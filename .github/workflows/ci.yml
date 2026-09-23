@@ -31,6 +31,14 @@ jobs:
       - run: pnpm test
       - name: Doctor all hosted apps
         run: pnpm mininode doctor --all
+      - name: Dry-run deploy of changed apps (build + gate config)
+        if: github.event_name == 'pull_request'
+        env:
+          SUPABASE_URL: https://example.supabase.co
+          SUPABASE_PUBLISHABLE_KEY: dry-run
+        run: |
+          pnpm --filter @mininode/sdk build
+          pnpm mininode deploy --changed "origin/${{ github.base_ref }}" --dry-run
       - name: Short app spec is up to date
         run: |
           pnpm spec:short
