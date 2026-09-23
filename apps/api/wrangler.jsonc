@@ -1,0 +1,26 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "mininode-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-09-23",
+  "compatibility_flags": ["nodejs_compat"],
+  "routes": [{ "pattern": "api.mininode.app", "custom_domain": true }],
+  "observability": { "enabled": true, "traces": { "enabled": true } },
+  "send_email": [
+    {
+      "name": "EMAIL",
+      "allowed_sender_addresses": ["hallo@mininode.app"]
+    }
+  ],
+  "triggers": { "crons": ["*/5 * * * *"] },
+  "vars": {
+    "PORTAL_URL": "https://mininode.app",
+    "SUPABASE_URL": "https://REPLACE_WITH_PROJECT_REF.supabase.co",
+    "SUPABASE_PUBLISHABLE_KEY": "REPLACE_WITH_PUBLISHABLE_KEY",
+    "MAIL_FROM": "hallo@mininode.app",
+    "GUACAMOLE_URL": "https://remote.mininode.app",
+    "NUCBOX_CONTROL_URL": "https://control.mininode.app"
+  }
+  // Secrets (wrangler secret put): SUPABASE_SECRET_KEY, SEND_EMAIL_HOOK_SECRET,
+  // GUACAMOLE_JSON_SECRET, NUCBOX_CONTROL_TOKEN, ACCESS_CLIENT_ID, ACCESS_CLIENT_SECRET
+}
