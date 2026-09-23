@@ -81,7 +81,7 @@ remote.post('/sessions', requireUser(), async (c) => {
     .select('slug, name, kind, data_mode, manifest')
     .eq('slug', slug)
     .single();
-  if (!app || app.kind !== 'remote') return problem(404, 'not_found', 'Keine Remote-App.');
+  if (app?.kind !== 'remote') return problem(404, 'not_found', 'Keine Remote-App.');
 
   const shared = app.data_mode === 'shared-account';
   if (shared) {
