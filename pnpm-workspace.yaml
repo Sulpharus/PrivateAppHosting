@@ -1,0 +1,5 @@
+packages:
+  - "packages/*"
+  - "platform/*"
+  - "apps/*"
+  - "fixtures/*"

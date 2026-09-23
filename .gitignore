@@ -1,0 +1,23 @@
+node_modules/
+dist/
+build/
+.turbo/
+.wrangler/
+.dev.vars
+.env
+.env.*
+!.env.example
+coverage/
+playwright-report/
+test-results/
+*.log
+.DS_Store
+
+# drop zone: only the placeholder is tracked
+inbox/*
+!inbox/.gitkeep
+!inbox/README.md
+
+# local supabase state
+supabase/.branches/
+supabase/.temp/
