@@ -72,11 +72,15 @@ if cf GET "$ACC/ai-gateway/gateways/mininode" >/dev/null 2>&1; then
   echo "  exists"
 else
   # Authenticated gateway: only requests carrying cf-aig-authorization (AI_GATEWAY_TOKEN) pass.
+  # Field names follow the gateway create API; if Cloudflare rejects them, fall back to the
+  # defaults (authentication and logs are on by default) and adjust rate limits in the dashboard.
   cf POST "$ACC/ai-gateway/gateways" '{
     "id": "mininode", "collect_logs": true, "authentication": true,
     "cache_ttl": 0, "cache_invalidate_on_update": true,
     "rate_limiting_interval": 60, "rate_limiting_limit": 120, "rate_limiting_technique": "sliding"
-  }' >/dev/null
+  }' >/dev/null ||
+    cf POST "$ACC/ai-gateway/gateways" '{"id":"mininode"}' >/dev/null ||
+    warn "AI Gateway not created; create 'mininode' in the dashboard (AI → AI Gateway)"
   echo "  created"
 fi
 echo "  AI_GATEWAY_BASE=https://gateway.ai.cloudflare.com/v1/$CLOUDFLARE_ACCOUNT_ID/mininode"

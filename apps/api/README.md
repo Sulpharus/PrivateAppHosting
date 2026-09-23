@@ -10,6 +10,8 @@ Hono Worker for everything that needs the service role or a secret:
 | `POST /remote/sessions` | signed-in user with grant | Queue or start a remote session; returns a Guacamole link |
 | `POST /remote/sessions/:id/heartbeat` | session owner | Keeps the session alive |
 | `DELETE /remote/sessions/:id` | owner or admin | Ends the session, promotes the next in queue |
+| `POST /remote/installs` | admin, recent | Starts an install of a remote app on the NucBox (snapshot → verify → install) |
+| `GET /remote/installs/:id` | admin | Install job status |
 | `DELETE /admin/users/:id` | admin, recent | Deletes a user |
 | cron `*/5 * * * *` | — | Expires idle sessions, releases stale AI reservations, syncs NucBox runtimes, keeps Supabase awake |
 

@@ -71,7 +71,7 @@ authentication token*) for `AI_GATEWAY_TOKEN`.
 6. **First admin:** the very first user of a fresh project becomes admin automatically. Create
    it in *Authentication → Users → Add user → Create new user* (your email, a password of at
    least 10 characters, *auto confirm*). Sign in at `https://mininode.app/login`, add a passkey
-   under *Konto*, then invite everyone else from *Admin → Benutzer*.
+   under *Dein Konto*, then invite everyone else from *Admin → Nutzer & Rollen*.
 
 ## 4. GitHub (repository → Settings → Environments → `production`, then `staging`)
 
@@ -83,6 +83,7 @@ authentication token*) for `AI_GATEWAY_TOKEN`.
 | var | `SUPABASE_PUBLISHABLE_KEY` | step 3.5 |
 | var | `AI_GATEWAY_BASE` | `https://gateway.ai.cloudflare.com/v1/<account-id>/mininode` |
 | var | `STAGING_DOMAIN` | staging only: `staging.mininode.app` |
+| var | `NUCBOX_TUNNEL_ID` | tunnel id printed by `bootstrap.sh`; enables the NucBox deploy jobs |
 | secret | `CLOUDFLARE_API_TOKEN` | step 1.6 |
 | secret | `SUPABASE_ACCESS_TOKEN` | supabase.com → Account → Access Tokens |
 | secret | `SUPABASE_DB_PASSWORD` | project database password |
