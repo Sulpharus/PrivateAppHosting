@@ -1,0 +1,26 @@
+{
+  "name": "@mininode/ai-proxy",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "types": "wrangler types --strict-vars=false",
+    "typecheck": "tsc -p .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "0.128.0",
+    "@mininode/gate": "workspace:*",
+    "@supabase/supabase-js": "2.117.1",
+    "hono": "4.13.8",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@mininode/config": "workspace:*",
+    "@types/node": "22.19.1",
+    "vitest": "5.0.1",
+    "wrangler": "4.137.0"
+  }
+}

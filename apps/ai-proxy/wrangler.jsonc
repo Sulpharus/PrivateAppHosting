@@ -1,0 +1,20 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "mininode-ai-proxy",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-09-23",
+  "compatibility_flags": ["nodejs_compat"],
+  "routes": [{ "pattern": "ai.mininode.app", "custom_domain": true }],
+  "observability": { "enabled": true, "traces": { "enabled": true } },
+  "limits": { "cpu_ms": 30000 },
+  "vars": {
+    "PORTAL_URL": "https://mininode.app",
+    "SUPABASE_URL": "https://REPLACE_WITH_PROJECT_REF.supabase.co",
+    "SUPABASE_PUBLISHABLE_KEY": "REPLACE_WITH_PUBLISHABLE_KEY",
+    "AI_GATEWAY_BASE": "https://gateway.ai.cloudflare.com/v1/REPLACE_WITH_ACCOUNT_ID/mininode",
+    // Optional JSON override of src/models.ts (model ids and € per 1M tokens), e.g. when a
+    // provider renames a model: {"gemini-flash":{"id":"gemini-x-flash","input":0.75,"output":3.75}}
+    "MODEL_CATALOG": ""
+  }
+  // Secrets: SUPABASE_SECRET_KEY, ANTHROPIC_API_KEY, GEMINI_API_KEY, AI_GATEWAY_TOKEN (optional)
+}
