@@ -14,7 +14,11 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@mininode/manifest": "workspace:*"
+    "@mininode/manifest": "workspace:*",
+    "@supabase/supabase-js": "2.117.1",
+    "postgres": "3.4.9",
+    "@mininode/gate": "workspace:*",
+    "@mininode/sdk": "workspace:*"
   },
   "devDependencies": {
     "@mininode/config": "workspace:*",

@@ -32,9 +32,13 @@ test('mobile start page: two-column tiles, tab bar, 44px targets', async ({ page
   await expect(page.getByRole('heading', { level: 1, name: /Anna/ })).toBeVisible();
 
   await expect(page.getByRole('navigation', { name: 'Hauptnavigation' })).toBeVisible();
-  const tiles = page.locator('.tile');
+  const tiles = page.locator('.tile').filter({ hasText: run });
   await expect(tiles).toHaveCount(4);
-  const [first, second] = [await tiles.nth(0).boundingBox(), await tiles.nth(1).boundingBox()];
+  const allTiles = page.locator('.tile');
+  const [first, second] = [
+    await allTiles.nth(0).boundingBox(),
+    await allTiles.nth(1).boundingBox(),
+  ];
   expect(first?.y).toBe(second?.y);
 
   for (const button of await page.getByRole('button').all()) {

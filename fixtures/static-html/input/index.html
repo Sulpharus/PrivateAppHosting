@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <title>Hallo</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="p-8">
+  <h1 class="text-2xl">Hallo!</h1>
+  <p>Besuche: <span id="count">0</span></p>
+  <script>
+    const n = Number(localStorage.getItem('visits') || 0) + 1;
+    localStorage.setItem('visits', String(n));
+    document.getElementById('count').textContent = n;
+  </script>
+</body>
+</html>

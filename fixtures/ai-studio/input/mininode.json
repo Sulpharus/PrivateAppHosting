@@ -1,0 +1,10 @@
+{
+  "specVersion": 1,
+  "slug": "input",
+  "name": "Rezeptideen",
+  "description": "Rezeptvorschläge aus deinen Zutaten",
+  "kind": "spa",
+  "target": "cloudflare",
+  "ai": { "models": ["gemini-flash"] },
+  "build": { "command": "pnpm build", "output": "dist" }
+}

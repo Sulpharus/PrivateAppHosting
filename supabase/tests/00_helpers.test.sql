@@ -54,6 +54,20 @@ begin
 end;
 $$;
 
+-- Gives a test file an empty platform (inside its own transaction, so nothing is lost):
+-- local databases also hold data from e2e runs and `mininode dev`.
+create or replace function tests.reset()
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  delete from platform.apps;
+  delete from auth.users;
+end;
+$$;
+
 grant execute on all functions in schema tests to authenticated, service_role;
 
 select plan(1);

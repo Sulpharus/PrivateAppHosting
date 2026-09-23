@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "mkdir -p public/schema && cp ../../packages/manifest/schema.json public/schema/mininode.json && vite build",
     "preview": "wrangler dev",
     "deploy": "vite build && wrangler deploy",
     "types": "wrangler types --strict-vars=false",

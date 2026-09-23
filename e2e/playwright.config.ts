@@ -20,13 +20,22 @@ export default defineConfig({
     { name: 'desktop', use: { ...devices['Desktop Chrome'] }, testIgnore: /mobile\.spec\.ts/ },
     { name: 'mobile', use: { ...devices['Pixel 7'] }, testMatch: /mobile\.spec\.ts/ },
   ],
-  webServer: {
-    command: 'pnpm --filter @mininode/portal dev',
-    url: 'http://localhost:5173/login',
-    reuseExistingServer: !process.env.CI,
-    env: {
-      VITE_SUPABASE_URL: process.env.SUPABASE_URL ?? '',
-      VITE_SUPABASE_PUBLISHABLE_KEY: process.env.SUPABASE_PUBLISHABLE_KEY ?? '',
+  webServer: [
+    {
+      command: 'pnpm --filter @mininode/portal dev',
+      url: 'http://localhost:5173/login',
+      reuseExistingServer: !process.env.CI,
+      env: {
+        VITE_SUPABASE_URL: process.env.SUPABASE_URL ?? '',
+        VITE_SUPABASE_PUBLISHABLE_KEY: process.env.SUPABASE_PUBLISHABLE_KEY ?? '',
+      },
     },
-  },
+    {
+      // A fixture app served through the real gate Worker (wrangler dev), registered locally.
+      command: 'pnpm mininode dev fixtures/static-html/expected/hallo --port 8790',
+      url: 'http://localhost:8790/_mininode/config.json',
+      reuseExistingServer: !process.env.CI,
+      timeout: 120_000,
+    },
+  ],
 });

@@ -1,0 +1,12 @@
+{
+  "$schema": "../../../../packages/manifest/schema.json",
+  "specVersion": 1,
+  "slug": "notizen",
+  "name": "Notizen",
+  "description": "Notizen mit KI-Zusammenfassung",
+  "kind": "spa",
+  "target": "cloudflare",
+  "data": { "mode": "private" },
+  "ai": { "models": ["claude-haiku"], "monthlyBudgetEur": 2, "maxOutputTokens": 800 },
+  "build": { "command": "pnpm build", "output": "dist" }
+}

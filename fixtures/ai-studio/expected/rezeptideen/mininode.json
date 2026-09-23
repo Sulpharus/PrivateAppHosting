@@ -1,0 +1,13 @@
+{
+  "$schema": "../../../../packages/manifest/schema.json",
+  "specVersion": 1,
+  "slug": "rezeptideen",
+  "name": "Rezeptideen",
+  "description": "Rezeptvorschläge aus deinen Zutaten",
+  "kind": "spa",
+  "target": "cloudflare",
+  "access": { "default": true },
+  "data": { "mode": "private" },
+  "ai": { "models": ["gemini-flash"], "monthlyBudgetEur": 3, "maxOutputTokens": 1500 },
+  "build": { "command": "pnpm build", "output": "dist" }
+}

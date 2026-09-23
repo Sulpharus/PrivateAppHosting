@@ -40,6 +40,11 @@ const SECRET_PATTERNS: [string, RegExp][] = [
   ['private key block', /-----BEGIN [A-Z ]*PRIVATE KEY-----/],
 ];
 
+/** Removes JS comments so explanatory notes do not trip code rules (secrets are still checked raw). */
+export function stripComments(source: string): string {
+  return source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:"'`\\])\/\/.*$/gm, '$1');
+}
+
 function* walk(dir: string): Generator<string> {
   for (const entry of readdirSync(dir)) {
     if (IGNORED_DIRS.has(entry) || entry.startsWith('.')) continue;
@@ -71,11 +76,12 @@ function checkSources(dir: string, manifest: Manifest, findings: Finding[]): voi
       }
     }
     if (!SOURCE_EXTENSIONS.test(file)) continue;
+    const code = file.endsWith('.html') ? text : stripComments(text);
 
-    if (/@mininode\/sdk|window\.mininode|\/_mininode\/sdk\.js/.test(text)) usesSdk = true;
+    if (/@mininode\/sdk|window\.mininode|\/_mininode\/sdk\.js/.test(code)) usesSdk = true;
 
     if (clientSide) {
-      if (/process\.env\.(API_KEY|GEMINI_API_KEY|ANTHROPIC_API_KEY|OPENAI_API_KEY)/.test(text)) {
+      if (/process\.env\.(API_KEY|GEMINI_API_KEY|ANTHROPIC_API_KEY|OPENAI_API_KEY)/.test(code)) {
         findings.push({
           severity: 'error',
           rule: 'no-client-ai-keys',
@@ -85,7 +91,7 @@ function checkSources(dir: string, manifest: Manifest, findings: Finding[]): voi
         });
       }
       if (
-        /from ['"](@google\/genai|@google\/generative-ai|@anthropic-ai\/sdk|openai)['"]/.test(text)
+        /from ['"](@google\/genai|@google\/generative-ai|@anthropic-ai\/sdk|openai)['"]/.test(code)
       ) {
         findings.push({
           severity: 'error',
@@ -94,7 +100,7 @@ function checkSources(dir: string, manifest: Manifest, findings: Finding[]): voi
           message: 'imports a provider SDK in client code; use mn.ai.chat / mn.ai.json',
         });
       }
-      if (/window\.claude\b/.test(text)) {
+      if (/window\.claude\b/.test(code)) {
         findings.push({
           severity: 'error',
           rule: 'no-artifact-runtime',
@@ -102,7 +108,7 @@ function checkSources(dir: string, manifest: Manifest, findings: Finding[]): voi
           message: 'uses the Claude artifact runtime (window.claude); replace with mn.ai / mn.kv',
         });
       }
-      if (rel.endsWith('.html') && /<script[^>]+src=["']https?:\/\//i.test(text)) {
+      if (rel.endsWith('.html') && /<script[^>]+src=["']https?:\/\//i.test(code)) {
         findings.push({
           severity: 'error',
           rule: 'no-cdn-scripts',
@@ -111,7 +117,7 @@ function checkSources(dir: string, manifest: Manifest, findings: Finding[]): voi
             'loads scripts from a CDN; bundle them (the CSP only allows same-origin scripts)',
         });
       }
-      if (/\blocalStorage\.(setItem|getItem)/.test(text) && manifest.data.mode !== 'none') {
+      if (/\blocalStorage\.(setItem|getItem)/.test(code) && manifest.data.mode !== 'none') {
         findings.push({
           severity: 'warning',
           rule: 'prefer-kv',

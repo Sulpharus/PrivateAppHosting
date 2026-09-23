@@ -1,0 +1,9 @@
+{
+  "specVersion": 1,
+  "slug": "input",
+  "name": "Hallo",
+  "description": "Zählt deine Besuche",
+  "kind": "static",
+  "target": "cloudflare",
+  "data": { "mode": "private" }
+}

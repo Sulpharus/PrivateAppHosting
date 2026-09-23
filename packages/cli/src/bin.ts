@@ -1,42 +1,88 @@
 #!/usr/bin/env node
-import { resolve } from 'node:path';
+import { existsSync } from 'node:fs';
+import { join, resolve } from 'node:path';
+import { changedApps } from './changed.ts';
+import type { DeployEnv } from './deploy/environment.ts';
+import { deployApp, devApp, readVersion } from './deploy/index.ts';
 import { type DoctorReport, doctor, hostedApps } from './doctor.ts';
+
+const ROOT = resolve(import.meta.dirname, '../../..');
 
 const USAGE = `mininode <command>
 
-  doctor <app-dir>   Check one hosted app (manifest, secrets, SDK, RLS, CSP)
-  doctor --all       Check every app in hosted/
+  doctor <app-dir> | --all          Check hosted apps (manifest, secrets, SDK, RLS, CSP)
+  dev <app-dir> [--port 8790]       Serve an app locally behind the gate (local Supabase)
+  deploy <app-dir> [--env staging]  Build, migrate, deploy and register one app
+  deploy --changed <base-ref>       Deploy every app changed since <base-ref>
+  changed <base-ref>                List hosted apps changed since <base-ref>
 `;
 
 function print(report: DoctorReport): boolean {
   const errors = report.findings.filter((f) => f.severity === 'error');
   const warnings = report.findings.filter((f) => f.severity === 'warning');
-  const status = errors.length > 0 ? 'FAIL' : 'ok';
-  console.log(`${status.padEnd(4)} ${report.app}`);
+  console.log(`${(errors.length > 0 ? 'FAIL' : 'ok').padEnd(4)} ${report.app}`);
   for (const finding of report.findings) {
     const where = finding.file ? ` ${finding.file}:` : '';
-    console.log(
-      `     ${finding.severity === 'error' ? 'error' : 'warn '} [${finding.rule}]${where} ${finding.message}`,
-    );
+    const level = finding.severity === 'error' ? 'error' : 'warn ';
+    console.log(`     ${level} [${finding.rule}]${where} ${finding.message}`);
   }
   if (warnings.length > 0 && errors.length === 0) console.log(`     ${warnings.length} warning(s)`);
   return errors.length === 0;
 }
 
-function main(args: string[]): number {
-  const [command, target] = args;
-  if (command !== 'doctor' || !target) {
-    console.log(USAGE);
-    return command ? 1 : 0;
-  }
-  const root = resolve(import.meta.dirname, '../../..');
-  const dirs = target === '--all' ? hostedApps(root) : [resolve(process.cwd(), target)];
-  if (dirs.length === 0) {
-    console.log('no hosted apps yet');
-    return 0;
-  }
-  const results = dirs.map((dir) => print(doctor(dir)));
-  return results.every(Boolean) ? 0 : 1;
+function flag(args: string[], name: string): string | undefined {
+  const index = args.indexOf(name);
+  return index >= 0 ? args[index + 1] : undefined;
 }
 
-process.exitCode = main(process.argv.slice(2));
+async function main(args: string[]): Promise<number> {
+  const [command, target] = args;
+  switch (command) {
+    case 'doctor': {
+      if (!target) break;
+      const dirs = target === '--all' ? hostedApps(ROOT) : [resolve(process.cwd(), target)];
+      if (dirs.length === 0) {
+        console.log('no hosted apps yet');
+        return 0;
+      }
+      return dirs.map((dir) => print(doctor(dir))).every(Boolean) ? 0 : 1;
+    }
+    case 'changed': {
+      if (!target) break;
+      for (const slug of changedApps(target, ROOT)) console.log(slug);
+      return 0;
+    }
+    case 'dev': {
+      if (!target) break;
+      await devApp(resolve(process.cwd(), target), Number(flag(args, '--port') ?? 8790));
+      return 0;
+    }
+    case 'deploy': {
+      if (!target) break;
+      const env = (flag(args, '--env') ?? 'production') as DeployEnv;
+      const dryRun = args.includes('--dry-run');
+      const base = flag(args, '--changed');
+      const dirs = base
+        ? changedApps(base, ROOT)
+            .map((slug) => join(ROOT, 'hosted', slug))
+            .filter((dir) => existsSync(join(dir, 'mininode.json')))
+        : [resolve(process.cwd(), target)];
+      const version = readVersion();
+      for (const dir of dirs) await deployApp(dir, { env, version, dryRun });
+      if (dirs.length === 0) console.log('nothing to deploy');
+      return 0;
+    }
+  }
+  console.log(USAGE);
+  return command ? 1 : 0;
+}
+
+main(process.argv.slice(2)).then(
+  (code) => {
+    process.exitCode = code;
+  },
+  (error: unknown) => {
+    console.error(error instanceof Error ? error.message : error);
+    process.exitCode = 1;
+  },
+);

@@ -1,5 +1,6 @@
 begin;
 select plan(9);
+select tests.reset();
 
 select tests.create_user('owner@example.com') as owner_id \gset
 select tests.create_user('trusted@example.com') as trusted_id \gset

@@ -1,5 +1,6 @@
 begin;
 select plan(17);
+select tests.reset();
 
 -- The first user of a fresh project is the admin.
 select tests.create_user('owner@example.com', 'Owner') as owner_id \gset

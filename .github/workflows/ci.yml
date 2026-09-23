@@ -31,6 +31,10 @@ jobs:
       - run: pnpm test
       - name: Doctor all hosted apps
         run: pnpm mininode doctor --all
+      - name: Short app spec is up to date
+        run: |
+          pnpm spec:short
+          git diff --exit-code docs/ai/NEW-APP-SPEC.short.md
       - name: Manifest JSON schema is up to date
         run: |
           pnpm --filter @mininode/manifest build

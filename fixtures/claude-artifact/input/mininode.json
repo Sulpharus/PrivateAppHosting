@@ -1,0 +1,11 @@
+{
+  "specVersion": 1,
+  "slug": "input",
+  "name": "Notizen",
+  "description": "Notizen mit KI-Zusammenfassung",
+  "kind": "spa",
+  "target": "cloudflare",
+  "data": { "mode": "private" },
+  "ai": { "models": ["claude-haiku"] },
+  "build": { "command": "pnpm build", "output": "dist" }
+}

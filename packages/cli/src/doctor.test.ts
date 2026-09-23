@@ -98,3 +98,12 @@ describe('doctor', () => {
     ]);
   });
 });
+
+describe('stripComments', () => {
+  it('drops line and block comments but keeps URLs and strings', async () => {
+    const { stripComments } = await import('./doctor.ts');
+    expect(stripComments('a(); // window.claude\n/* process.env.API_KEY */ b("https://x.y")')).toBe(
+      'a(); \n b("https://x.y")',
+    );
+  });
+});

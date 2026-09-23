@@ -12,7 +12,8 @@
       "!.claude/skills",
       "!**/worker-configuration.d.ts",
       "!supabase/.temp",
-      "!packages/manifest/schema.json"
+      "!packages/manifest/schema.json",
+      "!fixtures/*/input"
     ]
   },
   "formatter": {
@@ -48,5 +49,21 @@
         "organizeImports": "on"
       }
     }
-  }
+  },
+  "overrides": [
+    {
+      "includes": ["hosted/**", "fixtures/**"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noExplicitAny": "warn",
+            "noConsole": "off"
+          },
+          "style": {
+            "noNonNullAssertion": "warn"
+          }
+        }
+      }
+    }
+  ]
 }
