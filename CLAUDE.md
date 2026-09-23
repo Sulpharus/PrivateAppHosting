@@ -25,7 +25,7 @@ pnpm test          # Vitest across the workspace
 pnpm check         # all of the above
 pnpm db:start      # local Supabase (Docker)
 pnpm db:test       # pgTAP tests against local Supabase
-pnpm doctor <path> # validate a hosted app (mininode doctor)
+pnpm mininode doctor <path|--all>  # validate hosted apps
 ```
 
 Run `pnpm check` before every commit, and `pnpm db:test` when anything under `supabase/` changes.

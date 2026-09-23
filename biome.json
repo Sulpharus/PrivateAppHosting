@@ -7,7 +7,13 @@
   },
   "files": {
     "ignoreUnknown": true,
-    "includes": ["**", "!.claude/skills", "!**/worker-configuration.d.ts", "!supabase/.temp"]
+    "includes": [
+      "**",
+      "!.claude/skills",
+      "!**/worker-configuration.d.ts",
+      "!supabase/.temp",
+      "!packages/manifest/schema.json"
+    ]
   },
   "formatter": {
     "enabled": true,

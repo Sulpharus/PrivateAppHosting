@@ -19,8 +19,8 @@
     "db:reset": "supabase db reset",
     "db:test": "supabase test db",
     "db:lint": "supabase db lint --level warning",
-    "doctor": "node packages/cli/src/bin.ts doctor",
-    "test:integration": "scripts/with-local-supabase.sh turbo run test --env-mode=loose"
+    "test:integration": "scripts/with-local-supabase.sh turbo run test --env-mode=loose",
+    "mininode": "node packages/cli/src/bin.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.14",

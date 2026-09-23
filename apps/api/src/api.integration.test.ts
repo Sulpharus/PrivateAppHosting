@@ -31,7 +31,9 @@ describe.skipIf(!enabled)('api against local Supabase', () => {
     },
   } as unknown as ApiEnv;
 
-  const admin = createClient(url ?? '', secretKey ?? '', { auth: { persistSession: false } });
+  const admin = createClient(url ?? 'http://127.0.0.1', secretKey ?? 'unused', {
+    auth: { persistSession: false },
+  });
   const password = 'correct horse battery staple';
   const users: string[] = [];
   let adminToken = '';

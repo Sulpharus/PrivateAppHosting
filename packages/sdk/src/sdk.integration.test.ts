@@ -13,7 +13,9 @@ describe.skipIf(!enabled)('sdk against local Supabase', () => {
   const slug = `sdk-test-${Date.now().toString(36)}`;
   const email = `${slug}@example.com`;
   const password = 'correct horse battery staple';
-  const admin = createClient(url ?? '', secretKey ?? '', { auth: { persistSession: false } });
+  const admin = createClient(url ?? 'http://127.0.0.1', secretKey ?? 'unused', {
+    auth: { persistSession: false },
+  });
   let userId = '';
   let mn: Mininode;
 

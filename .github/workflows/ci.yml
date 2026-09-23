@@ -30,7 +30,7 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
       - name: Doctor all hosted apps
-        run: pnpm doctor --all
+        run: pnpm mininode doctor --all
       - name: Manifest JSON schema is up to date
         run: |
           pnpm --filter @mininode/manifest build

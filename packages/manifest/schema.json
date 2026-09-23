@@ -26,16 +26,31 @@
     },
     "kind": {
       "type": "string",
-      "enum": ["static", "spa", "nextjs", "container", "remote"]
+      "enum": [
+        "static",
+        "spa",
+        "nextjs",
+        "container",
+        "remote"
+      ]
     },
     "target": {
       "type": "string",
-      "enum": ["cloudflare", "vercel", "nucbox", "remote"]
+      "enum": [
+        "cloudflare",
+        "vercel",
+        "nucbox",
+        "remote"
+      ]
     },
     "access": {
       "default": {
         "default": false,
-        "roles": ["user", "trusted", "admin"]
+        "roles": [
+          "user",
+          "trusted",
+          "admin"
+        ]
       },
       "type": "object",
       "properties": {
@@ -44,12 +59,20 @@
           "type": "boolean"
         },
         "roles": {
-          "default": ["user", "trusted", "admin"],
+          "default": [
+            "user",
+            "trusted",
+            "admin"
+          ],
           "minItems": 1,
           "type": "array",
           "items": {
             "type": "string",
-            "enum": ["admin", "trusted", "user"]
+            "enum": [
+              "admin",
+              "trusted",
+              "user"
+            ]
           }
         }
       },
@@ -64,7 +87,13 @@
         "mode": {
           "default": "none",
           "type": "string",
-          "enum": ["none", "private", "shared-account", "group", "readonly"]
+          "enum": [
+            "none",
+            "private",
+            "shared-account",
+            "group",
+            "readonly"
+          ]
         }
       },
       "additionalProperties": false
@@ -77,7 +106,12 @@
           "type": "array",
           "items": {
             "type": "string",
-            "enum": ["gemini-flash", "gemini-pro", "claude-haiku", "claude-sonnet"]
+            "enum": [
+              "gemini-flash",
+              "gemini-pro",
+              "claude-haiku",
+              "claude-sonnet"
+            ]
           }
         },
         "monthlyBudgetEur": {
@@ -93,7 +127,9 @@
           "maximum": 16000
         }
       },
-      "required": ["models"],
+      "required": [
+        "models"
+      ],
       "additionalProperties": false
     },
     "build": {
@@ -108,7 +144,9 @@
           "minLength": 1
         }
       },
-      "required": ["output"],
+      "required": [
+        "output"
+      ],
       "additionalProperties": false
     },
     "container": {
@@ -132,7 +170,9 @@
           "pattern": "^\\/.*"
         }
       },
-      "required": ["port"],
+      "required": [
+        "port"
+      ],
       "additionalProperties": false
     },
     "remote": {
@@ -140,7 +180,11 @@
       "properties": {
         "runtime": {
           "type": "string",
-          "enum": ["windows", "wine", "android"]
+          "enum": [
+            "windows",
+            "wine",
+            "android"
+          ]
         },
         "program": {
           "type": "string",
@@ -158,7 +202,10 @@
               "pattern": "^[a-f0-9]{64}$"
             }
           },
-          "required": ["r2Key", "sha256"],
+          "required": [
+            "r2Key",
+            "sha256"
+          ],
           "additionalProperties": false
         },
         "wingetId": {
@@ -166,10 +213,20 @@
           "minLength": 1
         }
       },
-      "required": ["runtime", "program"],
+      "required": [
+        "runtime",
+        "program"
+      ],
       "additionalProperties": false
     }
   },
-  "required": ["specVersion", "slug", "name", "description", "kind", "target"],
+  "required": [
+    "specVersion",
+    "slug",
+    "name",
+    "description",
+    "kind",
+    "target"
+  ],
   "additionalProperties": false
 }
