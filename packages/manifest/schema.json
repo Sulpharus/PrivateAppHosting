@@ -1,0 +1,175 @@
+{
+  "title": "MiniNode app manifest (mininode.json)",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "specVersion": {
+      "type": "number",
+      "const": 1
+    },
+    "slug": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{0,30}[a-z0-9]$"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 40
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120
+    },
+    "kind": {
+      "type": "string",
+      "enum": ["static", "spa", "nextjs", "container", "remote"]
+    },
+    "target": {
+      "type": "string",
+      "enum": ["cloudflare", "vercel", "nucbox", "remote"]
+    },
+    "access": {
+      "default": {
+        "default": false,
+        "roles": ["user", "trusted", "admin"]
+      },
+      "type": "object",
+      "properties": {
+        "default": {
+          "default": false,
+          "type": "boolean"
+        },
+        "roles": {
+          "default": ["user", "trusted", "admin"],
+          "minItems": 1,
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["admin", "trusted", "user"]
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "data": {
+      "default": {
+        "mode": "none"
+      },
+      "type": "object",
+      "properties": {
+        "mode": {
+          "default": "none",
+          "type": "string",
+          "enum": ["none", "private", "shared-account", "group", "readonly"]
+        }
+      },
+      "additionalProperties": false
+    },
+    "ai": {
+      "type": "object",
+      "properties": {
+        "models": {
+          "minItems": 1,
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["gemini-flash", "gemini-pro", "claude-haiku", "claude-sonnet"]
+          }
+        },
+        "monthlyBudgetEur": {
+          "default": 2,
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 100
+        },
+        "maxOutputTokens": {
+          "default": 2000,
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "maximum": 16000
+        }
+      },
+      "required": ["models"],
+      "additionalProperties": false
+    },
+    "build": {
+      "type": "object",
+      "properties": {
+        "command": {
+          "type": "string",
+          "minLength": 1
+        },
+        "output": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": ["output"],
+      "additionalProperties": false
+    },
+    "container": {
+      "type": "object",
+      "properties": {
+        "port": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535
+        },
+        "memoryMb": {
+          "default": 256,
+          "type": "integer",
+          "minimum": 64,
+          "maximum": 4096
+        },
+        "healthPath": {
+          "default": "/health",
+          "type": "string",
+          "format": "starts_with",
+          "pattern": "^\\/.*"
+        }
+      },
+      "required": ["port"],
+      "additionalProperties": false
+    },
+    "remote": {
+      "type": "object",
+      "properties": {
+        "runtime": {
+          "type": "string",
+          "enum": ["windows", "wine", "android"]
+        },
+        "program": {
+          "type": "string",
+          "minLength": 1
+        },
+        "installer": {
+          "type": "object",
+          "properties": {
+            "r2Key": {
+              "type": "string",
+              "minLength": 1
+            },
+            "sha256": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            }
+          },
+          "required": ["r2Key", "sha256"],
+          "additionalProperties": false
+        },
+        "wingetId": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": ["runtime", "program"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["specVersion", "slug", "name", "description", "kind", "target"],
+  "additionalProperties": false
+}

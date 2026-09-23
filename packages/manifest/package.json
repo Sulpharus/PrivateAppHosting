@@ -1,0 +1,22 @@
+{
+  "name": "@mininode/manifest",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./schema.json": "./schema.json"
+  },
+  "scripts": {
+    "build": "node scripts/emit-json-schema.ts",
+    "typecheck": "tsc -p .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@mininode/config": "workspace:*",
+    "vitest": "5.0.1"
+  }
+}

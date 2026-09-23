@@ -1,0 +1,7 @@
+{
+  "extends": "@mininode/config/tsconfig.worker.json",
+  "compilerOptions": {
+    "types": ["@cloudflare/workers-types"]
+  },
+  "include": ["src"]
+}
