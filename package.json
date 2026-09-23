@@ -19,11 +19,16 @@
     "db:reset": "supabase db reset",
     "db:test": "supabase test db",
     "db:lint": "supabase db lint --level warning",
-    "test:integration": "scripts/with-local-supabase.sh turbo run test --env-mode=loose",
-    "mininode": "node packages/cli/src/bin.ts"
+    "test:integration": "scripts/with-local-supabase.sh turbo run test",
+    "mininode": "node packages/cli/src/bin.ts",
+    "e2e": "scripts/with-local-supabase.sh playwright test -c e2e/playwright.config.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.14",
+    "@mininode/config": "workspace:*",
+    "@mininode/gate": "workspace:*",
+    "@playwright/test": "1.63.0",
+    "@supabase/supabase-js": "2.117.1",
     "@types/node": "^22.20.4",
     "supabase": "2.117.0",
     "turbo": "2.11.3",

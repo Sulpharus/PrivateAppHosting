@@ -1,0 +1,5 @@
+{
+  "extends": "@mininode/config/tsconfig.worker.json",
+  "compilerOptions": { "types": ["./worker-configuration.d.ts"] },
+  "include": ["worker", "worker-configuration.d.ts"]
+}

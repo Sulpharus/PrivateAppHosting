@@ -17,7 +17,6 @@ test-results/
 inbox/*
 !inbox/.gitkeep
 !inbox/README.md
-
 # local supabase state
 supabase/.branches/
 supabase/.temp/

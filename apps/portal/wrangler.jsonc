@@ -1,0 +1,21 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "mininode-portal",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-09-23",
+  "routes": [{ "pattern": "mininode.app", "custom_domain": true }],
+  "observability": { "enabled": true, "traces": { "enabled": true } },
+  "assets": {
+    "directory": "dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/*", "!/assets/*"]
+  },
+  "vars": {
+    "SUPABASE_URL": "https://REPLACE_WITH_PROJECT_REF.supabase.co",
+    "SUPABASE_PUBLISHABLE_KEY": "REPLACE_WITH_PUBLISHABLE_KEY",
+    "API_URL": "https://api.mininode.app",
+    "AI_URL": "https://ai.mininode.app",
+    "COOKIE_DOMAIN": ".mininode.app"
+  }
+}

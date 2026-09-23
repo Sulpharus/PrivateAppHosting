@@ -15,5 +15,13 @@
       "cache": false,
       "persistent": true
     }
-  }
+  },
+  "globalEnv": [
+    "CI",
+    "SUPABASE_URL",
+    "SUPABASE_PUBLISHABLE_KEY",
+    "SUPABASE_SECRET_KEY",
+    "SCREENSHOT_DIR",
+    "PLAYWRIGHT_CHROMIUM"
+  ]
 }
