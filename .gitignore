@@ -26,3 +26,9 @@ infra/nucbox/*.env
 !infra/nucbox/*.example.env
 !infra/nucbox/*.sops.env
 cloudflare-secrets/
+# graphify: commit graph.json + GRAPH_REPORT.md, not caches or the HTML view
+graphify-out/cache/
+graphify-out/graph.html
+graphify-out/manifest.json
+graphify-out/memory/
+graphify-out/20*/

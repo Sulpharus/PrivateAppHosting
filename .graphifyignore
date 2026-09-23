@@ -1,0 +1,13 @@
+# Keep the knowledge graph to first-party code and docs.
+.claude/skills/
+**/worker-configuration.d.ts
+packages/manifest/schema.json
+docs/ai/NEW-APP-SPEC.short.md
+fixtures/*/input/
+pnpm-lock.yaml
+skills-lock.json
+**/package.json
+biome.json
+turbo.json
+**/tsconfig*.json
+graphify-out/

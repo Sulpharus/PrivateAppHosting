@@ -22,7 +22,8 @@
     "test:integration": "scripts/with-local-supabase.sh turbo run test",
     "mininode": "node packages/cli/src/bin.ts",
     "e2e": "scripts/with-local-supabase.sh playwright test -c e2e/playwright.config.ts",
-    "spec:short": "node scripts/generate-short-spec.ts"
+    "spec:short": "node scripts/generate-short-spec.ts",
+    "kb": "scripts/kb.sh"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.14",

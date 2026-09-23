@@ -116,7 +116,10 @@ owner's data (e.g. a shared household budget) · `group` = everyone with the app
 - Clean, calm, no gradients or emoji as UI. System or bundled fonts; generous spacing.
 - One primary action per screen. Clear empty states ("Noch keine Rezepte – leg das erste an").
 - Show loading and error states for every `await` that talks to the network.
-- Respect `prefers-reduced-motion`.
+- Respect `prefers-reduced-motion`. Animate only `transform` and `opacity`; never `transition: all`.
+- Visible keyboard focus (`:focus-visible` outline) on every interactive element.
+- Dialogs trap focus, close on `Escape` and return focus to the button that opened them.
+- At most one level of cards; use whitespace instead of boxes inside boxes.
 
 ### Before you hand it over
 
