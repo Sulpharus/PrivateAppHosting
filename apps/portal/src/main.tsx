@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { createBrowserRouter, Navigate, Outlet, RouterProvider, useLocation } from 'react-router';
 import { AuthProvider, useAuth } from './auth/AuthProvider.tsx';
 import { StepUpProvider } from './auth/StepUp.tsx';
-import { loadConfig } from './config.ts';
+import { loadConfig, setRuntimeConfig } from './config.ts';
 import { initApi } from './lib/api.ts';
 import { initSupabase } from './lib/supabase.ts';
 import { applyStoredTheme } from './lib/theme.ts';
@@ -72,6 +72,7 @@ async function start() {
   const config = await loadConfig();
   initSupabase(config);
   initApi(config);
+  setRuntimeConfig(config);
   const root = document.getElementById('root');
   if (!root) throw new Error('#root missing');
   createRoot(root).render(

@@ -1,6 +1,7 @@
 {
   "$schema": "../../node_modules/wrangler/config-schema.json",
   "name": "mininode-portal",
+  "account_id": "d690896e2d267adb0dd97027832767e5",
   "main": "worker/index.ts",
   "compatibility_date": "2026-09-23",
   "routes": [{ "pattern": "mininode.app", "custom_domain": true }],
@@ -12,10 +13,11 @@
     "run_worker_first": ["/*", "!/assets/*"]
   },
   "vars": {
-    "SUPABASE_URL": "https://REPLACE_WITH_PROJECT_REF.supabase.co",
-    "SUPABASE_PUBLISHABLE_KEY": "REPLACE_WITH_PUBLISHABLE_KEY",
+    "SUPABASE_URL": "https://ojicmpgqvoyakigvubek.supabase.co",
+    "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_jv1tZqYWg51sNxJ5-GjMMw_tZqa1s1C",
     "API_URL": "https://api.mininode.app",
     "AI_URL": "https://ai.mininode.app",
-    "COOKIE_DOMAIN": ".mininode.app"
+    "COOKIE_DOMAIN": ".mininode.app",
+    "EMAIL_ENABLED": "false"
   }
 }

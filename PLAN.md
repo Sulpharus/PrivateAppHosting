@@ -38,7 +38,7 @@ Non-goals: public sign-up, multi-tenant SaaS, a hot standby database.
 | Keep-alive | A daily real query (not a cached request), monitored by a dead-man's switch |
 | Backups | Nightly `pg_dump` + storage sync on the NucBox, then restic to NVMe (7/4/6) and an encrypted restic copy in R2. Restore drill scripted and alerting |
 | Auth | Supabase Auth, invite-only. **Passkeys** (Face ID, fingerprint, Windows Hello) primary, email + password fallback. All auth UI lives at **`mininode.app/login`** (ADR 0001) |
-| Email | **Cloudflare Email Sending** from the API Worker. Supabase auth mails go through the **Send Email hook**, with Cloudflare SMTP submission as a fallback |
+| Email | **Off for now** (Cloudflare Email Sending needs Workers Paid). Invites and password resets are one-time links the admin shares directly. The Email Sending binding and Send Email hook stay implemented and switch on with one config change |
 | Roles | `admin` (owner), `trusted` (shared-account apps), `user` |
 | Isolation | **RLS is the security boundary.** Every app table policy calls `platform.has_grant(slug)`; a schema per app is for tidiness only |
 | Deploy | `git push` to `main` runs GitHub Actions. Cloud targets deploy with `wrangler`. The NucBox deploys by pulling a digest-pinned image through a forced-command SSH over Access |
@@ -69,7 +69,7 @@ Total **≈ 6 €** (budget 15 €). A Windows 11 Pro licence is a one-off cost.
                    │                                        backup job · Wine images · (Redroid, optional)
                    │                                      NucBox · Windows 11 VM (RemoteApp, on demand)
                    ├─ Access: proxmox / ssh / guac-admin (owner + CI service token)
-                   └─ R2: installers, encrypted backups · Email Sending · AI Gateway
+                   └─ R2: installers, encrypted backups · AI Gateway
  Supabase Cloud (prod) + Supabase Cloud (staging) ◀── supabase-js + RLS from every app
 ```
 

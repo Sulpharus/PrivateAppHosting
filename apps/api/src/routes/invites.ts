@@ -96,18 +96,20 @@ invites.post('/', async (c) => {
     .single();
   const mail = inviteEmail({ inviterName: inviter?.display_name ?? 'Der Admin', url, expiresAt });
 
-  let emailSent = true;
-  try {
-    await c.env.EMAIL.send({
-      from: { email: c.env.MAIL_FROM, name: 'MiniNode' },
-      to: email,
-      ...mail,
-    });
-  } catch (error) {
-    emailSent = false;
-    console.error(
-      JSON.stringify({ event: 'invite_email_failed', inviteId: invite.id, error: String(error) }),
-    );
+  let emailSent = false;
+  if (c.env.EMAIL) {
+    try {
+      await c.env.EMAIL.send({
+        from: { email: c.env.MAIL_FROM, name: 'MiniNode' },
+        to: email,
+        ...mail,
+      });
+      emailSent = true;
+    } catch (error) {
+      console.error(
+        JSON.stringify({ event: 'invite_email_failed', inviteId: invite.id, error: String(error) }),
+      );
+    }
   }
 
   // The link is returned so the admin can also share it directly (e.g. via messenger).

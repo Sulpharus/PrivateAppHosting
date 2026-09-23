@@ -1,17 +1,17 @@
 # Graph Report - PrivateAppHosting  (2026-09-23)
 
 ## Corpus Check
-- 169 files · ~58,646 words
+- 169 files · ~59,315 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 28 file(s) not represented in the graph (top: (none) 10, .css 5, .jsonc 3)
 
 ## Summary
-- 910 nodes · 1768 edges · 78 communities (40 shown, 38 thin omitted)
+- 912 nodes · 1784 edges · 79 communities (40 shown, 39 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 25 edges (avg confidence: 0.93)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `ab132e92`
+- Built from commit: `741df4ab`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -82,17 +82,18 @@
 - manifest/README.md
 - ui/README.md
 - 20260923000800_app_migrations.sql
+- dockerEngine
 
 ## God Nodes (most connected - your core abstractions)
 1. `platform()` - 27 edges
 2. `supabase()` - 24 edges
 3. `useAuth()` - 19 edges
-4. `MiniNode.app — Project Plan (v2)` - 17 edges
-5. `base()` - 14 edges
-6. `Account()` - 14 edges
-7. `deployApp()` - 14 edges
-8. `doctor()` - 14 edges
-9. `useStepUp()` - 13 edges
+4. `Account()` - 17 edges
+5. `MiniNode.app — Project Plan (v2)` - 17 edges
+6. `useStepUp()` - 15 edges
+7. `base()` - 14 edges
+8. `deployApp()` - 14 edges
+9. `doctor()` - 14 edges
 10. `mininode` - 13 edges
 
 ## Surprising Connections (you probably didn't know these)
@@ -102,7 +103,7 @@
   docs/runbooks/restore.md → apps/portal/src/components/icons.tsx
 - `Rules` --references--> `supabase()`  [INFERRED]
   CLAUDE.md → apps/portal/src/lib/supabase.ts
-- `6. First deploy` --references--> `main()`  [INFERRED]
+- `5. First deploy and first login` --references--> `main()`  [INFERRED]
   docs/runbooks/first-setup.md → packages/cli/src/bin.ts
 - `Layout` --references--> `api()`  [INFERRED]
   CLAUDE.md → apps/portal/src/lib/api.ts
@@ -110,11 +111,11 @@
 ## Import Cycles
 - None detected.
 
-## Communities (78 total, 38 thin omitted)
+## Communities (79 total, 39 thin omitted)
 
 ### Community 0 - "portal/src/main.tsx"
 Cohesion: 0.05
-Nodes (95): AdminLayout(), dateTime(), euro(), EXTERNAL, LINKS, Ai(), BudgetRow, SCOPE_LABEL (+87 more)
+Nodes (96): AdminLayout(), dateTime(), euro(), EXTERNAL, LINKS, Ai(), BudgetRow, SCOPE_LABEL (+88 more)
 
 ### Community 1 - "deploy/index.ts"
 Cohesion: 0.05
@@ -122,11 +123,11 @@ Nodes (71): flag(), main(), ROOT, appsFromPaths(), changedApps(), parsed, produc
 
 ### Community 2 - "remote.ts"
 Cohesion: 0.07
-Nodes (49): enabled, AUTH_COPY, authEmail(), AuthEmailAction, Email, escapeHtml(), inviteEmail(), layout() (+41 more)
+Nodes (50): enabled, AUTH_COPY, authEmail(), AuthEmailAction, Email, escapeHtml(), inviteEmail(), layout() (+42 more)
 
 ### Community 3 - "src/auth.ts"
-Cohesion: 0.08
-Nodes (43): forbiddenPage(), forwardAuth(), ForwardAuthOptions, pick(), slugFromHost(), fetch(), portalConfig(), decide() (+35 more)
+Cohesion: 0.07
+Nodes (44): forbiddenPage(), forwardAuth(), ForwardAuthOptions, pick(), slugFromHost(), fetch(), portalConfig(), decide() (+36 more)
 
 ### Community 4 - "ai-proxy/src/index.ts"
 Cohesion: 0.09
@@ -141,8 +142,8 @@ Cohesion: 0.12
 Nodes (24): platform.handle_new_user, app_grants_app_slug_idx, apps_touch, audit_log_at_idx, invites_created_by_idx, invites_one_open_per_email_idx, notifications_app_slug_idx, notifications_user_unread_idx (+16 more)
 
 ### Community 7 - "TopBar.tsx"
-Cohesion: 0.17
-Nodes (21): AppsIcon(), base(), BellIcon(), IconProps, MoonIcon(), PinIcon(), ScreenIcon(), SearchIcon() (+13 more)
+Cohesion: 0.16
+Nodes (22): AppsIcon(), base(), BellIcon(), IconProps, Logo(), MoonIcon(), PinIcon(), ScreenIcon() (+14 more)
 
 ### Community 8 - "playbooks/README.md"
 Cohesion: 0.13
@@ -169,8 +170,8 @@ Cohesion: 0.12
 Nodes (16): ai, maxOutputTokens, models, monthlyBudgetEur, build, command, output, data (+8 more)
 
 ### Community 14 - "main.ts"
-Cohesion: 0.15
-Nodes (12): app, config, docker, hypervisor, reaper, scheduler, server, proxmoxClient() (+4 more)
+Cohesion: 0.12
+Nodes (15): cachedGrants(), bool, Config, loadConfig(), schema, app, config, docker (+7 more)
 
 ### Community 15 - "install.ts"
 Cohesion: 0.21
@@ -185,8 +186,8 @@ Cohesion: 0.20
 Nodes (10): ai_usage_app_month_idx, ai_usage_open_idx, ai_usage_user_month_idx, platform.ai_budgets, platform.ai_spent_micro(), platform.ai_usage, platform.my_ai_budget(), auth.users (+2 more)
 
 ### Community 18 - "control.test.ts"
-Cohesion: 0.14
-Nodes (9): cachedGrants(), config, TOKEN, ContainerInfo, demuxLogs(), dockerEngine, RunSpec, packages_gate_src_index_createverifier (+1 more)
+Cohesion: 0.22
+Nodes (8): config, TOKEN, ContainerInfo, demuxLogs(), RunSpec, proxmoxClient(), VmState, ref_undici
 
 ### Community 19 - "platform.remote_sessions"
 Cohesion: 0.27
@@ -197,8 +198,8 @@ Cohesion: 0.17
 Nodes (11): access, default, data, mode, description, kind, name, $schema (+3 more)
 
 ### Community 21 - "runtimes.ts"
-Cohesion: 0.14
-Nodes (14): bool, Config, loadConfig(), schema, createScheduler(), prepareWine(), GuacConnection, PrepareRequest (+6 more)
+Cohesion: 0.22
+Nodes (9): createScheduler(), prepareWine(), GuacConnection, PrepareRequest, PrepareResult, RuntimeConfig, RuntimeName, RuntimeUnavailable (+1 more)
 
 ### Community 22 - "You are building an app for MiniNode"
 Cohesion: 0.18
@@ -222,7 +223,7 @@ Nodes (3): ref_tailwindcss_vite, ref_vite, ref_vitejs_plugin_react
 
 ### Community 27 - "First setup"
 Cohesion: 0.25
-Nodes (8): 1. Cloudflare (dashboard, ~10 min), 2. Cloudflare resources (script, ~1 min), 3. Supabase, 4. GitHub (repository → Settings → Environments → `production`, then `staging`), 5. Worker secrets (once, from your machine), 6. First deploy, 7. NucBox, First setup
+Nodes (8): 1. Cloudflare: add the domain (5 min), 2. Supabase: two values and one click (5 min), 3. GitHub secrets (3 min), 4. Worker secrets (once), 5. First deploy and first login, 6. NucBox (later), Already done, First setup
 
 ### Community 28 - "bootstrap.sh"
 Cohesion: 0.50
@@ -275,7 +276,7 @@ Nodes (3): app_haushalt.entries, app_pinnwand.notes, app_rezepte.recipes
 ## Knowledge Gaps
 - **259 isolated node(s):** `supabase`, `cloudflare-docs`, `context7`, `npx`, `@playwright/mcp` (+254 more)
   These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 385 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
-- **38 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **39 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
@@ -289,8 +290,8 @@ _Questions this graph is uniquely positioned to answer:_
 - **What connects `supabase`, `cloudflare-docs`, `context7` to the rest of the system?**
   _259 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `portal/src/main.tsx` be split into smaller, more focused modules?**
-  _Cohesion score 0.05402570154733805 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.054580645161290325 - nodes in this community are weakly interconnected._
 - **Should `deploy/index.ts` be split into smaller, more focused modules?**
   _Cohesion score 0.050187265917602995 - nodes in this community are weakly interconnected._
 - **Should `remote.ts` be split into smaller, more focused modules?**
-  _Cohesion score 0.06778846153846153 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.06806526806526807 - nodes in this community are weakly interconnected._

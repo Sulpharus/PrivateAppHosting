@@ -188,6 +188,5 @@ Done. Next steps (docs/runbooks/first-setup.md):
   • GitHub secrets: CF_ACCESS_CLIENT_ID / CF_ACCESS_CLIENT_SECRET ← github-deploy.*
   • API Worker secrets: wrangler secret put ACCESS_CLIENT_ID / ACCESS_CLIENT_SECRET (apps/api) ← mininode-api.*
   • GitHub variable AI_GATEWAY_BASE=https://gateway.ai.cloudflare.com/v1/$CLOUDFLARE_ACCOUNT_ID/mininode
-  • Onboard $DOMAIN in Email Service → Email Sending (dashboard, one click).
   Then delete $OUT_DIR.
 EOF

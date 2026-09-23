@@ -10,6 +10,7 @@ export function portalConfig(env: Env) {
     apiUrl: env.API_URL,
     aiUrl: env.AI_URL,
     cookieDomain: env.COOKIE_DOMAIN || undefined,
+    emailEnabled: env.EMAIL_ENABLED === 'true',
   };
 }
 

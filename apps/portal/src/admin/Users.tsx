@@ -141,7 +141,7 @@ function InviteForm(props: { apps: AppRow[]; onCreated(): void }) {
           </select>
         </label>
         <button type="submit" className="button primary">
-          Einladung senden
+          Einladungslink erstellen
         </button>
       </form>
       {error && (
@@ -153,8 +153,8 @@ function InviteForm(props: { apps: AppRow[]; onCreated(): void }) {
         <div className="stack" role="status" style={{ gap: 8 }}>
           <p className="muted">
             {result.emailSent
-              ? 'Einladung verschickt.'
-              : 'Die E-Mail ging nicht raus – teile den Link direkt:'}
+              ? 'Einladung verschickt. Du kannst den Link auch direkt teilen:'
+              : 'Schick der Person diesen Link, z. B. per Messenger:'}
           </p>
           <div className="row">
             <input
@@ -292,6 +292,15 @@ export function Users() {
     void guarded(() => api(`/admin/users/${user.user_id}`, { method: 'DELETE' }));
   };
 
+  const [resetLink, setResetLink] = useState<{ name: string; link: string } | null>(null);
+  const recoveryLink = (user: UserRow) =>
+    void guarded(async () => {
+      const { link } = await api<{ link: string }>(`/admin/users/${user.user_id}/recovery-link`, {
+        method: 'POST',
+      });
+      setResetLink({ name: user.display_name, link });
+    });
+
   const revoke = (invite: InviteRow) =>
     void guarded(() => api(`/invites/${invite.id}`, { method: 'DELETE' }));
 
@@ -375,13 +384,22 @@ export function Users() {
                   </td>
                   <td>
                     {!self && (
-                      <button
-                        type="button"
-                        className="button small danger"
-                        onClick={() => remove(user)}
-                      >
-                        Löschen
-                      </button>
+                      <div className="row" style={{ justifyContent: 'flex-end' }}>
+                        <button
+                          type="button"
+                          className="button small"
+                          onClick={() => recoveryLink(user)}
+                        >
+                          Passwort-Link
+                        </button>
+                        <button
+                          type="button"
+                          className="button small danger"
+                          onClick={() => remove(user)}
+                        >
+                          Löschen
+                        </button>
+                      </div>
                     )}
                   </td>
                 </tr>
@@ -413,6 +431,33 @@ export function Users() {
           ))}
         </section>
       </div>
+
+      <Dialog
+        open={Boolean(resetLink)}
+        title={`Passwort zurücksetzen: ${resetLink?.name ?? ''}`}
+        onClose={() => setResetLink(null)}
+      >
+        <p className="muted">
+          Einmal-Link, gültig für eine Stunde. Schick ihn der Person direkt; damit kann sie ein
+          neues Passwort setzen.
+        </p>
+        <div className="row">
+          <input
+            className="mono"
+            readOnly
+            value={resetLink?.link ?? ''}
+            style={{ flex: 1, minWidth: 0 }}
+            aria-label="Link zum Zurücksetzen"
+          />
+          <button
+            type="button"
+            className="button small"
+            onClick={() => void navigator.clipboard.writeText(resetLink?.link ?? '')}
+          >
+            Kopieren
+          </button>
+        </div>
+      </Dialog>
 
       <GrantsDialog
         user={editing}

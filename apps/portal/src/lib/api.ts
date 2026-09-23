@@ -54,6 +54,8 @@ export async function api<T>(
 export function isReauthError(error: unknown): boolean {
   if (error instanceof ApiError) return error.needsReauth;
   const code = (error as { code?: unknown } | null)?.code;
+  // Supabase Auth: password change with `secure_password_change` and an old session.
+  if (code === 'reauthentication_needed') return true;
   const message = (error as { message?: unknown } | null)?.message;
   return (
     code === '42501' &&

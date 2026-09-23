@@ -147,6 +147,58 @@ describe.skipIf(!enabled)('api against local Supabase', () => {
     expect(data.user).toBeNull();
   });
 
+  it('without Email Sending the invite link is returned for sharing', async () => {
+    const { EMAIL: _unused, ...withoutEmail } = env;
+    const res = await app.request(
+      '/invites',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+        body: JSON.stringify({ email: `nomail-${run}@example.com` }),
+      },
+      withoutEmail as ApiEnv,
+    );
+    expect(res.status).toBe(201);
+    const body = (await res.json()) as { link: string; emailSent: boolean };
+    expect(body.emailSent).toBe(false);
+    expect(body.link).toMatch(/type=invite/);
+  });
+
+  it('lets only the admin create a password reset link', async () => {
+    const { data: target } = await admin.auth.admin.createUser({
+      email: `reset-${run}@example.com`,
+      password,
+      email_confirm: true,
+    });
+    const id = target.user?.id ?? '';
+    users.push(id);
+    const denied = await call(`/admin/users/${id}/recovery-link`, {
+      method: 'POST',
+      token: userToken,
+    });
+    expect(denied.status).toBe(403);
+    const res = await call(`/admin/users/${id}/recovery-link`, {
+      method: 'POST',
+      token: adminToken,
+    });
+    expect(res.status).toBe(200);
+    const { link } = (await res.json()) as { link: string };
+    const { data: audit } = await admin
+      .schema('platform')
+      .from('audit_log')
+      .select('detail')
+      .eq('action', 'user.recovery_link')
+      .contains('detail', { user_id: id });
+    expect(audit).toHaveLength(1);
+    const adminId = (await admin.auth.getUser(adminToken)).data.user?.id ?? '';
+    const self = await call(`/admin/users/${adminId}/recovery-link`, {
+      method: 'POST',
+      token: adminToken,
+    });
+    expect(self.status).toBe(400);
+    expect(link).toMatch(/^https:\/\/mininode\.app\/auth\/confirm\?token_hash=.+&type=recovery/);
+  });
+
   it('refuses remote sessions for apps the user may not use', async () => {
     const res = await call('/remote/sessions', {
       method: 'POST',

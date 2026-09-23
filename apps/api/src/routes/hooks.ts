@@ -80,6 +80,11 @@ export function buildMessages(payload: Payload, portalUrl: string) {
 export const hooks = new Hono<AppContext>();
 
 hooks.post('/send-email', async (c) => {
+  // Only active once Email Sending is bound and the hook is configured in Supabase.
+  const mailer = c.env.EMAIL;
+  if (!mailer || !c.env.SEND_EMAIL_HOOK_SECRET) {
+    return c.json({ error: { http_code: 503, message: 'email sending is not configured' } }, 503);
+  }
   const body = await c.req.text();
   if (!(await verify(c.env.SEND_EMAIL_HOOK_SECRET, c.req.raw.headers, body))) {
     return c.json({ error: { http_code: 401, message: 'invalid signature' } }, 401);
@@ -91,7 +96,7 @@ hooks.post('/send-email', async (c) => {
 
   try {
     for (const message of buildMessages(parsed.data, c.env.PORTAL_URL)) {
-      await c.env.EMAIL.send({ from: { email: c.env.MAIL_FROM, name: 'MiniNode' }, ...message });
+      await mailer.send({ from: { email: c.env.MAIL_FROM, name: 'MiniNode' }, ...message });
     }
   } catch (error) {
     console.error(

@@ -10,7 +10,9 @@ import {
   registerPasskey,
   renamePasskey,
 } from '../auth/passkeys.ts';
+import { useStepUp } from '../auth/StepUp.tsx';
 import { TopBar } from '../components/TopBar.tsx';
+import { isReauthError } from '../lib/api.ts';
 import { platform, supabase } from '../lib/supabase.ts';
 
 const ROLE_LABEL = { admin: 'Admin', trusted: 'Vertrauenswürdig', user: 'Nutzer' } as const;
@@ -27,6 +29,7 @@ function formatDate(value: string | null): string {
 export function Account() {
   const { profile, refreshProfile, signOut } = useAuth();
   const navigate = useNavigate();
+  const { run: stepUp } = useStepUp();
   const [params] = useSearchParams();
   const resetMode = params.get('reset') === '1';
   const [name, setName] = useState(profile?.displayName ?? '');
@@ -73,12 +76,19 @@ export function Account() {
   const savePassword = async () => {
     setError(null);
     setMessage(null);
-    const { error: updateError } = await supabase().auth.updateUser({ password });
-    if (updateError)
-      setError('Das Passwort ist zu schwach (mindestens 10 Zeichen, Buchstaben und Ziffern).');
-    else {
+    try {
+      await stepUp(async () => {
+        const { error: updateError } = await supabase().auth.updateUser({ password });
+        if (updateError) throw updateError;
+      });
       setPassword('');
       setMessage('Passwort geändert.');
+    } catch (err) {
+      setError(
+        isReauthError(err) || (err instanceof Error && err.message === 'Bestätigung abgebrochen.')
+          ? 'Bitte bestätige kurz deine Identität und versuch es noch einmal.'
+          : 'Das Passwort ist zu schwach (mindestens 10 Zeichen, Buchstaben und Ziffern).',
+      );
     }
   };
 

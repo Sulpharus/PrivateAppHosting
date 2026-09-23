@@ -3,6 +3,7 @@ import { Navigate, useNavigate, useSearchParams } from 'react-router';
 import { useAuth } from '../auth/AuthProvider.tsx';
 import { passkeyErrorMessage, passkeysSupported, signInWithPasskey } from '../auth/passkeys.ts';
 import { Logo } from '../components/icons.tsx';
+import { emailEnabled } from '../config.ts';
 import { goTo, safeNext } from '../lib/safe-next.ts';
 import { supabase } from '../lib/supabase.ts';
 
@@ -45,6 +46,10 @@ export function Login() {
 
   const forgotPassword = async () => {
     setError(null);
+    if (!emailEnabled()) {
+      setNotice('Frag den Admin nach einem Link zum Zurücksetzen (Verwaltung → Nutzer & Rollen).');
+      return;
+    }
     if (!email) {
       setError('Gib zuerst deine E-Mail-Adresse ein.');
       return;

@@ -12,10 +12,14 @@ Hono Worker for everything that needs the service role or a secret:
 | `DELETE /remote/sessions/:id` | owner or admin | Ends the session, promotes the next in queue |
 | `POST /remote/installs` | admin, recent | Starts an install of a remote app on the NucBox (snapshot → verify → install) |
 | `GET /remote/installs/:id` | admin | Install job status |
+| `POST /admin/users/:id/recovery-link` | admin, recent | One-time password-reset link to share (no email needed) |
 | `DELETE /admin/users/:id` | admin, recent | Deletes a user |
 | cron `*/5 * * * *` | — | Expires idle sessions, releases stale AI reservations, syncs NucBox runtimes, keeps Supabase awake |
 
-Secrets: `SUPABASE_SECRET_KEY`, `SEND_EMAIL_HOOK_SECRET`, `GUACAMOLE_JSON_SECRET`,
+Email is optional: without the `EMAIL` binding (Workers Paid) invites return only the link and
+`POST /admin/users/:id/recovery-link` (admin, recent) creates password-reset links to share.
+
+Secrets: `SUPABASE_SECRET_KEY`, `SEND_EMAIL_HOOK_SECRET` (only with email), `GUACAMOLE_JSON_SECRET`,
 `NUCBOX_CONTROL_TOKEN`, `ACCESS_CLIENT_ID`, `ACCESS_CLIENT_SECRET` (`wrangler secret put <NAME>`).
 
 ```bash

@@ -420,17 +420,17 @@
       "source_location": "L47"
     },
     {
-      "id": "apps_nucbox_control_src_proxmox_vmstate",
-      "label": "VmState",
+      "id": "apps_nucbox_control_src_config_config",
+      "label": "Config",
       "_callable": true,
       "_callable_class": true,
       "_origin": "ast",
       "community": 14,
       "community_name": "main.ts",
       "file_type": "code",
-      "norm_label": "vmstate",
-      "source_file": "apps/nucbox-control/src/proxmox.ts",
-      "source_location": "L6"
+      "norm_label": "config",
+      "source_file": "apps/nucbox-control/src/config.ts",
+      "source_location": "L45"
     },
     {
       "id": "apps_nucbox_control_src_install_installjob",
@@ -485,19 +485,6 @@
       "source_location": "L5"
     },
     {
-      "id": "apps_nucbox_control_src_docker_dockerengine",
-      "label": "dockerEngine",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 18,
-      "community_name": "control.test.ts",
-      "file_type": "code",
-      "norm_label": "dockerengine",
-      "source_file": "apps/nucbox-control/src/docker.ts",
-      "source_location": "L35"
-    },
-    {
       "id": "apps_nucbox_control_src_docker_runspec",
       "label": "RunSpec",
       "_callable": true,
@@ -509,6 +496,19 @@
       "norm_label": "runspec",
       "source_file": "apps/nucbox-control/src/docker.ts",
       "source_location": "L11"
+    },
+    {
+      "id": "apps_nucbox_control_src_proxmox_vmstate",
+      "label": "VmState",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 18,
+      "community_name": "control.test.ts",
+      "file_type": "code",
+      "norm_label": "vmstate",
+      "source_file": "apps/nucbox-control/src/proxmox.ts",
+      "source_location": "L6"
     },
     {
       "id": "apps_api_src_email_templates_authemailaction",
@@ -652,19 +652,6 @@
       "norm_label": "remotesessionrow",
       "source_file": "apps/api/src/routes/remote.ts",
       "source_location": "L16"
-    },
-    {
-      "id": "apps_nucbox_control_src_config_config",
-      "label": "Config",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 21,
-      "community_name": "runtimes.ts",
-      "file_type": "code",
-      "norm_label": "config",
-      "source_file": "apps/nucbox-control/src/config.ts",
-      "source_location": "L45"
     },
     {
       "id": "apps_nucbox_control_src_runtimes_guacconnection",
@@ -1239,6 +1226,19 @@
       "source_location": "L3"
     },
     {
+      "id": "apps_nucbox_control_src_docker_dockerengine",
+      "label": "dockerEngine",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 78,
+      "community_name": "dockerEngine",
+      "file_type": "code",
+      "norm_label": "dockerengine",
+      "source_file": "apps/nucbox-control/src/docker.ts",
+      "source_location": "L35"
+    },
+    {
       "id": "packages_sdk_src_ai_aichatoptions",
       "label": "AiChatOptions",
       "_callable": true,
@@ -1617,18 +1617,6 @@
       "source_location": "L4"
     },
     {
-      "id": "apps_portal_src_components_icons_logo",
-      "label": "Logo()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 0,
-      "community_name": "portal/src/main.tsx",
-      "file_type": "code",
-      "norm_label": "logo()",
-      "source_file": "apps/portal/src/components/icons.tsx",
-      "source_location": "L16"
-    },
-    {
       "id": "apps_portal_src_components_remotecard_remotecard",
       "label": "RemoteCard()",
       "_callable": true,
@@ -1641,6 +1629,18 @@
       "source_location": "L18"
     },
     {
+      "id": "apps_portal_src_config_emailenabled",
+      "label": "emailEnabled()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 0,
+      "community_name": "portal/src/main.tsx",
+      "file_type": "code",
+      "norm_label": "emailenabled()",
+      "source_file": "apps/portal/src/config.ts",
+      "source_location": "L34"
+    },
+    {
       "id": "apps_portal_src_config_loadconfig",
       "label": "loadConfig()",
       "_callable": true,
@@ -1650,7 +1650,19 @@
       "file_type": "code",
       "norm_label": "loadconfig()",
       "source_file": "apps/portal/src/config.ts",
-      "source_location": "L10"
+      "source_location": "L12"
+    },
+    {
+      "id": "apps_portal_src_config_setruntimeconfig",
+      "label": "setRuntimeConfig()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 0,
+      "community_name": "portal/src/main.tsx",
+      "file_type": "code",
+      "norm_label": "setruntimeconfig()",
+      "source_file": "apps/portal/src/config.ts",
+      "source_location": "L30"
     },
     {
       "id": "apps_portal_src_lib_api_api",
@@ -1890,7 +1902,7 @@
       "file_type": "code",
       "norm_label": "account()",
       "source_file": "apps/portal/src/routes/Account.tsx",
-      "source_location": "L27"
+      "source_location": "L29"
     },
     {
       "id": "apps_portal_src_routes_account_formatdate",
@@ -1902,7 +1914,7 @@
       "file_type": "code",
       "norm_label": "formatdate()",
       "source_file": "apps/portal/src/routes/Account.tsx",
-      "source_location": "L18"
+      "source_location": "L20"
     },
     {
       "id": "apps_portal_src_routes_authpages_authcard",
@@ -1974,7 +1986,7 @@
       "file_type": "code",
       "norm_label": "login()",
       "source_file": "apps/portal/src/routes/Login.tsx",
-      "source_location": "L9"
+      "source_location": "L10"
     },
     {
       "id": "apps_portal_src_routes_welcome_welcome",
@@ -2445,16 +2457,28 @@
       "source_location": "L65"
     },
     {
-      "id": "apps_nucbox_control_src_proxmox_proxmoxclient",
-      "label": "proxmoxClient()",
+      "id": "apps_nucbox_control_src_auth_cachedgrants",
+      "label": "cachedGrants()",
       "_callable": true,
       "_origin": "ast",
       "community": 14,
       "community_name": "main.ts",
       "file_type": "code",
-      "norm_label": "proxmoxclient()",
-      "source_file": "apps/nucbox-control/src/proxmox.ts",
-      "source_location": "L25"
+      "norm_label": "cachedgrants()",
+      "source_file": "apps/nucbox-control/src/auth.ts",
+      "source_location": "L21"
+    },
+    {
+      "id": "apps_nucbox_control_src_config_loadconfig",
+      "label": "loadConfig()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 14,
+      "community_name": "main.ts",
+      "file_type": "code",
+      "norm_label": "loadconfig()",
+      "source_file": "apps/nucbox-control/src/config.ts",
+      "source_location": "L47"
     },
     {
       "id": "apps_nucbox_control_src_install_createinstaller",
@@ -2649,18 +2673,6 @@
       "source_location": "L40"
     },
     {
-      "id": "apps_nucbox_control_src_auth_cachedgrants",
-      "label": "cachedGrants()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 18,
-      "community_name": "control.test.ts",
-      "file_type": "code",
-      "norm_label": "cachedgrants()",
-      "source_file": "apps/nucbox-control/src/auth.ts",
-      "source_location": "L21"
-    },
-    {
       "id": "apps_nucbox_control_src_control_test_fakedocker",
       "label": "fakeDocker()",
       "_callable": true,
@@ -2697,64 +2709,16 @@
       "source_location": "L139"
     },
     {
-      "id": "apps_nucbox_control_src_docker_dockerengine_inspect",
-      "label": ".inspect()",
+      "id": "apps_nucbox_control_src_proxmox_proxmoxclient",
+      "label": "proxmoxClient()",
       "_callable": true,
       "_origin": "ast",
       "community": 18,
       "community_name": "control.test.ts",
       "file_type": "code",
-      "norm_label": ".inspect()",
-      "source_file": "apps/nucbox-control/src/docker.ts",
-      "source_location": "L27"
-    },
-    {
-      "id": "apps_nucbox_control_src_docker_dockerengine_list",
-      "label": ".list()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 18,
-      "community_name": "control.test.ts",
-      "file_type": "code",
-      "norm_label": ".list()",
-      "source_file": "apps/nucbox-control/src/docker.ts",
-      "source_location": "L26"
-    },
-    {
-      "id": "apps_nucbox_control_src_docker_dockerengine_run",
-      "label": ".run()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 18,
-      "community_name": "control.test.ts",
-      "file_type": "code",
-      "norm_label": ".run()",
-      "source_file": "apps/nucbox-control/src/docker.ts",
-      "source_location": "L29"
-    },
-    {
-      "id": "apps_nucbox_control_src_docker_dockerengine_stop",
-      "label": ".stop()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 18,
-      "community_name": "control.test.ts",
-      "file_type": "code",
-      "norm_label": ".stop()",
-      "source_file": "apps/nucbox-control/src/docker.ts",
-      "source_location": "L30"
-    },
-    {
-      "id": "apps_nucbox_control_src_docker_dockerengine_wait",
-      "label": ".wait()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 18,
-      "community_name": "control.test.ts",
-      "file_type": "code",
-      "norm_label": ".wait()",
-      "source_file": "apps/nucbox-control/src/docker.ts",
-      "source_location": "L32"
+      "norm_label": "proxmoxclient()",
+      "source_file": "apps/nucbox-control/src/proxmox.ts",
+      "source_location": "L25"
     },
     {
       "id": "apps_api_src_api_integration_test_send",
@@ -2838,7 +2802,7 @@
       "file_type": "code",
       "norm_label": "maintenance()",
       "source_file": "apps/api/src/index.ts",
-      "source_location": "L57"
+      "source_location": "L97"
     },
     {
       "id": "apps_api_src_index_scheduled",
@@ -2850,7 +2814,7 @@
       "file_type": "code",
       "norm_label": "scheduled()",
       "source_file": "apps/api/src/index.ts",
-      "source_location": "L81"
+      "source_location": "L121"
     },
     {
       "id": "apps_api_src_lib_auth_problem",
@@ -3117,18 +3081,6 @@
       "source_location": "L120"
     },
     {
-      "id": "apps_nucbox_control_src_config_loadconfig",
-      "label": "loadConfig()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 21,
-      "community_name": "runtimes.ts",
-      "file_type": "code",
-      "norm_label": "loadconfig()",
-      "source_file": "apps/nucbox-control/src/config.ts",
-      "source_location": "L47"
-    },
-    {
       "id": "apps_nucbox_control_src_runtimes_createscheduler",
       "label": "createScheduler()",
       "_callable": true,
@@ -3366,7 +3318,7 @@
       "file_type": "code",
       "norm_label": "fetch()",
       "source_file": "apps/portal/worker/index.ts",
-      "source_location": "L17"
+      "source_location": "L18"
     },
     {
       "id": "apps_portal_worker_index_portalconfig",
@@ -3981,6 +3933,18 @@
       "source_location": "L40"
     },
     {
+      "id": "apps_portal_src_components_icons_logo",
+      "label": "Logo()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 7,
+      "community_name": "TopBar.tsx",
+      "file_type": "code",
+      "norm_label": "logo()",
+      "source_file": "apps/portal/src/components/icons.tsx",
+      "source_location": "L16"
+    },
+    {
       "id": "apps_portal_src_components_icons_moonicon",
       "label": "MoonIcon()",
       "_callable": true,
@@ -4159,6 +4123,66 @@
       "norm_label": "stored()",
       "source_file": "apps/portal/src/lib/theme.ts",
       "source_location": "L6"
+    },
+    {
+      "id": "apps_nucbox_control_src_docker_dockerengine_inspect",
+      "label": ".inspect()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 78,
+      "community_name": "dockerEngine",
+      "file_type": "code",
+      "norm_label": ".inspect()",
+      "source_file": "apps/nucbox-control/src/docker.ts",
+      "source_location": "L27"
+    },
+    {
+      "id": "apps_nucbox_control_src_docker_dockerengine_list",
+      "label": ".list()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 78,
+      "community_name": "dockerEngine",
+      "file_type": "code",
+      "norm_label": ".list()",
+      "source_file": "apps/nucbox-control/src/docker.ts",
+      "source_location": "L26"
+    },
+    {
+      "id": "apps_nucbox_control_src_docker_dockerengine_run",
+      "label": ".run()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 78,
+      "community_name": "dockerEngine",
+      "file_type": "code",
+      "norm_label": ".run()",
+      "source_file": "apps/nucbox-control/src/docker.ts",
+      "source_location": "L29"
+    },
+    {
+      "id": "apps_nucbox_control_src_docker_dockerengine_stop",
+      "label": ".stop()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 78,
+      "community_name": "dockerEngine",
+      "file_type": "code",
+      "norm_label": ".stop()",
+      "source_file": "apps/nucbox-control/src/docker.ts",
+      "source_location": "L30"
+    },
+    {
+      "id": "apps_nucbox_control_src_docker_dockerengine_wait",
+      "label": ".wait()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 78,
+      "community_name": "dockerEngine",
+      "file_type": "code",
+      "norm_label": ".wait()",
+      "source_file": "apps/nucbox-control/src/docker.ts",
+      "source_location": "L32"
     },
     {
       "id": "packages_sdk_src_config_appschema",
@@ -4718,7 +4742,7 @@
       "file_type": "code",
       "norm_label": "role_label",
       "source_file": "apps/portal/src/routes/Account.tsx",
-      "source_location": "L16"
+      "source_location": "L18"
     },
     {
       "id": "apps_portal_src_routes_authpages",
@@ -5929,6 +5953,39 @@
       "source_location": "L8"
     },
     {
+      "id": "apps_nucbox_control_src_config",
+      "label": "nucbox-control/src/config.ts",
+      "_origin": "ast",
+      "community": 14,
+      "community_name": "main.ts",
+      "file_type": "code",
+      "norm_label": "nucbox-control/src/config.ts",
+      "source_file": "apps/nucbox-control/src/config.ts",
+      "source_location": "L1"
+    },
+    {
+      "id": "apps_nucbox_control_src_config_bool",
+      "label": "bool",
+      "_origin": "ast",
+      "community": 14,
+      "community_name": "main.ts",
+      "file_type": "code",
+      "norm_label": "bool",
+      "source_file": "apps/nucbox-control/src/config.ts",
+      "source_location": "L3"
+    },
+    {
+      "id": "apps_nucbox_control_src_config_schema",
+      "label": "schema",
+      "_origin": "ast",
+      "community": 14,
+      "community_name": "main.ts",
+      "file_type": "code",
+      "norm_label": "schema",
+      "source_file": "apps/nucbox-control/src/config.ts",
+      "source_location": "L8"
+    },
+    {
       "id": "apps_nucbox_control_src_main",
       "label": "main.ts",
       "_origin": "ast",
@@ -6015,17 +6072,6 @@
       "norm_label": "server",
       "source_file": "apps/nucbox-control/src/main.ts",
       "source_location": "L64"
-    },
-    {
-      "id": "apps_nucbox_control_src_proxmox",
-      "label": "proxmox.ts",
-      "_origin": "ast",
-      "community": 14,
-      "community_name": "main.ts",
-      "file_type": "code",
-      "norm_label": "proxmox.ts",
-      "source_file": "apps/nucbox-control/src/proxmox.ts",
-      "source_location": "L1"
     },
     {
       "id": "apps_nucbox_control_src_install",
@@ -6347,6 +6393,17 @@
       "source_location": "L1"
     },
     {
+      "id": "apps_nucbox_control_src_proxmox",
+      "label": "proxmox.ts",
+      "_origin": "ast",
+      "community": 18,
+      "community_name": "control.test.ts",
+      "file_type": "code",
+      "norm_label": "proxmox.ts",
+      "source_file": "apps/nucbox-control/src/proxmox.ts",
+      "source_location": "L1"
+    },
+    {
       "id": "supabase_migrations_20260923000400_remote_sessions",
       "label": "20260923000400_remote_sessions.sql",
       "_origin": "ast",
@@ -6564,7 +6621,7 @@
       "file_type": "code",
       "norm_label": "app",
       "source_file": "apps/api/src/index.ts",
-      "source_location": "L10"
+      "source_location": "L11"
     },
     {
       "id": "apps_api_src_lib_auth",
@@ -6850,39 +6907,6 @@
       "file_type": "code",
       "norm_label": "target",
       "source_file": "fixtures/static-html/expected/hallo/mininode.json",
-      "source_location": "L8"
-    },
-    {
-      "id": "apps_nucbox_control_src_config",
-      "label": "nucbox-control/src/config.ts",
-      "_origin": "ast",
-      "community": 21,
-      "community_name": "runtimes.ts",
-      "file_type": "code",
-      "norm_label": "nucbox-control/src/config.ts",
-      "source_file": "apps/nucbox-control/src/config.ts",
-      "source_location": "L1"
-    },
-    {
-      "id": "apps_nucbox_control_src_config_bool",
-      "label": "bool",
-      "_origin": "ast",
-      "community": 21,
-      "community_name": "runtimes.ts",
-      "file_type": "code",
-      "norm_label": "bool",
-      "source_file": "apps/nucbox-control/src/config.ts",
-      "source_location": "L3"
-    },
-    {
-      "id": "apps_nucbox_control_src_config_schema",
-      "label": "schema",
-      "_origin": "ast",
-      "community": 21,
-      "community_name": "runtimes.ts",
-      "file_type": "code",
-      "norm_label": "schema",
-      "source_file": "apps/nucbox-control/src/config.ts",
       "source_location": "L8"
     },
     {
@@ -7323,88 +7347,88 @@
       "source_location": "L1"
     },
     {
-      "id": "docs_runbooks_first_setup_1_cloudflare_dashboard_10_min",
-      "label": "1. Cloudflare (dashboard, ~10 min)",
+      "id": "docs_runbooks_first_setup_1_cloudflare_add_the_domain_5_min",
+      "label": "1. Cloudflare: add the domain (5 min)",
       "_origin": "ast",
       "community": 27,
       "community_name": "First setup",
       "file_type": "document",
       "node_kind": "heading",
-      "norm_label": "1. cloudflare (dashboard, ~10 min)",
+      "norm_label": "1. cloudflare: add the domain (5 min)",
       "source_file": "docs/runbooks/first-setup.md",
-      "source_location": "L6"
+      "source_location": "L15"
     },
     {
-      "id": "docs_runbooks_first_setup_2_cloudflare_resources_script_1_min",
-      "label": "2. Cloudflare resources (script, ~1 min)",
+      "id": "docs_runbooks_first_setup_2_supabase_two_values_and_one_click_5_min",
+      "label": "2. Supabase: two values and one click (5 min)",
       "_origin": "ast",
       "community": 27,
       "community_name": "First setup",
       "file_type": "document",
       "node_kind": "heading",
-      "norm_label": "2. cloudflare resources (script, ~1 min)",
+      "norm_label": "2. supabase: two values and one click (5 min)",
       "source_file": "docs/runbooks/first-setup.md",
-      "source_location": "L39"
+      "source_location": "L41"
     },
     {
-      "id": "docs_runbooks_first_setup_3_supabase",
-      "label": "3. Supabase",
+      "id": "docs_runbooks_first_setup_3_github_secrets_3_min",
+      "label": "3. GitHub secrets (3 min)",
       "_origin": "ast",
       "community": 27,
       "community_name": "First setup",
       "file_type": "document",
       "node_kind": "heading",
-      "norm_label": "3. supabase",
+      "norm_label": "3. github secrets (3 min)",
       "source_file": "docs/runbooks/first-setup.md",
-      "source_location": "L58"
+      "source_location": "L50"
     },
     {
-      "id": "docs_runbooks_first_setup_4_github_repository_settings_environments_production_then_staging",
-      "label": "4. GitHub (repository \u2192 Settings \u2192 Environments \u2192 `production`, then `staging`)",
+      "id": "docs_runbooks_first_setup_4_worker_secrets_once",
+      "label": "4. Worker secrets (once)",
       "_origin": "ast",
       "community": 27,
       "community_name": "First setup",
       "file_type": "document",
       "node_kind": "heading",
-      "norm_label": "4. github (repository \u2192 settings \u2192 environments \u2192 `production`, then `staging`)",
+      "norm_label": "4. worker secrets (once)",
       "source_file": "docs/runbooks/first-setup.md",
-      "source_location": "L76"
+      "source_location": "L61"
     },
     {
-      "id": "docs_runbooks_first_setup_5_worker_secrets_once_from_your_machine",
-      "label": "5. Worker secrets (once, from your machine)",
+      "id": "docs_runbooks_first_setup_5_first_deploy_and_first_login",
+      "label": "5. First deploy and first login",
       "_origin": "ast",
       "community": 27,
       "community_name": "First setup",
       "file_type": "document",
       "node_kind": "heading",
-      "norm_label": "5. worker secrets (once, from your machine)",
+      "norm_label": "5. first deploy and first login",
       "source_file": "docs/runbooks/first-setup.md",
-      "source_location": "L95"
+      "source_location": "L81"
     },
     {
-      "id": "docs_runbooks_first_setup_6_first_deploy",
-      "label": "6. First deploy",
+      "id": "docs_runbooks_first_setup_6_nucbox_later",
+      "label": "6. NucBox (later)",
       "_origin": "ast",
       "community": 27,
       "community_name": "First setup",
       "file_type": "document",
       "node_kind": "heading",
-      "norm_label": "6. first deploy",
+      "norm_label": "6. nucbox (later)",
       "source_file": "docs/runbooks/first-setup.md",
-      "source_location": "L116"
+      "source_location": "L91"
     },
     {
-      "id": "docs_runbooks_first_setup_7_nucbox",
-      "label": "7. NucBox",
+      "id": "docs_runbooks_first_setup_already_done",
+      "label": "Already done",
       "_origin": "ast",
       "community": 27,
       "community_name": "First setup",
       "file_type": "document",
       "node_kind": "heading",
-      "norm_label": "7. nucbox",
+      "norm_label": "already done",
       "source_file": "docs/runbooks/first-setup.md",
-      "source_location": "L122"
+      "source_location": "L5"
     },
     {
       "id": "docs_runbooks_first_setup_first_setup",
@@ -10492,6 +10516,18 @@
       "type": "external"
     },
     {
+      "id": "packages_gate_src_index_createverifier",
+      "label": "packages_gate_src_index_createverifier",
+      "_origin": "semantic",
+      "community": 14,
+      "community_name": "main.ts",
+      "external": true,
+      "file_type": "concept",
+      "norm_label": "packages_gate_src_index_createverifier",
+      "source_file": "",
+      "type": "external"
+    },
+    {
       "id": "packages_gate_src_index_supabasegrantchecker",
       "label": "packages_gate_src_index_supabasegrantchecker",
       "_origin": "semantic",
@@ -10512,18 +10548,6 @@
       "external": true,
       "file_type": "concept",
       "norm_label": "ref_hono_node_server",
-      "source_file": "",
-      "type": "external"
-    },
-    {
-      "id": "ref_undici",
-      "label": "ref_undici",
-      "_origin": "semantic",
-      "community": 14,
-      "community_name": "main.ts",
-      "external": true,
-      "file_type": "concept",
-      "norm_label": "ref_undici",
       "source_file": "",
       "type": "external"
     },
@@ -10552,26 +10576,14 @@
       "type": "external"
     },
     {
-      "id": "packages_gate_src_index_createverifier",
-      "label": "packages_gate_src_index_createverifier",
+      "id": "ref_undici",
+      "label": "ref_undici",
       "_origin": "semantic",
       "community": 18,
       "community_name": "control.test.ts",
       "external": true,
       "file_type": "concept",
-      "norm_label": "packages_gate_src_index_createverifier",
-      "source_file": "",
-      "type": "external"
-    },
-    {
-      "id": "packages_gate_src_index_verifier",
-      "label": "packages_gate_src_index_verifier",
-      "_origin": "semantic",
-      "community": 18,
-      "community_name": "control.test.ts",
-      "external": true,
-      "file_type": "concept",
-      "norm_label": "packages_gate_src_index_verifier",
+      "norm_label": "ref_undici",
       "source_file": "",
       "type": "external"
     },
@@ -10615,8 +10627,8 @@
       "id": "ref_zod",
       "label": "ref_zod",
       "_origin": "semantic",
-      "community": 21,
-      "community_name": "runtimes.ts",
+      "community": 2,
+      "community_name": "remote.ts",
       "external": true,
       "file_type": "concept",
       "norm_label": "ref_zod",
@@ -10716,6 +10728,18 @@
       "external": true,
       "file_type": "concept",
       "norm_label": "packages_gate_src_index_securityheaders",
+      "source_file": "",
+      "type": "external"
+    },
+    {
+      "id": "packages_gate_src_index_verifier",
+      "label": "packages_gate_src_index_verifier",
+      "_origin": "semantic",
+      "community": 3,
+      "community_name": "src/auth.ts",
+      "external": true,
+      "file_type": "concept",
+      "norm_label": "packages_gate_src_index_verifier",
       "source_file": "",
       "type": "external"
     },
@@ -11059,18 +11083,6 @@
     },
     {
       "source": "apps_api_src_index_maintenance",
-      "target": "apps_api_src_lib_supabase_adminclient",
-      "relation": "calls",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "context": "call",
-      "source_file": "apps/api/src/index.ts",
-      "source_location": "L58",
-      "weight": 1.0
-    },
-    {
-      "source": "apps_api_src_index_maintenance",
       "target": "apps_api_src_routes_remote_controlheaders",
       "relation": "calls",
       "_origin": "ast",
@@ -11078,7 +11090,19 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "apps/api/src/index.ts",
-      "source_location": "L71",
+      "source_location": "L111",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_api_src_index_maintenance",
+      "target": "apps_api_src_lib_supabase_adminclient",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "apps/api/src/index.ts",
+      "source_location": "L98",
       "weight": 1.0
     },
     {
@@ -11090,7 +11114,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "apps/api/src/index.ts",
-      "source_location": "L82",
+      "source_location": "L122",
       "weight": 1.0
     },
     {
@@ -11966,7 +11990,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "apps/portal/src/admin/Users.tsx",
-      "source_location": "L374",
+      "source_location": "L383",
       "weight": 1.0
     },
     {
@@ -12546,20 +12570,20 @@
       "weight": 1.0
     },
     {
-      "source": "apps_portal_src_routes_account_account",
-      "target": "apps_portal_src_routes_account_formatdate",
+      "source": "apps_portal_src_main_start",
+      "target": "apps_portal_src_config_setruntimeconfig",
       "relation": "calls",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "context": "call",
-      "source_file": "apps/portal/src/routes/Account.tsx",
-      "source_location": "L158",
+      "source_file": "apps/portal/src/main.tsx",
+      "source_location": "L75",
       "weight": 1.0
     },
     {
       "source": "apps_portal_src_routes_account_account",
-      "target": "apps_portal_src_auth_passkeys_renamepasskey",
+      "target": "apps_portal_src_routes_account_formatdate",
       "relation": "calls",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -12571,7 +12595,7 @@
     },
     {
       "source": "apps_portal_src_routes_account_account",
-      "target": "apps_portal_src_auth_passkeys_deletepasskey",
+      "target": "apps_portal_src_auth_passkeys_renamepasskey",
       "relation": "calls",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -12583,6 +12607,18 @@
     },
     {
       "source": "apps_portal_src_routes_account_account",
+      "target": "apps_portal_src_auth_passkeys_deletepasskey",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "apps/portal/src/routes/Account.tsx",
+      "source_location": "L188",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_portal_src_routes_account_account",
       "target": "apps_portal_src_auth_authprovider_authstate_signout",
       "relation": "calls",
       "_origin": "ast",
@@ -12590,7 +12626,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "apps/portal/src/routes/Account.tsx",
-      "source_location": "L225",
+      "source_location": "L235",
       "weight": 1.0
     },
     {
@@ -12602,7 +12638,19 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "apps/portal/src/routes/Account.tsx",
-      "source_location": "L28",
+      "source_location": "L30",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_portal_src_routes_account_account",
+      "target": "apps_portal_src_auth_stepup_usestepup",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "apps/portal/src/routes/Account.tsx",
+      "source_location": "L32",
       "weight": 1.0
     },
     {
@@ -12614,7 +12662,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "apps/portal/src/routes/Account.tsx",
-      "source_location": "L39",
+      "source_location": "L42",
       "weight": 1.0
     },
     {
@@ -12626,7 +12674,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "apps/portal/src/routes/Account.tsx",
-      "source_location": "L39",
+      "source_location": "L42",
       "weight": 1.0
     },
     {
@@ -12638,7 +12686,19 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "apps/portal/src/routes/Account.tsx",
-      "source_location": "L58",
+      "source_location": "L61",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_portal_src_routes_account_account",
+      "target": "apps_portal_src_auth_stepup_stepup_run",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "apps/portal/src/routes/Account.tsx",
+      "source_location": "L66",
       "weight": 1.0
     },
     {
@@ -12650,7 +12710,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "apps/portal/src/routes/Account.tsx",
-      "source_location": "L65",
+      "source_location": "L68",
       "weight": 1.0
     },
     {
@@ -12662,7 +12722,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "apps/portal/src/routes/Account.tsx",
-      "source_location": "L70",
+      "source_location": "L73",
       "weight": 1.0
     },
     {
@@ -12674,7 +12734,19 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "apps/portal/src/routes/Account.tsx",
-      "source_location": "L76",
+      "source_location": "L81",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_portal_src_routes_account_account",
+      "target": "apps_portal_src_lib_api_isreautherror",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "apps/portal/src/routes/Account.tsx",
+      "source_location": "L88",
       "weight": 1.0
     },
     {
@@ -12854,7 +12926,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "apps/portal/src/routes/Login.tsx",
-      "source_location": "L12",
+      "source_location": "L13",
       "weight": 1.0
     },
     {
@@ -12866,7 +12938,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "apps/portal/src/routes/Login.tsx",
-      "source_location": "L13",
+      "source_location": "L14",
       "weight": 1.0
     },
     {
@@ -12878,7 +12950,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "apps/portal/src/routes/Login.tsx",
-      "source_location": "L22",
+      "source_location": "L23",
       "weight": 1.0
     },
     {
@@ -12890,7 +12962,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "apps/portal/src/routes/Login.tsx",
-      "source_location": "L28",
+      "source_location": "L29",
       "weight": 1.0
     },
     {
@@ -12902,7 +12974,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "apps/portal/src/routes/Login.tsx",
-      "source_location": "L31",
+      "source_location": "L32",
       "weight": 1.0
     },
     {
@@ -12914,7 +12986,19 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "apps/portal/src/routes/Login.tsx",
-      "source_location": "L40",
+      "source_location": "L41",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_portal_src_routes_login_login",
+      "target": "apps_portal_src_config_emailenabled",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "apps/portal/src/routes/Login.tsx",
+      "source_location": "L49",
       "weight": 1.0
     },
     {
@@ -12926,7 +13010,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "apps/portal/src/routes/Login.tsx",
-      "source_location": "L73",
+      "source_location": "L78",
       "weight": 1.0
     },
     {
@@ -13046,7 +13130,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "apps/portal/worker/index.ts",
-      "source_location": "L19",
+      "source_location": "L20",
       "weight": 1.0
     },
     {
@@ -13058,7 +13142,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "apps/portal/worker/index.ts",
-      "source_location": "L22",
+      "source_location": "L23",
       "weight": 1.0
     },
     {
@@ -13070,7 +13154,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "apps/portal/worker/index.ts",
-      "source_location": "L26",
+      "source_location": "L27",
       "weight": 1.0
     },
     {
@@ -13082,7 +13166,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "apps/portal/worker/index.ts",
-      "source_location": "L28",
+      "source_location": "L29",
       "weight": 1.0
     },
     {
@@ -14927,7 +15011,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "apps/api/src/index.ts",
-      "source_location": "L3",
+      "source_location": "L4",
       "weight": 1.0
     },
     {
@@ -14939,7 +15023,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "apps/api/src/index.ts",
-      "source_location": "L4",
+      "source_location": "L5",
       "weight": 1.0
     },
     {
@@ -14951,7 +15035,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "apps/api/src/index.ts",
-      "source_location": "L4",
+      "source_location": "L5",
       "weight": 1.0
     },
     {
@@ -14963,7 +15047,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "apps/api/src/index.ts",
-      "source_location": "L4",
+      "source_location": "L5",
       "weight": 1.0
     },
     {
@@ -14975,7 +15059,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "apps/api/src/index.ts",
-      "source_location": "L5",
+      "source_location": "L6",
       "weight": 1.0
     },
     {
@@ -14987,7 +15071,19 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "apps/api/src/index.ts",
-      "source_location": "L6",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_api_src_index",
+      "target": "apps_api_src_routes_invites_confirmurl",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "apps/api/src/index.ts",
+      "source_location": "L8",
       "weight": 1.0
     },
     {
@@ -14999,7 +15095,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "apps/api/src/index.ts",
-      "source_location": "L7",
+      "source_location": "L8",
       "weight": 1.0
     },
     {
@@ -15011,7 +15107,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "apps/api/src/index.ts",
-      "source_location": "L8",
+      "source_location": "L9",
       "weight": 1.0
     },
     {
@@ -15023,7 +15119,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "apps/api/src/index.ts",
-      "source_location": "L8",
+      "source_location": "L9",
       "weight": 1.0
     },
     {
@@ -16996,6 +17092,18 @@
     },
     {
       "source": "apps_portal_src_main",
+      "target": "apps_portal_src_config_setruntimeconfig",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "apps/portal/src/main.tsx",
+      "source_location": "L6",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_portal_src_main",
       "target": "apps_portal_src_lib_api_initapi",
       "relation": "imports",
       "_origin": "ast",
@@ -17032,7 +17140,7 @@
     },
     {
       "source": "apps_portal_src_routes_account",
-      "target": "apps_portal_src_components_topbar_topbar",
+      "target": "apps_portal_src_auth_stepup_usestepup",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -17044,7 +17152,7 @@
     },
     {
       "source": "apps_portal_src_routes_account",
-      "target": "apps_portal_src_lib_supabase_platform",
+      "target": "apps_portal_src_components_topbar_topbar",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -17056,6 +17164,30 @@
     },
     {
       "source": "apps_portal_src_routes_account",
+      "target": "apps_portal_src_lib_api_isreautherror",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "apps/portal/src/routes/Account.tsx",
+      "source_location": "L15",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_portal_src_routes_account",
+      "target": "apps_portal_src_lib_supabase_platform",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "apps/portal/src/routes/Account.tsx",
+      "source_location": "L16",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_portal_src_routes_account",
       "target": "apps_portal_src_lib_supabase_supabase",
       "relation": "imports",
       "_origin": "ast",
@@ -17063,7 +17195,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "apps/portal/src/routes/Account.tsx",
-      "source_location": "L14",
+      "source_location": "L16",
       "weight": 1.0
     },
     {
@@ -17464,7 +17596,7 @@
     },
     {
       "source": "apps_portal_src_routes_login",
-      "target": "apps_portal_src_lib_safe_next_goto",
+      "target": "apps_portal_src_config_emailenabled",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -17472,6 +17604,18 @@
       "context": "import",
       "source_file": "apps/portal/src/routes/Login.tsx",
       "source_location": "L6",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_portal_src_routes_login",
+      "target": "apps_portal_src_lib_safe_next_goto",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "apps/portal/src/routes/Login.tsx",
+      "source_location": "L7",
       "weight": 1.0
     },
     {
@@ -17483,7 +17627,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "apps/portal/src/routes/Login.tsx",
-      "source_location": "L6",
+      "source_location": "L7",
       "weight": 1.0
     },
     {
@@ -17495,7 +17639,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "apps/portal/src/routes/Login.tsx",
-      "source_location": "L7",
+      "source_location": "L8",
       "weight": 1.0
     },
     {
@@ -19016,7 +19160,7 @@
     },
     {
       "source": "apps_api_src_index",
-      "target": "apps_api_src_env",
+      "target": "ref_zod",
       "relation": "imports_from",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -19024,6 +19168,18 @@
       "context": "import",
       "source_file": "apps/api/src/index.ts",
       "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_api_src_index",
+      "target": "apps_api_src_env",
+      "relation": "imports_from",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "apps/api/src/index.ts",
+      "source_location": "L4",
       "type_only": true,
       "weight": 1.0
     },
@@ -19036,7 +19192,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "apps/api/src/index.ts",
-      "source_location": "L4",
+      "source_location": "L5",
       "weight": 1.0
     },
     {
@@ -19048,7 +19204,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "apps/api/src/index.ts",
-      "source_location": "L5",
+      "source_location": "L6",
       "weight": 1.0
     },
     {
@@ -19060,7 +19216,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "apps/api/src/index.ts",
-      "source_location": "L6",
+      "source_location": "L7",
       "weight": 1.0
     },
     {
@@ -19072,7 +19228,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "apps/api/src/index.ts",
-      "source_location": "L7",
+      "source_location": "L8",
       "weight": 1.0
     },
     {
@@ -19084,7 +19240,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "apps/api/src/index.ts",
-      "source_location": "L8",
+      "source_location": "L9",
       "weight": 1.0
     },
     {
@@ -20809,7 +20965,7 @@
     },
     {
       "source": "apps_portal_src_routes_account",
-      "target": "apps_portal_src_components_topbar",
+      "target": "apps_portal_src_auth_stepup",
       "relation": "imports_from",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -20821,7 +20977,7 @@
     },
     {
       "source": "apps_portal_src_routes_account",
-      "target": "apps_portal_src_lib_supabase",
+      "target": "apps_portal_src_components_topbar",
       "relation": "imports_from",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -20829,6 +20985,30 @@
       "context": "import",
       "source_file": "apps/portal/src/routes/Account.tsx",
       "source_location": "L14",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_portal_src_routes_account",
+      "target": "apps_portal_src_lib_api",
+      "relation": "imports_from",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "apps/portal/src/routes/Account.tsx",
+      "source_location": "L15",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_portal_src_routes_account",
+      "target": "apps_portal_src_lib_supabase",
+      "relation": "imports_from",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "apps/portal/src/routes/Account.tsx",
+      "source_location": "L16",
       "weight": 1.0
     },
     {
@@ -21074,7 +21254,7 @@
     },
     {
       "source": "apps_portal_src_routes_login",
-      "target": "apps_portal_src_lib_safe_next",
+      "target": "apps_portal_src_config",
       "relation": "imports_from",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -21086,7 +21266,7 @@
     },
     {
       "source": "apps_portal_src_routes_login",
-      "target": "apps_portal_src_lib_supabase",
+      "target": "apps_portal_src_lib_safe_next",
       "relation": "imports_from",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -21094,6 +21274,18 @@
       "context": "import",
       "source_file": "apps/portal/src/routes/Login.tsx",
       "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_portal_src_routes_login",
+      "target": "apps_portal_src_lib_supabase",
+      "relation": "imports_from",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "apps/portal/src/routes/Login.tsx",
+      "source_location": "L8",
       "weight": 1.0
     },
     {
@@ -23048,18 +23240,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/api/src/index.ts",
-      "source_location": "L10",
-      "weight": 1.0
-    },
-    {
-      "source": "apps_api_src_index",
-      "target": "apps_api_src_index_maintenance",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "apps/api/src/index.ts",
-      "source_location": "L57",
+      "source_location": "L11",
       "weight": 1.0
     },
     {
@@ -23070,7 +23251,18 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/api/src/index.ts",
-      "source_location": "L81",
+      "source_location": "L121",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_api_src_index",
+      "target": "apps_api_src_index_maintenance",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "apps/api/src/index.ts",
+      "source_location": "L97",
       "weight": 1.0
     },
     {
@@ -24819,7 +25011,29 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/portal/src/config.ts",
-      "source_location": "L10",
+      "source_location": "L12",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_portal_src_config",
+      "target": "apps_portal_src_config_setruntimeconfig",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "apps/portal/src/config.ts",
+      "source_location": "L30",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_portal_src_config",
+      "target": "apps_portal_src_config_emailenabled",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "apps/portal/src/config.ts",
+      "source_location": "L34",
       "weight": 1.0
     },
     {
@@ -25193,7 +25407,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/portal/src/routes/Account.tsx",
-      "source_location": "L16",
+      "source_location": "L18",
       "weight": 1.0
     },
     {
@@ -25204,7 +25418,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/portal/src/routes/Account.tsx",
-      "source_location": "L18",
+      "source_location": "L20",
       "weight": 1.0
     },
     {
@@ -25215,7 +25429,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/portal/src/routes/Account.tsx",
-      "source_location": "L27",
+      "source_location": "L29",
       "weight": 1.0
     },
     {
@@ -25303,7 +25517,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/portal/src/routes/Login.tsx",
-      "source_location": "L9",
+      "source_location": "L10",
       "weight": 1.0
     },
     {
@@ -25325,7 +25539,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/portal/worker/index.ts",
-      "source_location": "L17",
+      "source_location": "L18",
       "weight": 1.0
     },
     {
@@ -25693,79 +25907,79 @@
     },
     {
       "source": "docs_runbooks_first_setup_first_setup",
-      "target": "docs_runbooks_first_setup_6_first_deploy",
+      "target": "docs_runbooks_first_setup_1_cloudflare_add_the_domain_5_min",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/runbooks/first-setup.md",
-      "source_location": "L116",
+      "source_location": "L15",
       "weight": 1.0
     },
     {
       "source": "docs_runbooks_first_setup_first_setup",
-      "target": "docs_runbooks_first_setup_7_nucbox",
+      "target": "docs_runbooks_first_setup_2_supabase_two_values_and_one_click_5_min",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/runbooks/first-setup.md",
-      "source_location": "L122",
+      "source_location": "L41",
       "weight": 1.0
     },
     {
       "source": "docs_runbooks_first_setup_first_setup",
-      "target": "docs_runbooks_first_setup_2_cloudflare_resources_script_1_min",
+      "target": "docs_runbooks_first_setup_already_done",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/runbooks/first-setup.md",
-      "source_location": "L39",
+      "source_location": "L5",
       "weight": 1.0
     },
     {
       "source": "docs_runbooks_first_setup_first_setup",
-      "target": "docs_runbooks_first_setup_3_supabase",
+      "target": "docs_runbooks_first_setup_3_github_secrets_3_min",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/runbooks/first-setup.md",
-      "source_location": "L58",
+      "source_location": "L50",
       "weight": 1.0
     },
     {
       "source": "docs_runbooks_first_setup_first_setup",
-      "target": "docs_runbooks_first_setup_1_cloudflare_dashboard_10_min",
+      "target": "docs_runbooks_first_setup_4_worker_secrets_once",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/runbooks/first-setup.md",
-      "source_location": "L6",
+      "source_location": "L61",
       "weight": 1.0
     },
     {
       "source": "docs_runbooks_first_setup_first_setup",
-      "target": "docs_runbooks_first_setup_4_github_repository_settings_environments_production_then_staging",
+      "target": "docs_runbooks_first_setup_5_first_deploy_and_first_login",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/runbooks/first-setup.md",
-      "source_location": "L76",
+      "source_location": "L81",
       "weight": 1.0
     },
     {
       "source": "docs_runbooks_first_setup_first_setup",
-      "target": "docs_runbooks_first_setup_5_worker_secrets_once_from_your_machine",
+      "target": "docs_runbooks_first_setup_6_nucbox_later",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/runbooks/first-setup.md",
-      "source_location": "L95",
+      "source_location": "L91",
       "weight": 1.0
     },
     {
@@ -31000,7 +31214,7 @@
       "confidence_score": 0.85,
       "context": "argument",
       "source_file": "apps/portal/src/routes/Account.tsx",
-      "source_location": "L143",
+      "source_location": "L153",
       "weight": 1.0
     },
     {
@@ -31100,7 +31314,7 @@
       "weight": 1.0
     },
     {
-      "source": "docs_runbooks_first_setup_6_first_deploy",
+      "source": "docs_runbooks_first_setup_5_first_deploy_and_first_login",
       "target": "packages_cli_src_bin_main",
       "relation": "references",
       "_origin": "ast",
@@ -31108,7 +31322,7 @@
       "confidence_score": 0.95,
       "context": "main",
       "source_file": "docs/runbooks/first-setup.md",
-      "source_location": "L118",
+      "source_location": "L83",
       "weight": 1.0
     },
     {
@@ -31281,5 +31495,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "ab132e9246c6a0e9bcc77d7fee00a6d389e02a70"
+  "built_at_commit": "741df4ab2eea61bccfeb00f6f42185dfd6117d92"
 }
