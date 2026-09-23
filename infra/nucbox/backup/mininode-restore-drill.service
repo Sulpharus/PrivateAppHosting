@@ -1,0 +1,7 @@
+[Unit]
+Description=MiniNode monthly restore drill
+After=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/srv/mininode/infra/nucbox/backup/restore-drill.sh r2

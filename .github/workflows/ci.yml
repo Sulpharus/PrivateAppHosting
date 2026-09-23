@@ -48,6 +48,33 @@ jobs:
           pnpm --filter @mininode/manifest build
           git diff --exit-code packages/manifest/schema.json
 
+  infra:
+    name: Infra scripts and images
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Shellcheck
+        run: |
+          shellcheck -S warning infra/cloudflare/*.sh infra/nucbox/deploy/nucbox-deploy \
+            infra/nucbox/wine/entrypoint.sh infra/nucbox/backup/*.sh scripts/*.sh
+      - name: Compose file is valid
+        working-directory: infra/nucbox
+        run: |
+          TUNNEL_TOKEN=x GUACAMOLE_JSON_SECRET=x DOCKER_GID=999 CONTROL_DIGEST=sha256:0 \
+            docker compose -f compose.yml config --quiet --no-interpolate
+      - name: Build nucbox-control image
+        run: docker build -f apps/nucbox-control/Dockerfile -t mininode-nucbox-control:ci .
+      - name: Image smoke test
+        run: |
+          docker run -d --name control -p 8080:8080 \
+            -e CONTROL_TOKEN=$(openssl rand -hex 32) -e SUPABASE_URL=https://example.supabase.co \
+            -e SUPABASE_PUBLISHABLE_KEY=x -e PROXMOX_URL=https://127.0.0.1:8006 -e PROXMOX_TOKEN=x \
+            -e WINDOWS_RDP_PASSWORD=x mininode-nucbox-control:ci
+          for i in $(seq 1 20); do curl -fsS localhost:8080/health && break; sleep 1; done
+          code=$(curl -s -o /dev/null -w '%{http_code}' -H 'X-Forwarded-Host: demo.mininode.app' \
+            -H 'Sec-Fetch-Mode: navigate' localhost:8080/auth)
+          test "$code" = 302 || { docker logs control; exit 1; }
+
   database:
     name: Database, integration and e2e
     runs-on: ubuntu-latest

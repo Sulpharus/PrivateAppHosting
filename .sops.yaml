@@ -1,0 +1,7 @@
+# SOPS encrypts NucBox secrets with age. Add the public key of every machine that must decrypt
+# (the NucBox Linux VM and your PC): `age-keygen -o ~/.config/sops/age/keys.txt`.
+creation_rules:
+  - path_regex: infra/nucbox/.*\.sops\.env$
+    age: >-
+      age1replace_with_nucbox_public_key,
+      age1replace_with_admin_pc_public_key

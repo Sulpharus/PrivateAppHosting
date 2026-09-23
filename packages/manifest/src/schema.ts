@@ -91,6 +91,8 @@ const remoteSchema = z
       .object({
         r2Key: z.string().min(1),
         sha256: z.string().regex(/^[a-f0-9]{64}$/, 'sha256 must be 64 lowercase hex chars'),
+        /** Arguments for an unattended install. Defaults: `.msi` → `/qn /norestart`, `.exe` → `/S`. */
+        silentArgs: z.string().max(200).optional(),
       })
       .strict()
       .optional(),

@@ -5,6 +5,22 @@ import { type AppRow, listApps } from '../lib/apps.ts';
 import { platform } from '../lib/supabase.ts';
 import { dateTime } from './AdminLayout.tsx';
 
+interface InstallJob {
+  id: string;
+  status: 'running' | 'succeeded' | 'failed';
+  step: string;
+  snapshot?: string;
+  output?: string;
+}
+
+const STEPS: Record<string, string> = {
+  queued: 'wartet',
+  wake: 'VM startet',
+  snapshot: 'Snapshot',
+  install: 'installiert',
+  done: 'fertig',
+};
+
 interface SessionRow {
   id: string;
   app_slug: string;
@@ -51,6 +67,34 @@ export function Remote() {
 
   const end = (session: SessionRow) =>
     void run(() => api(`/remote/sessions/${session.id}`, { method: 'DELETE' })).then(load);
+
+  const [installs, setInstalls] = useState<Record<string, InstallJob>>({});
+  const [installError, setInstallError] = useState<Record<string, string>>({});
+  const install = (slug: string) => {
+    setInstallError((current) => ({ ...current, [slug]: '' }));
+    void run(() => api<InstallJob>('/remote/installs', { method: 'POST', body: { app: slug } }))
+      .then((job) => setInstalls((current) => ({ ...current, [slug]: job })))
+      .catch((error: unknown) =>
+        setInstallError((current) => ({
+          ...current,
+          [slug]: error instanceof Error ? error.message : 'Installation fehlgeschlagen.',
+        })),
+      );
+  };
+
+  // Poll running installs every 5 s until they finish.
+  useEffect(() => {
+    const running = Object.entries(installs).filter(([, job]) => job.status === 'running');
+    if (running.length === 0) return;
+    const timer = setTimeout(() => {
+      for (const [slug, job] of running) {
+        void api<InstallJob>(`/remote/installs/${job.id}`)
+          .then((next) => setInstalls((current) => ({ ...current, [slug]: next })))
+          .catch(() => undefined);
+      }
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, [installs]);
 
   return (
     <>
@@ -101,6 +145,38 @@ export function Remote() {
                   Sitzung beenden
                 </button>
               </div>
+            )}
+            <div className="row">
+              {installs[app.slug] ? (
+                <span
+                  className={`pill ${installs[app.slug]?.status === 'succeeded' ? 'ok' : ''}`}
+                  role="status"
+                >
+                  Installation: {STEPS[installs[app.slug]?.step ?? ''] ?? installs[app.slug]?.step}
+                  {installs[app.slug]?.status === 'failed' && ' – fehlgeschlagen'}
+                </span>
+              ) : (
+                <span className="muted">
+                  Installiert nach einem Snapshot der VM; der Installer wird per SHA-256 geprüft.
+                </span>
+              )}
+              <span className="spacer" />
+              <button
+                type="button"
+                className="button small"
+                disabled={installs[app.slug]?.status === 'running' || Boolean(active)}
+                onClick={() => install(app.slug)}
+              >
+                {installs[app.slug] ? 'Erneut installieren' : 'Installieren'}
+              </button>
+            </div>
+            {installError[app.slug] && (
+              <p role="alert" className="error">
+                {installError[app.slug]}
+              </p>
+            )}
+            {installs[app.slug]?.status === 'failed' && installs[app.slug]?.output && (
+              <pre className="mono small-log">{installs[app.slug]?.output}</pre>
             )}
             {queue.length > 0 && (
               <p className="muted">

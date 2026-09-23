@@ -177,3 +177,76 @@ remote.delete('/sessions/:id', requireUser(), async (c) => {
   if (error) return problem(500, 'db_error', error.message);
   return c.body(null, 204);
 });
+
+// ---------------------------------------------------------------------------------------------
+// Installs (admin): nucbox-control snapshots the VM, verifies the installer hash and installs.
+
+interface RemoteManifest {
+  runtime: 'windows' | 'wine' | 'android';
+  program: string;
+  installer?: { r2Key: string; sha256: string; silentArgs?: string };
+  wingetId?: string;
+}
+
+remote.post('/installs', requireUser({ role: 'admin', recentAuth: 600 }), async (c) => {
+  const parsed = requestSchema.safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) return problem(400, 'invalid_request', 'Unbekannte App.');
+  const db = adminClient(c.env);
+  const { data: app } = await db
+    .schema('platform')
+    .from('apps')
+    .select('slug, kind, manifest')
+    .eq('slug', parsed.data.app)
+    .single();
+  const config = (app?.manifest as { remote?: RemoteManifest } | undefined)?.remote;
+  if (app?.kind !== 'remote' || !config) return problem(404, 'not_found', 'Keine Remote-App.');
+  if (config.runtime === 'android')
+    return problem(501, 'runtime_unavailable', 'Android-Apps werden noch nicht unterstützt.');
+  if (!config.installer && !config.wingetId)
+    return problem(400, 'no_installer', 'Das Manifest nennt weder Installer noch winget-ID.');
+
+  const response = await fetch(`${c.env.NUCBOX_CONTROL_URL}/installers`, {
+    method: 'POST',
+    headers: controlHeaders(c.env),
+    body: JSON.stringify({
+      app: app.slug,
+      runtime: config.runtime,
+      program: config.program,
+      installer: config.installer,
+      wingetId: config.wingetId,
+    }),
+  }).catch(() => null);
+  if (!response) return problem(502, 'host_unavailable', 'Die NucBox ist gerade nicht erreichbar.');
+  if (response.status === 409)
+    return problem(409, 'busy', 'Für diese App läuft schon eine Installation.');
+  if (!response.ok)
+    return problem(502, 'host_error', `Installation abgelehnt (${response.status}).`);
+
+  const job = (await response.json()) as { id: string };
+  await db
+    .schema('platform')
+    .from('audit_log')
+    .insert({
+      actor_id: c.get('claims').sub,
+      app_slug: app.slug,
+      action: 'remote.install',
+      detail: {
+        job: job.id,
+        runtime: config.runtime,
+        installer: config.installer?.r2Key ?? config.wingetId,
+      },
+    });
+  return c.json(job, 202);
+});
+
+remote.get('/installs/:id', requireUser({ role: 'admin' }), async (c) => {
+  const id = c.req.param('id');
+  if (!/^[0-9a-f-]{36}$/.test(id)) return problem(400, 'invalid_request', 'Ungültige ID.');
+  const response = await fetch(`${c.env.NUCBOX_CONTROL_URL}/installers/${id}`, {
+    headers: controlHeaders(c.env),
+  }).catch(() => null);
+  if (!response) return problem(502, 'host_unavailable', 'Die NucBox ist gerade nicht erreichbar.');
+  if (response.status === 404)
+    return problem(404, 'not_found', 'Installation unbekannt (Neustart?).');
+  return c.json(await response.json());
+});

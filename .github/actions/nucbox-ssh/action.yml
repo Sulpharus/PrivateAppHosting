@@ -1,0 +1,32 @@
+name: NucBox deploy over SSH
+description: Runs one nucbox-deploy command through Cloudflare Access (forced-command SSH).
+inputs:
+  command: { description: "Arguments for nucbox-deploy", required: true }
+  ssh-key: { description: "Private key of the deploy user", required: true }
+  access-client-id: { description: "Access service token id", required: true }
+  access-client-secret: { description: "Access service token secret", required: true }
+  host: { description: "SSH hostname", default: ssh.mininode.app }
+runs:
+  using: composite
+  steps:
+    - name: Install cloudflared
+      shell: bash
+      run: |
+        command -v cloudflared >/dev/null || {
+          curl -fsSL -o /tmp/cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
+          sudo dpkg -i /tmp/cloudflared.deb
+        }
+    - name: nucbox-deploy ${{ inputs.command }}
+      shell: bash
+      env:
+        SSH_KEY: ${{ inputs.ssh-key }}
+        TUNNEL_SERVICE_TOKEN_ID: ${{ inputs.access-client-id }}
+        TUNNEL_SERVICE_TOKEN_SECRET: ${{ inputs.access-client-secret }}
+        HOST: ${{ inputs.host }}
+        COMMAND: ${{ inputs.command }}
+      run: |
+        key=$(mktemp) && trap 'rm -f "$key"' EXIT
+        printf '%s\n' "$SSH_KEY" > "$key"
+        ssh -i "$key" -o StrictHostKeyChecking=accept-new -o BatchMode=yes \
+          -o ProxyCommand="cloudflared access ssh --hostname %h --id $TUNNEL_SERVICE_TOKEN_ID --secret $TUNNEL_SERVICE_TOKEN_SECRET" \
+          "deploy@$HOST" "$COMMAND"

@@ -21,3 +21,8 @@ inbox/*
 supabase/.branches/
 supabase/.temp/
 apps/portal/public/schema/
+# NucBox secrets (only the *.sops.env encrypted form and *.example.env may be committed)
+infra/nucbox/*.env
+!infra/nucbox/*.example.env
+!infra/nucbox/*.sops.env
+cloudflare-secrets/

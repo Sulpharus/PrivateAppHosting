@@ -140,7 +140,8 @@ jobs:
   nucbox:
     name: NucBox container ${{ matrix.slug }}
     needs: apps
-    if: needs.apps.outputs.containers != '[]'
+    # Skipped until the NucBox is set up (docs/runbooks/nucbox-install.md).
+    if: needs.apps.outputs.containers != '[]' && vars.NUCBOX_TUNNEL_ID != ''
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment || 'production' }}
     permissions:
@@ -153,6 +154,12 @@ jobs:
         slug: ${{ fromJson(needs.apps.outputs.containers) }}
     steps:
       - uses: actions/checkout@v5
+      - name: Image name and manifest label
+        id: meta
+        run: |
+          echo "image=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/mininode-${{ matrix.slug }}" >> "$GITHUB_OUTPUT"
+          # The NucBox reads port, memory and health path from this label (nucbox-deploy).
+          echo "manifest=$(jq -c . "hosted/${{ matrix.slug }}/mininode.json")" >> "$GITHUB_OUTPUT"
       - uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -163,23 +170,92 @@ jobs:
         with:
           context: hosted/${{ matrix.slug }}
           push: true
-          tags: ghcr.io/${{ github.repository_owner }}/mininode-${{ matrix.slug }}:${{ github.sha }}
+          tags: ${{ steps.meta.outputs.image }}:${{ github.sha }}
+          labels: |
+            app.mininode.manifest=${{ steps.meta.outputs.manifest }}
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
       - uses: actions/attest-build-provenance@v3
         with:
-          subject-name: ghcr.io/${{ github.repository_owner }}/mininode-${{ matrix.slug }}
+          subject-name: ${{ steps.meta.outputs.image }}
           subject-digest: ${{ steps.build.outputs.digest }}
           push-to-registry: true
-      - name: Install cloudflared
-        run: |
-          curl -fsSL -o cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
-          sudo dpkg -i cloudflared.deb
-      - name: Roll out on the NucBox (forced-command SSH through Cloudflare Access)
+      - name: DNS record → tunnel
         env:
-          SSH_KEY: ${{ secrets.NUCBOX_DEPLOY_SSH_KEY }}
-          TUNNEL_SERVICE_TOKEN_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
-          TUNNEL_SERVICE_TOKEN_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          TUNNEL_ID: ${{ vars.NUCBOX_TUNNEL_ID }}
+          DOMAIN: ${{ vars.STAGING_DOMAIN || 'mininode.app' }}
+        run: ./infra/cloudflare/dns-upsert.sh "${{ matrix.slug }}.$DOMAIN" "$TUNNEL_ID.cfargotunnel.com"
+      - uses: ./.github/actions/nucbox-ssh
+        with:
+          command: ${{ matrix.slug }} ${{ steps.build.outputs.digest }}
+          ssh-key: ${{ secrets.NUCBOX_DEPLOY_SSH_KEY }}
+          access-client-id: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          access-client-secret: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+
+  platform-images:
+    name: NucBox platform image ${{ matrix.component }}
+    needs: database
+    if: always() && vars.NUCBOX_TUNNEL_ID != '' && (needs.database.result == 'success' || needs.database.result == 'skipped')
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment || 'production' }}
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
+    strategy:
+      matrix:
+        include:
+          - component: control
+            name: mininode-nucbox-control
+            context: .
+            file: apps/nucbox-control/Dockerfile
+            paths: apps/nucbox-control packages/gate pnpm-lock.yaml
+          - component: wine
+            name: mininode-wine
+            context: infra/nucbox/wine
+            file: infra/nucbox/wine/Dockerfile
+            paths: infra/nucbox/wine
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Changed?
+        id: changed
         run: |
-          install -m 600 /dev/null key && printf '%s\n' "$SSH_KEY" > key
-          ssh -i key -o StrictHostKeyChecking=accept-new \
-            -o ProxyCommand="cloudflared access ssh --hostname %h --id $TUNNEL_SERVICE_TOKEN_ID --secret $TUNNEL_SERVICE_TOKEN_SECRET" \
-            deploy@ssh.mininode.app "${{ matrix.slug }} ${{ steps.build.outputs.digest }}"
+          before="${{ github.event.before }}"
+          if [ -z "$before" ] || [ "$before" = 0000000000000000000000000000000000000000 ] \
+             || ! git cat-file -e "$before" 2>/dev/null \
+             || [ -n "$(git diff --name-only "$before" HEAD -- ${{ matrix.paths }})" ]; then
+            echo "build=true" >> "$GITHUB_OUTPUT"
+          fi
+          echo "image=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/${{ matrix.name }}" >> "$GITHUB_OUTPUT"
+      - uses: docker/login-action@v3
+        if: steps.changed.outputs.build == 'true'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        if: steps.changed.outputs.build == 'true'
+        id: build
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.file }}
+          push: true
+          tags: ${{ steps.changed.outputs.image }}:${{ github.sha }}
+          labels: org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+      - uses: actions/attest-build-provenance@v3
+        if: steps.changed.outputs.build == 'true'
+        with:
+          subject-name: ${{ steps.changed.outputs.image }}
+          subject-digest: ${{ steps.build.outputs.digest }}
+          push-to-registry: true
+      - uses: ./.github/actions/nucbox-ssh
+        if: steps.changed.outputs.build == 'true'
+        with:
+          command: platform ${{ matrix.component }} ${{ steps.build.outputs.digest }}
+          ssh-key: ${{ secrets.NUCBOX_DEPLOY_SSH_KEY }}
+          access-client-id: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          access-client-secret: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}

@@ -1,0 +1,10 @@
+[Unit]
+Description=MiniNode nightly backup
+Wants=network-online.target
+After=network-online.target docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/srv/mininode/infra/nucbox/backup/backup.sh
+Nice=10
+IOSchedulingClass=idle
