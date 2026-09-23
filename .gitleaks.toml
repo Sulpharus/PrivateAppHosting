@@ -1,0 +1,8 @@
+# Extends the default rules. Vendored agent skills contain placeholder credentials
+# (e.g. YOUR_API_TOKEN) in documentation examples.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "vendored agent skill documentation"
+paths = ['''^\.claude/skills/''']

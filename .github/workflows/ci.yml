@@ -44,7 +44,13 @@ jobs:
       - uses: supabase/setup-cli@v1
         with:
           version: latest
-      - run: supabase db start
+      - name: Start database (retries registry rate limits)
+        run: |
+          for attempt in 1 2 3; do
+            supabase db start && exit 0
+            echo "attempt $attempt failed, retrying in 30s"; sleep 30
+          done
+          exit 1
       - run: supabase test db
 
   secrets:
