@@ -7,8 +7,8 @@ import { type AiChatOptions, type AiMessage, createAi } from './ai.ts';
 import { appSchema, loadConfig, type MininodeConfig } from './config.ts';
 import { createKv, type KvScope } from './kv.ts';
 
-export type { AiChatOptions, AiMessage, KvScope, MininodeConfig };
 export { appSchema, assertConfig } from './config.ts';
+export type { AiChatOptions, AiMessage, KvScope, MininodeConfig };
 
 export type Role = 'admin' | 'trusted' | 'user';
 
@@ -29,7 +29,11 @@ export interface Mininode {
   readonly db: ReturnType<SupabaseClient['schema']>;
   readonly kv: ReturnType<typeof createKv>;
   readonly files: {
-    upload(path: string, body: Blob | File | ArrayBuffer, options?: { shared?: boolean; contentType?: string }): Promise<string>;
+    upload(
+      path: string,
+      body: Blob | File | ArrayBuffer,
+      options?: { shared?: boolean; contentType?: string },
+    ): Promise<string>;
     url(path: string, options?: { shared?: boolean; expiresIn?: number }): Promise<string>;
     list(prefix?: string, options?: { shared?: boolean }): Promise<string[]>;
     remove(path: string, options?: { shared?: boolean }): Promise<void>;
@@ -133,7 +137,10 @@ export function createMininode(config: MininodeConfig): Mininode {
         return data.signedUrl;
       },
       async list(prefix = '', options = {}) {
-        const folder = `${config.appSlug}/${await ownerFolder(options.shared)}/${prefix}`.replace(/\/$/, '');
+        const folder = `${config.appSlug}/${await ownerFolder(options.shared)}/${prefix}`.replace(
+          /\/$/,
+          '',
+        );
         const { data, error } = await supabase.storage.from(FILE_BUCKET).list(folder);
         if (error) throw error;
         return data.map((entry) => entry.name);
@@ -146,7 +153,10 @@ export function createMininode(config: MininodeConfig): Mininode {
       },
     },
     realtime: (channel) => supabase.channel(`${config.appSlug}:${channel}`),
-    ai: createAi(config, async () => (await supabase.auth.getSession()).data.session?.access_token ?? null),
+    ai: createAi(
+      config,
+      async () => (await supabase.auth.getSession()).data.session?.access_token ?? null,
+    ),
     async notify(title, body, url) {
       const { error } = await supabase.schema('platform').rpc('notify_self', {
         p_app_slug: config.appSlug,

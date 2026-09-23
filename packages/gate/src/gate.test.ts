@@ -127,14 +127,19 @@ describe('decide', () => {
 
 describe('helpers', () => {
   it('detects navigations', () => {
-    expect(isNavigation(new Request(url, { headers: { 'Sec-Fetch-Mode': 'navigate' } }))).toBe(true);
+    expect(isNavigation(new Request(url, { headers: { 'Sec-Fetch-Mode': 'navigate' } }))).toBe(
+      true,
+    );
     expect(isNavigation(new Request(url, { headers: { 'Sec-Fetch-Mode': 'cors' } }))).toBe(false);
     expect(isNavigation(new Request(url, { headers: { Accept: 'text/html' } }))).toBe(true);
   });
 
   it('checks recent authentication', () => {
     const now = Date.now();
-    const claims = { sub: 'x', amr: [{ method: 'passkey', timestamp: Math.floor(now / 1000) - 60 }] };
+    const claims = {
+      sub: 'x',
+      amr: [{ method: 'passkey', timestamp: Math.floor(now / 1000) - 60 }],
+    };
     expect(hasRecentAuth(claims, 600, now)).toBe(true);
     expect(hasRecentAuth(claims, 30, now)).toBe(false);
     expect(hasRecentAuth({ sub: 'x' }, 600, now)).toBe(false);

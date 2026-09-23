@@ -13,8 +13,4 @@ export default defineConfig({
     target: 'es2022',
     sourcemap: true,
   },
-  test: {
-    environment: 'happy-dom',
-    environmentOptions: { happyDOM: { url: 'http://localhost:5173/' } },
-  },
 });

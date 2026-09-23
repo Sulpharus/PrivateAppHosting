@@ -1,6 +1,6 @@
 // The gate's decision, independent of the runtime (Workers or the NucBox forward-auth server).
 
-import { readSession, type SessionClaims, SESSION_COOKIE, type Verifier } from './session.ts';
+import { readSession, SESSION_COOKIE, type SessionClaims, type Verifier } from './session.ts';
 
 export type GrantChecker = (accessToken: string, appSlug: string) => Promise<boolean>;
 

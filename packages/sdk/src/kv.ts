@@ -17,15 +17,17 @@ export function createKv(supabase: SupabaseClient, appSlug: string) {
     return data;
   };
 
-  const scoped = async (scope: KvScope) => {
-    const owner = await ownerFor(scope);
+  // Query builders are thenables, so this must not be async: awaiting would execute the query.
+  const scoped = (owner: string | null) => {
     const query = table().select('key, value, updated_at').eq('app_slug', appSlug);
     return owner === null ? query.is('owner_id', null) : query.eq('owner_id', owner);
   };
 
   return {
     async get<T extends Json = Json>(key: string, scope: KvScope = 'user'): Promise<T | null> {
-      const { data, error } = await (await scoped(scope)).eq('key', key).maybeSingle();
+      const { data, error } = await scoped(await ownerFor(scope))
+        .eq('key', key)
+        .maybeSingle();
       if (error) throw error;
       return (data?.value as T | undefined) ?? null;
     },
@@ -48,7 +50,7 @@ export function createKv(supabase: SupabaseClient, appSlug: string) {
     },
 
     async list(prefix = '', scope: KvScope = 'user'): Promise<{ key: string; value: Json }[]> {
-      const { data, error } = await (await scoped(scope))
+      const { data, error } = await scoped(await ownerFor(scope))
         .like('key', `${prefix.replace(/[%_]/g, '\\$&')}%`)
         .order('key');
       if (error) throw error;

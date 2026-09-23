@@ -48,7 +48,10 @@ function forbiddenPage(env: AppEnv): Response {
 @media (prefers-color-scheme:dark){body{background:#121210;color:#edeae2}a{color:#ffa47c}}
 main{max-width:28rem;padding:2rem}h1{font-size:1.75rem;margin:0 0 .75rem}a{color:#9a3512}</style></head>
 <body><main><h1>Kein Zugriff auf ${escapeHtml(env.APP_NAME)}</h1><p>Diese App wurde für deinen Account nicht freigegeben. Frag den Admin nach einer Freigabe.</p><p><a href="${portal}">Zur Startseite</a></p></main></body></html>`;
-  return new Response(html, { status: 403, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+  return new Response(html, {
+    status: 403,
+    headers: { 'Content-Type': 'text/html; charset=utf-8' },
+  });
 }
 
 function escapeHtml(value: string): string {

@@ -2,13 +2,7 @@
 // The cookie format follows @supabase/ssr: optional `base64-` prefix with base64url JSON, split
 // into `<name>.0`, `<name>.1`, … chunks when large.
 
-import {
-  createRemoteJWKSet,
-  errors,
-  type JWTPayload,
-  type JWTVerifyGetKey,
-  jwtVerify,
-} from 'jose';
+import { createRemoteJWKSet, errors, type JWTPayload, type JWTVerifyGetKey, jwtVerify } from 'jose';
 
 export const SESSION_COOKIE = 'mn-auth';
 const BASE64_PREFIX = 'base64-';
@@ -65,11 +59,16 @@ export interface StoredSession {
   refreshToken: string | null;
 }
 
-export function readSession(cookieHeader: string | null, name = SESSION_COOKIE): StoredSession | null {
+export function readSession(
+  cookieHeader: string | null,
+  name = SESSION_COOKIE,
+): StoredSession | null {
   const raw = readCookieValue(parseCookies(cookieHeader), name);
   if (!raw) return null;
   try {
-    const json = raw.startsWith(BASE64_PREFIX) ? base64UrlToString(raw.slice(BASE64_PREFIX.length)) : raw;
+    const json = raw.startsWith(BASE64_PREFIX)
+      ? base64UrlToString(raw.slice(BASE64_PREFIX.length))
+      : raw;
     const parsed: unknown = JSON.parse(json);
     if (typeof parsed !== 'object' || parsed === null) return null;
     const record = parsed as Record<string, unknown>;
@@ -118,7 +117,11 @@ export function createVerifier(supabaseUrl: string, keys?: JWTVerifyGetKey): Ver
 }
 
 /** True when the user signed in (any method) within `maxAgeSeconds` — used for step-up checks. */
-export function hasRecentAuth(claims: SessionClaims, maxAgeSeconds = 600, now = Date.now()): boolean {
+export function hasRecentAuth(
+  claims: SessionClaims,
+  maxAgeSeconds = 600,
+  now = Date.now(),
+): boolean {
   const cutoff = Math.floor(now / 1000) - maxAgeSeconds;
   return (claims.amr ?? []).some((entry) => entry.timestamp >= cutoff);
 }

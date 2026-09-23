@@ -39,8 +39,15 @@ export function createAi(config: MininodeConfig, token: TokenSource) {
       ...(signal ? { signal } : {}),
     });
     if (!response.ok) {
-      const problem = (await response.json().catch(() => ({}))) as { error?: string; message?: string };
-      throw new AiError(problem.message ?? response.statusText, problem.error ?? 'error', response.status);
+      const problem = (await response.json().catch(() => ({}))) as {
+        error?: string;
+        message?: string;
+      };
+      throw new AiError(
+        problem.message ?? response.statusText,
+        problem.error ?? 'error',
+        response.status,
+      );
     }
     return response;
   };
@@ -62,7 +69,10 @@ export function createAi(config: MininodeConfig, token: TokenSource) {
     },
 
     /** Streams the answer; yields text deltas as they arrive. */
-    async *stream(messages: AiMessage[] | string, options: AiChatOptions = {}): AsyncGenerator<string> {
+    async *stream(
+      messages: AiMessage[] | string,
+      options: AiChatOptions = {},
+    ): AsyncGenerator<string> {
       const response = await post(
         '/v1/chat',
         { ...toRequest(messages, options), stream: true },
