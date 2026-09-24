@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ideen</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="/_mininode/sdk.js" defer></script>
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <header>
+    <a href="https://mininode.app">← Alle Apps</a>
+  </header>
+  <main>
+    <h1>Ideen</h1>
+    <p class="muted">Beschreib kurz, wofür du Ideen brauchst. Die KI antwortet mit fünf Vorschlägen.</p>
+    <form id="ask" style="flex-direction: column">
+      <label for="prompt">Wofür brauchst du Ideen?</label>
+      <textarea id="prompt" maxlength="600" required placeholder="z. B. ein Geschenk für meine Schwester, die gern wandert"></textarea>
+      <div class="row">
+        <button type="button" class="ghost" data-example="ein schnelles Abendessen mit dem, was im Kühlschrank ist: Eier, Spinat, Feta">Beispiel: Abendessen</button>
+        <button type="button" class="ghost" data-example="einen Samstag mit Kindern bei Regen in München">Beispiel: Regentag</button>
+      </div>
+      <button id="submit" class="primary" type="submit">Ideen holen</button>
+    </form>
+    <p id="error" class="error" role="alert" hidden></p>
+    <section aria-live="polite">
+      <ul id="answers"></ul>
+    </section>
+  </main>
+</body>
+</html>

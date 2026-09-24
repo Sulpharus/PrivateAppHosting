@@ -37,5 +37,12 @@ export default defineConfig({
       reuseExistingServer: !process.env.CI,
       timeout: 120_000,
     },
+    // The real hosted apps, each behind its own local gate.
+    ...['notizen', 'einkauf', 'ideen'].map((slug, index) => ({
+      command: `pnpm mininode dev hosted/${slug} --port ${8791 + index}`,
+      url: `http://localhost:${8791 + index}/_mininode/config.json`,
+      reuseExistingServer: !process.env.CI,
+      timeout: 120_000,
+    })),
   ],
 });

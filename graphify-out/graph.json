@@ -1617,6 +1617,18 @@
       "source_location": "L4"
     },
     {
+      "id": "apps_portal_src_components_icons_logo",
+      "label": "Logo()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 0,
+      "community_name": "portal/src/main.tsx",
+      "file_type": "code",
+      "norm_label": "logo()",
+      "source_file": "apps/portal/src/components/icons.tsx",
+      "source_location": "L16"
+    },
+    {
       "id": "apps_portal_src_components_remotecard_remotecard",
       "label": "RemoteCard()",
       "_callable": true,
@@ -2457,18 +2469,6 @@
       "source_location": "L65"
     },
     {
-      "id": "apps_nucbox_control_src_auth_cachedgrants",
-      "label": "cachedGrants()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 14,
-      "community_name": "main.ts",
-      "file_type": "code",
-      "norm_label": "cachedgrants()",
-      "source_file": "apps/nucbox-control/src/auth.ts",
-      "source_location": "L21"
-    },
-    {
       "id": "apps_nucbox_control_src_config_loadconfig",
       "label": "loadConfig()",
       "_callable": true,
@@ -2611,6 +2611,18 @@
       "norm_label": "winevolume()",
       "source_file": "apps/nucbox-control/src/runtimes.ts",
       "source_location": "L30"
+    },
+    {
+      "id": "e2e_hosted_apps_spec_signinto",
+      "label": "signInTo()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 16,
+      "community_name": "portal.spec.ts",
+      "file_type": "code",
+      "norm_label": "signinto()",
+      "source_file": "e2e/hosted-apps.spec.ts",
+      "source_location": "L15"
     },
     {
       "id": "e2e_portal_spec_signin",
@@ -3259,6 +3271,18 @@
       "norm_label": ".wake()",
       "source_file": "apps/nucbox-control/src/proxmox.ts",
       "source_location": "L11"
+    },
+    {
+      "id": "apps_nucbox_control_src_auth_cachedgrants",
+      "label": "cachedGrants()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 3,
+      "community_name": "src/auth.ts",
+      "file_type": "code",
+      "norm_label": "cachedgrants()",
+      "source_file": "apps/nucbox-control/src/auth.ts",
+      "source_location": "L21"
     },
     {
       "id": "apps_nucbox_control_src_auth_forbiddenpage",
@@ -3933,18 +3957,6 @@
       "source_location": "L40"
     },
     {
-      "id": "apps_portal_src_components_icons_logo",
-      "label": "Logo()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 7,
-      "community_name": "TopBar.tsx",
-      "file_type": "code",
-      "norm_label": "logo()",
-      "source_file": "apps/portal/src/components/icons.tsx",
-      "source_location": "L16"
-    },
-    {
       "id": "apps_portal_src_components_icons_moonicon",
       "label": "MoonIcon()",
       "_callable": true,
@@ -4183,6 +4195,42 @@
       "norm_label": ".wait()",
       "source_file": "apps/nucbox-control/src/docker.ts",
       "source_location": "L32"
+    },
+    {
+      "id": "hosted_einkauf_app_render",
+      "label": "render()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 82,
+      "community_name": "render",
+      "file_type": "code",
+      "norm_label": "render()",
+      "source_file": "hosted/einkauf/app.js",
+      "source_location": "L34"
+    },
+    {
+      "id": "hosted_ideen_app_render",
+      "label": "render()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 84,
+      "community_name": "ideen/app.js",
+      "file_type": "code",
+      "norm_label": "render()",
+      "source_file": "hosted/ideen/app.js",
+      "source_location": "L21"
+    },
+    {
+      "id": "hosted_notizen_app_render",
+      "label": "render()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 86,
+      "community_name": "render",
+      "file_type": "code",
+      "norm_label": "render()",
+      "source_file": "hosted/notizen/app.js",
+      "source_location": "L22"
     },
     {
       "id": "packages_sdk_src_config_appschema",
@@ -5767,12 +5815,12 @@
     },
     {
       "id": "fixtures_claude_artifact_expected_notizen_mininode",
-      "label": "notizen/mininode.json",
+      "label": "expected/notizen/mininode.json",
       "_origin": "ast",
       "community": 13,
       "community_name": "notizen/mininode.json",
       "file_type": "code",
-      "norm_label": "notizen/mininode.json",
+      "norm_label": "expected/notizen/mininode.json",
       "source_file": "fixtures/claude-artifact/expected/notizen/mininode.json",
       "source_location": "L1"
     },
@@ -6104,6 +6152,17 @@
       "file_type": "code",
       "norm_label": "gate.spec.ts",
       "source_file": "e2e/gate.spec.ts",
+      "source_location": "L1"
+    },
+    {
+      "id": "e2e_hosted_apps_spec",
+      "label": "hosted-apps.spec.ts",
+      "_origin": "ast",
+      "community": 16,
+      "community_name": "portal.spec.ts",
+      "file_type": "code",
+      "norm_label": "hosted-apps.spec.ts",
+      "source_file": "e2e/hosted-apps.spec.ts",
       "source_location": "L1"
     },
     {
@@ -7356,7 +7415,7 @@
       "node_kind": "heading",
       "norm_label": "1. cloudflare: add the domain (5 min)",
       "source_file": "docs/runbooks/first-setup.md",
-      "source_location": "L15"
+      "source_location": "L17"
     },
     {
       "id": "docs_runbooks_first_setup_2_supabase_two_values_and_one_click_5_min",
@@ -7368,7 +7427,7 @@
       "node_kind": "heading",
       "norm_label": "2. supabase: two values and one click (5 min)",
       "source_file": "docs/runbooks/first-setup.md",
-      "source_location": "L41"
+      "source_location": "L43"
     },
     {
       "id": "docs_runbooks_first_setup_3_github_secrets_3_min",
@@ -7380,19 +7439,19 @@
       "node_kind": "heading",
       "norm_label": "3. github secrets (3 min)",
       "source_file": "docs/runbooks/first-setup.md",
-      "source_location": "L50"
+      "source_location": "L52"
     },
     {
-      "id": "docs_runbooks_first_setup_4_worker_secrets_once",
-      "label": "4. Worker secrets (once)",
+      "id": "docs_runbooks_first_setup_4_test_apps",
+      "label": "4. Test apps",
       "_origin": "ast",
       "community": 27,
       "community_name": "First setup",
       "file_type": "document",
       "node_kind": "heading",
-      "norm_label": "4. worker secrets (once)",
+      "norm_label": "4. test apps",
       "source_file": "docs/runbooks/first-setup.md",
-      "source_location": "L61"
+      "source_location": "L70"
     },
     {
       "id": "docs_runbooks_first_setup_5_first_deploy_and_first_login",
@@ -7404,7 +7463,7 @@
       "node_kind": "heading",
       "norm_label": "5. first deploy and first login",
       "source_file": "docs/runbooks/first-setup.md",
-      "source_location": "L81"
+      "source_location": "L76"
     },
     {
       "id": "docs_runbooks_first_setup_6_nucbox_later",
@@ -7416,7 +7475,7 @@
       "node_kind": "heading",
       "norm_label": "6. nucbox (later)",
       "source_file": "docs/runbooks/first-setup.md",
-      "source_location": "L91"
+      "source_location": "L86"
     },
     {
       "id": "docs_runbooks_first_setup_already_done",
@@ -9259,13 +9318,13 @@
     },
     {
       "id": "fixtures_claude_artifact_expected_notizen_readme",
-      "label": "notizen/README.md",
+      "label": "expected/notizen/README.md",
       "_origin": "ast",
       "community": 56,
       "community_name": "notizen/README.md",
       "file_type": "document",
       "node_kind": "page",
-      "norm_label": "notizen/readme.md",
+      "norm_label": "expected/notizen/readme.md",
       "source_file": "fixtures/claude-artifact/expected/notizen/README.md",
       "source_location": "L1"
     },
@@ -9971,12 +10030,12 @@
     },
     {
       "id": "fixtures_static_html_expected_hallo_app",
-      "label": "app.js",
+      "label": "hallo/app.js",
       "_origin": "ast",
       "community": 70,
       "community_name": "app.js",
       "file_type": "code",
-      "norm_label": "app.js",
+      "norm_label": "hallo/app.js",
       "source_file": "fixtures/static-html/expected/hallo/app.js",
       "source_location": "L1"
     },
@@ -10062,6 +10121,182 @@
       "norm_label": "reviewer.md",
       "source_file": ".claude/agents/reviewer.md",
       "source_location": "L1"
+    },
+    {
+      "id": "hosted_ideen_mininode",
+      "label": "ideen/mininode.json",
+      "_origin": "ast",
+      "community": 79,
+      "community_name": "ideen/mininode.json",
+      "file_type": "code",
+      "norm_label": "ideen/mininode.json",
+      "source_file": "hosted/ideen/mininode.json",
+      "source_location": "L1"
+    },
+    {
+      "id": "hosted_ideen_mininode_access",
+      "label": "access",
+      "_origin": "ast",
+      "community": 79,
+      "community_name": "ideen/mininode.json",
+      "file_type": "code",
+      "norm_label": "access",
+      "source_file": "hosted/ideen/mininode.json",
+      "source_location": "L9"
+    },
+    {
+      "id": "hosted_ideen_mininode_access_default",
+      "label": "default",
+      "_origin": "ast",
+      "community": 79,
+      "community_name": "ideen/mininode.json",
+      "file_type": "code",
+      "norm_label": "default",
+      "source_file": "hosted/ideen/mininode.json",
+      "source_location": "L9"
+    },
+    {
+      "id": "hosted_ideen_mininode_ai",
+      "label": "ai",
+      "_origin": "ast",
+      "community": 79,
+      "community_name": "ideen/mininode.json",
+      "file_type": "code",
+      "norm_label": "ai",
+      "source_file": "hosted/ideen/mininode.json",
+      "source_location": "L11"
+    },
+    {
+      "id": "hosted_ideen_mininode_ai_maxoutputtokens",
+      "label": "maxOutputTokens",
+      "_origin": "ast",
+      "community": 79,
+      "community_name": "ideen/mininode.json",
+      "file_type": "code",
+      "norm_label": "maxoutputtokens",
+      "source_file": "hosted/ideen/mininode.json",
+      "source_location": "L11"
+    },
+    {
+      "id": "hosted_ideen_mininode_ai_models",
+      "label": "models",
+      "_origin": "ast",
+      "community": 79,
+      "community_name": "ideen/mininode.json",
+      "file_type": "code",
+      "norm_label": "models",
+      "source_file": "hosted/ideen/mininode.json",
+      "source_location": "L11"
+    },
+    {
+      "id": "hosted_ideen_mininode_ai_monthlybudgeteur",
+      "label": "monthlyBudgetEur",
+      "_origin": "ast",
+      "community": 79,
+      "community_name": "ideen/mininode.json",
+      "file_type": "code",
+      "norm_label": "monthlybudgeteur",
+      "source_file": "hosted/ideen/mininode.json",
+      "source_location": "L11"
+    },
+    {
+      "id": "hosted_ideen_mininode_data",
+      "label": "data",
+      "_origin": "ast",
+      "community": 79,
+      "community_name": "ideen/mininode.json",
+      "file_type": "code",
+      "norm_label": "data",
+      "source_file": "hosted/ideen/mininode.json",
+      "source_location": "L10"
+    },
+    {
+      "id": "hosted_ideen_mininode_data_mode",
+      "label": "mode",
+      "_origin": "ast",
+      "community": 79,
+      "community_name": "ideen/mininode.json",
+      "file_type": "code",
+      "norm_label": "mode",
+      "source_file": "hosted/ideen/mininode.json",
+      "source_location": "L10"
+    },
+    {
+      "id": "hosted_ideen_mininode_description",
+      "label": "description",
+      "_origin": "ast",
+      "community": 79,
+      "community_name": "ideen/mininode.json",
+      "file_type": "code",
+      "norm_label": "description",
+      "source_file": "hosted/ideen/mininode.json",
+      "source_location": "L6"
+    },
+    {
+      "id": "hosted_ideen_mininode_kind",
+      "label": "kind",
+      "_origin": "ast",
+      "community": 79,
+      "community_name": "ideen/mininode.json",
+      "file_type": "code",
+      "norm_label": "kind",
+      "source_file": "hosted/ideen/mininode.json",
+      "source_location": "L7"
+    },
+    {
+      "id": "hosted_ideen_mininode_name",
+      "label": "name",
+      "_origin": "ast",
+      "community": 79,
+      "community_name": "ideen/mininode.json",
+      "file_type": "code",
+      "norm_label": "name",
+      "source_file": "hosted/ideen/mininode.json",
+      "source_location": "L5"
+    },
+    {
+      "id": "hosted_ideen_mininode_schema",
+      "label": "$schema",
+      "_origin": "ast",
+      "community": 79,
+      "community_name": "ideen/mininode.json",
+      "file_type": "code",
+      "norm_label": "$schema",
+      "source_file": "hosted/ideen/mininode.json",
+      "source_location": "L2"
+    },
+    {
+      "id": "hosted_ideen_mininode_slug",
+      "label": "slug",
+      "_origin": "ast",
+      "community": 79,
+      "community_name": "ideen/mininode.json",
+      "file_type": "code",
+      "norm_label": "slug",
+      "source_file": "hosted/ideen/mininode.json",
+      "source_location": "L4"
+    },
+    {
+      "id": "hosted_ideen_mininode_specversion",
+      "label": "specVersion",
+      "_origin": "ast",
+      "community": 79,
+      "community_name": "ideen/mininode.json",
+      "file_type": "code",
+      "norm_label": "specversion",
+      "source_file": "hosted/ideen/mininode.json",
+      "source_location": "L3"
+    },
+    {
+      "id": "hosted_ideen_mininode_target",
+      "label": "target",
+      "_origin": "ast",
+      "community": 79,
+      "community_name": "ideen/mininode.json",
+      "file_type": "code",
+      "norm_label": "target",
+      "source_file": "hosted/ideen/mininode.json",
+      "source_location": "L8"
     },
     {
       "id": "docs_ai_playbooks_ai_studio",
@@ -10328,6 +10563,375 @@
       "source_location": "L1"
     },
     {
+      "id": "hosted_einkauf_mininode",
+      "label": "einkauf/mininode.json",
+      "_origin": "ast",
+      "community": 80,
+      "community_name": "einkauf/mininode.json",
+      "file_type": "code",
+      "norm_label": "einkauf/mininode.json",
+      "source_file": "hosted/einkauf/mininode.json",
+      "source_location": "L1"
+    },
+    {
+      "id": "hosted_einkauf_mininode_access",
+      "label": "access",
+      "_origin": "ast",
+      "community": 80,
+      "community_name": "einkauf/mininode.json",
+      "file_type": "code",
+      "norm_label": "access",
+      "source_file": "hosted/einkauf/mininode.json",
+      "source_location": "L9"
+    },
+    {
+      "id": "hosted_einkauf_mininode_access_default",
+      "label": "default",
+      "_origin": "ast",
+      "community": 80,
+      "community_name": "einkauf/mininode.json",
+      "file_type": "code",
+      "norm_label": "default",
+      "source_file": "hosted/einkauf/mininode.json",
+      "source_location": "L9"
+    },
+    {
+      "id": "hosted_einkauf_mininode_data",
+      "label": "data",
+      "_origin": "ast",
+      "community": 80,
+      "community_name": "einkauf/mininode.json",
+      "file_type": "code",
+      "norm_label": "data",
+      "source_file": "hosted/einkauf/mininode.json",
+      "source_location": "L10"
+    },
+    {
+      "id": "hosted_einkauf_mininode_data_mode",
+      "label": "mode",
+      "_origin": "ast",
+      "community": 80,
+      "community_name": "einkauf/mininode.json",
+      "file_type": "code",
+      "norm_label": "mode",
+      "source_file": "hosted/einkauf/mininode.json",
+      "source_location": "L10"
+    },
+    {
+      "id": "hosted_einkauf_mininode_description",
+      "label": "description",
+      "_origin": "ast",
+      "community": 80,
+      "community_name": "einkauf/mininode.json",
+      "file_type": "code",
+      "norm_label": "description",
+      "source_file": "hosted/einkauf/mininode.json",
+      "source_location": "L6"
+    },
+    {
+      "id": "hosted_einkauf_mininode_kind",
+      "label": "kind",
+      "_origin": "ast",
+      "community": 80,
+      "community_name": "einkauf/mininode.json",
+      "file_type": "code",
+      "norm_label": "kind",
+      "source_file": "hosted/einkauf/mininode.json",
+      "source_location": "L7"
+    },
+    {
+      "id": "hosted_einkauf_mininode_name",
+      "label": "name",
+      "_origin": "ast",
+      "community": 80,
+      "community_name": "einkauf/mininode.json",
+      "file_type": "code",
+      "norm_label": "name",
+      "source_file": "hosted/einkauf/mininode.json",
+      "source_location": "L5"
+    },
+    {
+      "id": "hosted_einkauf_mininode_schema",
+      "label": "$schema",
+      "_origin": "ast",
+      "community": 80,
+      "community_name": "einkauf/mininode.json",
+      "file_type": "code",
+      "norm_label": "$schema",
+      "source_file": "hosted/einkauf/mininode.json",
+      "source_location": "L2"
+    },
+    {
+      "id": "hosted_einkauf_mininode_slug",
+      "label": "slug",
+      "_origin": "ast",
+      "community": 80,
+      "community_name": "einkauf/mininode.json",
+      "file_type": "code",
+      "norm_label": "slug",
+      "source_file": "hosted/einkauf/mininode.json",
+      "source_location": "L4"
+    },
+    {
+      "id": "hosted_einkauf_mininode_specversion",
+      "label": "specVersion",
+      "_origin": "ast",
+      "community": 80,
+      "community_name": "einkauf/mininode.json",
+      "file_type": "code",
+      "norm_label": "specversion",
+      "source_file": "hosted/einkauf/mininode.json",
+      "source_location": "L3"
+    },
+    {
+      "id": "hosted_einkauf_mininode_target",
+      "label": "target",
+      "_origin": "ast",
+      "community": 80,
+      "community_name": "einkauf/mininode.json",
+      "file_type": "code",
+      "norm_label": "target",
+      "source_file": "hosted/einkauf/mininode.json",
+      "source_location": "L8"
+    },
+    {
+      "id": "hosted_notizen_mininode",
+      "label": "hosted/notizen/mininode.json",
+      "_origin": "ast",
+      "community": 81,
+      "community_name": "hosted/notizen/mininode.json",
+      "file_type": "code",
+      "norm_label": "hosted/notizen/mininode.json",
+      "source_file": "hosted/notizen/mininode.json",
+      "source_location": "L1"
+    },
+    {
+      "id": "hosted_notizen_mininode_access",
+      "label": "access",
+      "_origin": "ast",
+      "community": 81,
+      "community_name": "hosted/notizen/mininode.json",
+      "file_type": "code",
+      "norm_label": "access",
+      "source_file": "hosted/notizen/mininode.json",
+      "source_location": "L9"
+    },
+    {
+      "id": "hosted_notizen_mininode_access_default",
+      "label": "default",
+      "_origin": "ast",
+      "community": 81,
+      "community_name": "hosted/notizen/mininode.json",
+      "file_type": "code",
+      "norm_label": "default",
+      "source_file": "hosted/notizen/mininode.json",
+      "source_location": "L9"
+    },
+    {
+      "id": "hosted_notizen_mininode_data",
+      "label": "data",
+      "_origin": "ast",
+      "community": 81,
+      "community_name": "hosted/notizen/mininode.json",
+      "file_type": "code",
+      "norm_label": "data",
+      "source_file": "hosted/notizen/mininode.json",
+      "source_location": "L10"
+    },
+    {
+      "id": "hosted_notizen_mininode_data_mode",
+      "label": "mode",
+      "_origin": "ast",
+      "community": 81,
+      "community_name": "hosted/notizen/mininode.json",
+      "file_type": "code",
+      "norm_label": "mode",
+      "source_file": "hosted/notizen/mininode.json",
+      "source_location": "L10"
+    },
+    {
+      "id": "hosted_notizen_mininode_description",
+      "label": "description",
+      "_origin": "ast",
+      "community": 81,
+      "community_name": "hosted/notizen/mininode.json",
+      "file_type": "code",
+      "norm_label": "description",
+      "source_file": "hosted/notizen/mininode.json",
+      "source_location": "L6"
+    },
+    {
+      "id": "hosted_notizen_mininode_kind",
+      "label": "kind",
+      "_origin": "ast",
+      "community": 81,
+      "community_name": "hosted/notizen/mininode.json",
+      "file_type": "code",
+      "norm_label": "kind",
+      "source_file": "hosted/notizen/mininode.json",
+      "source_location": "L7"
+    },
+    {
+      "id": "hosted_notizen_mininode_name",
+      "label": "name",
+      "_origin": "ast",
+      "community": 81,
+      "community_name": "hosted/notizen/mininode.json",
+      "file_type": "code",
+      "norm_label": "name",
+      "source_file": "hosted/notizen/mininode.json",
+      "source_location": "L5"
+    },
+    {
+      "id": "hosted_notizen_mininode_schema",
+      "label": "$schema",
+      "_origin": "ast",
+      "community": 81,
+      "community_name": "hosted/notizen/mininode.json",
+      "file_type": "code",
+      "norm_label": "$schema",
+      "source_file": "hosted/notizen/mininode.json",
+      "source_location": "L2"
+    },
+    {
+      "id": "hosted_notizen_mininode_slug",
+      "label": "slug",
+      "_origin": "ast",
+      "community": 81,
+      "community_name": "hosted/notizen/mininode.json",
+      "file_type": "code",
+      "norm_label": "slug",
+      "source_file": "hosted/notizen/mininode.json",
+      "source_location": "L4"
+    },
+    {
+      "id": "hosted_notizen_mininode_specversion",
+      "label": "specVersion",
+      "_origin": "ast",
+      "community": 81,
+      "community_name": "hosted/notizen/mininode.json",
+      "file_type": "code",
+      "norm_label": "specversion",
+      "source_file": "hosted/notizen/mininode.json",
+      "source_location": "L3"
+    },
+    {
+      "id": "hosted_notizen_mininode_target",
+      "label": "target",
+      "_origin": "ast",
+      "community": 81,
+      "community_name": "hosted/notizen/mininode.json",
+      "file_type": "code",
+      "norm_label": "target",
+      "source_file": "hosted/notizen/mininode.json",
+      "source_location": "L8"
+    },
+    {
+      "id": "hosted_einkauf_app",
+      "label": "einkauf/app.js",
+      "_origin": "ast",
+      "community": 82,
+      "community_name": "render",
+      "file_type": "code",
+      "norm_label": "einkauf/app.js",
+      "source_file": "hosted/einkauf/app.js",
+      "source_location": "L1"
+    },
+    {
+      "id": "hosted_einkauf_readme",
+      "label": "einkauf/README.md",
+      "_origin": "ast",
+      "community": 83,
+      "community_name": "einkauf/README.md",
+      "file_type": "document",
+      "node_kind": "page",
+      "norm_label": "einkauf/readme.md",
+      "source_file": "hosted/einkauf/README.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "hosted_einkauf_readme_einkauf",
+      "label": "Einkauf",
+      "_origin": "ast",
+      "community": 83,
+      "community_name": "einkauf/README.md",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "einkauf",
+      "source_file": "hosted/einkauf/README.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "hosted_ideen_app",
+      "label": "ideen/app.js",
+      "_origin": "ast",
+      "community": 84,
+      "community_name": "ideen/app.js",
+      "file_type": "code",
+      "norm_label": "ideen/app.js",
+      "source_file": "hosted/ideen/app.js",
+      "source_location": "L1"
+    },
+    {
+      "id": "hosted_ideen_readme",
+      "label": "ideen/README.md",
+      "_origin": "ast",
+      "community": 85,
+      "community_name": "ideen/README.md",
+      "file_type": "document",
+      "node_kind": "page",
+      "norm_label": "ideen/readme.md",
+      "source_file": "hosted/ideen/README.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "hosted_ideen_readme_ideen",
+      "label": "Ideen",
+      "_origin": "ast",
+      "community": 85,
+      "community_name": "ideen/README.md",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "ideen",
+      "source_file": "hosted/ideen/README.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "hosted_notizen_app",
+      "label": "notizen/app.js",
+      "_origin": "ast",
+      "community": 86,
+      "community_name": "render",
+      "file_type": "code",
+      "norm_label": "notizen/app.js",
+      "source_file": "hosted/notizen/app.js",
+      "source_location": "L1"
+    },
+    {
+      "id": "hosted_notizen_readme",
+      "label": "hosted/notizen/README.md",
+      "_origin": "ast",
+      "community": 87,
+      "community_name": "hosted/notizen/README.md",
+      "file_type": "document",
+      "node_kind": "page",
+      "norm_label": "hosted/notizen/readme.md",
+      "source_file": "hosted/notizen/README.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "hosted_notizen_readme_notizen",
+      "label": "Notizen",
+      "_origin": "ast",
+      "community": 87,
+      "community_name": "hosted/notizen/README.md",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "notizen",
+      "source_file": "hosted/notizen/README.md",
+      "source_location": "L1"
+    },
+    {
       "id": "packages_sdk_src_ai",
       "label": "ai.ts",
       "_origin": "ast",
@@ -10432,18 +11036,6 @@
       "type": "external"
     },
     {
-      "id": "ref_node_crypto",
-      "label": "ref_node_crypto",
-      "_origin": "semantic",
-      "community": 1,
-      "community_name": "deploy/index.ts",
-      "external": true,
-      "file_type": "concept",
-      "norm_label": "ref_node_crypto",
-      "source_file": "",
-      "type": "external"
-    },
-    {
       "id": "ref_node_fs",
       "label": "ref_node_fs",
       "_origin": "semantic",
@@ -10516,14 +11108,14 @@
       "type": "external"
     },
     {
-      "id": "packages_gate_src_index_createverifier",
-      "label": "packages_gate_src_index_createverifier",
+      "id": "ref_node_crypto",
+      "label": "ref_node_crypto",
       "_origin": "semantic",
-      "community": 14,
-      "community_name": "main.ts",
+      "community": 12,
+      "community_name": "server.ts",
       "external": true,
       "file_type": "concept",
-      "norm_label": "packages_gate_src_index_createverifier",
+      "norm_label": "ref_node_crypto",
       "source_file": "",
       "type": "external"
     },
@@ -10620,6 +11212,18 @@
       "external": true,
       "file_type": "concept",
       "norm_label": "ref_hono",
+      "source_file": "",
+      "type": "external"
+    },
+    {
+      "id": "ref_supabase_supabase_js",
+      "label": "ref_supabase_supabase_js",
+      "_origin": "semantic",
+      "community": 2,
+      "community_name": "remote.ts",
+      "external": true,
+      "file_type": "concept",
+      "norm_label": "ref_supabase_supabase_js",
       "source_file": "",
       "type": "external"
     },
@@ -10780,6 +11384,18 @@
       "type": "external"
     },
     {
+      "id": "packages_gate_src_index_createverifier",
+      "label": "packages_gate_src_index_createverifier",
+      "_origin": "semantic",
+      "community": 4,
+      "community_name": "ai-proxy/src/index.ts",
+      "external": true,
+      "file_type": "concept",
+      "norm_label": "packages_gate_src_index_createverifier",
+      "source_file": "",
+      "type": "external"
+    },
+    {
       "id": "ref_anthropic_ai_sdk",
       "label": "ref_anthropic_ai_sdk",
       "_origin": "semantic",
@@ -10788,18 +11404,6 @@
       "external": true,
       "file_type": "concept",
       "norm_label": "ref_anthropic_ai_sdk",
-      "source_file": "",
-      "type": "external"
-    },
-    {
-      "id": "ref_supabase_supabase_js",
-      "label": "ref_supabase_supabase_js",
-      "_origin": "semantic",
-      "community": 4,
-      "community_name": "ai-proxy/src/index.ts",
-      "external": true,
-      "file_type": "concept",
-      "norm_label": "ref_supabase_supabase_js",
       "source_file": "",
       "type": "external"
     },
@@ -13194,6 +13798,30 @@
       "weight": 1.0
     },
     {
+      "source": "hosted_einkauf_app_render",
+      "target": "hosted_einkauf_app_render",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "hosted/einkauf/app.js",
+      "source_location": "L70",
+      "weight": 1.0
+    },
+    {
+      "source": "hosted_notizen_app_render",
+      "target": "hosted_notizen_app_render",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "hosted/notizen/app.js",
+      "source_location": "L52",
+      "weight": 1.0
+    },
+    {
       "source": "infra_cloudflare_bootstrap_access_app",
       "target": "infra_cloudflare_bootstrap_cf",
       "relation": "calls",
@@ -14274,6 +14902,18 @@
       "weight": 1.0
     },
     {
+      "source": "e2e_hosted_apps_spec",
+      "target": "e2e_hosted_apps_spec_signinto",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "e2e/hosted-apps.spec.ts",
+      "source_location": "L15",
+      "weight": 1.0
+    },
+    {
       "source": "e2e_portal_spec",
       "target": "e2e_portal_spec_signin",
       "relation": "contains",
@@ -14282,6 +14922,42 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "e2e/portal.spec.ts",
+      "source_location": "L22",
+      "weight": 1.0
+    },
+    {
+      "source": "hosted_einkauf_app",
+      "target": "hosted_einkauf_app_render",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "hosted/einkauf/app.js",
+      "source_location": "L34",
+      "weight": 1.0
+    },
+    {
+      "source": "hosted_ideen_app",
+      "target": "hosted_ideen_app_render",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "hosted/ideen/app.js",
+      "source_location": "L21",
+      "weight": 1.0
+    },
+    {
+      "source": "hosted_notizen_app",
+      "target": "hosted_notizen_app_render",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "hosted/notizen/app.js",
       "source_location": "L22",
       "weight": 1.0
     },
@@ -17843,6 +18519,42 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "e2e/gate.spec.ts",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "e2e_hosted_apps_spec",
+      "target": "e2e_seed_cleanup",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "e2e/hosted-apps.spec.ts",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "e2e_hosted_apps_spec",
+      "target": "e2e_seed_createuser",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "e2e/hosted-apps.spec.ts",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "e2e_hosted_apps_spec",
+      "target": "e2e_seed_password",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "e2e/hosted-apps.spec.ts",
       "source_location": "L2",
       "weight": 1.0
     },
@@ -21453,6 +22165,30 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "e2e/gate.spec.ts",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "e2e_hosted_apps_spec",
+      "target": "ref_playwright_test",
+      "relation": "imports_from",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "e2e/hosted-apps.spec.ts",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "e2e_hosted_apps_spec",
+      "target": "e2e_seed",
+      "relation": "imports_from",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "e2e/hosted-apps.spec.ts",
       "source_location": "L2",
       "weight": 1.0
     },
@@ -25913,7 +26649,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/runbooks/first-setup.md",
-      "source_location": "L15",
+      "source_location": "L17",
       "weight": 1.0
     },
     {
@@ -25924,7 +26660,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/runbooks/first-setup.md",
-      "source_location": "L41",
+      "source_location": "L43",
       "weight": 1.0
     },
     {
@@ -25946,18 +26682,18 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/runbooks/first-setup.md",
-      "source_location": "L50",
+      "source_location": "L52",
       "weight": 1.0
     },
     {
       "source": "docs_runbooks_first_setup_first_setup",
-      "target": "docs_runbooks_first_setup_4_worker_secrets_once",
+      "target": "docs_runbooks_first_setup_4_test_apps",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/runbooks/first-setup.md",
-      "source_location": "L61",
+      "source_location": "L70",
       "weight": 1.0
     },
     {
@@ -25968,7 +26704,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/runbooks/first-setup.md",
-      "source_location": "L81",
+      "source_location": "L76",
       "weight": 1.0
     },
     {
@@ -25979,7 +26715,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/runbooks/first-setup.md",
-      "source_location": "L91",
+      "source_location": "L86",
       "weight": 1.0
     },
     {
@@ -26804,6 +27540,446 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "fixtures/static-html/expected/hallo/README.md",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "hosted_einkauf_mininode",
+      "target": "hosted_einkauf_mininode_data",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "hosted/einkauf/mininode.json",
+      "source_location": "L10",
+      "weight": 1.0
+    },
+    {
+      "source": "hosted_einkauf_mininode",
+      "target": "hosted_einkauf_mininode_schema",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "hosted/einkauf/mininode.json",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "hosted_einkauf_mininode",
+      "target": "hosted_einkauf_mininode_specversion",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "hosted/einkauf/mininode.json",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "hosted_einkauf_mininode",
+      "target": "hosted_einkauf_mininode_slug",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "hosted/einkauf/mininode.json",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "hosted_einkauf_mininode",
+      "target": "hosted_einkauf_mininode_name",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "hosted/einkauf/mininode.json",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "hosted_einkauf_mininode",
+      "target": "hosted_einkauf_mininode_description",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "hosted/einkauf/mininode.json",
+      "source_location": "L6",
+      "weight": 1.0
+    },
+    {
+      "source": "hosted_einkauf_mininode",
+      "target": "hosted_einkauf_mininode_kind",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "hosted/einkauf/mininode.json",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "hosted_einkauf_mininode",
+      "target": "hosted_einkauf_mininode_target",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "hosted/einkauf/mininode.json",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "hosted_einkauf_mininode",
+      "target": "hosted_einkauf_mininode_access",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "hosted/einkauf/mininode.json",
+      "source_location": "L9",
+      "weight": 1.0
+    },
+    {
+      "source": "hosted_einkauf_mininode_access",
+      "target": "hosted_einkauf_mininode_access_default",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "hosted/einkauf/mininode.json",
+      "source_location": "L9",
+      "weight": 1.0
+    },
+    {
+      "source": "hosted_einkauf_mininode_data",
+      "target": "hosted_einkauf_mininode_data_mode",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "hosted/einkauf/mininode.json",
+      "source_location": "L10",
+      "weight": 1.0
+    },
+    {
+      "source": "hosted_einkauf_readme",
+      "target": "hosted_einkauf_readme_einkauf",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "hosted/einkauf/README.md",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "hosted_ideen_mininode",
+      "target": "hosted_ideen_mininode_data",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "hosted/ideen/mininode.json",
+      "source_location": "L10",
+      "weight": 1.0
+    },
+    {
+      "source": "hosted_ideen_mininode",
+      "target": "hosted_ideen_mininode_ai",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "hosted/ideen/mininode.json",
+      "source_location": "L11",
+      "weight": 1.0
+    },
+    {
+      "source": "hosted_ideen_mininode",
+      "target": "hosted_ideen_mininode_schema",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "hosted/ideen/mininode.json",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "hosted_ideen_mininode",
+      "target": "hosted_ideen_mininode_specversion",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "hosted/ideen/mininode.json",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "hosted_ideen_mininode",
+      "target": "hosted_ideen_mininode_slug",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "hosted/ideen/mininode.json",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "hosted_ideen_mininode",
+      "target": "hosted_ideen_mininode_name",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "hosted/ideen/mininode.json",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "hosted_ideen_mininode",
+      "target": "hosted_ideen_mininode_description",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "hosted/ideen/mininode.json",
+      "source_location": "L6",
+      "weight": 1.0
+    },
+    {
+      "source": "hosted_ideen_mininode",
+      "target": "hosted_ideen_mininode_kind",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "hosted/ideen/mininode.json",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "hosted_ideen_mininode",
+      "target": "hosted_ideen_mininode_target",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "hosted/ideen/mininode.json",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "hosted_ideen_mininode",
+      "target": "hosted_ideen_mininode_access",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "hosted/ideen/mininode.json",
+      "source_location": "L9",
+      "weight": 1.0
+    },
+    {
+      "source": "hosted_ideen_mininode_access",
+      "target": "hosted_ideen_mininode_access_default",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "hosted/ideen/mininode.json",
+      "source_location": "L9",
+      "weight": 1.0
+    },
+    {
+      "source": "hosted_ideen_mininode_ai",
+      "target": "hosted_ideen_mininode_ai_maxoutputtokens",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "hosted/ideen/mininode.json",
+      "source_location": "L11",
+      "weight": 1.0
+    },
+    {
+      "source": "hosted_ideen_mininode_ai",
+      "target": "hosted_ideen_mininode_ai_models",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "hosted/ideen/mininode.json",
+      "source_location": "L11",
+      "weight": 1.0
+    },
+    {
+      "source": "hosted_ideen_mininode_ai",
+      "target": "hosted_ideen_mininode_ai_monthlybudgeteur",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "hosted/ideen/mininode.json",
+      "source_location": "L11",
+      "weight": 1.0
+    },
+    {
+      "source": "hosted_ideen_mininode_data",
+      "target": "hosted_ideen_mininode_data_mode",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "hosted/ideen/mininode.json",
+      "source_location": "L10",
+      "weight": 1.0
+    },
+    {
+      "source": "hosted_ideen_readme",
+      "target": "hosted_ideen_readme_ideen",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "hosted/ideen/README.md",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "hosted_notizen_mininode",
+      "target": "hosted_notizen_mininode_data",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "hosted/notizen/mininode.json",
+      "source_location": "L10",
+      "weight": 1.0
+    },
+    {
+      "source": "hosted_notizen_mininode",
+      "target": "hosted_notizen_mininode_schema",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "hosted/notizen/mininode.json",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "hosted_notizen_mininode",
+      "target": "hosted_notizen_mininode_specversion",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "hosted/notizen/mininode.json",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "hosted_notizen_mininode",
+      "target": "hosted_notizen_mininode_slug",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "hosted/notizen/mininode.json",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "hosted_notizen_mininode",
+      "target": "hosted_notizen_mininode_name",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "hosted/notizen/mininode.json",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "hosted_notizen_mininode",
+      "target": "hosted_notizen_mininode_description",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "hosted/notizen/mininode.json",
+      "source_location": "L6",
+      "weight": 1.0
+    },
+    {
+      "source": "hosted_notizen_mininode",
+      "target": "hosted_notizen_mininode_kind",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "hosted/notizen/mininode.json",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "hosted_notizen_mininode",
+      "target": "hosted_notizen_mininode_target",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "hosted/notizen/mininode.json",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "hosted_notizen_mininode",
+      "target": "hosted_notizen_mininode_access",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "hosted/notizen/mininode.json",
+      "source_location": "L9",
+      "weight": 1.0
+    },
+    {
+      "source": "hosted_notizen_mininode_access",
+      "target": "hosted_notizen_mininode_access_default",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "hosted/notizen/mininode.json",
+      "source_location": "L9",
+      "weight": 1.0
+    },
+    {
+      "source": "hosted_notizen_mininode_data",
+      "target": "hosted_notizen_mininode_data_mode",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "hosted/notizen/mininode.json",
+      "source_location": "L10",
+      "weight": 1.0
+    },
+    {
+      "source": "hosted_notizen_readme",
+      "target": "hosted_notizen_readme_notizen",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "hosted/notizen/README.md",
       "source_location": "L1",
       "weight": 1.0
     },
@@ -31322,7 +32498,7 @@
       "confidence_score": 0.95,
       "context": "main",
       "source_file": "docs/runbooks/first-setup.md",
-      "source_location": "L83",
+      "source_location": "L78",
       "weight": 1.0
     },
     {
@@ -31495,5 +32671,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "741df4ab2eea61bccfeb00f6f42185dfd6117d92"
+  "built_at_commit": "0ae7886ef8090e221fc600c6b70603c357f55f7f"
 }

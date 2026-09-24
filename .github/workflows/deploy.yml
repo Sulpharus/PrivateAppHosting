@@ -87,6 +87,34 @@ jobs:
       - name: AI proxy
         working-directory: apps/ai-proxy
         run: pnpm exec wrangler deploy
+      - name: Worker secrets from the GitHub environment
+        # Only secrets that are set are uploaded; provider keys can be added later.
+        env:
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          AI_GATEWAY_TOKEN: ${{ secrets.AI_GATEWAY_TOKEN }}
+          GUACAMOLE_JSON_SECRET: ${{ secrets.GUACAMOLE_JSON_SECRET }}
+          NUCBOX_CONTROL_TOKEN: ${{ secrets.NUCBOX_CONTROL_TOKEN }}
+          ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_API_CLIENT_ID }}
+          ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_API_CLIENT_SECRET }}
+        run: |
+          upload() { # worker-dir NAME...
+            local dir=$1 args=() name
+            shift
+            for name in "$@"; do args+=(--arg "$name" "${!name}"); done
+            local json
+            json=$(jq -n "${args[@]}" '$ARGS.named | with_entries(select(.value != ""))')
+            if [ "$json" != "{}" ]; then
+              local file
+              file=$(mktemp)
+              trap 'rm -f "$file"' RETURN
+              echo "$json" > "$file"
+              (cd "$dir" && pnpm exec wrangler secret bulk "$file")
+            fi
+          }
+          upload apps/api SUPABASE_SECRET_KEY GUACAMOLE_JSON_SECRET NUCBOX_CONTROL_TOKEN ACCESS_CLIENT_ID ACCESS_CLIENT_SECRET
+          upload apps/ai-proxy SUPABASE_SECRET_KEY ANTHROPIC_API_KEY GEMINI_API_KEY AI_GATEWAY_TOKEN
 
   apps:
     name: Hosted apps

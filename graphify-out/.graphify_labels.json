@@ -77,5 +77,14 @@
   "75": "50_kv_files.test.sql",
   "76": "60_admin_rpcs.test.sql",
   "77": "reviewer.md",
-  "78": "dockerEngine"
+  "78": "dockerEngine",
+  "79": "ideen/mininode.json",
+  "80": "einkauf/mininode.json",
+  "81": "hosted/notizen/mininode.json",
+  "82": "render",
+  "83": "einkauf/README.md",
+  "84": "ideen/app.js",
+  "85": "ideen/README.md",
+  "86": "render",
+  "87": "hosted/notizen/README.md"
 }

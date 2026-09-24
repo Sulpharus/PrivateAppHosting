@@ -1,0 +1,154 @@
+/* Shared look of the MiniNode test apps: calm, readable, light and dark. */
+:root {
+  --bg: #f3f1ec;
+  --surface: #ffffff;
+  --line: #dcd8cf;
+  --text: #17160f;
+  --muted: #5d5a52;
+  --accent: #9a3512;
+  --accent-text: #ffffff;
+  --danger: #a1261b;
+  color-scheme: light dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #121210;
+    --surface: #1c1b18;
+    --line: #34322d;
+    --text: #edeae2;
+    --muted: #a9a59b;
+    --accent: #ffa47c;
+    --accent-text: #1a0d06;
+    --danger: #ff8a80;
+  }
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font:
+    16px / 1.5 system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    sans-serif;
+}
+header,
+main {
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: 1rem;
+}
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+header a {
+  color: var(--muted);
+  text-decoration: none;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+}
+h1 {
+  font-size: 1.75rem;
+  margin: 0.5rem 0 0.25rem;
+  letter-spacing: -0.01em;
+}
+.muted {
+  color: var(--muted);
+  margin-top: 0;
+}
+form,
+.row {
+  display: flex;
+  gap: 0.5rem;
+}
+input,
+textarea,
+button {
+  font: inherit;
+  min-height: 44px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--text);
+  padding: 0.5rem 0.75rem;
+}
+input,
+textarea {
+  flex: 1;
+  min-width: 0;
+}
+textarea {
+  width: 100%;
+  min-height: 6rem;
+  resize: vertical;
+}
+button {
+  cursor: pointer;
+}
+button.primary {
+  background: var(--accent);
+  color: var(--accent-text);
+  border-color: var(--accent);
+  font-weight: 600;
+}
+button.ghost {
+  background: transparent;
+}
+button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+ul {
+  list-style: none;
+  padding: 0;
+  margin: 1rem 0;
+  display: grid;
+  gap: 0.5rem;
+}
+li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 0.5rem 0.5rem 0.5rem 0.75rem;
+}
+li .text {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+li .meta {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+.empty {
+  color: var(--muted);
+  text-align: center;
+  padding: 2rem 0;
+}
+.error {
+  color: var(--danger);
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

@@ -10,6 +10,8 @@ Where the platform stands and what is left, in order. Every step is idempotent.
 | Supabase staging | project `mininode-staging` (`ttgrtecdqouiogiwcjag`), empty; migrated on its first `supabase db push` |
 | Public config | Supabase URL, publishable keys, Cloudflare account id and AI Gateway URL are in the `wrangler.jsonc` files and `deploy.yml` (none of them are secret) |
 | Auth settings as code | `supabase/config.toml` + `[remotes.production]`: sign-ups off, passwords ≥ 10, passkeys for `mininode.app`, custom access token hook. Applied by the deploy workflow (`supabase config push`) |
+| JWT signing keys | migrated to asymmetric keys (JWKS at `/auth/v1/.well-known/jwks.json`), as the gates require |
+| Supabase access token + secret key | created (`mininode-ci`, `mininode-workers`); they only need to go into GitHub (step 3) |
 | No email | Email Sending needs Workers Paid, so it is off. Invites and password resets are one-time links the admin copies from *Verwaltung → Nutzer & Rollen* and sends by messenger. To turn email on later: add the `send_email` binding back to `apps/api/wrangler.jsonc` and set `EMAIL_ENABLED` to `"true"` in `apps/portal/wrangler.jsonc` |
 
 ## 1. Cloudflare: add the domain (5 min)
@@ -49,34 +51,27 @@ Where the platform stands and what is left, in order. Every step is idempotent.
 
 ## 3. GitHub secrets (3 min)
 
-Repository → *Settings → Environments → New environment* `production` → *Add secret*:
+Repository → *Settings → Environments → New environment* `production` → *Add secret*. The
+deploy workflow uses them and also uploads the Worker secrets, so nothing has to be set with
+`wrangler` by hand. Removing a GitHub secret does not remove it from the Worker; use
+`pnpm exec wrangler secret delete <NAME>` in the Worker's folder for that.
 
-| Secret | Value |
-|---|---|
-| `CLOUDFLARE_API_TOKEN` | the token from step 1 |
-| `SUPABASE_ACCESS_TOKEN` | step 2.1 |
-| `SUPABASE_SECRET_KEY` | step 2.2 |
-| `SUPABASE_DB_URL` | only when the first app with its own tables arrives: *Connect → Session pooler* string |
+| Secret | Value | Needed |
+|---|---|---|
+| `CLOUDFLARE_API_TOKEN` | the token from step 1 | now |
+| `SUPABASE_ACCESS_TOKEN` | step 2.1 | now |
+| `SUPABASE_SECRET_KEY` | step 2.2 | now |
+| `GEMINI_API_KEY` / `ANTHROPIC_API_KEY` | provider keys for the AI proxy (the *Ideen* app) | for AI |
+| `AI_GATEWAY_TOKEN` | AI Gateway → mininode → Settings → auth token | for AI |
+| `GUACAMOLE_JSON_SECRET`, `NUCBOX_CONTROL_TOKEN` | `openssl rand -hex 16` / `-hex 32`, same values as on the NucBox | NucBox |
+| `CF_ACCESS_API_CLIENT_ID` / `_SECRET` | Access service token `mininode-api` (from `bootstrap.sh`) | NucBox |
+| `SUPABASE_DB_URL` | *Connect → Session pooler* string | apps with own tables |
 
-## 4. Worker secrets (once)
+## 4. Test apps
 
-Either give Claude network access to `api.cloudflare.com` (cloud environment settings →
-*Network access*), or run locally:
-
-```bash
-cd apps/api
-pnpm exec wrangler secret put SUPABASE_SECRET_KEY
-pnpm exec wrangler secret put GUACAMOLE_JSON_SECRET     # openssl rand -hex 16, same as on the NucBox
-pnpm exec wrangler secret put NUCBOX_CONTROL_TOKEN      # openssl rand -hex 32, same as on the NucBox
-cd ../ai-proxy
-pnpm exec wrangler secret put SUPABASE_SECRET_KEY
-pnpm exec wrangler secret put ANTHROPIC_API_KEY         # or store provider keys in the AI Gateway (BYOK)
-pnpm exec wrangler secret put GEMINI_API_KEY
-pnpm exec wrangler secret put AI_GATEWAY_TOKEN          # AI Gateway → mininode → Settings → auth token
-```
-
-The API also accepts `ACCESS_CLIENT_ID` / `ACCESS_CLIENT_SECRET` (Access service token for
-`control.mininode.app`) once the NucBox runs.
+`hosted/notizen` (private notes), `hosted/einkauf` (shared list) and `hosted/ideen` (AI) deploy
+with the first run and are granted to every user. They check private data, shared data and the
+AI proxy; each README says what to try.
 
 ## 5. First deploy and first login
 
