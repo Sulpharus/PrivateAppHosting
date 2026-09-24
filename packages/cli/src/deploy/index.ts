@@ -21,6 +21,7 @@ const NOT_SERVED = new Set([
   'package.json',
   'node_modules',
   'src',
+  'test',
 ]);
 
 export interface DeployOptions {

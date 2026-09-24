@@ -67,6 +67,22 @@ describe.skipIf(!enabled)('sdk against local Supabase', () => {
     expect(await mn.auth.role()).toMatch(/^(admin|user)$/);
   });
 
+  it('lists more keys than one PostgREST response holds', async () => {
+    const owner = await mn.supabase.schema('platform').rpc('effective_owner', { p_slug: slug });
+    if (owner.error) throw owner.error;
+    const rows = Array.from({ length: 1005 }, (_, i) => ({
+      app_slug: slug,
+      owner_id: owner.data as string,
+      key: `bulk:${String(i).padStart(4, '0')}`,
+      value: i,
+    }));
+    const insert = await admin.schema('platform').from('app_kv').insert(rows);
+    if (insert.error) throw insert.error;
+    const listed = await mn.kv.list('bulk:');
+    expect(listed).toHaveLength(1005);
+    expect(listed.at(-1)).toEqual({ key: 'bulk:1004', value: 1004 });
+  });
+
   it('stores private and shared key-value data', async () => {
     await mn.kv.set('settings', { theme: 'dark' });
     await mn.kv.set('motd', 'Hallo', 'shared');

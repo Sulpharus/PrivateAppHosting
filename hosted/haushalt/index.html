@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Haushalt</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="/_mininode/sdk.js" defer></script>
+  <script type="module" src="/app.js"></script>
+</head>
+<body data-tab="overview">
+  <header class="top">
+    <div class="top-inner">
+      <div>
+        <a class="home" href="https://mininode.app">← Alle Apps</a>
+        <h1>Haushalt</h1>
+      </div>
+      <button id="add" class="btn primary" type="button">+ Buchung</button>
+    </div>
+    <nav class="tabs" aria-label="Bereiche">
+      <button type="button" data-tab="overview" aria-current="page">Übersicht</button>
+      <button type="button" data-tab="bookings">Buchungen</button>
+      <button type="button" data-tab="budget">Budget</button>
+      <button type="button" data-tab="tax">Steuer</button>
+      <button type="button" data-tab="settings">Einstellungen</button>
+    </nav>
+  </header>
+  <main id="view"></main>
+  <dialog id="dlg"></dialog>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+</body>
+</html>
