@@ -1,0 +1,11 @@
+{
+  "$schema": "../../packages/manifest/schema.json",
+  "specVersion": 1,
+  "slug": "haushalt",
+  "name": "Haushalt",
+  "description": "Einnahmen und Ausgaben, Monatsbudgets, Bank-Import und automatische Übernahme in die Steuererklärung",
+  "kind": "static",
+  "target": "cloudflare",
+  "access": { "default": true },
+  "data": { "mode": "private" }
+}
