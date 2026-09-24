@@ -2,7 +2,7 @@
 // automatic transfer of tax-relevant bookings into the forms of the income tax return.
 // Storage is private mn.kv: settings, one key per booking (tx:<date>:<id>), per standing order
 // (rec:<id>) and per tax year (profile:<year>). Receipts are files in mn.files (belege/...).
-import { analyse, hash, parseAmount, toBookings } from './csv.js';
+import { analyse, toCsv as csv, hash, parseAmount, toBookings } from './csv.js';
 import {
   cleanBooking,
   cleanProfile,
@@ -125,7 +125,10 @@ async function ensureYear(year) {
   }
   S.years.add(year);
 }
+// Bumped on every write; a background refresh that overlaps a write is thrown away.
+let writes = 0;
 async function saveBooking(b, oldKey) {
+  writes++;
   const mn = await ready;
   const key = keyOf(b);
   await mn.kv.set(key, b);
@@ -136,6 +139,7 @@ async function saveBooking(b, oldKey) {
   }
 }
 async function deleteBooking(key) {
+  writes++;
   const mn = await ready;
   const b = S.tx.get(key);
   await mn.kv.delete(key);
@@ -701,6 +705,7 @@ function profileForm(year) {
           homeofficeDays: Math.round(num('homeofficeDays')),
           children: Math.round(num('children')),
           married: fd.get('married') === 'on',
+          car: fd.get('car') === 'on',
           income: income && income > 0 ? income : 0,
           employee: fd.get('employee') === 'on',
         });
@@ -729,6 +734,12 @@ function profileForm(year) {
       { class: 'check' },
       h('input', { type: 'checkbox', name: 'employee', checked: p.employee }),
       'Ich bin Arbeitnehmer:in (Anlage N)',
+    ),
+    h(
+      'label',
+      { class: 'check' },
+      h('input', { type: 'checkbox', name: 'car', checked: p.car }),
+      'Mit dem eigenen Auto zur Arbeit (keine Obergrenze von 4.500 €)',
     ),
     h(
       'label',
@@ -1192,6 +1203,12 @@ function editBooking(key) {
     party: '',
   };
   let receipt = b.receipt;
+  // Files uploaded in this dialog; whatever is not saved with the booking is removed on close.
+  const uploaded = new Set();
+  const dropUnsaved = () => {
+    for (const path of uploaded) ready.then((mn) => mn.files.remove(path)).catch(() => {});
+    uploaded.clear();
+  };
   const receiptHost = h('div', { class: 'receipt' });
   const drawReceipt = () =>
     receiptHost.replaceChildren(
@@ -1240,6 +1257,7 @@ function editBooking(key) {
                   await mn.files.upload(path, file, {
                     contentType: file.type || 'application/octet-stream',
                   });
+                  uploaded.add(path);
                   receipt = path;
                   drawReceipt();
                 } catch {
@@ -1406,6 +1424,7 @@ function editBooking(key) {
           try {
             await ensureYear(Number(date.slice(0, 4)));
             await saveBooking(next, key);
+            uploaded.delete(receipt);
             if (old?.receipt && old.receipt !== receipt)
               ready.then((mn) => mn.files.remove(old.receipt)).catch(() => {});
             closeDialog();
@@ -1419,6 +1438,7 @@ function editBooking(key) {
       'Speichern',
     ),
   ]);
+  dlg().addEventListener('close', dropUnsaved, { once: true });
 }
 async function openReceipt(path) {
   // Open the tab synchronously so popup blockers allow it, then point it at the signed URL.
@@ -1756,9 +1776,8 @@ function editRecurring(id) {
             if (!start) return formError(form, 'Gib den Monat der ersten Buchung an.');
             if (end && end < start)
               return formError(form, 'Die letzte Buchung liegt vor der ersten.');
-            // Changing the start or rhythm restarts generation from the new start; existing keys are
-            // skipped, so nothing is booked twice.
-            const restart = start !== r.start || Number(val(form, 'every')) !== r.every;
+            // Months already generated stay done (\`until\`), so an edit never re-books a month the
+            // user deleted or moved; new settings apply from the next due month on.
             const next = cleanRecurring({
               ...r,
               text: val(form, 'text'),
@@ -1769,7 +1788,7 @@ function editRecurring(id) {
               day: Math.min(28, Math.max(1, Math.round(Number(val(form, 'day')) || 1))),
               start,
               end,
-              until: restart ? '' : r.until,
+              until: r.until,
             });
             if (!next) return formError(form, 'Bitte prüfe die Angaben.');
             try {
@@ -1853,12 +1872,23 @@ async function previewImport(parsed) {
       amount: Number(val(form, 'amount')),
       text: Number(val(form, 'text')),
       party: Number(val(form, 'party')),
+      sign: parsed.map.sign,
     };
     const found = toBookings({ rows: parsed.rows, map });
     try {
       await Promise.all([...new Set(found.map((b) => Number(b.date.slice(0, 4))))].map(ensureYear));
     } catch {
-      /* shown as not loaded below */
+      // Without the existing bookings the duplicate check would overwrite them.
+      prepared = [];
+      summary.replaceChildren(
+        h(
+          'p',
+          { class: 'neg' },
+          'Deine bisherigen Buchungen konnten nicht geladen werden. Versuche es gleich noch einmal.',
+        ),
+      );
+      importBtn.disabled = true;
+      return;
     }
     const seen = new Map();
     prepared = found.map((b) => {
@@ -1969,15 +1999,6 @@ async function previewImport(parsed) {
 }
 
 // ---------- export / backup ----------
-function csv(lines) {
-  const cell = (v) => {
-    const s = String(v ?? '');
-    // Prefix formula starters so spreadsheet apps do not execute imported text.
-    const safe = /^[=+\-@\t\r]/.test(s) && !/^-?\d/.test(s) ? `'${s}` : s;
-    return /[";\n]/.test(safe) ? `"${safe.replaceAll('"', '""')}"` : safe;
-  };
-  return `﻿${lines.map((l) => l.map(cell).join(';')).join('\r\n')}`;
-}
 function download(name, content, type) {
   const url = URL.createObjectURL(new Blob([content], { type }));
   const a = h('a', { href: url, download: name });
@@ -2117,6 +2138,7 @@ let refreshedAt = Date.now();
 async function refresh() {
   const mn = await ready;
   const years = [...S.years];
+  const before = writes;
   const [settings, recs, ...lists] = await Promise.all([
     mn.kv.get('settings'),
     mn.kv.list('rec:'),
@@ -2128,6 +2150,7 @@ async function refresh() {
       const b = cleanBooking(value, FIELDS);
       if (b) next.set(key, b);
     }
+  if (writes !== before) return;
   if (settings) S.settings = cleanSettings(settings, FIELDS);
   S.recs = new Map(
     recs

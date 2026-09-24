@@ -82,10 +82,11 @@ export const FIELDS = {
 export function params(year) {
   return {
     // § 9a EStG
-    arbeitnehmerPauschbetrag: year >= 2023 ? 123000 : 120000,
+    arbeitnehmerPauschbetrag: year >= 2023 ? 123000 : year === 2022 ? 120000 : 100000,
     // § 4 Abs. 5 Nr. 6c EStG: per day, capped days
-    homeofficeRate: year >= 2023 ? 600 : 500,
-    homeofficeMaxDays: year >= 2023 ? 210 : 120,
+    // Introduced in 2020: 5 € for at most 120 days (600 €), from 2023 6 € for 210 days (1.260 €)
+    homeofficeRate: year >= 2023 ? 600 : year >= 2020 ? 500 : 0,
+    homeofficeMaxDays: year >= 2023 ? 210 : year >= 2020 ? 120 : 0,
     // § 9 Abs. 1 Nr. 4 EStG, cents per km of the one-way distance and working day.
     // 2026: 38 ct from the first kilometre (Steueränderungsgesetz 2025).
     kmRateFirst20: year >= 2026 ? 38 : 30,
@@ -105,13 +106,14 @@ export function params(year) {
   };
 }
 
-/** Distance allowance for the tax year, in cents. */
-export function entfernungspauschale(year, km, days) {
+/** Distance allowance for the tax year, in cents. The 4.500 € cap does not apply to commuting
+ * by one's own car (§ 9 Abs. 2 Satz 2 EStG). */
+export function entfernungspauschale(year, km, days, car = false) {
   const p = params(year);
   const k = Math.max(0, Math.floor(km || 0));
   const d = Math.max(0, Math.floor(days || 0));
   const perDay = Math.min(k, 20) * p.kmRateFirst20 + Math.max(0, k - 20) * p.kmRateFrom21;
-  return Math.min(perDay * d, p.kmCap);
+  return car ? perDay * d : Math.min(perDay * d, p.kmCap);
 }
 
 /** Home office allowance, in cents. */
@@ -172,7 +174,7 @@ export function buildReturn(year, bookings, profile = {}) {
   // Anlage N
   {
     const rows = [];
-    const km = entfernungspauschale(year, profile.commuteKm, profile.commuteDays);
+    const km = entfernungspauschale(year, profile.commuteKm, profile.commuteDays, profile.car);
     if (profile.commuteKm && profile.commuteDays)
       rows.push({
         key: 'wk_entfernung',
@@ -181,8 +183,11 @@ export function buildReturn(year, bookings, profile = {}) {
         cents: km,
         computed: true,
       });
+    const own = fieldsOf('N');
+    // A home office room (Arbeitszimmer) replaces the daily flat rate; both cannot be claimed.
+    const room = own.find((row) => row.key === 'wk_arbeitszimmer');
     const ho = homeofficePauschale(year, profile.homeofficeDays);
-    if (profile.homeofficeDays)
+    if (profile.homeofficeDays && ho > 0 && !room?.cents)
       rows.push({
         key: 'wk_homeoffice',
         label: 'Tagespauschale für Tätigkeit in der häuslichen Wohnung',
@@ -190,9 +195,9 @@ export function buildReturn(year, bookings, profile = {}) {
         cents: ho,
         computed: true,
       });
-    const own = fieldsOf('N');
     const konto = own.find((row) => row.key === 'wk_kontofuehrung');
-    if (konto && konto.cents === 0 && profile.employee !== false) {
+    // The flat 16 € is an alternative to the booked fees: take whichever is higher.
+    if (konto && konto.cents < p.kontofuehrungPauschale && profile.employee !== false) {
       konto.cents = p.kontofuehrungPauschale;
       konto.hint = 'Pauschale, wird ohne Nachweis üblicherweise anerkannt.';
       konto.computed = true;

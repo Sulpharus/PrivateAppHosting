@@ -373,15 +373,6 @@ function groupedWhen(slots) {
       : '')
   );
 }
-function describeSlot(s) {
-  const when =
-    s.kind === 'date'
-      ? fmt(parse(s.date), { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
-      : daysLabel(s.days || []);
-  const per = s.kind === 'date' ? '' : periodLabel(s.period);
-  return `<p><b>${esc(when)}</b>&ensp;<span class="muted">${esc(timeLabel(s))}</span>${per ? `<span class="season">${esc(per)}</span>` : ''}</p>`;
-}
-
 /* ---------- views ---------- */
 function setHeader(title, sub) {
   setText($('#title'), title);
@@ -730,7 +721,7 @@ let sheetReturn = null;
 function openSheet(html, tall, foot) {
   if (!$('#sheet-root').firstChild) sheetReturn = document.activeElement;
   $('#sheet-root').innerHTML =
-    `<div class="overlay" data-action="backdrop"><div class="sheet${tall ? ' tall' : ''}${foot ? ' foot' : ''}" role="dialog" aria-modal="true" tabindex="-1">${html}</div></div>`;
+    `<div class="overlay" data-action="backdrop"><div class="sheet${tall ? ' tall' : ''}${foot ? ' foot' : ''}" role="dialog" aria-modal="true" aria-labelledby="sheet-title" tabindex="-1">${html}</div></div>`;
   document.body.style.overflow = 'hidden';
   $('.sheet').focus({ preventScroll: true });
 }
@@ -863,7 +854,7 @@ function detailBodyHTML(a, ds) {
       : '<p class="muted">Noch keine Besuche eingetragen</p>') +
       `<div class="visit-add"><input type="date" id="visitdate" value="${td}" max="${td}" aria-label="Datum des Besuchs"><button class="btn" data-action="add-visit">Eintragen</button></div>`,
   ]);
-  return `<h2 class="d-title">${esc(a.name)}</h2>${[a.category, a.level].filter(Boolean).length ? `<p class="d-meta">${esc([a.category, levelLabel(a.level)].filter(Boolean).join(', '))}</p>` : ''}
+  return `<h2 class="d-title" id="sheet-title">${esc(a.name)}</h2>${[a.category, a.level].filter(Boolean).length ? `<p class="d-meta">${esc([a.category, levelLabel(a.level)].filter(Boolean).join(', '))}</p>` : ''}
     ${a.description ? `<p class="d-desc">${esc(a.description)}</p>` : ''}${today}
     <dl class="facts">${facts.map(([k, v]) => `<div class="fact"><dt>${k}</dt><dd>${v}</dd></div>`).join('')}</dl>
     <div class="d-actions"><button class="btn danger" data-action="del">Aktivität löschen</button></div>`;
@@ -940,7 +931,7 @@ function openEditor(a) {
   const opt = (val, label, cur) =>
     `<option value="${esc(val)}"${val === cur ? ' selected' : ''}>${esc(label)}</option>`;
   openSheet(
-    `<div class="bar"><button class="btn ghost" data-action="cancel-edit">Abbrechen</button><h2>${a ? 'Aktivität bearbeiten' : 'Neue Aktivität'}</h2><button class="btn primary" data-action="save">Speichern</button></div>
+    `<div class="bar"><button class="btn ghost" data-action="cancel-edit">Abbrechen</button><h2 id="sheet-title">${a ? 'Aktivität bearbeiten' : 'Neue Aktivität'}</h2><button class="btn primary" data-action="save">Speichern</button></div>
   <form class="form" id="form" novalidate>
     <fieldset><legend>Fotos</legend><div class="photos" id="photos"></div><p class="hint">Das erste Foto ist das Titelbild. Tippe auf ein anderes Foto, um es zum Titelbild zu machen.</p></fieldset>
     <fieldset><legend>Grundlagen</legend>
@@ -1081,8 +1072,7 @@ document.addEventListener('change', (e) => {
   if (!draft || !t.dataset) return;
   if (t.dataset.season) {
     const scope = t.dataset.season,
-      old = seasonObj(scope) || {},
-      yr = new Date().getFullYear();
+      old = seasonObj(scope) || {};
     const next =
       t.value === 'all'
         ? { type: 'all' }
@@ -1610,12 +1600,16 @@ function applyLocal(act, del) {
   S.acts = next;
   dataChanged();
 }
+// Bumped on every write; a reload that overlaps a write is repeated instead of applied.
+let writes = 0;
 async function persist(act) {
+  writes++;
   const mn = await ready;
   await mn.kv.set(ACT + act.id, act);
   applyLocal(act);
 }
 async function removeAct(a) {
+  writes++;
   const mn = await ready;
   await mn.kv.delete(ACT + a.id);
   applyLocal(a, true);
@@ -2171,7 +2165,7 @@ function openPlanEditor(p) {
     `<option value="${esc(val)}"${val === cur ? ' selected' : ''}>${esc(label)}</option>`;
   const acts = [...S.acts].sort((x, y) => x.name.localeCompare(y.name, 'de'));
   openSheet(
-    `<div class="bar"><button class="btn ghost" data-action="close">Abbrechen</button><h2>${p ? 'Tarif bearbeiten' : 'Neuer Tarif'}</h2><button class="btn primary" data-action="save-plan">Speichern</button></div>
+    `<div class="bar"><button class="btn ghost" data-action="close">Abbrechen</button><h2 id="sheet-title">${p ? 'Tarif bearbeiten' : 'Neuer Tarif'}</h2><button class="btn primary" data-action="save-plan">Speichern</button></div>
   <form class="form" id="planform" data-type="${esc(pdraft.type)}" novalidate>
     <fieldset><legend>Tarif</legend>
       <label class="f">Name<input name="name" value="${v('name')}" placeholder="z. B. Urban Sports Club M" autocomplete="off"></label>
@@ -2244,12 +2238,14 @@ async function savePlan() {
   }
 }
 async function persistPlan(p) {
+  writes++;
   const mn = await ready;
   await mn.kv.set(PLAN + p.id, p);
   S.plans = [...S.plans.filter((x) => x.id !== p.id), p];
   plansChanged();
 }
 async function removePlan(p) {
+  writes++;
   const mn = await ready;
   await mn.kv.delete(PLAN + p.id);
   S.plans = S.plans.filter((x) => x.id !== p.id);
@@ -2450,7 +2446,34 @@ async function exportData() {
 }
 /* backups come from other devices or the original artifact: keep only well-formed dates, so a bad
    file can neither break the calendar nor inject markup */
-function sanitizeAct(raw) {
+const TEXT = [
+  'name',
+  'category',
+  'provider',
+  'description',
+  'location',
+  'address',
+  'signupUrl',
+  'signupNotes',
+  'cost',
+  'level',
+  'contact',
+  'website',
+  'notes',
+];
+const text = (v) => (typeof v === 'string' ? v : v === null || v === undefined ? '' : String(v));
+const weekdays = (v) =>
+  arr(v)
+    .map(Number)
+    .filter((d) => Number.isInteger(d) && d >= 0 && d <= 6);
+/* Stored or imported data is untrusted: coerce every field the UI relies on to its type, so one
+   bad record can neither crash rendering nor inject markup. keepMedia keeps photo refs (kv data);
+   imports store their photos again. */
+const legacyRange = (o) =>
+  isDay(o.from) || isDay(o.until)
+    ? { type: 'range', from: isDay(o.from) ? o.from : '', until: isDay(o.until) ? o.until : '' }
+    : { type: 'all' };
+function sanitizeAct(raw, keepMedia = false) {
   const period = (p) =>
     p && typeof p === 'object' && (p.type === 'yearly' || p.type === 'range')
       ? {
@@ -2467,30 +2490,65 @@ function sanitizeAct(raw) {
       const o =
         s.kind === 'date'
           ? { kind: 'date', date: s.date }
-          : { kind: 'weekly', days: s.days.map(Number).filter((d) => d >= 0 && d <= 6) };
+          : { kind: 'weekly', days: weekdays(s.days) };
       o.start = String(s.start || '');
       o.end = String(s.end || '');
       const per = s.kind === 'date' ? undefined : period(s.period);
       if (per) o.period = per;
       return o;
     });
+  const texts = Object.fromEntries(TEXT.map((k) => [k, text(raw[k])]));
+  const photos = keepMedia ? arr(raw.photos).filter((r) => typeof r === 'string') : [];
+  const thumbs = {};
+  if (keepMedia && raw.thumbs && typeof raw.thumbs === 'object')
+    for (const r of photos) if (typeof raw.thumbs[r] === 'string') thumbs[r] = raw.thumbs[r];
+  const acc = raw.access && typeof raw.access === 'object' ? raw.access : {};
   return {
     ...raw,
+    ...texts,
+    id: text(raw.id),
+    signup: raw.signup in SIGNUP ? raw.signup : 'none',
+    visitPrice: Number.isFinite(raw.visitPrice) && raw.visitPrice > 0 ? raw.visitPrice : 0,
+    access: {
+      guest: acc.guest === true,
+      students: acc.students === true,
+      membership: acc.membership === true,
+    },
     slots,
-    equipment: arr(raw.equipment).map(String),
+    equipment: arr(raw.equipment).map(text),
     done: arr(raw.done).filter(isDay),
-    photos: [],
-    thumbs: {},
-    season: period(raw.season) || { type: 'all' },
+    photos,
+    thumbs,
+    // Older records keep the offer period in from/until instead of season.
+    season: period(raw.season) || legacyRange(raw),
     planned: {
-      ...pl,
-      days: arr(pl.days)
-        .map(Number)
-        .filter((d) => d >= 0 && d <= 6),
+      mode: ['none', 'weekly', 'dates', 'both'].includes(pl.mode) ? pl.mode : 'none',
+      every: [1, 2, 3, 4].includes(pl.every) ? pl.every : 1,
+      anchor: isDay(pl.anchor) ? pl.anchor : '',
+      days: weekdays(pl.days),
       dates: arr(pl.dates).filter(isDay),
       skip: arr(pl.skip).filter(isDay),
-      season: period(pl.season) || { type: 'all' },
+      season: period(pl.season) || legacyRange(pl),
     },
+  };
+}
+function sanitizePlan(raw) {
+  const amount = typeof raw.amount === 'number' ? raw.amount : Number(raw.amount);
+  return {
+    id: text(raw.id),
+    name: text(raw.name),
+    provider: text(raw.provider),
+    category: text(raw.category),
+    notes: text(raw.notes),
+    type: raw.type in PTYPES ? raw.type : 'recurring',
+    unit: raw.unit in UNITS ? raw.unit : 'month',
+    every: Number.isInteger(raw.every) && raw.every >= 1 && raw.every <= 100 ? raw.every : 1,
+    visits: Number.isInteger(raw.visits) && raw.visits >= 1 ? raw.visits : 10,
+    amount: Number.isFinite(amount) && amount >= 0 ? amount : 0,
+    start: isDay(raw.start) ? raw.start : '',
+    end: isDay(raw.end) ? raw.end : '',
+    activities: arr(raw.activities).filter((x) => typeof x === 'string'),
+    updatedAt: Number.isFinite(raw.updatedAt) ? raw.updatedAt : 0,
   };
 }
 async function importData(file) {
@@ -2545,12 +2603,7 @@ async function importData(file) {
   for (const p of Array.isArray(data.plans) ? data.plans : []) {
     if (!p || typeof p.id !== 'string' || !p.name) continue;
     try {
-      await persistPlan({
-        ...p,
-        activities: arr(p.activities).filter((x) => typeof x === 'string'),
-        start: isDay(p.start) ? p.start : '',
-        end: isDay(p.end) ? p.end : '',
-      });
+      await persistPlan(sanitizePlan(p));
       pcount++;
     } catch {
       failed++;
@@ -2581,28 +2634,38 @@ render();
 let loading = null;
 function load() {
   loading ??= (async () => {
+    let retry = false;
     try {
       const mn = await ready;
+      const before = writes;
       const [acts, plans, last] = await Promise.all([
         mn.kv.list(ACT),
         mn.kv.list(PLAN),
         mn.kv.get(LAST_BACKUP),
       ]);
+      // A save finished while we were reading: this snapshot may miss it, so read again.
+      if (writes !== before) {
+        retry = true;
+        return;
+      }
       S.acts = acts
         .filter((x) => x.value && typeof x.value === 'object')
-        .map((x) => ({ ...x.value, id: x.key.slice(ACT.length) }));
+        .map((x) => sanitizeAct({ ...x.value, id: x.key.slice(ACT.length) }, true));
       S.plans = plans
         .filter((x) => x.value && typeof x.value === 'object')
-        .map((x) => ({ ...x.value, id: x.key.slice(PLAN.length) }));
+        .map((x) => sanitizePlan({ ...x.value, id: x.key.slice(PLAN.length) }));
       S.lastBackup = typeof last === 'number' ? last : null;
       dataChanged();
       plansChanged();
     } catch {
       toast('Deine Daten konnten nicht geladen werden. Lade die Seite neu.');
     } finally {
-      S.loading = false;
       loading = null;
-      scheduleRender();
+      if (retry) setTimeout(load, 300);
+      else {
+        S.loading = false;
+        scheduleRender();
+      }
     }
   })();
   return loading;

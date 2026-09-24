@@ -28,6 +28,13 @@ user (`data.mode: private`). Static HTML with ES modules, no build.
 Tax parameters per year live in `tax.js` (Arbeitnehmer-Pauschbetrag, Homeoffice 6 €/day up to
 210 days, distance allowance 30/38 ct and 38 ct from the first kilometre from 2026,
 Kinderbetreuung 80 % up to 4,800 € from 2025, § 35a caps). Check them each year before filing.
+The 4,500 € cap on the distance allowance is skipped for commuting by one's own car (checkbox
+in the yearly details).
+
+## Tests
+
+`pnpm --filter @mininode-hosted/haushalt test` runs the unit tests of the pure modules
+(`test/`, not deployed); `e2e/haushalt.spec.ts` covers the app end to end.
 
 ## Data
 

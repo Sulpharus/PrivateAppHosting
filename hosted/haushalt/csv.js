@@ -55,13 +55,28 @@ export function parseAmount(value) {
     sign *= -1;
     s = s.slice(0, -1);
   }
-  if (!/^[\d.,]+$/.test(s)) return null;
-  const lastComma = s.lastIndexOf(',');
-  const lastDot = s.lastIndexOf('.');
-  const decimal = lastComma > lastDot ? ',' : '.';
-  const thousands = decimal === ',' ? '.' : ',';
-  const parts = s.split(thousands).join('').split(decimal);
-  if (parts.length > 2) return null;
+  if (!/^\d[\d.,]*$/.test(s)) return null;
+  const commas = s.split(',').length - 1;
+  const dots = s.split('.').length - 1;
+  let decimal;
+  if (commas && dots) decimal = s.lastIndexOf(',') > s.lastIndexOf('.') ? ',' : '.';
+  else if (commas)
+    decimal = commas === 1 ? ',' : null; // German exports: "12,30"
+  else if (dots)
+    decimal = dots === 1 && !/^\d{1,3}\.\d{3}$/.test(s) ? '.' : null; // "1.234" = thousands
+  else decimal = null;
+  const thousands = decimal === ',' ? '.' : decimal === '.' ? ',' : /,/.test(s) ? ',' : '.';
+  if (
+    thousands &&
+    s.includes(thousands) &&
+    !new RegExp(`^\\d{1,3}(\\${thousands}\\d{3})+(\\${decimal ?? 'x'}\\d*)?$`).test(s)
+  )
+    return null;
+  const parts = s
+    .split(thousands)
+    .join('')
+    .split(decimal ?? '\u0000');
+  if (parts.length > 2 || (parts[1] ?? '').length > 2) return null;
   const euros = Number(parts[0] || '0');
   const cents = Number(`${parts[1] ?? ''}00`.slice(0, 2));
   if (!Number.isFinite(euros) || !Number.isFinite(cents)) return null;
@@ -90,7 +105,9 @@ function valid(y, m, d) {
 
 const GUESS = {
   date: /^(buchungstag|buchungsdatum|datum|date|valuta|wertstellung|booking date)/i,
-  amount: /^(betrag|umsatz|amount|betrag \(eur\)|betrag \(€\)|soll\/haben)/i,
+  amount: /^(betrag|umsatz|amount)/i,
+  // Volksbank/Sparkasse: unsigned amount plus a separate "S"/"H" column.
+  sign: /^(soll\/haben|s\/h|soll-haben|kennzeichen)$/i,
   text: /^(verwendungszweck|buchungstext|beschreibung|description|zweck|vorgang|purpose)/i,
   party:
     /^(beguenstigter|begünstigter|empfänger|empfaenger|auftraggeber|zahlungsempfänger|name|payee|gegenkonto|beguenstigter\/zahlungspflichtiger|zahlungspflichtiger)/i,
@@ -98,7 +115,7 @@ const GUESS = {
 
 /**
  * Finds the header row (banks put account info above it) and guesses the columns.
- * Returns { header, rows, map: { date, amount, text, party } } with column indexes or -1.
+ * Returns { header, rows, map: { date, amount, text, party, sign } } with column indexes or -1.
  */
 export function analyse(text) {
   const delimiter = detectDelimiter(text);
@@ -123,6 +140,7 @@ export function analyse(text) {
     ),
     text: find(GUESS.text, -1),
     party: find(GUESS.party, -1),
+    sign: find(GUESS.sign, -1),
   };
   // Without a recognisable header: first date-like and amount-like columns of the first row.
   if (map.date < 0 && rows[0]) map.date = rows[0].findIndex((c) => parseDate(c));
@@ -136,7 +154,14 @@ export function toBookings({ rows, map }) {
   const out = [];
   for (const row of rows) {
     const date = parseDate(row[map.date]);
-    const cents = parseAmount(row[map.amount]);
+    let cents = parseAmount(row[map.amount]);
+    if (cents !== null && map.sign >= 0) {
+      const mark = String(row[map.sign] ?? '')
+        .trim()
+        .toUpperCase();
+      if (mark === 'S') cents = -Math.abs(cents);
+      else if (mark === 'H') cents = Math.abs(cents);
+    }
     if (!date || cents === null || cents === 0) continue;
     const party = map.party >= 0 ? (row[map.party] ?? '') : '';
     const text = map.text >= 0 ? (row[map.text] ?? '') : '';
@@ -159,4 +184,15 @@ export function hash(value) {
     h = Math.imul(h, 0x01000193);
   }
   return (h >>> 0).toString(36);
+}
+
+/** Rows → CSV for German spreadsheet apps (BOM, ";", CRLF). Text that starts like a formula is
+ * prefixed with ' so imported bank text never runs as a formula; plain numbers stay numbers. */
+export function toCsv(lines) {
+  const cell = (v) => {
+    const s = String(v ?? '');
+    const safe = /^[=+\-@\t\r]/.test(s) && !/^-?\d+(?:[.,]\d+)*$/.test(s) ? `'${s}` : s;
+    return /[";\n\r]/.test(safe) ? `"${safe.replaceAll('"', '""')}"` : safe;
+  };
+  return `\uFEFF${lines.map((l) => l.map(cell).join(';')).join('\r\n')}`;
 }

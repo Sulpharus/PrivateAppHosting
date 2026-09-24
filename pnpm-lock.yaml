@@ -187,6 +187,12 @@ importers:
         specifier: 4.137.0
         version: 4.137.0(@cloudflare/workers-types@5.20260923.1)(@types/node@22.20.4)
 
+  hosted/haushalt:
+    devDependencies:
+      vitest:
+        specifier: 5.0.1
+        version: 5.0.1(@types/node@22.20.4)(happy-dom@20.14.5)(vite@8.3.0(@types/node@22.20.4)(esbuild@0.28.1))
+
   packages/cli:
     dependencies:
       '@mininode/gate':

@@ -65,10 +65,12 @@ test('haushalt books, imports a bank CSV and fills the tax forms', async ({ page
   // The tax view picks up the booking and the donation without any extra step.
   await page.getByRole('button', { name: 'Steuer', exact: true }).click();
   const hh = page.getByRole('region', { name: 'Anlage Haushaltsnahe Aufwendungen' });
-  await expect(hh.getByRole('cell', { name: '300,00 €', exact: true }).first()).toBeVisible();
+  await expect(hh.getByRole('row', { name: /^Handwerkerleistungen/ })).toContainText('300,00 €');
   await expect(hh.getByText('Steuerermäßigung: 60,00 €')).toBeVisible();
   const sa = page.getByRole('region', { name: 'Anlage Sonderausgaben' });
-  await expect(sa.getByRole('cell', { name: '50,00 €', exact: true }).first()).toBeVisible();
+  await expect(sa.getByRole('row', { name: /^Spenden und Mitgliedsbeiträge/ })).toContainText(
+    '50,00 €',
+  );
 
   await page.getByLabel('Entfernung zur Arbeit (km, einfach)').fill('10');
   await page.getByLabel('Tage im Büro').fill('100');

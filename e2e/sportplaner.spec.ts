@@ -65,4 +65,49 @@ test('sportplaner stores activities with photos per user', async ({ browser }) =
   await other.getByLabel('Passwort', { exact: true }).fill(PASSWORD);
   await other.getByRole('button', { name: 'Anmelden', exact: true }).click();
   await expect(other.getByText('Deine Bibliothek ist leer')).toBeVisible();
+
+  // A hostile or broken backup: fractional weekday, numeric name, script URL, bad dates, an
+  // unknown tariff unit. It must import cleanly and keep rendering after a reload.
+  const otherErrors: string[] = [];
+  other.on('pageerror', (error) => otherErrors.push(error.message));
+  const backup = {
+    app: 'sport-planner',
+    version: 2,
+    activities: [
+      {
+        id: 'bad-1',
+        name: 42,
+        provider: 7,
+        website: 'javascript:alert(1)',
+        slots: [{ kind: 'weekly', days: [2.5, 3], start: '18:00' }],
+        done: ['2026-01-05', '"><img src=x onerror=alert(1)>'],
+        planned: { mode: 'weekly', days: ['x', 1.5], every: 9 },
+      },
+    ],
+    plans: [
+      {
+        id: 'plan-1',
+        name: 'Karte',
+        type: 'recurring',
+        unit: 'fortnight',
+        every: 2,
+        amount: 'x',
+        activities: ['bad-1'],
+      },
+    ],
+    photos: {},
+  };
+  await other.getByRole('button', { name: 'Bibliothek' }).click();
+  await other.locator('#importfile').setInputFiles({
+    name: 'sicherung.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(JSON.stringify(backup)),
+  });
+  await expect(other.getByText('1 Aktivität und 1 Tarif importiert.')).toBeVisible();
+  await other.reload();
+  await other.getByRole('button', { name: 'Bibliothek' }).click();
+  await expect(other.getByRole('heading', { name: '42', exact: true })).toBeVisible();
+  await other.getByRole('button', { name: 'Statistik' }).click();
+  await expect(other.getByRole('button', { name: /Karte/ })).toBeVisible();
+  expect(otherErrors).toEqual([]);
 });

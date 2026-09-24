@@ -3,6 +3,9 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 /** `user`: private to the (effective) owner. `shared`: visible to everyone who has the app. */
 export type KvScope = 'user' | 'shared';
 
+/** Rows per request; must not exceed PostgREST's max_rows (supabase/config.toml). */
+const PAGE = 1000;
+
 type Json = string | number | boolean | null | Json[] | { [key: string]: Json };
 
 export function createKv(supabase: SupabaseClient, appSlug: string) {
@@ -50,11 +53,20 @@ export function createKv(supabase: SupabaseClient, appSlug: string) {
     },
 
     async list(prefix = '', scope: KvScope = 'user'): Promise<{ key: string; value: Json }[]> {
-      const { data, error } = await scoped(await ownerFor(scope))
-        .like('key', `${prefix.replace(/[%_]/g, '\\$&')}%`)
-        .order('key');
-      if (error) throw error;
-      return (data ?? []).map((row) => ({ key: row.key as string, value: row.value as Json }));
+      const owner = await ownerFor(scope);
+      const pattern = `${prefix.replace(/[%_]/g, '\\$&')}%`;
+      const out: { key: string; value: Json }[] = [];
+      // PostgREST caps every response (max_rows, 1000 on Supabase): page until a short page.
+      for (let from = 0; ; from += PAGE) {
+        const { data, error } = await scoped(owner)
+          .like('key', pattern)
+          .order('key')
+          .range(from, from + PAGE - 1);
+        if (error) throw error;
+        const rows = data ?? [];
+        for (const row of rows) out.push({ key: row.key as string, value: row.value as Json });
+        if (rows.length < PAGE) return out;
+      }
     },
   };
 }

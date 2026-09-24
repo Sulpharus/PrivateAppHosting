@@ -131,6 +131,7 @@ export function cleanProfile(raw) {
     homeofficeDays: num(raw?.homeofficeDays, 366),
     children: num(raw?.children, 20),
     married: raw?.married === true,
+    car: raw?.car === true,
     income: num(raw?.income, 1e11),
     employee: raw?.employee !== false,
   };
