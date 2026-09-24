@@ -47,12 +47,12 @@ jobs:
       - uses: supabase/setup-cli@v1
         with:
           version: 2.117.0
-      - name: Push migrations and auth settings
+      - name: Check the Supabase access token
         run: |
-          if [ -z "$SUPABASE_ACCESS_TOKEN" ]; then
-            echo "::error::SUPABASE_ACCESS_TOKEN is not set (docs/runbooks/first-setup.md, step 3)"
-            exit 1
-          fi
+          scripts/ci-clean-secret.sh SUPABASE_ACCESS_TOKEN '^sbp_(oauth_)?[a-f0-9]{40}$' \
+            'Expected a personal access token (supabase.com → Account → Access Tokens, sbp_…), not a project API key.'
+      - name: Link and push migrations
+        run: |
           supabase link --project-ref "$SUPABASE_PROJECT_REF"
           supabase db push
       - name: Push auth settings (production only; staging has no domain yet)
@@ -78,6 +78,8 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Check the Cloudflare API token
+        run: scripts/ci-clean-secret.sh CLOUDFLARE_API_TOKEN
       - name: Portal
         working-directory: apps/portal
         run: pnpm build && pnpm exec wrangler deploy
@@ -140,6 +142,8 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @mininode/sdk build
+      - name: Check the Cloudflare API token
+        run: scripts/ci-clean-secret.sh CLOUDFLARE_API_TOKEN
       - name: Deploy changed apps
         run: |
           if [ "${{ inputs.all_apps }}" = "true" ] || [ "${{ github.event.before }}" = "" ] \
