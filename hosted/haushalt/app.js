@@ -1182,7 +1182,10 @@ function nameSelects(root) {
   }
 }
 function closeDialog() {
-  if (dlg().open) dlg().close();
+  if (!dlg().open) return;
+  dlg().close();
+  // The close event fires later; clear now so no stale form lingers in the page meanwhile.
+  dlg().replaceChildren();
 }
 function formError(form, message) {
   const p = form.querySelector('.error');
