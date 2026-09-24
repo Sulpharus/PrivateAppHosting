@@ -1,0 +1,12 @@
+{
+  "$schema": "../../packages/manifest/schema.json",
+  "specVersion": 1,
+  "slug": "ideen",
+  "name": "Ideen",
+  "description": "Frag die KI nach Ideen für Alltag, Essen und Ausflüge",
+  "kind": "static",
+  "target": "cloudflare",
+  "access": { "default": true },
+  "data": { "mode": "private" },
+  "ai": { "models": ["gemini-flash"], "monthlyBudgetEur": 1, "maxOutputTokens": 800 }
+}

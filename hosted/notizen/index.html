@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Notizen</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="/_mininode/sdk.js" defer></script>
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <header>
+    <a href="https://mininode.app">← Alle Apps</a>
+  </header>
+  <main>
+    <h1>Notizen</h1>
+    <p class="muted">Nur für dich. Auf dem Handy und am PC dieselben Notizen.</p>
+    <form id="add">
+      <label class="sr-only" for="text">Neue Notiz</label>
+      <input id="text" autocomplete="off" placeholder="Was willst du dir merken?" maxlength="500" required>
+      <button class="primary" type="submit">Speichern</button>
+    </form>
+    <p id="error" class="error" role="alert" hidden></p>
+    <ul id="list" aria-live="polite"></ul>
+  </main>
+</body>
+</html>

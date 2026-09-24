@@ -1,0 +1,9 @@
+**/node_modules
+**/dist
+**/.turbo
+.git
+e2e
+fixtures
+inbox
+hosted
+supabase/.temp

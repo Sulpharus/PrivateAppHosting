@@ -1,0 +1,72 @@
+/*
+ * MiniNode design tokens. Light is the default; dark follows the system unless the user picks a
+ * theme (data-theme on <html>). Colors meet WCAG AA for text on their intended surfaces.
+ */
+:root {
+  --font-display: "Bricolage Grotesque Variable", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-text: "Instrument Sans Variable", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono Variable", ui-monospace, "Cascadia Code", Consolas, monospace;
+
+  --radius-s: 8px;
+  --radius-m: 12px;
+  --radius-l: 16px;
+  --tap: 44px;
+
+  --bg: #f3f1ec;
+  --dot: rgb(23 22 15 / 0.07);
+  --surface: #ffffff;
+  --surface-2: #ebe8e1;
+  --line: #dfdad0;
+  --ink: #17160f;
+  --muted: #5f5a50;
+  --accent: #b8431a;
+  --accent-ink: #ffffff;
+  --accent-soft: #f7e4da;
+  --accent-text: #9a3512;
+  --ok: #2f8a3e;
+  --warn: #8a6a00;
+  --bad: #b3261e;
+  --focus: #1f5fbf;
+
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121210;
+    --dot: rgb(237 234 226 / 0.06);
+    --surface: #1c1b18;
+    --surface-2: #2a2925;
+    --line: #2e2d29;
+    --ink: #edeae2;
+    --muted: #a8a296;
+    --accent: #ff8c5a;
+    --accent-ink: #1a0e08;
+    --accent-soft: rgb(255 140 90 / 0.14);
+    --accent-text: #ffa47c;
+    --ok: #6fcf7c;
+    --warn: #e3c35a;
+    --bad: #ff8a80;
+    --focus: #8ab4ff;
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg: #121210;
+  --dot: rgb(237 234 226 / 0.06);
+  --surface: #1c1b18;
+  --surface-2: #2a2925;
+  --line: #2e2d29;
+  --ink: #edeae2;
+  --muted: #a8a296;
+  --accent: #ff8c5a;
+  --accent-ink: #1a0e08;
+  --accent-soft: rgb(255 140 90 / 0.14);
+  --accent-text: #ffa47c;
+  --ok: #6fcf7c;
+  --warn: #e3c35a;
+  --bad: #ff8a80;
+  --focus: #8ab4ff;
+  color-scheme: dark;
+}

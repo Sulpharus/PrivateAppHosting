@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Einkauf</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="/_mininode/sdk.js" defer></script>
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <header>
+    <a href="https://mininode.app">← Alle Apps</a>
+  </header>
+  <main>
+    <h1>Einkauf</h1>
+    <p class="muted">Eine Liste für alle, die die App nutzen. Änderungen sehen die anderen nach ein paar Sekunden.</p>
+    <form id="add">
+      <label class="sr-only" for="text">Artikel</label>
+      <input id="text" autocomplete="off" placeholder="z. B. Milch, 2 Packungen" maxlength="120" required>
+      <button class="primary" type="submit">Hinzufügen</button>
+    </form>
+    <p id="error" class="error" role="alert" hidden></p>
+    <ul id="list" aria-live="polite"></ul>
+    <div class="row">
+      <button id="clear" class="ghost" type="button" hidden>Erledigte entfernen</button>
+    </div>
+  </main>
+</body>
+</html>

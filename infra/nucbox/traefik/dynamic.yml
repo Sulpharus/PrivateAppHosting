@@ -1,0 +1,29 @@
+# Middlewares every container app router uses (labels written by nucbox-deploy):
+#   traefik.http.routers.<slug>.middlewares=mininode-strip@file,mininode-auth@file
+http:
+  middlewares:
+    # Clients must never be able to supply identity headers themselves.
+    mininode-strip:
+      headers:
+        customRequestHeaders:
+          X-Mininode-User: ""
+          X-Mininode-Email: ""
+          X-Mininode-Role: ""
+          X-Mininode-Token: ""
+    mininode-auth:
+      forwardAuth:
+        address: http://nucbox-control:8080/auth
+        trustForwardHeader: false
+        authRequestHeaders: ["Cookie", "Accept", "Sec-Fetch-Mode"]
+        authResponseHeaders:
+          - X-Mininode-User
+          - X-Mininode-Email
+          - X-Mininode-Role
+          - X-Mininode-Token
+    mininode-headers:
+      headers:
+        stsSeconds: 31536000
+        stsIncludeSubdomains: true
+        contentTypeNosniff: true
+        referrerPolicy: strict-origin-when-cross-origin
+        permissionsPolicy: "camera=(), microphone=(), geolocation=(), payment=()"

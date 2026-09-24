@@ -1,0 +1,11 @@
+# Extends the default rules. Vendored agent skills contain placeholder credentials
+# (e.g. YOUR_API_TOKEN) in documentation examples.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "vendored agent skill documentation; generated knowledge graph (labels + hashes)"
+paths = ['''^\.claude/skills/''', '''^graphify-out/''']
+# Supabase publishable keys are public by design (shipped to every browser); secret keys
+# (sb_secret_…) are still reported.
+regexes = ['''^sb_publishable_[A-Za-z0-9_-]+$''']

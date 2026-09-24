@@ -1,27 +1,27 @@
-# MiniNode.app — Project Plan
+# MiniNode.app — Project Plan (v2)
 
-Status: **agreed plan, pre-implementation** (2026-09-23)
+Status: **agreed, in implementation** · v1 2026-09-23 · v2 2026-09-23 (after an external architecture review)
 Design reference: Host Manager canvas (claude.ai artifact, private to the owner)
 
-MiniNode.app is a private, invite-only hosting platform. It serves web apps, services and
-remote-controlled native programs under `*.mininode.app`, with one shared login, one role
-model and one data layer (Supabase). It is a clean-room project: nothing is reused from
-earlier personal hosting projects.
+MiniNode.app is a private, invite-only hosting platform. It runs web apps, services and
+remote-controlled native programs under `*.mininode.app` with one login, one role model and
+one data layer (Supabase). It is a clean-room project and reuses nothing from earlier
+hosting projects.
 
 ---
 
 ## 1. Goals
 
-1. Drop an app (ZIP) into the repo, let an AI agent integrate it, push — it is live at
-   `<slug>.mininode.app` with login and per-user data.
-2. Every app, whatever its stack, uses the same accounts, roles and database.
-3. Native Windows and Android programs can be used from any device through the browser,
-   including with the owner's account shared without revealing credentials.
-4. Clear, machine-readable rules so that AI tools produce apps that integrate with zero or
-   minimal changes, and an autonomous agent can integrate everything else.
-5. A clean, typed, tested codebase from the first commit.
+1. Drop an app (a ZIP) into the repo, let an AI agent integrate it, then push. The app goes live
+   at `<slug>.mininode.app` with login and per-user data.
+2. Every app, whatever its stack, shares the same accounts, roles and database.
+3. Native Windows programs can be used from any device through the browser, including with
+   the owner's account shared without revealing credentials.
+4. Machine-readable rules let AI tools produce apps that integrate with little or no rework,
+   and a deterministic checker (`mininode doctor`) verifies the result.
+5. The codebase is clean, typed and tested from the first commit.
 
-Non-goals: public sign-up, multi-tenant SaaS, hosting other people's commercial workloads.
+Non-goals: public sign-up, multi-tenant SaaS, a hot standby database.
 
 ---
 
@@ -29,260 +29,261 @@ Non-goals: public sign-up, multi-tenant SaaS, hosting other people's commercial 
 
 | Topic | Decision |
 |---|---|
-| Domain | `mininode.app`, registered at Cloudflare Registrar; DNS on Cloudflare |
-| Default host | **Cloudflare Workers** (static assets + server code; Next.js via OpenNext) |
-| Exception host | **Vercel** only for Next.js apps that do not run on Workers |
-| Home server | GMKtec NucBox G9 (16 GB), reinstalled with **Proxmox VE** |
-| NucBox VMs | Linux VM (Docker: container apps, Guacamole, Wine, Redroid, local Supabase, backups) + Windows 11 VM (remote apps) |
-| Exposure | **Cloudflare Tunnel** only — no open ports, no static IP needed |
-| Database | **Supabase Cloud** (free tier) primary; self-hosted Supabase on the NucBox as standby/offline mode |
-| Keep-alive | Daily ping against Supabase so the free project never pauses |
-| Backups | Nightly dump to NucBox NVMe, retention 7 daily / 4 weekly / 6 monthly, plus encrypted copy in Cloudflare R2 |
-| Auth | Supabase Auth, invite-only. **Passkeys** (device biometrics: Face ID, fingerprint, Windows Hello) as primary; email + password as fallback |
-| Roles | `admin` (owner), `trusted` (may use apps in shared-account mode), `user` |
-| URLs | One subdomain per app; session cookie scoped to `.mininode.app` |
-| Deploy trigger | `git push` to `main` → GitHub Actions |
-| Integration | Local Claude Code on the owner's PC or a cloud session runs the `integrate-app` skill **before** code reaches GitHub |
-| AI keys | Central **AI proxy** (`ai.mininode.app`); keys never ship to clients; per-user budgets |
-| Remote apps | Guacamole in the browser; Windows VM (1 session + queue), Wine containers (parallel), Android via Redroid |
-| Idle policy | Windows VM shuts down after idle timeout; Wine/Android containers stop; RAM is freed |
-| Stack | TypeScript monorepo: pnpm + Turborepo, React + Vite (portal/admin), Hono (API workers), Node/TS agent on the NucBox |
+| Domain | `mininode.app` (Cloudflare Registrar, Cloudflare DNS) |
+| Default host | **Cloudflare Workers Paid** ($5/month): static assets plus Worker code, with the Worker running first only for navigations and `/api/*` |
+| Next.js | In order of preference: static export, then vinext (beta), then OpenNext, then **Vercel** as the exception |
+| Home server | NucBox G9 (N150, 16 GB) running **Proxmox VE**: a Linux VM (Docker) and a Windows 11 Pro VM |
+| Exposure | **Cloudflare Tunnel** only. Admin surfaces (Proxmox, SSH, Guacamole admin) sit behind **Cloudflare Access** |
+| Database | **Supabase Cloud** Free (production). A second free project serves as **staging**. No hot standby; a scripted monthly **restore drill** instead |
+| Keep-alive | A daily real query (not a cached request), monitored by a dead-man's switch |
+| Backups | Nightly `pg_dump` + storage sync on the NucBox, then restic to NVMe (7/4/6) and an encrypted restic copy in R2. Restore drill scripted and alerting |
+| Auth | Supabase Auth, invite-only. **Passkeys** (Face ID, fingerprint, Windows Hello) primary, email + password fallback. All auth UI lives at **`mininode.app/login`** (ADR 0001) |
+| Email | **Off for now** (Cloudflare Email Sending needs Workers Paid). Invites and password resets are one-time links the admin shares directly. The Email Sending binding and Send Email hook stay implemented and switch on with one config change |
+| Roles | `admin` (owner), `trusted` (shared-account apps), `user` |
+| Isolation | **RLS is the security boundary.** Every app table policy calls `platform.has_grant(slug)`; a schema per app is for tidiness only |
+| Deploy | `git push` to `main` runs GitHub Actions. Cloud targets deploy with `wrangler`. The NucBox deploys by pulling a digest-pinned image through a forced-command SSH over Access |
+| Integration | The `integrate-app` skill (Claude Code, local PC or cloud) runs against **local Supabase only**, then `mininode doctor` |
+| AI | `ai.mininode.app` Worker (auth, per-app model allow-list, reserve/settle budget) forwarding through **Cloudflare AI Gateway** |
+| Remote apps | Guacamole with **encrypted JSON auth** issued by the platform API. Windows 11 RemoteApp in a locked-down session. Wine via RDP/VNC images. Android optional (disabled by default) |
+| Monitoring | Healthchecks.io dead-man's switches + an external uptime check + phone alerts (ntfy), all independent of the NucBox |
+| Secrets | GitHub/Cloudflare secrets for CI and Workers; NucBox `.env` encrypted in the repo with **SOPS + age** |
+| Stack | TypeScript monorepo: pnpm, Turborepo, Biome, React + Vite, Hono, Vitest, Playwright, pgTAP |
+
+Monthly cost: Workers Paid ≈ 4.60 €, domain ≈ 1 € (≈ 12 €/year), everything else on free tiers.
+Total **≈ 6 €** (budget 15 €). A Windows 11 Pro licence is a one-off cost.
 
 ---
 
 ## 3. Architecture
 
 ```
-                 ┌──────────────────── Cloudflare ─────────────────────┐
- Browser ──TLS──▶│ DNS *.mininode.app                                  │
- (PC / phone)    │  ├─ mininode.app ........ Portal + Host Manager (Worker)
-                 │  ├─ api.mininode.app .... Platform API (Hono Worker)
-                 │  ├─ ai.mininode.app ..... AI proxy (Hono Worker)
-                 │  ├─ <slug>.mininode.app . App Worker  ── or ──▶ Vercel (exception)
-                 │  ├─ remote.mininode.app . ─┐
-                 │  └─ <slug>.mininode.app . ─┴─ Cloudflare Tunnel ─┐
-                 │  R2: installers, encrypted backups                │
-                 └──────────────────────────────────────────────────┼──┘
-                                                                     ▼
- Supabase Cloud ◀──────── all apps (supabase-js, RLS) ──── NucBox G9 · Proxmox
-  auth · postgres · realtime · storage                     ├─ Linux VM (Docker)
-        ▲                                                  │   cloudflared, Traefik, forward-auth,
-        └── nightly dump ─────────────────────────────────│   container apps, Guacamole, Wine pool,
-                                                           │   Redroid, agent, backup job,
-                                                           │   standby Supabase
-                                                           └─ Windows 11 VM (RemoteApp, on demand)
+ Browser ──TLS──▶ Cloudflare
+ (PC / phone)      ├─ mininode.app ............ apps/portal   (Worker + assets: start page, /login, /admin)
+                   ├─ api.mininode.app ........ apps/api      (Hono: invites, email hook, remote tokens, deploy registry)
+                   ├─ ai.mininode.app ......... apps/ai-proxy (Hono → AI Gateway → Gemini / Claude)
+                   ├─ <slug>.mininode.app ..... hosted app Worker (gate from packages/gate) | Vercel (exception)
+                   ├─ remote.mininode.app ─┐
+                   ├─ <slug>.mininode.app ─┴── Tunnel ──▶ NucBox · Linux VM
+                   │                                        cloudflared · Traefik · forward-auth
+                   │                                        container apps · Guacamole · nucbox-control
+                   │                                        backup job · Wine images · (Redroid, optional)
+                   │                                      NucBox · Windows 11 VM (RemoteApp, on demand)
+                   ├─ Access: proxmox / ssh / guac-admin (owner + CI service token)
+                   └─ R2: installers, encrypted backups · AI Gateway
+ Supabase Cloud (prod) + Supabase Cloud (staging) ◀── supabase-js + RLS from every app
 ```
 
 ### 3.1 Hosting targets
 
 | `target` | Runs on | Used for | Deployed by |
 |---|---|---|---|
-| `cloudflare` | Workers (static assets + optional server code) | Static sites, SPAs, AI Studio / Claude exports, most Next.js | `wrangler deploy` in CI |
+| `cloudflare` | Worker with static assets | Static, SPA, Claude/AI Studio exports, Next.js via static export or vinext | `wrangler deploy` in CI |
 | `vercel` | Vercel | Next.js apps that fail on Workers | Vercel CLI in CI |
-| `nucbox` | Docker on the Linux VM | Anything with a long-running process: Python, Node servers, WebSockets, databases | CI builds image → GHCR → agent pulls |
-| `remote` | Windows VM / Wine / Redroid | Native programs | Installer in R2 → agent installs |
+| `nucbox` | Docker on the Linux VM | Long-running servers (Python, Node, WebSockets) | CI builds image → GHCR (+ attestation) → `nucbox-deploy <slug> <digest>` |
+| `remote` | Windows VM / Wine | Native programs | Installer (hash-pinned) in R2 → `nucbox-control` installs after snapshot |
 
-Routing is explicit: CI creates one DNS record per app (Worker custom domain, Vercel CNAME
-or tunnel ingress). No wildcard catch-all, so unknown subdomains 404 at the edge.
+DNS is explicit: CI creates one record per app. There is no wildcard catch-all.
 
-### 3.2 NucBox layout (16 GB RAM budget)
+### 3.2 NucBox (16 GB)
 
-| Component | RAM (typ.) | Notes |
+| Component | RAM | Policy |
 |---|---|---|
-| Proxmox host | 1 GB | |
-| Linux VM | 6–7 GB | Docker services below; ballooning enabled |
-| ├ cloudflared, Traefik, forward-auth, agent | < 0.5 GB | always on |
-| ├ Container apps | 0.5–2 GB | per app limits in manifest |
-| ├ Guacamole | 0.5 GB | always on |
-| ├ Wine pool / Redroid | 0–3 GB | started on connect, stopped when idle |
-| └ Standby Supabase | 0 / 2 GB | off by default; started for failover or local dev |
-| Windows 11 VM | 0 / 6 GB | started on connect, shut down when idle |
+| Proxmox host | 1 GB | always |
+| Linux VM | 6 GB (balloon) | always. Runs cloudflared, Traefik, forward-auth, Guacamole, nucbox-control, container apps |
+| Windows 11 VM | 0 / 6 GB | **hibernate** after idle; resume on connect |
+| Wine sessions | 0–2 GB | started on connect, stopped when idle |
+| Redroid (optional) | 0–3 GB | disabled by default; **mutually exclusive** with the Windows VM (enforced by the scheduler) |
 
 ---
 
 ## 4. Identity and access
 
-- **Supabase Auth** is the single identity provider for every app, service and remote session.
-- **Invite-only:** sign-ups are disabled. The admin creates an invite (email, role, app grants,
-  expiry); the invite link lets the person set up a passkey, or a password as fallback.
-- **Passkeys:** Supabase Auth passkeys (WebAuthn, discoverable credentials; currently marked
-  experimental by Supabase). Relying Party ID `mininode.app`, so one passkey works on every
-  subdomain. The prompt uses the device's biometrics. Email + password stays available as fallback.
-- **Session sharing:** the auth cookie is set on `.mininode.app`, so signing in once covers all
-  apps. Server-side checks verify the JWT locally against Supabase's JWKS (asymmetric signing keys).
-- **Gatekeeping:**
-  - Cloudflare-hosted apps: the Worker checks the session before serving any asset.
-  - NucBox apps: Traefik forward-auth verifies the JWT.
-  - Remote apps: Guacamole trusts the platform login (SSO), never its own user list.
-- **Roles** (`platform.profiles.role`):
-  - `admin`: everything, including deploys, users, hosts and the AI budget.
-  - `trusted`: granted apps, plus apps and remote programs in *shared-account* mode.
-  - `user`: granted apps with private data.
-- **App grants:** `platform.app_grants(user_id, app_slug)`. Apps can be marked "default for
-  everyone" so new users receive them automatically.
-- **Shared-account mode (per app toggle):**
-  - Web apps: `trusted` users with a grant read and write the owner's data rows (they act as
-    the owner). RLS enforces this through `platform.effective_owner(app_slug)`.
-  - Remote apps: the program runs logged in with the owner's account; `trusted` users control
-    it without ever seeing credentials.
-  - Every action is recorded with the real user ID in an audit log.
+- **Central login:** `mininode.app/login` handles invite acceptance, passkey enrolment, passkey
+  sign-in, password fallback and password reset. Apps call `sdk.auth.requireLogin()`, which
+  redirects there with `?next=`. The RP ID is `mininode.app` and permanent.
+- **Session:** `@supabase/ssr` cookies on `.mininode.app` (the staging project uses a different
+  cookie name). The gate verifies JWTs with `jose` against Supabase's cached remote JWKS.
+  An expired token redirects to `mininode.app/auth/refresh?next=`.
+- **Step-up:** admin actions and generating remote-session tokens require a passkey (or password)
+  sign-in within the last 10 minutes. This is checked via the JWT `amr` claim.
+- **Invites:**
+  - The admin creates an invite (email, role, grants, expiry). The API Worker calls
+    `auth.admin.generateLink` and emails a link to a portal page.
+  - That page has a **Continue** button that calls `verifyOtp(token_hash)`, so mail scanners
+    cannot consume the token.
+  - Sign-ups are otherwise disabled.
+- **Roles and grants:**
+  - `platform.profiles.role` holds `admin`, `trusted` or `user`.
+  - `platform.app_grants(user_id, app_slug)` records access; apps flagged `default` are granted
+    automatically.
+- **Shared-account mode** (per-app flag):
+  - Web apps: `trusted` users with a grant act on the owner's rows via
+    `platform.effective_owner(slug)`.
+  - Remote apps: the program runs as the owner inside a dedicated, locked-down Windows account.
+  - Every write goes to an audit log with the real user ID.
+- **Defense in depth:**
+  - A strict CSP set by the gate.
+  - No `anon` grants on any app schema.
+  - Access in front of all infrastructure admin UIs.
 
 ---
 
 ## 5. Data
 
-- **One Supabase project** holds the whole platform. Schemas:
-  - `platform`: profiles, roles, apps, grants, invites, remote sessions and queue, AI usage, audit.
-  - `app_<slug>`: one schema per app. Apps only reach their own schema.
-- **RLS everywhere.** Default policy templates:
-  - `private`: the row owner is `auth.uid()`.
+- **Schemas:**
+  - `platform`: profiles, grants, invites, apps, deployments, remote sessions and queue,
+    AI budgets/usage, audit, notifications.
+  - `app_<slug>`: one per app. CI adds each to the exposed schemas via the Management API.
+- **RLS templates** (every one includes `platform.has_grant(slug)`):
+  - `private`: the owner is `auth.uid()`.
   - `shared-account`: the owner is `effective_owner()`.
-  - `group`: all users with a grant read and write.
-  - `readonly`: public read inside the platform.
-- **Migrations** live in `supabase/migrations`. Each app's SQL lives in `apps/<slug>/db/` and
-  is applied through the same pipeline. Nobody changes the production schema by hand.
-- **Standby mode:** the same migrations run against self-hosted Supabase on the NucBox. The SDK
-  only knows a base URL and a public key, so switching is a configuration change.
-- **Backups:** nightly `pg_dump` plus storage sync on the NucBox, then restic to the NVMe (7/4/6)
-  and an encrypted restic copy to R2. The Host Manager shows a restore test once a month.
+  - `group`: all users with a grant.
+  - `readonly`: read-only for users with a grant.
+- **pgTAP tests:**
+  - A meta-test fails if any `app_*` table lacks RLS or a policy lacks the grant check.
+  - Negative tests: a user reading another app's schema; a `user` calling admin RPCs; the AI
+    budget running out.
+- **Migrations:** platform migrations live in `supabase/migrations`; each app's SQL lives in
+  `hosted/<slug>/db/`. Both are applied by CI, first to staging, then to production.
+- **Backups and restore drill** as in §2. The drill restores the latest backup into a local
+  `supabase start`, runs smoke queries and pings Healthchecks.
 
 ---
 
 ## 6. App model
 
-Every hosted app is a folder `apps/<slug>/` containing the app source and a manifest `mininode.json`:
+Each hosted app is a folder `hosted/<slug>/` containing the source and `mininode.json`:
 
 ```jsonc
 {
   "$schema": "../../packages/manifest/schema.json",
-  "slug": "rezepte",                  // → rezepte.mininode.app
+  "specVersion": 1,
+  "slug": "rezepte",
   "name": "Rezepte",
   "description": "Rezepte und Wochenplan",
-  "kind": "spa",                      // static | spa | nextjs | container | remote
-  "target": "cloudflare",             // cloudflare | vercel | nucbox | remote
+  "kind": "spa",                        // static | spa | nextjs | container | remote
+  "target": "cloudflare",               // cloudflare | vercel | nucbox | remote
   "access": { "default": true, "roles": ["user", "trusted", "admin"] },
-  "data": { "mode": "private" },      // none | private | shared-account | group
-  "ai": { "enabled": true, "models": ["gemini-flash"] },
+  "data": { "mode": "private" },        // none | private | shared-account | group | readonly
+  "ai": { "models": ["gemini-flash"], "monthlyBudgetEur": 3 },
   "build": { "command": "pnpm build", "output": "dist" },
-  "runtime": { "port": 8080, "memory": "256m" },   // container only
-  "remote": { "runtime": "windows", "installer": "r2://installers/foo.msi" } // remote only
+  "container": { "port": 8080, "memoryMb": 256, "healthPath": "/health" },
+  "remote": { "runtime": "windows", "installer": { "r2Key": "…", "sha256": "…" } }
 }
 ```
 
-The manifest is validated by a JSON Schema in CI. The portal, DNS, deploy and Host Manager are
-all derived from these manifests, so there is no second registry to keep in sync.
+The JSON Schema lives in `packages/manifest` and is validated in CI and by `mininode doctor`.
+Everything else is derived from manifests: portal tiles, DNS, deploy, Host Manager.
 
 ---
 
-## 7. Pipeline: from ZIP to live
+## 7. Pipeline
 
-1. **Drop:** put the ZIP in `inbox/`. Contents are git-ignored, so nothing unintegrated is
-   ever committed.
-2. **Integrate:** run `/integrate-app inbox/foo.zip` in Claude Code, locally or in the cloud. The agent:
-   1. Unpacks the ZIP and classifies the source (Claude artifact, AI Studio export,
-      Vite/React, Next.js, static HTML, Node server, Python server, other).
-   2. Follows the matching playbook in `docs/ai/playbooks/`.
-   3. Adds the SDK, login gate, data layer (schema + RLS), AI proxy calls and manifest.
-   4. Builds, runs unit and e2e smoke tests locally, then commits on a branch.
-3. **Review:** the pull request shows the diff. CI validates the manifest, then runs lint,
-   type checks, tests, a build and a security scan (secrets, client-side keys).
-4. **Merge → deploy:** CI deploys by target, creates or updates DNS, applies migrations and
-   registers the app in `platform.apps`.
-5. **NucBox:** the agent watches GHCR, pulls new images and restarts with health checks.
-   After a failed health check it rolls back automatically.
-6. **Installers (remote apps):** the upload goes to R2, not git. The agent installs it silently
-   on the Windows VM (winget ID when available) or tests it in a Wine container, and reports back.
+1. **Drop** the ZIP into `inbox/` (contents are git-ignored).
+2. **`/integrate-app inbox/foo.zip`:**
+   1. The agent classifies the source, follows the matching playbook, and wires in the SDK, the
+      gate, the data layer, AI calls and the manifest.
+   2. It tests against local Supabase.
+   3. It runs `mininode doctor`.
+   4. It commits on a branch.
+3. **PR checks:**
+   - Biome (a relaxed profile for `hosted/`) and typecheck.
+   - Vitest and pgTAP.
+   - `mininode doctor` for every changed app.
+   - Build, secret scan and fixture snapshots.
+   - Changed apps only (`turbo --affected`).
+4. **Merge → deploy:**
+   - Migrations to staging, then production.
+   - Deploy by target and update DNS.
+   - Register the app in `platform.apps`.
+5. **NucBox deploy:**
+   - The CI job runs `cloudflared access ssh` with a service token.
+   - The SSH key is `restrict,command="nucbox-deploy"`; the script accepts only a slug regex
+     and a `sha256:` digest.
+   - It verifies the attestation, then runs `flock` and compose up, then a health check.
+   - On failure it rolls back to the recorded previous digest.
+6. **Installers:**
+   - Admin only. Uploaded to R2 together with a SHA-256.
+   - `nucbox-control` snapshots the Windows VM, verifies the hash, installs silently (winget when
+     possible) and reports back.
 
 ---
 
 ## 8. Platform SDK (`@mininode/sdk`)
 
-A newly designed, framework-agnostic ES module. It also ships as a single `<script>` build for
-plain HTML apps. It wraps supabase-js and the platform API:
+A framework-agnostic ES module, also built as a single `<script>` file for plain HTML apps.
 
 | Namespace | Purpose |
 |---|---|
-| `auth` | Current user and role; `requireLogin()`; sign out; passkey management link |
-| `data` | Typed Supabase client pre-scoped to `app_<slug>`, plus simple key-value helpers |
-| `realtime` | Channels and presence for shared features |
-| `files` | Supabase Storage scoped to the app |
-| `ai` | Calls the AI proxy (chat, structured output, images) with no keys on the client |
-| `notify` | Notifications in the portal's bell |
-| `app` | Manifest info and shared-account status |
+| `auth` | `user()`, `role()`, `requireLogin()` (redirects to central login), `signOut()` |
+| `data` | supabase-js client scoped to `app_<slug>`, plus a small key-value helper |
+| `realtime` | channels and presence |
+| `files` | Storage scoped to the app |
+| `ai` | `chat()`, `json()` via the AI proxy (no keys on the client) |
+| `notify` | portal notifications |
+| `app` | manifest info, shared-account status |
 
-Configuration comes from the host, not the app, so the same build runs in cloud and standby mode.
+The host injects the configuration (`/_mininode/config.json`), so the same build runs on
+staging and production.
 
 ---
 
-## 9. AI instructions (the core of the streamlined workflow)
+## 9. AI instructions
 
-All AI instructions live in `docs/ai/`:
-
-| File | Audience | Content |
-|---|---|---|
-| `NEW-APP-SPEC.md` | Any AI that builds an app (Claude, AI Studio, others) | Paste-ready spec: allowed stacks, SDK usage, no secrets in the client, where data lives, UI conventions, ZIP layout, manifest |
-| `NEW-APP-SPEC.short.md` | Tools with small prompt limits | Condensed version |
-| `playbooks/<source>.md` | The integration agent | Step-by-step conversion per source type (claude-artifact, ai-studio, vite-react, nextjs, static-html, node-server, python-server, docker-generic, native-installer) |
-| `CHECKLIST.md` | Agent and human reviewer | Definition of done for an integrated app |
-| `.claude/skills/integrate-app/` | Claude Code | The skill that orchestrates the playbooks and tests |
-
-Playbooks are tested: sample apps for each source type live in `fixtures/` and CI checks that
-they integrate cleanly.
+| Artifact | Purpose |
+|---|---|
+| `docs/ai/NEW-APP-SPEC.md` | Paste-ready spec for any AI building an app (versioned via `specVersion`) |
+| `docs/ai/NEW-APP-SPEC.short.md` | **Generated** from the long spec by a script, never hand-edited |
+| `docs/ai/playbooks/*.md` | Per source: claude-artifact, ai-studio, vite-react, nextjs, static-html, node-server, python-server, docker-generic, native-installer |
+| `packages/cli` → `mininode doctor` | The deterministic definition of done, shared by the skill and CI |
+| `.claude/skills/integrate-app/` | Orchestrates classify → playbook → local test → doctor |
+| `fixtures/` | Real-shaped sample exports plus expected integrated snapshots, checked on every PR. LLM-driven integration evals run manually or nightly, not per PR |
 
 ---
 
 ## 10. Remote apps
 
-- **Gateway:** Apache Guacamole at `remote.mininode.app`, with SSO via the platform login.
-  Sessions open in the browser on PC and phone; touch and keyboard work on mobile.
-- **Windows 11 VM:** RemoteApp mode shows a single program instead of a full desktop. Windows 11
-  allows one concurrent session, so the platform provides a queue and a "busy since … by …"
-  indicator and warns the user before disconnecting.
-- **Wine containers:** one container per user session, so several people can work at once. Only
-  suitable for programs that run under Wine; the agent tests this at install time.
-- **Android:** Redroid on the Linux VM, controlled from the browser. x86 compatibility is
-  checked per app.
-- **Idle policy (configurable in the Host Manager):** VM shutdown after 15 minutes idle,
-  containers after 10 minutes, a warning 2 minutes before. The first start takes about 30–40 s,
-  and the UI says so.
-- **Shared account:** the program stays logged in as the owner; access is limited to `trusted` users.
+- **Gateway:** Guacamole at `remote.mininode.app`, reachable only through the tunnel.
+- **Connecting:** the portal asks the API for a session. The API checks the JWT, role, grant,
+  queue slot and step-up, then signs a short-lived **encrypted JSON auth** blob naming exactly one
+  connection. For `trusted` users in shared-account mode, clipboard, file transfer and drive
+  redirection are disabled.
+- **Windows 11 Pro VM:**
+  - RemoteApp via `fAllowUnlistedRemotePrograms`; one session, with a queue and a
+    "busy since … by …" indicator.
+  - A dedicated Windows account without the owner's browser profile, restricted with
+    AppLocker / SRP.
+  - Hibernates after idle (default 15 min, warning 2 min before).
+- **Wine:** RDP/VNC-capable images so Guacamole stays the only gateway. Parallel use is limited by
+  each program's own licensing and login rules.
+- **Android (optional):** a Redroid compose profile, disabled by default. It checks for the
+  `binder_linux` kernel module and fails with a clear message if missing, and it is mutually
+  exclusive with the Windows VM.
 
 ---
 
 ## 11. AI proxy
 
-- A Hono Worker at `ai.mininode.app`. It requires a valid session, adds the provider key
-  server-side and streams responses back.
-- Providers: Google Gemini and Anthropic Claude. More can be added through adapters.
-- Limits: a global monthly budget (hard stop except for the admin), per-role defaults (user 2 €,
-  trusted 5 €) and per-user overrides. Usage is logged per user and app in `platform.ai_usage`.
-- During integration, AI Studio and Claude artifact apps are rewired to `sdk.ai`.
+- **Auth:** session and grant for the calling app (the request `Origin` is mapped to an app slug),
+  plus the model allow-list from the manifest and a `max_tokens` cap.
+- **Budget:** a Postgres RPC atomically *reserves* the worst-case cost before the call and
+  *settles* the real cost afterwards. It enforces global, per-app, per-role and per-user limits.
+  The admin is exempt from the global hard stop.
+- **Forwarding:** via Cloudflare AI Gateway (logs, caching, rate limits); provider keys are held
+  by the Gateway.
 
 ---
 
 ## 12. UI
 
-- **Start page (`mininode.app`):** all apps the user may open, with pinned and shared filters,
-  remote apps with live session status, notifications and profile. Light and dark mode, desktop
-  and mobile.
-- **Host Manager (`mininode.app/admin`, admin only):**
-  - Overview
-  - App Library (including the inbox)
-  - Remote apps
-  - Deployments
-  - Domains & SSL
-  - Logs & incidents
-  - Analytics
-  - Users & roles
-  - AI proxy
-  - Hosts
-  - Settings
-- **Design tokens** live in `packages/ui`, shared by the portal and the SDK's small UI elements
-  (login gate, account menu).
-- **Fonts:** Bricolage Grotesque (display), Instrument Sans (text) and JetBrains Mono (code).
-  All are self-hosted as WOFF2, so they look identical on every device, with the system font
-  as fallback.
-- **Accessibility:** WCAG AA contrast, touch targets of at least 44 px, full keyboard access.
+- **Start page** (`mininode.app`): app tiles with pinned and shared filters, remote apps with live
+  status, notifications and profile. Light and dark mode, desktop and mobile.
+- **Host Manager** (`mininode.app/admin`, admin only, step-up): **Overview, Apps (incl. inbox),
+  Users & roles, Remote apps, AI proxy** are functional in v1.
+  - Deployments, Domains, Logs and Hosts link out to the Cloudflare, Supabase and GitHub
+    dashboards; they never show placeholder data.
+- **Fonts:** Bricolage Grotesque, Instrument Sans and JetBrains Mono, self-hosted WOFF2.
+- **Accessibility:** WCAG AA contrast, touch targets of at least 44 px, keyboard access.
 
 ---
 
@@ -290,49 +291,51 @@ they integrate cleanly.
 
 ```
 .
-├─ apps/                  # hosted apps, one folder per app (+ mininode.json)
-├─ inbox/                 # ZIP drop zone (contents git-ignored)
-├─ platform/
-│  ├─ portal/             # start page + Host Manager (React + Vite, Worker)
-│  ├─ api/                # platform API (Hono Worker)
-│  ├─ ai-proxy/           # AI proxy (Hono Worker)
-│  ├─ gate/               # auth gate used by app Workers + forward-auth on the NucBox
-│  └─ agent/              # NucBox agent (Node/TS)
+├─ apps/                 # platform deployables
+│  ├─ portal/            # start page, /login, /admin (React + Vite on a Worker)
+│  ├─ api/               # platform API (Hono Worker)
+│  ├─ ai-proxy/          # AI proxy (Hono Worker)
+│  └─ nucbox-control/    # VM power, queue, Guacamole token signer, deploy script (Node)
+├─ hosted/               # user apps, one folder each (+ mininode.json)
+├─ inbox/                # ZIP drop zone (git-ignored)
 ├─ packages/
-│  ├─ sdk/                # @mininode/sdk
-│  ├─ ui/                 # design tokens + shared components
-│  ├─ manifest/           # mininode.json schema, types, validator
-│  └─ config/             # shared tsconfig, Biome config
-├─ supabase/              # config.toml, migrations, seed, RLS tests
+│  ├─ config/            # shared tsconfig
+│  ├─ manifest/          # mininode.json schema, types, validator
+│  ├─ sdk/               # @mininode/sdk
+│  ├─ gate/              # auth gate for app Workers + forward-auth
+│  ├─ ui/                # design tokens + shared components
+│  └─ cli/               # mininode CLI (doctor, new, deploy helpers)
+├─ supabase/             # config.toml, migrations, tests (pgTAP), seed
 ├─ infra/
-│  ├─ cloudflare/         # wrangler configs, tunnel config, DNS automation
-│  └─ nucbox/             # Proxmox notes, docker-compose stacks, Windows VM setup, backup job
-├─ fixtures/              # sample apps per source type for playbook tests
+│  ├─ cloudflare/        # tunnel config, DNS automation, Access policies
+│  └─ nucbox/            # Proxmox setup, compose stacks, Windows VM scripts, backup, SOPS secrets
+├─ fixtures/             # sample exports + expected snapshots
 ├─ docs/
-│  ├─ ai/                 # AI specs, playbooks, checklist
-│  ├─ adr/                # architecture decision records
-│  └─ runbooks/           # restore, failover, add a host, rotate keys
-├─ .claude/               # project skills, settings, hooks
-└─ .github/workflows/     # CI + deploy
+│  ├─ ai/                # NEW-APP-SPEC, playbooks
+│  ├─ adr/               # architecture decisions
+│  └─ runbooks/          # restore, key rotation, add an app, NucBox install
+├─ .claude/              # skills (incl. integrate-app), settings
+└─ .github/workflows/    # ci.yml, deploy.yml, nightly.yml
 ```
 
 ---
 
 ## 14. Engineering standards
 
-- TypeScript `strict` everywhere, with ESM only.
-- **Biome** handles lint and format (one tool, fast); config lives in `packages/config`.
+- TypeScript `strict` with `exactOptionalPropertyTypes`, ESM only.
+- **Biome** for lint and format: a strict profile for `apps/` and `packages/`, a relaxed profile
+  for `hosted/`.
 - **Tests:**
-  - Vitest for units.
-  - Playwright for e2e: login, portal, one app per target.
-  - pgTAP for RLS policies.
-- **CI** is required on every PR: install → lint → typecheck → test → build → manifest
-  validation → secret scan.
-- **Commits** follow Conventional Commits; Renovate keeps dependencies current.
-- **Secrets** stay in GitHub Actions secrets, Cloudflare secrets and a `.env` on the NucBox.
-  They never enter the repo, and `.env.example` documents every variable.
-- **Architecture decisions** are recorded as ADRs in `docs/adr/`.
-- **Every folder with code** has a short README (purpose, how to run and test).
+  - Vitest for unit tests (and Workers pool tests for the Workers).
+  - pgTAP for RLS.
+  - Playwright for e2e, including a virtual-authenticator passkey flow and a two-subdomain
+    token-expiry test.
+- **Rule for later phases:** every feature has a CI smoke test *or* sits behind a flag marked
+  unsupported. Untested code must not silently rot.
+- **CI** on every PR; Conventional Commits; Renovate with grouped updates for `hosted/`.
+- **Secrets** never enter the repo in plain text. `.env.example` documents each variable, and
+  there is a runbook for rotating every key.
+- ADRs for every non-obvious decision; a README in every package.
 
 ---
 
@@ -340,23 +343,32 @@ they integrate cleanly.
 
 | Phase | Scope | Done when |
 |---|---|---|
-| 0 · Foundation | Tooling research + install (skills, MCPs), monorepo skeleton, CI, Biome, `CLAUDE.md` | Empty repo builds, lints and tests green in CI |
-| 1 · Identity & portal | Supabase project, `platform` schema + RLS, invites, passkeys + password, portal start page, admin: users & roles | Owner can invite a person who signs in with a fingerprint |
-| 2 · Cloud apps | Manifest, SDK v1, gate, Cloudflare deploy pipeline, DNS automation, App Library | A ZIP from AI Studio is live on its subdomain with per-user data |
-| 3 · AI layer | `NEW-APP-SPEC`, playbooks, `integrate-app` skill, fixtures, AI proxy | Each fixture type integrates cleanly through the skill |
-| 4 · NucBox | Proxmox, Linux VM, tunnel, Traefik, forward-auth, agent, container target, backups (NVMe + R2), keep-alive | A Python server app runs on the NucBox behind the login; restore test passes |
-| 5 · Remote apps | Guacamole + SSO, Windows VM with RemoteApp, idle shutdown, queue, Wine pool, Redroid | A Windows program is usable from the phone; the VM sleeps when idle |
-| 6 · Polish | Host Manager analytics, incidents, Vercel exception path, standby-failover runbook | Runbooks tested |
+| 0 · Foundation | Monorepo, CI, Biome, skills, `CLAUDE.md`, ADRs | CI green on the empty skeleton |
+| 1 · Identity & portal | Platform schema + RLS + pgTAP, invites, email hook, central login (passkeys + password), start page, admin (Users) | Invite → fingerprint sign-in works end to end (e2e with virtual authenticator) |
+| 2 · Cloud apps | Manifest, SDK, gate, doctor, cloudflare deploy, DNS, admin (Apps) | A sample SPA fixture deploys behind login with private data |
+| 3 · AI layer | NEW-APP-SPEC, playbooks, integrate-app skill, fixtures, AI proxy + budget RPC, admin (AI) | Fixture snapshots pass; budget tests pass |
+| 4 · NucBox | Proxmox runbook, tunnel, Traefik, forward-auth, deploy script, backups, restore drill, monitoring | A container fixture runs behind login; the restore drill passes |
+| 5 · Remote apps | Guacamole JSON auth, nucbox-control (VM power, queue), Windows lockdown scripts, admin (Remote) | A Windows program opens from the phone; the VM hibernates when idle |
+| 6 · Optional | Wine images, Redroid profile, Vercel path, analytics | Each behind a flag with a smoke test |
 
 ---
 
-## 16. To verify during research (marked [?] in discussion)
+## 16. Review log (v1 → v2)
 
-- The current status and limits of Supabase passkeys (experimental flag) and cookie sessions
-  across subdomains.
-- The maturity of the OpenNext adapter for Next.js on Workers, and current Workers free-tier limits.
-- The best way to connect Guacamole to Supabase Auth: Supabase as an OAuth/OIDC provider,
-  or header auth behind forward-auth.
-- Windows 11 RemoteApp setup on the Pro edition; licensing of a Windows 11 VM.
-- Redroid on the N150 kernel (binder modules) and ARM app translation.
-- Current Cloudflare Registrar pricing for `.app`.
+The external review raised these points, and all were adopted:
+- The 5-origin passkey limit → central login.
+- Supabase's built-in email can't send invites → Cloudflare Email plus the hook.
+- Schema-per-app is not isolation → RLS with `has_grant()`.
+- Guacamole OIDC is incompatible with Supabase → JSON auth.
+- The Workers Free quota → Workers Paid with selective `run_worker_first`.
+- The Next.js path moves to vinext.
+- The cookie blast radius → step-up, CSP and a refresh redirect.
+- The hot standby is dropped → restore drill.
+- A custom deploy agent is replaced by forced-command SSH plus a small control service.
+- Access is placed in front of admin surfaces.
+- AI proxy hardening.
+- RemoteApp lockdown.
+- Android becomes optional.
+- Monitoring runs off the NucBox, and secrets are handled with SOPS.
+- `mininode doctor`, the generated short spec and `specVersion`.
+- Repo naming: `apps/` vs `hosted/`.

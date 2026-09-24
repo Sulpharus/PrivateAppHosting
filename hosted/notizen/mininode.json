@@ -1,0 +1,11 @@
+{
+  "$schema": "../../packages/manifest/schema.json",
+  "specVersion": 1,
+  "slug": "notizen",
+  "name": "Notizen",
+  "description": "Deine privaten Notizen, auf allen Geräten gleich",
+  "kind": "static",
+  "target": "cloudflare",
+  "access": { "default": true },
+  "data": { "mode": "private" }
+}

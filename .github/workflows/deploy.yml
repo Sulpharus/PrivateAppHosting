@@ -1,0 +1,287 @@
+name: Deploy
+
+# Runs after CI on main. Order: database → platform Workers → hosted apps → NucBox containers.
+# Secrets and variables live in the GitHub environment (production / staging); see
+# docs/runbooks/first-setup.md for the full list.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Target environment
+        type: choice
+        options: [production, staging]
+        default: production
+      all_apps:
+        description: Redeploy every hosted app (not only changed ones)
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-${{ inputs.environment || 'production' }}
+  cancel-in-progress: false
+
+env:
+  DEPLOY_ENV: ${{ inputs.environment || 'production' }}
+  # Public identifiers (also in the wrangler.jsonc files); secrets live in the GitHub environment.
+  CLOUDFLARE_ACCOUNT_ID: d690896e2d267adb0dd97027832767e5
+  SUPABASE_PROJECT_REF: ${{ (inputs.environment || 'production') == 'production' && 'ojicmpgqvoyakigvubek' || 'ttgrtecdqouiogiwcjag' }}
+  SUPABASE_URL: ${{ (inputs.environment || 'production') == 'production' && 'https://ojicmpgqvoyakigvubek.supabase.co' || 'https://ttgrtecdqouiogiwcjag.supabase.co' }}
+  SUPABASE_PUBLISHABLE_KEY: ${{ (inputs.environment || 'production') == 'production' && 'sb_publishable_jv1tZqYWg51sNxJ5-GjMMw_tZqa1s1C' || 'sb_publishable_zQfFz-ruNPkIQauwa253iw_4zOZmiOB' }}
+
+jobs:
+  database:
+    name: Database migrations and auth config
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment || 'production' }}
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.117.0
+      - name: Push migrations and auth settings
+        run: |
+          if [ -z "$SUPABASE_ACCESS_TOKEN" ]; then
+            echo "::error::SUPABASE_ACCESS_TOKEN is not set (docs/runbooks/first-setup.md, step 3)"
+            exit 1
+          fi
+          supabase link --project-ref "$SUPABASE_PROJECT_REF"
+          supabase db push
+      - name: Push auth settings (production only; staging has no domain yet)
+        if: env.DEPLOY_ENV == 'production'
+        run: |
+          supabase config diff --project-ref "$SUPABASE_PROJECT_REF"
+          supabase config push --project-ref "$SUPABASE_PROJECT_REF" --yes
+
+  platform:
+    name: Platform Workers
+    needs: database
+    # Staging needs its own domain first (packages/cli/src/deploy/environment.ts).
+    if: (inputs.environment || 'production') == 'production'
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment || 'production' }}
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Portal
+        working-directory: apps/portal
+        run: pnpm build && pnpm exec wrangler deploy
+      - name: API
+        working-directory: apps/api
+        run: pnpm exec wrangler deploy
+      - name: AI proxy
+        working-directory: apps/ai-proxy
+        run: pnpm exec wrangler deploy
+      - name: Worker secrets from the GitHub environment
+        # Only secrets that are set are uploaded; provider keys can be added later.
+        env:
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          AI_GATEWAY_TOKEN: ${{ secrets.AI_GATEWAY_TOKEN }}
+          GUACAMOLE_JSON_SECRET: ${{ secrets.GUACAMOLE_JSON_SECRET }}
+          NUCBOX_CONTROL_TOKEN: ${{ secrets.NUCBOX_CONTROL_TOKEN }}
+          ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_API_CLIENT_ID }}
+          ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_API_CLIENT_SECRET }}
+        run: |
+          upload() { # worker-dir NAME...
+            local dir=$1 args=() name
+            shift
+            for name in "$@"; do args+=(--arg "$name" "${!name}"); done
+            local json
+            json=$(jq -n "${args[@]}" '$ARGS.named | with_entries(select(.value != ""))')
+            if [ "$json" != "{}" ]; then
+              local file
+              file=$(mktemp)
+              trap 'rm -f "$file"' RETURN
+              echo "$json" > "$file"
+              (cd "$dir" && pnpm exec wrangler secret bulk "$file")
+            fi
+          }
+          upload apps/api SUPABASE_SECRET_KEY GUACAMOLE_JSON_SECRET NUCBOX_CONTROL_TOKEN ACCESS_CLIENT_ID ACCESS_CLIENT_SECRET
+          upload apps/ai-proxy SUPABASE_SECRET_KEY ANTHROPIC_API_KEY GEMINI_API_KEY AI_GATEWAY_TOKEN
+
+  apps:
+    name: Hosted apps
+    needs: platform
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment || 'production' }}
+    outputs:
+      containers: ${{ steps.containers.outputs.list }}
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      STAGING_DOMAIN: ${{ vars.STAGING_DOMAIN }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @mininode/sdk build
+      - name: Deploy changed apps
+        run: |
+          if [ "${{ inputs.all_apps }}" = "true" ] || [ "${{ github.event.before }}" = "" ] \
+             || [ "${{ github.event.before }}" = "0000000000000000000000000000000000000000" ]; then
+            for dir in hosted/*/; do
+              [ -f "$dir/mininode.json" ] && pnpm mininode deploy "$dir" --env "$DEPLOY_ENV"
+            done
+          else
+            pnpm mininode deploy --changed "${{ github.event.before }}" --env "$DEPLOY_ENV"
+          fi
+      - name: List container apps to roll out
+        id: containers
+        run: |
+          list=$(node -e '
+            const fs = require("node:fs");
+            const apps = fs.existsSync("hosted") ? fs.readdirSync("hosted", { withFileTypes: true }) : [];
+            const slugs = apps.filter((d) => d.isDirectory()).map((d) => d.name).filter((slug) => {
+              try { return JSON.parse(fs.readFileSync(`hosted/${slug}/mininode.json`, "utf8")).target === "nucbox"; }
+              catch { return false; }
+            });
+            process.stdout.write(JSON.stringify(slugs));')
+          echo "list=$list" >> "$GITHUB_OUTPUT"
+
+  nucbox:
+    name: NucBox container ${{ matrix.slug }}
+    needs: apps
+    # Skipped until the NucBox is set up (docs/runbooks/nucbox-install.md).
+    if: needs.apps.outputs.containers != '[]' && vars.NUCBOX_TUNNEL_ID != ''
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment || 'production' }}
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
+    strategy:
+      matrix:
+        slug: ${{ fromJson(needs.apps.outputs.containers) }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: Image name and manifest label
+        id: meta
+        run: |
+          echo "image=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/mininode-${{ matrix.slug }}" >> "$GITHUB_OUTPUT"
+          # The NucBox reads port, memory and health path from this label (nucbox-deploy).
+          echo "manifest=$(jq -c . "hosted/${{ matrix.slug }}/mininode.json")" >> "$GITHUB_OUTPUT"
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        id: build
+        with:
+          context: hosted/${{ matrix.slug }}
+          push: true
+          tags: ${{ steps.meta.outputs.image }}:${{ github.sha }}
+          labels: |
+            app.mininode.manifest=${{ steps.meta.outputs.manifest }}
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+      - uses: actions/attest-build-provenance@v3
+        with:
+          subject-name: ${{ steps.meta.outputs.image }}
+          subject-digest: ${{ steps.build.outputs.digest }}
+          push-to-registry: true
+      - name: DNS record → tunnel
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          TUNNEL_ID: ${{ vars.NUCBOX_TUNNEL_ID }}
+          DOMAIN: ${{ vars.STAGING_DOMAIN || 'mininode.app' }}
+        run: ./infra/cloudflare/dns-upsert.sh "${{ matrix.slug }}.$DOMAIN" "$TUNNEL_ID.cfargotunnel.com"
+      - uses: ./.github/actions/nucbox-ssh
+        with:
+          command: ${{ matrix.slug }} ${{ steps.build.outputs.digest }}
+          ssh-key: ${{ secrets.NUCBOX_DEPLOY_SSH_KEY }}
+          access-client-id: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          access-client-secret: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+
+  platform-images:
+    name: NucBox platform image ${{ matrix.component }}
+    needs: database
+    if: always() && vars.NUCBOX_TUNNEL_ID != '' && (needs.database.result == 'success' || needs.database.result == 'skipped')
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment || 'production' }}
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
+    strategy:
+      matrix:
+        include:
+          - component: control
+            name: mininode-nucbox-control
+            context: .
+            file: apps/nucbox-control/Dockerfile
+            paths: apps/nucbox-control packages/gate pnpm-lock.yaml
+          - component: wine
+            name: mininode-wine
+            context: infra/nucbox/wine
+            file: infra/nucbox/wine/Dockerfile
+            paths: infra/nucbox/wine
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Changed?
+        id: changed
+        run: |
+          before="${{ github.event.before }}"
+          if [ -z "$before" ] || [ "$before" = 0000000000000000000000000000000000000000 ] \
+             || ! git cat-file -e "$before" 2>/dev/null \
+             || [ -n "$(git diff --name-only "$before" HEAD -- ${{ matrix.paths }})" ]; then
+            echo "build=true" >> "$GITHUB_OUTPUT"
+          fi
+          echo "image=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/${{ matrix.name }}" >> "$GITHUB_OUTPUT"
+      - uses: docker/login-action@v3
+        if: steps.changed.outputs.build == 'true'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        if: steps.changed.outputs.build == 'true'
+        id: build
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.file }}
+          push: true
+          tags: ${{ steps.changed.outputs.image }}:${{ github.sha }}
+          labels: org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+      - uses: actions/attest-build-provenance@v3
+        if: steps.changed.outputs.build == 'true'
+        with:
+          subject-name: ${{ steps.changed.outputs.image }}
+          subject-digest: ${{ steps.build.outputs.digest }}
+          push-to-registry: true
+      - uses: ./.github/actions/nucbox-ssh
+        if: steps.changed.outputs.build == 'true'
+        with:
+          command: platform ${{ matrix.component }} ${{ steps.build.outputs.digest }}
+          ssh-key: ${{ secrets.NUCBOX_DEPLOY_SSH_KEY }}
+          access-client-id: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          access-client-secret: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}

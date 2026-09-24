@@ -1,0 +1,19 @@
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+}
+main {
+  padding: 1.5rem;
+  display: grid;
+  gap: 1rem;
+  max-width: 40rem;
+}
+label {
+  display: grid;
+  gap: 0.25rem;
+}
+input,
+button {
+  min-height: 44px;
+  font: inherit;
+}
