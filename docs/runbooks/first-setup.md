@@ -14,31 +14,35 @@ Where the platform stands and what is left, in order. Every step is idempotent.
 | Supabase access token + secret key | created (`mininode-ci`, `mininode-workers`); they only need to go into GitHub (step 3) |
 | No email | Email Sending needs Workers Paid, so it is off. Invites and password resets are one-time links the admin copies from *Verwaltung → Nutzer & Rollen* and sends by messenger. To turn email on later: add the `send_email` binding back to `apps/api/wrangler.jsonc` and set `EMAIL_ENABLED` to `"true"` in `apps/portal/wrangler.jsonc` |
 
-## 1. Cloudflare: add the domain (5 min)
+## 1. Cloudflare: domain and deploy token (5 min)
 
-1. Dashboard → *Add a domain* → `mininode.app` → **Free** plan. Cloudflare shows two nameservers.
-2. At the registrar where you bought `mininode.app`, replace its nameservers with those two.
-   The zone turns *Active* within minutes to a few hours; Cloudflare emails you.
-3. Edit the API token (*My Profile → API Tokens → your token → Edit*) and add the zone
-   permissions for `mininode.app`:
+`mininode.app` was bought through **Cloudflare Registrar**, so the zone already exists and
+always uses Cloudflare's nameservers; there is nothing to change at a registrar.
 
-   | Scope | Permission |
-   |---|---|
-   | Account · Workers Scripts | Edit |
-   | Account · Workers R2 Storage | Edit |
-   | Account · AI Gateway | Edit |
-   | Account · Cloudflare Tunnel | Edit |
-   | Account · Access: Apps and Policies | Edit |
-   | Account · Access: Service Tokens | Edit |
-   | Account · Account Settings | Read |
-   | Zone · Workers Routes, DNS, Zone Settings | Edit |
-   | Zone · Zone | Read |
+1. *Domains*: `mininode.app` must show **Active**. A new registration can take a few minutes.
+   Confirm the registrant verification email from Cloudflare (ICANN requires it; unverified
+   domains are suspended after 15 days).
+2. Deploy token (*My Profile → API Tokens → Create Token*): start from the template
+   **Edit Cloudflare Workers**, then:
+   - *Permissions* (Cloudflare's Workers roles, 2026): Workers must be **Admin** at the Workers
+     product scope, because the first deploy *creates* the Workers (Editor can only update
+     existing ones). The template's *Workers Routes: Edit* covers the custom domains. Add
+     *Zone → DNS → Edit* (per-app DNS records for NucBox apps later).
+   - *Account Resources*: your account. *Zone Resources*: *Specific zone → mininode.app*.
+   - *Create Token*, copy it, and replace the GitHub secret `CLOUDFLARE_API_TOKEN` with it.
+   For the NucBox later, the same token also needs *AI Gateway, Cloudflare Tunnel,
+   Access: Apps and Policies, Access: Service Tokens → Edit* and *Zone Settings → Edit*
+   (used by `infra/cloudflare/bootstrap.sh`).
+3. Nothing else for the first deploy: `wrangler deploy` creates the DNS records and
+   certificates for `mininode.app`, `api.`, `ai.` and every app itself.
 
-4. R2: open *R2 Object Storage* once and enable it (payment method required; backups and
-   installers stay inside the free 10 GB). Only needed for the NucBox.
-5. Zero Trust needs nothing now: `infra/cloudflare/bootstrap.sh` creates the Access
-   applications once the zone is active, and the team domain then appears under
-   *Zero Trust → Settings*.
+Later, for the NucBox:
+
+- R2: open *R2 Object Storage* once and enable it (payment method required; backups and
+  installers stay inside the free 10 GB).
+- Zero Trust needs nothing now: `infra/cloudflare/bootstrap.sh` creates the Access
+  applications once the zone is active, and the team domain then appears under
+  *Zero Trust → Settings*.
 
 ## 2. Supabase: two values and one click (5 min)
 
