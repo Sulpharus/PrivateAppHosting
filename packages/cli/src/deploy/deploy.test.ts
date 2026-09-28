@@ -4,6 +4,7 @@ import { appsFromPaths } from '../changed.ts';
 import { environmentSettings } from './environment.ts';
 import { schemaList } from './index.ts';
 import { plan } from './migrate.ts';
+import { workersToPrune } from './prune.ts';
 import { appRow } from './register.ts';
 import { appWranglerConfig, GATE_ENTRY } from './wrangler-config.ts';
 
@@ -99,5 +100,13 @@ describe('schemaList', () => {
       'app_a',
     ]);
     expect(schemaList('public,app_gone', 'app_static', new Set(['public']))).toEqual(['public']);
+  });
+});
+
+describe('workersToPrune', () => {
+  it('only removes prefixed Workers of apps that are gone', () => {
+    const names = ['mn-app-haushalt', 'mn-app-notizen', 'mininode-portal', 'mn-stg-notizen'];
+    expect(workersToPrune(names, 'mn-app-', new Set(['haushalt']))).toEqual(['mn-app-notizen']);
+    expect(workersToPrune(names, 'mn-app-', new Set(['haushalt', 'notizen']))).toEqual([]);
   });
 });

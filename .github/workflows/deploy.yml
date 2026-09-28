@@ -162,6 +162,8 @@ jobs:
           else
             pnpm mininode deploy --changed "$before" --env "$DEPLOY_ENV"
           fi
+      - name: Remove Workers of deleted apps
+        run: pnpm mininode prune --env "$DEPLOY_ENV"
       - name: List container apps to roll out
         id: containers
         run: |

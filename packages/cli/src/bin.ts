@@ -1,9 +1,10 @@
 #!/usr/bin/env node
-import { existsSync } from 'node:fs';
+import { existsSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { changedApps } from './changed.ts';
 import type { DeployEnv } from './deploy/environment.ts';
 import { deployApp, devApp, readVersion } from './deploy/index.ts';
+import { cloudflareApps, pruneApps } from './deploy/prune.ts';
 import { type DoctorReport, doctor, hostedApps } from './doctor.ts';
 
 const ROOT = resolve(import.meta.dirname, '../../..');
@@ -15,6 +16,7 @@ const USAGE = `mininode <command>
   deploy <app-dir> [--env staging]  Build, migrate, deploy and register one app
   deploy --changed <base-ref>       Deploy every app changed since <base-ref>
   changed <base-ref>                List hosted apps changed since <base-ref>
+  prune [--env staging] [--dry-run] Delete Workers of apps removed from hosted/, disable them
 `;
 
 function print(report: DoctorReport): boolean {
@@ -46,6 +48,12 @@ async function main(args: string[]): Promise<number> {
         return 0;
       }
       return dirs.map((dir) => print(doctor(dir))).every(Boolean) ? 0 : 1;
+    }
+    case 'prune': {
+      const env = (flag(args, '--env') ?? 'production') as DeployEnv;
+      const dirs = existsSync(join(ROOT, 'hosted')) ? readdirSync(join(ROOT, 'hosted')) : [];
+      await pruneApps(env, cloudflareApps(ROOT, dirs), { dryRun: args.includes('--dry-run') });
+      return 0;
     }
     case 'changed': {
       if (!target) break;

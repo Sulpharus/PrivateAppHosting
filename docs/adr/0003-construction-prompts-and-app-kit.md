@@ -103,12 +103,11 @@ Each phase is its own PR, deployed and verified before the next one starts.
 |---|---|---|
 | 1 | **App isolation:** `calling_app()` from `Origin`, retrofit to `app_kv` and app files | pgTAP proves app A cannot read app B's kv; e2e green |
 | 2 | **Sportplaner redesign** (visual + structural) | screenshots approved by the admin |
-| 3 | **App kit** extracted, served by the gate; Sportplaner, Haushalt and the test apps switched over | all apps look like one suite; doctor checks kit usage |
+| 3 | **App kit** extracted, served by the gate; Sportplaner and Haushalt switched over | all apps look like one suite; doctor checks kit usage |
 | 4 | **Suite core:** records, registry with stage 1 types, collections incl. shared ones, links, files, permissions with priority and merge, SDK `mn.suite` | pgTAP for every rule in ADR 0002 §4; SDK tests |
 | 5 | **Verwaltung:** permission matrix, priority lists, overlap warnings, conflict log; collection management in *Dein Konto* | e2e: request → approve → read/write |
 | 6 | **Prompt library** + dashboard page + `mininode prompt` | a new app built only from the composed prompt passes doctor unchanged |
-| 7 | **First suite:** a new *Kalender* app (universal calendar and map), *Notizen* creating tasks | task from a note appears in the calendar |
-| 8 | Stage 2 types with their apps: Haushalt ↔ Sportplaner (contracts, transactions, activities), media/trips, games | per type: two apps exchange data without duplicates |
+| 7 | Stage 2 types with their apps: Haushalt ↔ Sportplaner (contracts, transactions, activities), media/trips, games | per type: two apps exchange data without duplicates |
 
 ## Consequences
 
