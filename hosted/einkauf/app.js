@@ -31,9 +31,14 @@ window.addEventListener('DOMContentLoaded', () => {
     error.hidden = false;
   };
 
+  // Start-up, polling and every change render; only the newest may draw, or a slow older
+  // response would put back a list without the item just added.
+  let latest = 0;
   async function render() {
+    const run = ++latest;
     mn = await ready;
     const items = await mn.kv.list('item:', 'shared');
+    if (run !== latest) return;
     // Open items first, then by the time they were added.
     items.sort((a, b) => Number(a.value.done) - Number(b.value.done) || a.key.localeCompare(b.key));
     list.replaceChildren();

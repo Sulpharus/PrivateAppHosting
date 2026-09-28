@@ -1,21 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
+import { type AuditRow, describeActivity } from '../lib/activity.ts';
 import { type AppRow, listApps } from '../lib/apps.ts';
 import { platform } from '../lib/supabase.ts';
 import { dateTime, euro } from './AdminLayout.tsx';
-
-interface AuditRow {
-  id: number;
-  at: string;
-  action: string;
-  app_slug: string | null;
-}
-
-const ACTION_LABEL: Record<string, string> = {
-  'user.created': 'Nutzer angelegt',
-  'user.role_changed': 'Rolle geändert',
-  'app.state_changed': 'App-Status geändert',
-};
 
 export function Overview() {
   const [apps, setApps] = useState<AppRow[]>([]);
@@ -23,14 +11,25 @@ export function Overview() {
   const [aiSpent, setAiSpent] = useState(0);
   const [aiLimit, setAiLimit] = useState<number | null>(null);
   const [audit, setAudit] = useState<AuditRow[]>([]);
+  const [names, setNames] = useState(new Map<string, string>());
 
   useEffect(() => {
     void Promise.all([
       listApps().then(setApps),
       platform()
         .from('profiles')
-        .select('user_id', { count: 'exact', head: true })
-        .then(({ count }) => setUsers(count ?? 0)),
+        .select('user_id, display_name', { count: 'exact' })
+        .then(({ data, count }) => {
+          setUsers(count ?? 0);
+          setNames(
+            new Map(
+              ((data as { user_id: string; display_name: string }[] | null) ?? []).map((p) => [
+                p.user_id,
+                p.display_name,
+              ]),
+            ),
+          );
+        }),
       platform()
         .rpc('admin_ai_usage')
         .then(({ data }) =>
@@ -49,7 +48,7 @@ export function Overview() {
         .then(({ data }) => setAiLimit((data?.monthly_limit_micro as number | undefined) ?? null)),
       platform()
         .from('audit_log')
-        .select('id, at, action, app_slug')
+        .select('id, at, action, app_slug, actor_id, detail')
         .order('at', { ascending: false })
         .limit(8)
         .then(({ data }) => setAudit((data as AuditRow[] | null) ?? [])),
@@ -117,7 +116,7 @@ export function Overview() {
             <span className="muted mono" style={{ minWidth: 110 }}>
               {dateTime(row.at)}
             </span>
-            <span>{ACTION_LABEL[row.action] ?? row.action}</span>
+            <span>{describeActivity(row, names)}</span>
             {row.app_slug && <span className="pill mono">{row.app_slug}</span>}
           </div>
         ))}

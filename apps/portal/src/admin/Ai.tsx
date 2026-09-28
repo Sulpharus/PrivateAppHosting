@@ -123,7 +123,7 @@ export function Ai() {
               <span style={{ flex: 1, minWidth: 200 }}>
                 {SCOPE_LABEL[key] ?? `${budget.scope}: ${budget.scope_key}`}
               </span>
-              <label className="field" style={{ width: 140 }}>
+              <label className="field row" style={{ width: 160, gap: 6 }}>
                 <span className="sr-only">Limit in Euro</span>
                 <input
                   name="euros"
@@ -132,6 +132,9 @@ export function Ai() {
                   step="0.5"
                   defaultValue={budget.monthly_limit_micro / 1_000_000}
                 />
+                <span className="muted" aria-hidden="true">
+                  €
+                </span>
               </label>
               <button type="submit" className="button small">
                 Speichern

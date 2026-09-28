@@ -199,6 +199,36 @@ describe.skipIf(!enabled)('api against local Supabase', () => {
     expect(link).toMatch(/^https:\/\/mininode\.app\/auth\/confirm\?token_hash=.+&type=recovery/);
   });
 
+  it('deletes users only as admin and records it', async () => {
+    const email = `delete-${run}@example.com`;
+    const { data: target } = await admin.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+    });
+    const id = target.user?.id ?? '';
+    users.push(id);
+    expect((await call(`/admin/users/${id}`, { method: 'DELETE', token: userToken })).status).toBe(
+      403,
+    );
+    expect(
+      (await call('/admin/users/not-a-uuid', { method: 'DELETE', token: adminToken })).status,
+    ).toBe(400);
+    expect((await call(`/admin/users/${id}`, { method: 'DELETE', token: adminToken })).status).toBe(
+      204,
+    );
+    const { data: audit } = await admin
+      .schema('platform')
+      .from('audit_log')
+      .select('detail')
+      .eq('action', 'user.deleted')
+      .contains('detail', { user_id: id });
+    expect(audit).toHaveLength(1);
+    expect((await call(`/admin/users/${id}`, { method: 'DELETE', token: adminToken })).status).toBe(
+      404,
+    );
+  });
+
   it('refuses remote sessions for apps the user may not use', async () => {
     const res = await call('/remote/sessions', {
       method: 'POST',
