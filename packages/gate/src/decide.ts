@@ -50,6 +50,11 @@ export async function decide(input: DecideInput): Promise<Decision> {
     return { action: 'redirect', location: loginUrl(input.portalUrl, input.url), reason: 'login' };
   }
 
+  // Signed in, but the authenticator code is missing: the portal's login page asks for it.
+  if (result.claims.mn_mfa === 'pending') {
+    return { action: 'redirect', location: loginUrl(input.portalUrl, input.url), reason: 'login' };
+  }
+
   const allowed = await input.checkGrant(session.accessToken, input.appSlug);
   return allowed ? { action: 'allow', claims: result.claims } : { action: 'forbidden' };
 }

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 import { useAuth } from '../auth/AuthProvider.tsx';
 import { googleErrorFromUrl } from '../auth/google.ts';
+import { needsAal2 } from '../auth/mfa.ts';
 import {
   deletePasskey,
   listPasskeys,
@@ -32,7 +33,7 @@ export function Account() {
   const { profile, refreshProfile, signOut } = useAuth();
   const navigate = useNavigate();
   const { run: stepUp } = useStepUp();
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
   const resetMode = params.get('reset') === '1';
   const [name, setName] = useState(profile?.displayName ?? '');
   const [passkeys, setPasskeys] = useState<PasskeyInfo[]>([]);
@@ -53,6 +54,8 @@ export function Account() {
     [],
   );
 
+  const clearLinked = useCallback(() => setParams({}, { replace: true }), [setParams]);
+
   const reload = useCallback(async () => {
     if (passkeysSupported()) setPasskeys(await listPasskeys().catch(() => []));
   }, []);
@@ -69,10 +72,12 @@ export function Account() {
     setError(null);
     setMessage(null);
     try {
-      await action();
+      // Accounts with an authenticator app confirm passkey changes with its code (aal2).
+      await stepUp(action);
       setMessage(success);
       await reload();
     } catch (err) {
+      if (err instanceof Error && err.message === 'Bestätigung abgebrochen.') return;
       setError(passkeyErrorMessage(err));
     }
   };
@@ -100,7 +105,9 @@ export function Account() {
       setMessage('Passwort geändert.');
     } catch (err) {
       setError(
-        isReauthError(err) || (err instanceof Error && err.message === 'Bestätigung abgebrochen.')
+        isReauthError(err) ||
+          needsAal2(err) ||
+          (err instanceof Error && err.message === 'Bestätigung abgebrochen.')
           ? 'Bitte bestätige kurz deine Identität und versuch es noch einmal.'
           : 'Das Passwort ist zu schwach (mindestens 10 Zeichen, Buchstaben und Ziffern).',
       );
@@ -212,7 +219,11 @@ export function Account() {
         )}
 
         <AuthenticatorCard feedback={feedback} />
-        <GoogleCard feedback={feedback} linked={params.get('linked') === 'google'} />
+        <GoogleCard
+          feedback={feedback}
+          linked={params.get('linked') === 'google'}
+          onLinkedShown={clearLinked}
+        />
 
         <section className="card" aria-labelledby="password-title">
           <h2 id="password-title" className="section-title">

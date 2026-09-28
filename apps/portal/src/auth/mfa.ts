@@ -86,6 +86,13 @@ export async function removeAuthenticator(factorId: string): Promise<void> {
   if (error) throw error;
 }
 
+/** Supabase refuses an action until this session has verified the authenticator code. */
+export function needsAal2(error: unknown): boolean {
+  const code = (error as { code?: unknown } | null)?.code;
+  const message = error instanceof Error ? error.message : '';
+  return code === 'insufficient_aal' || /aal2/i.test(message);
+}
+
 export function mfaErrorMessage(error: unknown): string {
   const text = error instanceof Error ? `${error.name} ${error.message}` : String(error);
   if (/no_factor/.test(text)) return 'Für dein Konto ist keine Authenticator-App eingerichtet.';

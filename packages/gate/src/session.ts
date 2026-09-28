@@ -12,6 +12,8 @@ export interface SessionClaims extends JWTPayload {
   email?: string;
   role?: string;
   mn_role?: 'admin' | 'trusted' | 'user';
+  /** Set by the access token hook while the authenticator code is still missing. */
+  mn_mfa?: 'pending';
   amr?: { method: string; timestamp: number }[];
 }
 

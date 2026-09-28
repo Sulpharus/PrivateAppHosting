@@ -1,4 +1,5 @@
 // End-to-end API tests against the local Supabase stack (`pnpm test:integration`).
+import { createHmac } from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { ApiEnv } from './env.ts';
@@ -8,6 +9,20 @@ const url = process.env.SUPABASE_URL;
 const publishableKey = process.env.SUPABASE_PUBLISHABLE_KEY;
 const secretKey = process.env.SUPABASE_SECRET_KEY;
 const enabled = Boolean(url && publishableKey && secretKey);
+
+/** RFC 6238 code (SHA-1, 30 s, 6 digits) for a base32 secret, like an authenticator app. */
+function totp(secret: string): string {
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+  const bits = [...secret.replace(/[\s=]/g, '').toUpperCase()]
+    .map((char) => alphabet.indexOf(char).toString(2).padStart(5, '0'))
+    .join('');
+  const key = Buffer.from((bits.match(/.{8}/g) ?? []).map((byte) => Number.parseInt(byte, 2)));
+  const counter = Buffer.alloc(8);
+  counter.writeBigUInt64BE(BigInt(Math.floor(Date.now() / 30_000)));
+  const hash = createHmac('sha1', key).update(counter).digest();
+  const offset = (hash.at(-1) ?? 0) & 0xf;
+  return String((hash.readUInt32BE(offset) & 0x7fffffff) % 1_000_000).padStart(6, '0');
+}
 
 describe.skipIf(!enabled)('api against local Supabase', () => {
   const run = Date.now().toString(36);
@@ -236,5 +251,31 @@ describe.skipIf(!enabled)('api against local Supabase', () => {
       body: JSON.stringify({ app: 'nope' }),
     });
     expect(res.status).toBe(403);
+  });
+
+  it('an admin with an authenticator app is no admin until the code is verified', async () => {
+    const email = `mfa-admin-${run}@example.com`;
+    await tokenFor(email, 'admin');
+    const client = createClient(url ?? '', publishableKey ?? '', {
+      auth: { persistSession: false },
+    });
+    await client.auth.signInWithPassword({ email, password });
+    const { data: enrolled, error } = await client.auth.mfa.enroll({ factorType: 'totp' });
+    if (error) throw error;
+    const verified = await client.auth.mfa.challengeAndVerify({
+      factorId: enrolled.id,
+      code: totp(enrolled.totp.secret),
+    });
+    expect(verified.error).toBeNull();
+    const aal2Token = verified.data?.access_token ?? '';
+
+    // A fresh password sign-in is aal1: recent, but without the second factor.
+    const fresh = await client.auth.signInWithPassword({ email, password });
+    const aal1Token = fresh.data.session?.access_token ?? '';
+    const body = JSON.stringify({ email: `mfa-guest-${run}@example.com` });
+    const denied = await call('/invites', { method: 'POST', token: aal1Token, body });
+    expect(denied.status).toBe(403);
+    const allowed = await call('/invites', { method: 'POST', token: aal2Token, body });
+    expect(allowed.status).toBe(201);
   });
 });

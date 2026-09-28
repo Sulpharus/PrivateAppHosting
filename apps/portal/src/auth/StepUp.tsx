@@ -1,5 +1,8 @@
 // Sensitive actions (admin changes, shared-account remote sessions) need a sign-in within the last
 // ten minutes. `useStepUp().run(action)` retries the action once after a quick re-authentication.
+// Accounts with an authenticator app confirm with its code: that renews the sign-in time and
+// makes the session aal2, which Supabase also wants for passkey and password changes. A new
+// password sign-in would drop the session back to aal1 instead.
 
 import { createContext, type ReactNode, useContext, useRef, useState } from 'react';
 import { Dialog } from '../components/Dialog.tsx';
@@ -7,7 +10,7 @@ import { isReauthError } from '../lib/api.ts';
 import { supabase } from '../lib/supabase.ts';
 import { useAuth } from './AuthProvider.tsx';
 import { CodeForm } from './CodeForm.tsx';
-import { codeRequired } from './mfa.ts';
+import { listAuthenticators, needsAal2 } from './mfa.ts';
 import { passkeyErrorMessage, passkeysSupported, signInWithPasskey } from './passkeys.ts';
 
 interface StepUp {
@@ -31,6 +34,9 @@ export function StepUpProvider({ children }: { children: ReactNode }) {
       setPassword('');
       setAskCode(false);
       setOpen(true);
+      void listAuthenticators()
+        .then((factors) => setAskCode(factors.length > 0))
+        .catch(() => undefined);
     });
 
   const finish = (ok: boolean) => {
@@ -55,8 +61,6 @@ export function StepUpProvider({ children }: { children: ReactNode }) {
       password,
     });
     if (signInError) setError('Passwort stimmt nicht.');
-    // A new password session starts at aal1 again: accounts with an authenticator app confirm it.
-    else if (await codeRequired()) setAskCode(true);
     else finish(true);
   };
 
@@ -64,7 +68,7 @@ export function StepUpProvider({ children }: { children: ReactNode }) {
     try {
       return await action();
     } catch (err) {
-      if (!isReauthError(err)) throw err;
+      if (!isReauthError(err) && !needsAal2(err)) throw err;
       await confirm();
       return action();
     }
@@ -75,7 +79,12 @@ export function StepUpProvider({ children }: { children: ReactNode }) {
       {children}
       <Dialog open={open} title="Kurz bestätigen" onClose={() => finish(false)}>
         {askCode ? (
-          <CodeForm onDone={() => finish(true)} />
+          <>
+            <p className="muted">
+              Bestätige diese Aktion mit dem Code aus deiner Authenticator-App.
+            </p>
+            <CodeForm onDone={() => finish(true)} />
+          </>
         ) : (
           <>
             <p className="muted">Für diese Aktion musst du dich noch einmal bestätigen.</p>

@@ -2,7 +2,6 @@
 
 import type { UserIdentity } from '@supabase/supabase-js';
 import { useCallback, useEffect, useState } from 'react';
-import { CodeForm } from '../auth/CodeForm.tsx';
 import { connectGoogle, disconnectGoogle, googleEnabled, googleIdentity } from '../auth/google.ts';
 import {
   type AuthenticatorInfo,
@@ -13,14 +12,13 @@ import {
   removeAuthenticator,
   startEnrolment,
 } from '../auth/mfa.ts';
+import { useStepUp } from '../auth/StepUp.tsx';
 import { Dialog } from '../components/Dialog.tsx';
 
 interface Feedback {
   ok(message: string): void;
   fail(message: string): void;
 }
-
-const needsAal2 = (error: unknown) => /aal2/i.test(error instanceof Error ? error.message : '');
 
 function formatDate(value: string): string {
   return new Date(value).toLocaleDateString('de-DE', {
@@ -35,8 +33,7 @@ export function AuthenticatorCard({ feedback }: { feedback: Feedback }) {
   const [enrolment, setEnrolment] = useState<Enrolment | null>(null);
   const [code, setCode] = useState('');
   const [enrolError, setEnrolError] = useState<string | null>(null);
-  // An action that needs a session confirmed with the current authenticator code first.
-  const [confirming, setConfirming] = useState<(() => Promise<void>) | null>(null);
+  const { run: stepUp } = useStepUp();
 
   const reload = useCallback(async () => {
     setFactors(await listAuthenticators().catch(() => []));
@@ -46,13 +43,13 @@ export function AuthenticatorCard({ feedback }: { feedback: Feedback }) {
     void reload();
   }, [reload]);
 
-  /** Runs `action`; when Supabase wants an aal2 session first, asks for a code and retries. */
+  /** Runs `action`; when Supabase wants a confirmed session first, asks for the code and retries. */
   const guarded = async (action: () => Promise<void>) => {
     try {
-      await action();
+      await stepUp(action);
     } catch (err) {
-      if (needsAal2(err)) setConfirming(() => action);
-      else feedback.fail(mfaErrorMessage(err));
+      if (!(err instanceof Error && err.message === 'Bestätigung abgebrochen.'))
+        feedback.fail(mfaErrorMessage(err));
     }
   };
 
@@ -179,27 +176,21 @@ export function AuthenticatorCard({ feedback }: { feedback: Feedback }) {
           </form>
         )}
       </Dialog>
-
-      <Dialog
-        open={confirming !== null}
-        title="Kurz bestätigen"
-        onClose={() => setConfirming(null)}
-      >
-        {confirming && (
-          <CodeForm
-            onDone={() => {
-              const action = confirming;
-              setConfirming(null);
-              void guarded(action);
-            }}
-          />
-        )}
-      </Dialog>
     </section>
   );
 }
 
-export function GoogleCard({ feedback, linked }: { feedback: Feedback; linked: boolean }) {
+export function GoogleCard({
+  feedback,
+  linked,
+  onLinkedShown,
+}: {
+  feedback: Feedback;
+  linked: boolean;
+  /** Clears `?linked=google`, so the message does not come back on reload. */
+  onLinkedShown(): void;
+}) {
+  const { run: stepUp } = useStepUp();
   const [available, setAvailable] = useState(false);
   const [identity, setIdentity] = useState<UserIdentity | null>(null);
 
@@ -213,8 +204,10 @@ export function GoogleCard({ feedback, linked }: { feedback: Feedback; linked: b
   }, [reload]);
 
   useEffect(() => {
-    if (linked && identity) feedback.ok('Google-Konto verbunden.');
-  }, [linked, identity, feedback]);
+    if (!linked || !identity) return;
+    feedback.ok('Google-Konto verbunden.');
+    onLinkedShown();
+  }, [linked, identity, feedback, onLinkedShown]);
 
   // Hidden while Google is switched off, unless an old connection is still there to remove.
   if (!available && !identity) return null;
@@ -241,7 +234,7 @@ export function GoogleCard({ feedback, linked }: { feedback: Feedback; linked: b
             onClick={async () => {
               if (!confirm('Google-Konto trennen?')) return;
               try {
-                await disconnectGoogle(identity);
+                await stepUp(() => disconnectGoogle(identity));
                 feedback.ok('Google-Konto getrennt.');
                 await reload();
               } catch {

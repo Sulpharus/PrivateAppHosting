@@ -6,6 +6,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react';
 import { platform, supabase } from '../lib/supabase.ts';
@@ -27,6 +28,8 @@ interface AuthState {
   codePending: boolean;
   profile: Profile | null;
   refreshProfile(): Promise<void>;
+  /** Re-reads whether the code is still missing (right after it was verified). */
+  recheckCode(): Promise<void>;
   signOut(): Promise<void>;
 }
 
@@ -37,6 +40,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [codePending, setCodePending] = useState(false);
   const [loading, setLoading] = useState(true);
+  // Auth events can overlap; only the newest code check may set `codePending`.
+  const codeCheck = useRef(0);
+
+  const recheckCode = useCallback(async (signedIn = true) => {
+    const id = ++codeCheck.current;
+    const pending = signedIn && (await codeRequired());
+    if (id === codeCheck.current) setCodePending(pending);
+  }, []);
 
   const loadProfile = useCallback(async (current: Session | null) => {
     if (!current) {
@@ -67,7 +78,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .then(async ({ data }) => {
         if (!active) return;
         setSession(data.session);
-        setCodePending(data.session ? await codeRequired() : false);
+        await recheckCode(data.session !== null);
         await loadProfile(data.session);
         setLoading(false);
       });
@@ -75,9 +86,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(next);
       // Other auth calls inside this callback can deadlock supabase-js, so run them after it.
       setTimeout(() => {
-        void (next ? codeRequired() : Promise.resolve(false)).then((pending) => {
-          if (active) setCodePending(pending);
-        });
+        if (!active) return;
+        void recheckCode(next !== null);
         void loadProfile(next);
       }, 0);
     });
@@ -85,7 +95,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       active = false;
       listener.subscription.unsubscribe();
     };
-  }, [loadProfile]);
+  }, [loadProfile, recheckCode]);
 
   const value = useMemo<AuthState>(
     () => ({
@@ -94,11 +104,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       codePending,
       profile,
       refreshProfile: () => loadProfile(session),
+      recheckCode: () => recheckCode(),
       async signOut() {
         await supabase().auth.signOut();
       },
     }),
-    [loading, session, codePending, profile, loadProfile],
+    [loading, session, codePending, profile, loadProfile, recheckCode],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

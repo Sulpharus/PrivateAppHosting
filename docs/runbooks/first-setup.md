@@ -107,8 +107,10 @@ are pruned: their Workers are deleted and their registry rows disabled (data is 
    everyone else from *Verwaltung → Nutzer & Rollen* and send them the link.
 4. Optional: set up an authenticator app under *Dein Konto*. From then on a password or Google
    sign-in asks for its code; a passkey sign-in does not. The database enforces it
-   (`platform.mfa_ok`), so apps and the gate follow. Lost the phone? Sign in with a passkey and
-   remove the app there, or delete the factor in Supabase → *Authentication → Users*.
+   (`platform.mfa_ok`, and the access token hook withholds `mn_role` for the API), so apps, the
+   gate and the API follow. Keep a passkey on a second device as well. Lost the phone? A passkey
+   still signs in, but removing the app needs its code, so delete the factor in Supabase →
+   *Authentication → Users → the user → MFA factors*, then set up the new phone.
 
 ## 6. NucBox (later)
 

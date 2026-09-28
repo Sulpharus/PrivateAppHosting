@@ -1,5 +1,5 @@
 begin;
-select plan(10);
+select plan(14);
 select tests.reset();
 
 select tests.create_user('owner@example.com', 'Owner') as owner_id \gset
@@ -36,6 +36,29 @@ select ok(not platform.has_grant('notizen'), 'aal1 session with a factor may not
 select is((select count(*)::int from platform.apps), 0, 'aal1 session with a factor sees no apps');
 select pg_temp.login_as(:'owner_id', 'oauth', 'aal1');
 select ok(not platform.is_admin(), 'aal1 session with a factor is not admin');
+
+-- The access token hook withholds the admin role (API, NucBox) until the code is verified.
+select tests.logout();
+select is(
+  platform.custom_access_token_hook(jsonb_build_object('user_id', :'owner_id', 'claims',
+    jsonb_build_object('aal', 'aal1', 'amr', jsonb_build_array(jsonb_build_object('method', 'password', 'timestamp', 1)))))
+    -> 'claims' ->> 'mn_role',
+  'user', 'hook: aal1 token of an admin with a factor carries mn_role user');
+select is(
+  platform.custom_access_token_hook(jsonb_build_object('user_id', :'owner_id', 'claims',
+    jsonb_build_object('aal', 'aal1', 'amr', jsonb_build_array(jsonb_build_object('method', 'password', 'timestamp', 1)))))
+    -> 'claims' ->> 'mn_mfa',
+  'pending', 'hook: aal1 token with a factor is marked mn_mfa pending');
+select is(
+  platform.custom_access_token_hook(jsonb_build_object('user_id', :'owner_id', 'claims',
+    jsonb_build_object('aal', 'aal2', 'mn_mfa', 'pending')))
+    -> 'claims',
+  jsonb_build_object('aal', 'aal2', 'mn_role', 'admin'), 'hook: aal2 token carries the real role');
+select is(
+  platform.custom_access_token_hook(jsonb_build_object('user_id', :'owner_id', 'claims',
+    jsonb_build_object('aal', 'aal1', 'amr', jsonb_build_array(jsonb_build_object('method', 'webauthn', 'timestamp', 1)))))
+    -> 'claims' ->> 'mn_role',
+  'admin', 'hook: passkey token carries the real role');
 
 select pg_temp.login_as(:'user_id', 'totp', 'aal2');
 select ok(platform.has_grant('notizen'), 'aal2 session may use apps');

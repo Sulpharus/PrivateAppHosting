@@ -13,7 +13,7 @@ import { supabase } from '../lib/supabase.ts';
 export function Login() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
-  const { session, loading, codePending, signOut } = useAuth();
+  const { session, loading, codePending, recheckCode, signOut } = useAuth();
   const next = safeNext(params.get('next'));
   const fromGoogle = params.get('via') === 'google';
   const [email, setEmail] = useState('');
@@ -92,7 +92,12 @@ export function Login() {
             </p>
           </div>
           <CodeForm
-            onDone={() => void done()}
+            onDone={async () => {
+              // Clear the pending state first, so the session guard does not bounce back here.
+              await recheckCode();
+              setAskCode(false);
+              await done();
+            }}
             onCancel={async () => {
               setAskCode(false);
               await signOut();

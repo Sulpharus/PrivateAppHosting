@@ -85,12 +85,15 @@ jobs:
             echo "::notice::GOOGLE_CLIENT_ID/GOOGLE_CLIENT_SECRET not set; skipping Google sign-in."
             exit 0
           fi
-          jq -n --arg id "$GOOGLE_CLIENT_ID" --arg secret "$GOOGLE_CLIENT_SECRET" \
-            '{external_google_enabled: true, external_google_client_id: $id, external_google_secret: $secret}' \
+          # jq reads the values from the environment, so they never appear on a command line.
+          jq -n '{external_google_enabled: true, external_google_client_id: env.GOOGLE_CLIENT_ID, external_google_secret: env.GOOGLE_CLIENT_SECRET}' \
             | curl -fsS -X PATCH "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_REF/config/auth" \
               -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
               -H "Content-Type: application/json" \
               --data-binary @- -o /dev/null
+          curl -fsS "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_REF/config/auth" \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            | jq -e '.external_google_enabled == true and .external_google_client_id == env.GOOGLE_CLIENT_ID' > /dev/null
 
   platform:
     name: Platform Workers

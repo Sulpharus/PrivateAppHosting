@@ -27,7 +27,7 @@ export function googleEnabled(): Promise<boolean> {
 }
 
 /** Back to the login page, which finishes the sign-in (second factor, then `next`). */
-function returnUrl(next: string): string {
+export function returnUrl(next: string): string {
   return `${location.origin}/login?${new URLSearchParams({ next, via: 'google' })}`;
 }
 
