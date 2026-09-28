@@ -9,7 +9,7 @@ Where the platform stands and what is left, in order. Every step is idempotent.
 | Supabase production | project `mininode` (`ojicmpgqvoyakigvubek`, Frankfurt, free plan), all platform migrations applied and recorded for `supabase db push` |
 | Supabase staging | project `mininode-staging` (`ttgrtecdqouiogiwcjag`), empty; migrated on its first `supabase db push` |
 | Public config | Supabase URL, publishable keys, Cloudflare account id and AI Gateway URL are in the `wrangler.jsonc` files and `deploy.yml` (none of them are secret) |
-| Auth settings as code | `supabase/config.toml` + `[remotes.production]`: sign-ups off, passwords ≥ 10, passkeys for `mininode.app`, custom access token hook. Applied by the deploy workflow (`supabase config push`) |
+| Auth settings as code | `supabase/config.toml` + `[remotes.production]`: sign-ups off, passwords ≥ 10, passkeys for `mininode.app`, custom access token hook. Applied by the deploy workflow (`supabase config push`); passkeys and the WebAuthn relying party are set by a separate Management API step, because `config push` does not manage them |
 | JWT signing keys | migrated to asymmetric keys (JWKS at `/auth/v1/.well-known/jwks.json`), as the gates require |
 | Supabase access token + secret key | created (`mininode-ci`, `mininode-workers`); they only need to go into GitHub (step 3) |
 | No email | Email Sending needs Workers Paid, so it is off. Invites and password resets are one-time links the admin copies from *Verwaltung → Nutzer & Rollen* and sends by messenger. To turn email on later: add the `send_email` binding back to `apps/api/wrangler.jsonc` and set `EMAIL_ENABLED` to `"true"` in `apps/portal/wrangler.jsonc` |
@@ -70,6 +70,32 @@ deploy workflow uses them and also uploads the Worker secrets, so nothing has to
 | `GUACAMOLE_JSON_SECRET`, `NUCBOX_CONTROL_TOKEN` | `openssl rand -hex 16` / `-hex 32`, same values as on the NucBox | NucBox |
 | `CF_ACCESS_API_CLIENT_ID` / `_SECRET` | Access service token `mininode-api` (from `bootstrap.sh`) | NucBox |
 | `SUPABASE_DB_URL` | *Connect → Session pooler* string | apps with own tables |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | the Google OAuth client from step 3.1 | "Mit Google anmelden" |
+| `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | `node scripts/vapid-keys.ts` (Web Push; changing them later means every device switches push on again) | push notifications |
+| `GOOGLE_TOKEN_KEY` | `openssl rand -base64 32` (encrypts stored Google grants; keep a copy) | Gmail/Calendar in apps |
+
+### 3.1 Google sign-in (optional, 10 min)
+
+1. [Google Cloud console](https://console.cloud.google.com/) → a project (any) → *APIs & Services →
+   OAuth consent screen*: app name *MiniNode*, user type *External*, your email as support and
+   developer contact. Scopes: `openid`, `email`, `profile`, and for apps that use Gmail and
+   Calendar (ADR 0004) also `gmail.readonly`, `gmail.modify`, `calendar.readonly` and
+   `calendar`. Set the publishing status to *In production*: in *Testing* only listed test users
+   can sign in and Google's grants expire after seven days. Do not submit it for verification;
+   unverified, the consent screen shows a warning ("Google hat diese App nicht überprüft →
+   Erweitert → Weiter zu MiniNode") and at most 100 accounts can use it, which is fine here.
+   *APIs & Services → Library*: enable the **Gmail API** and the **Google Calendar API**.
+2. *Credentials → Create credentials → OAuth client ID*, type *Web application*:
+   - Authorized JavaScript origins: `https://mininode.app`
+   - Authorized redirect URIs: `https://ojicmpgqvoyakigvubek.supabase.co/auth/v1/callback`
+3. Put the client ID and secret into the GitHub secrets above. The next deploy switches the
+   provider on; set them there, not in the Supabase dashboard, because `supabase config push`
+   switches providers that are not in `config.toml` off again on every deploy.
+
+Sign-ups stay off, so Google only signs in accounts that exist: its email must match the invited
+address, or the user connects Google under *Dein Konto* first. With `GOOGLE_TOKEN_KEY` set, the
+same sign-in also lets apps that declare `google` in `mininode.json` use the user's Gmail and
+Calendar (ADR 0004); *Dein Konto → Google* shows the state and can revoke it.
 
 ## 4. Apps
 
@@ -87,6 +113,12 @@ are pruned: their Workers are deleted and their registry rows disabled (data is 
    (≥ 10 characters), *Auto confirm*. The first user of the project becomes admin.
 3. Sign in at `https://mininode.app/login`, add a passkey under *Dein Konto*, then invite
    everyone else from *Verwaltung → Nutzer & Rollen* and send them the link.
+4. Optional: set up an authenticator app under *Dein Konto*. From then on a password or Google
+   sign-in asks for its code; a passkey sign-in does not. The database enforces it
+   (`platform.mfa_ok`, and the access token hook withholds `mn_role` for the API), so apps, the
+   gate and the API follow. Keep a passkey on a second device as well. Lost the phone? A passkey
+   still signs in, but removing the app needs its code, so delete the factor in Supabase →
+   *Authentication → Users → the user → MFA factors*, then set up the new phone.
 
 ## 6. NucBox (later)
 

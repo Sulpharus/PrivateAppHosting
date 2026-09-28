@@ -132,6 +132,26 @@
       ],
       "additionalProperties": false
     },
+    "google": {
+      "type": "object",
+      "properties": {
+        "gmail": {
+          "type": "string",
+          "enum": [
+            "read",
+            "write"
+          ]
+        },
+        "calendar": {
+          "type": "string",
+          "enum": [
+            "read",
+            "write"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
     "build": {
       "type": "object",
       "properties": {

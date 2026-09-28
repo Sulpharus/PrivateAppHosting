@@ -60,6 +60,14 @@ admin dashboard offers the same, described next.
 - stores the admin's own additions, e.g. "Farben für Kinder-Apps", in
   `platform.prompt_snippets`, admin-only under RLS. These can be ticked like modules.
 
+**Status.** Implemented as *Verwaltung → KI-Werkstatt* (`apps/portal/src/admin/Workshop.tsx`):
+the files an AI needs (spec, short spec, design system, `ui.css`, `ui.js`) for copying and
+download, and a composer that joins the brief from a form (name, idea, audience, where it is
+built, accent, extra requirements), the spec, the design system, one app type from
+`docs/ai/prompts/types/` and the chosen modules from `docs/ai/prompts/modules/`. The library is
+bundled at build time. Not yet built: the admin's own snippets in `platform.prompt_snippets`,
+`mininode prompt` on the command line, and doctor rules per module.
+
 **Doctor.** Every rule a prompt states is checked by `mininode doctor` wherever it can be
 checked mechanically, so a prompt and its enforcement cannot drift apart.
 

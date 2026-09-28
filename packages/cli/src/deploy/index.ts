@@ -1,5 +1,15 @@
 import { spawnSync } from 'node:child_process';
-import { cpSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  cpSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
@@ -16,6 +26,8 @@ const REPO_ROOT = resolve(import.meta.dirname, '../../../..');
 const SDK_BUNDLE = join(REPO_ROOT, 'packages/sdk/dist/mininode.iife.js');
 /** The app kit (design system), served next to the SDK as /_mininode/ui.css and ui.js. */
 const KIT = join(REPO_ROOT, 'packages/ui/kit');
+/** Service worker and its registration script, same for every app (ADR 0005). */
+const PWA = join(REPO_ROOT, 'packages/gate/assets');
 /** The kit's fonts, resolved from @mininode/ui's own dependencies (the packages only export CSS). */
 function kitFonts(): string[] {
   const require = createRequire(join(KIT, '..', 'package.json'));
@@ -55,8 +67,14 @@ function run(
     throw new Error(`${command} ${args.join(' ')} failed (exit ${result.status})`);
 }
 
+/** Builds the SDK bundle when it is missing or older than its sources (a stale one misleads). */
 function ensureSdkBundle(): void {
-  if (!existsSync(SDK_BUNDLE)) run('pnpm', ['--filter', '@mininode/sdk', 'build'], REPO_ROOT);
+  const sources = join(REPO_ROOT, 'packages/sdk/src');
+  const newest = Math.max(
+    ...readdirSync(sources).map((name) => statSync(join(sources, name)).mtimeMs),
+  );
+  if (!existsSync(SDK_BUNDLE) || statSync(SDK_BUNDLE).mtimeMs < newest)
+    run('pnpm', ['--filter', '@mininode/sdk', 'build'], REPO_ROOT);
 }
 
 /** Builds the app and returns a staging folder that contains exactly what gets served. */
@@ -81,6 +99,16 @@ export function stageAssets(appDir: string, manifest: Manifest): string {
   cpSync(SDK_BUNDLE, join(platform, 'sdk.js'));
   cpSync(join(KIT, 'ui.css'), join(platform, 'ui.css'));
   cpSync(join(KIT, 'ui.js'), join(platform, 'ui.js'));
+  // A new version per deploy: browsers reinstall the worker and drop the old caches.
+  const version = `${manifest.slug}-${Date.now().toString(36)}`;
+  writeFileSync(
+    join(platform, 'sw.js'),
+    readFileSync(join(PWA, 'sw.js'), 'utf8').replace(
+      "const VERSION = 'dev';",
+      `const VERSION = '${version}';`,
+    ),
+  );
+  cpSync(join(PWA, 'pwa.js'), join(platform, 'pwa.js'));
   for (const font of kitFonts()) cpSync(font, join(platform, 'fonts', basename(font)));
   return stage;
 }

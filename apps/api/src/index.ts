@@ -4,8 +4,10 @@ import { z } from 'zod';
 import type { ApiEnv } from './env.ts';
 import { type AppContext, problem, requireUser } from './lib/auth.ts';
 import { adminClient } from './lib/supabase.ts';
+import { google } from './routes/google.ts';
 import { hooks } from './routes/hooks.ts';
 import { confirmUrl, invites } from './routes/invites.ts';
+import { deliverPushes, push } from './routes/push.ts';
 import { controlHeaders, remote } from './routes/remote.ts';
 
 export const app = new Hono<AppContext>();
@@ -33,7 +35,9 @@ app.use(
 );
 
 app.get('/health', (c) => c.json({ ok: true }));
+app.route('/google', google);
 app.route('/hooks', hooks);
+app.route('/push', push);
 app.route('/invites', invites);
 app.route('/remote', remote);
 
@@ -118,7 +122,7 @@ app.onError((error, c) => {
 });
 
 /**
- * Every 5 minutes: expire idle remote sessions, release stale AI reservations, tell the NucBox
+ * Every 5 minutes (cron runs every minute, see `scheduled`): expire idle remote sessions, release stale AI reservations, tell the NucBox
  * which runtimes are still needed, and touch the database so the free project never pauses.
  */
 export async function maintenance(env: ApiEnv): Promise<void> {
@@ -145,7 +149,14 @@ export async function maintenance(env: ApiEnv): Promise<void> {
 
 export default {
   fetch: app.fetch,
-  async scheduled(_controller, env, ctx) {
-    ctx.waitUntil(maintenance(env));
+  async scheduled(controller, env, ctx) {
+    // Every minute: push notifications. Every fifth minute: the maintenance below.
+    ctx.waitUntil(
+      deliverPushes(env).catch((error: unknown) =>
+        console.error(JSON.stringify({ event: 'push_delivery_failed', error: String(error) })),
+      ),
+    );
+    if (new Date(controller.scheduledTime).getUTCMinutes() % 5 === 0)
+      ctx.waitUntil(maintenance(env));
   },
 } satisfies ExportedHandler<ApiEnv>;

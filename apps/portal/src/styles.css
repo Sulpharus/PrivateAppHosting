@@ -835,3 +835,138 @@ code,
   font-size: 12px;
   white-space: pre-wrap;
 }
+
+/* ---------- KI-Werkstatt ---------- */
+.workshop-file {
+  align-items: flex-start;
+  flex-wrap: wrap;
+  padding: 12px 0;
+  border-top: 1px solid var(--line);
+}
+.workshop-file-text {
+  flex: 1;
+  min-width: 240px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.workshop-file-actions {
+  gap: 8px;
+}
+.workshop-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 24px;
+}
+@media (min-width: 1100px) {
+  .workshop-grid {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+    align-items: start;
+  }
+  .workshop-output {
+    position: sticky;
+    top: 88px;
+  }
+}
+.workshop-form textarea,
+.workshop-prompt {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: var(--radius-m);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 16px;
+  resize: vertical;
+}
+.workshop-prompt {
+  min-height: 520px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.5;
+  background: var(--surface-2);
+}
+.workshop-set {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+.workshop-set legend {
+  font-size: 14px;
+  color: var(--muted);
+  margin-bottom: 8px;
+  padding: 0;
+}
+.workshop-set .small-text {
+  font-size: 14px;
+}
+.workshop-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.workshop-chips .chip {
+  min-height: var(--tap);
+}
+.workshop-checks {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 4px 16px;
+}
+.workshop-checks label {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  min-height: var(--tap);
+  padding: 8px 0;
+  cursor: pointer;
+}
+.workshop-checks input {
+  width: 20px;
+  height: 20px;
+  margin: 2px 0 0;
+  flex: none;
+  accent-color: var(--accent);
+}
+.workshop-checks small {
+  display: block;
+  font-size: 13px;
+}
+.workshop-two {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+/* Account: authenticator app setup */
+.totp-qr {
+  width: 200px;
+  height: 200px;
+  align-self: center;
+  padding: 8px;
+  border-radius: var(--radius-m);
+  background: var(--qr-bg);
+}
+.totp-secret {
+  text-align: center;
+  font-size: 14px;
+  letter-spacing: 0.04em;
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+
+/* Offline notice (PWA) */
+.offline-banner {
+  margin: 0;
+  padding: 10px 16px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--line);
+  color: var(--ink);
+  font-size: 14px;
+  text-align: center;
+}

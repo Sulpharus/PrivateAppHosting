@@ -8,6 +8,7 @@ const LINKS: [string, string][] = [
   ['/admin/users', 'Nutzer & Rollen'],
   ['/admin/remote', 'Remote-Apps'],
   ['/admin/ai', 'KI-Proxy'],
+  ['/admin/workshop', 'KI-Werkstatt'],
 ];
 
 const EXTERNAL: [string, string][] = [

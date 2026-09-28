@@ -96,3 +96,10 @@ export const SharedIcon = ({ size = 12 }: IconProps) => (
     <path d="M1.5 15c.7-2.6 2.5-3.8 5-3.8s4.3 1.2 5 3.8M11.5 3.5a2.5 2.5 0 0 1 0 5" />
   </svg>
 );
+
+/** Google's "G" in the current colour, for "Mit Google anmelden". */
+export const GoogleMark = ({ size = 18 }: IconProps) => (
+  <svg {...base(size)} strokeWidth={2} aria-hidden="true">
+    <path d="M15.2 9H9.4M15.2 9a6.2 6.2 0 1 1-1.8-4.4" />
+  </svg>
+);

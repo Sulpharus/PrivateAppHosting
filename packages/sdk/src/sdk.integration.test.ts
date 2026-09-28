@@ -127,4 +127,19 @@ describe.skipIf(!enabled)('sdk against local Supabase', () => {
       .eq('user_id', userId);
     expect(data).toEqual([{ title: 'Erinnerung' }]);
   });
+
+  it('schedules, replaces, lists and cancels push reminders', async () => {
+    const at = new Date(Date.now() + 3_600_000);
+    await mn.push.schedule({ key: 'task:1', at, title: 'Müll', path: '/heute' });
+    await mn.push.schedule({ key: 'task:1', at, title: 'Müll rausbringen', path: '/heute' });
+    const listed = await mn.push.list();
+    expect(listed).toHaveLength(1);
+    expect(listed[0]).toMatchObject({ key: 'task:1', title: 'Müll rausbringen', path: '/heute' });
+    await mn.push.cancel('task:1');
+    expect(await mn.push.list()).toEqual([]);
+    expect(await mn.push.status()).toMatch(/^(off|unsupported)$/);
+    await expect(mn.push.schedule({ key: 'x', at, title: 'x', path: 'heute' })).rejects.toThrow(
+      'must start with',
+    );
+  });
 });

@@ -5,9 +5,21 @@ import { createBrowserClient } from '@supabase/ssr';
 import type { RealtimeChannel, SupabaseClient, User } from '@supabase/supabase-js';
 import { type AiChatOptions, type AiMessage, createAi } from './ai.ts';
 import { appSchema, loadConfig, type MininodeConfig } from './config.ts';
+import { createGoogle } from './google.ts';
 import { createKv, type KvScope } from './kv.ts';
+import {
+  createOfflineKv,
+  indexedDbStore,
+  isNetworkError,
+  type LocalStore,
+  memoryStore,
+} from './offline.ts';
+import { createPush } from './push.ts';
+import { cookieSessionUserId } from './session-cookie.ts';
 
 export { appSchema, assertConfig } from './config.ts';
+export { GoogleError } from './google.ts';
+export type { PushOptions, PushStatus, ScheduledPush } from './push.ts';
 export type { AiChatOptions, AiMessage, KvScope, MininodeConfig };
 
 export type Role = 'admin' | 'trusted' | 'user';
@@ -27,7 +39,10 @@ export interface Mininode {
   };
   /** supabase-js query builder scoped to this app's schema: `mn.db.from('recipes').select()`. */
   readonly db: ReturnType<SupabaseClient['schema']>;
-  readonly kv: ReturnType<typeof createKv>;
+  /** Works offline: local copy per user, changes queued and sent when online (ADR 0005). */
+  readonly kv: ReturnType<typeof createOfflineKv>['kv'];
+  /** Connection state and the queue of offline changes. */
+  readonly offline: ReturnType<typeof createOfflineKv>['offline'];
   readonly files: {
     upload(
       path: string,
@@ -40,7 +55,12 @@ export interface Mininode {
   };
   realtime(channel: string): RealtimeChannel;
   readonly ai: ReturnType<typeof createAi>;
+  /** Gmail and Calendar of the signed-in user, for apps with a `google` block (ADR 0004). */
+  readonly google: ReturnType<typeof createGoogle>;
+  /** Bell notification now; also pushed to the user's devices with notifications on. */
   notify(title: string, body?: string, url?: string): Promise<void>;
+  /** Reminders delivered later, also with the app closed (ADR 0005). */
+  readonly push: ReturnType<typeof createPush>;
 }
 
 const FILE_BUCKET = 'app-files';
@@ -79,7 +99,40 @@ export function createMininode(config: MininodeConfig): Mininode {
     return url.toString();
   };
 
-  const currentUser = async () => (await supabase.auth.getUser()).data.user;
+  // Offline the server cannot confirm the user: fall back to the stored session (ADR 0005).
+  // The last confirmed user of this app on this device (ADR 0005): offline, or once the access
+  // token expired without a connection, supabase-js has no session to offer, but the app should
+  // keep working with that user's local data.
+  const userKey = `mininode:user:${config.appSlug}`;
+  const remember = (user: User) => {
+    try {
+      localStorage.setItem(userKey, JSON.stringify(user));
+    } catch {
+      // Storage blocked: offline start just is not possible then.
+    }
+  };
+  /** The remembered user, but only while the session cookie still belongs to them. */
+  const remembered = (): User | null => {
+    try {
+      const raw = localStorage.getItem(userKey);
+      const user = raw ? (JSON.parse(raw) as User) : null;
+      return user && cookieSessionUserId(document.cookie) === user.id ? user : null;
+    } catch {
+      return null;
+    }
+  };
+  const currentUser = async (): Promise<User | null> => {
+    // Offline, supabase-js would retry a token refresh for up to 30 s before giving up.
+    if (!navigator.onLine) return remembered();
+    const { data, error } = await supabase.auth.getUser();
+    if (data.user) {
+      remember(data.user);
+      return data.user;
+    }
+    return error && isNetworkError(error) ? remembered() : null;
+  };
+  const sessionToken = async () =>
+    (await supabase.auth.getSession()).data.session?.access_token ?? null;
 
   // Resolves the owner folder for file paths: shared-account apps store under the app owner.
   const ownerFolder = async (shared?: boolean): Promise<string> => {
@@ -95,6 +148,27 @@ export function createMininode(config: MininodeConfig): Mininode {
     if (!clean || clean.includes('..')) throw new Error('mininode: invalid file path');
     return `${config.appSlug}/${await ownerFolder(shared)}/${clean}`;
   };
+
+  const stores = new Map<string, LocalStore>();
+  const localStore = async (): Promise<LocalStore> => {
+    const sessionUser = navigator.onLine
+      ? (await supabase.auth.getSession()).data.session?.user
+      : undefined;
+    if (sessionUser) remember(sessionUser);
+    // Never a store for "nobody": changes written there would never be sent.
+    const userId = sessionUser?.id ?? remembered()?.id;
+    if (!userId) throw new Error('mininode: not signed in');
+    let store = stores.get(userId);
+    if (!store) {
+      store =
+        typeof indexedDB === 'undefined'
+          ? memoryStore()
+          : indexedDbStore(`mininode:${config.appSlug}:${userId}`);
+      stores.set(userId, store);
+    }
+    return store;
+  };
+  const offlineKv = createOfflineKv(createKv(supabase, config.appSlug), localStore);
 
   return {
     config,
@@ -112,13 +186,17 @@ export function createMininode(config: MininodeConfig): Mininode {
         return new Promise<never>(() => {});
       },
       async signOut() {
-        await supabase.auth.signOut();
-        location.assign(config.portalUrl);
+        // Cached pages and the offline user of this app belong to the user who signs out.
+        navigator.serviceWorker?.controller?.postMessage({ type: 'mininode:clear' });
+        localStorage.removeItem(userKey);
+        // The portal signs out the shared session and switches this device's push off.
+        location.assign(new URL('/logout', config.portalUrl).toString());
       },
       accountUrl: () => new URL('/account', config.portalUrl).toString(),
     },
     db: supabase.schema(appSchema(config.appSlug)),
-    kv: createKv(supabase, config.appSlug),
+    kv: offlineKv.kv,
+    offline: offlineKv.offline,
     files: {
       async upload(path, body, options = {}) {
         const target = await objectPath(path, options.shared);
@@ -154,10 +232,9 @@ export function createMininode(config: MininodeConfig): Mininode {
       },
     },
     realtime: (channel) => supabase.channel(`${config.appSlug}:${channel}`),
-    ai: createAi(
-      config,
-      async () => (await supabase.auth.getSession()).data.session?.access_token ?? null,
-    ),
+    ai: createAi(config, sessionToken),
+    google: createGoogle(config, sessionToken),
+    push: createPush(config, supabase),
     async notify(title, body, url) {
       const { error } = await supabase.schema('platform').rpc('notify_self', {
         p_app_slug: config.appSlug,

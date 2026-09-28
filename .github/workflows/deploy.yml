@@ -60,6 +60,40 @@ jobs:
         run: |
           supabase config diff --project-ref "$SUPABASE_PROJECT_REF"
           supabase config push --project-ref "$SUPABASE_PROJECT_REF" --yes
+      - name: Passkeys (production only; config push does not manage them)
+        if: env.DEPLOY_ENV == 'production'
+        # Same values as [remotes.production.auth.webauthn] in supabase/config.toml. Changing the
+        # RP ID would invalidate every registered passkey (ADR 0001).
+        run: |
+          curl -fsS -X PATCH "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_REF/config/auth" \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d '{"passkey_enabled":true,"webauthn_rp_display_name":"MiniNode","webauthn_rp_id":"mininode.app","webauthn_rp_origins":"https://mininode.app"}' \
+            -o /dev/null
+          curl -fsS "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_REF/config/auth" \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            | jq -e '.passkey_enabled == true and .webauthn_rp_id == "mininode.app"' > /dev/null
+      - name: Google sign-in (production only, when the OAuth client is configured)
+        if: env.DEPLOY_ENV == 'production'
+        # Sign-ups stay off, so Google only signs in accounts that already exist (same email) or
+        # that linked Google under "Dein Konto". Without the secrets the provider stays as it is.
+        env:
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+        run: |
+          if [ -z "$GOOGLE_CLIENT_ID" ] || [ -z "$GOOGLE_CLIENT_SECRET" ]; then
+            echo "::notice::GOOGLE_CLIENT_ID/GOOGLE_CLIENT_SECRET not set; skipping Google sign-in."
+            exit 0
+          fi
+          # jq reads the values from the environment, so they never appear on a command line.
+          jq -n '{external_google_enabled: true, external_google_client_id: env.GOOGLE_CLIENT_ID, external_google_secret: env.GOOGLE_CLIENT_SECRET}' \
+            | curl -fsS -X PATCH "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_REF/config/auth" \
+              -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+              -H "Content-Type: application/json" \
+              --data-binary @- -o /dev/null
+          curl -fsS "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_REF/config/auth" \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            | jq -e '.external_google_enabled == true and .external_google_client_id == env.GOOGLE_CLIENT_ID' > /dev/null
 
   platform:
     name: Platform Workers
@@ -100,6 +134,11 @@ jobs:
           NUCBOX_CONTROL_TOKEN: ${{ secrets.NUCBOX_CONTROL_TOKEN }}
           ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_API_CLIENT_ID }}
           ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_API_CLIENT_SECRET }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          GOOGLE_TOKEN_KEY: ${{ secrets.GOOGLE_TOKEN_KEY }}
+          VAPID_PUBLIC_KEY: ${{ secrets.VAPID_PUBLIC_KEY }}
+          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
         run: |
           upload() { # worker-dir NAME...
             local dir=$1 args=() name
@@ -115,7 +154,8 @@ jobs:
               (cd "$dir" && pnpm exec wrangler secret bulk "$file")
             fi
           }
-          upload apps/api SUPABASE_SECRET_KEY GUACAMOLE_JSON_SECRET NUCBOX_CONTROL_TOKEN ACCESS_CLIENT_ID ACCESS_CLIENT_SECRET
+          upload apps/api SUPABASE_SECRET_KEY GUACAMOLE_JSON_SECRET NUCBOX_CONTROL_TOKEN ACCESS_CLIENT_ID ACCESS_CLIENT_SECRET \
+            GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET GOOGLE_TOKEN_KEY VAPID_PUBLIC_KEY VAPID_PRIVATE_KEY
           upload apps/ai-proxy SUPABASE_SECRET_KEY ANTHROPIC_API_KEY GEMINI_API_KEY AI_GATEWAY_TOKEN
 
   apps:

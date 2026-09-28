@@ -1,8 +1,16 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Navigate, useNavigate, useSearchParams } from 'react-router';
 import { useAuth } from '../auth/AuthProvider.tsx';
+import { CodeForm } from '../auth/CodeForm.tsx';
+import {
+  googleEnabled,
+  googleErrorFromUrl,
+  googleHandOverDone,
+  signInWithGoogle,
+} from '../auth/google.ts';
+import { codeRequired } from '../auth/mfa.ts';
 import { passkeyErrorMessage, passkeysSupported, signInWithPasskey } from '../auth/passkeys.ts';
-import { Logo } from '../components/icons.tsx';
+import { GoogleMark, Logo } from '../components/icons.tsx';
 import { emailEnabled } from '../config.ts';
 import { goTo, safeNext } from '../lib/safe-next.ts';
 import { supabase } from '../lib/supabase.ts';
@@ -10,24 +18,48 @@ import { supabase } from '../lib/supabase.ts';
 export function Login() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
-  const { session, loading } = useAuth();
+  const { session, loading, codePending, recheckCode, signOut } = useAuth();
   const next = safeNext(params.get('next'));
+  const fromGoogle = params.get('via') === 'google';
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(() => googleErrorFromUrl(params));
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [askCode, setAskCode] = useState(false);
+  const [google, setGoogle] = useState(false);
 
-  if (!loading && session && next.startsWith('/')) return <Navigate to={next} replace />;
+  useEffect(() => {
+    void googleEnabled().then(setGoogle);
+  }, []);
 
-  const done = () => goTo(next, navigate);
+  // Leave only after a Google grant was taken out of the shared session cookie.
+  const done = async () => {
+    await googleHandOverDone();
+    await goTo(next, navigate);
+  };
+  const ready = !loading && session && !codePending && !askCode && !busy;
+
+  // Back from Google (possibly to an app on another subdomain): finish like a password sign-in.
+  useEffect(() => {
+    if (ready && fromGoogle && !next.startsWith('/'))
+      void googleHandOverDone().then(() => goTo(next, navigate));
+  }, [ready, fromGoogle, next, navigate]);
+
+  if (ready && next.startsWith('/')) return <Navigate to={next} replace />;
+
+  /** After the first factor: ask for the authenticator code when the account has one. */
+  const afterSignIn = async () => {
+    if (await codeRequired()) setAskCode(true);
+    else await done();
+  };
 
   const withPasskey = async () => {
     setError(null);
     setBusy(true);
     try {
       await signInWithPasskey();
-      await done();
+      await afterSignIn();
     } catch (err) {
       setError(passkeyErrorMessage(err));
     } finally {
@@ -39,10 +71,51 @@ export function Login() {
     setError(null);
     setBusy(true);
     const { error: signInError } = await supabase().auth.signInWithPassword({ email, password });
-    setBusy(false);
     if (signInError) setError('E-Mail oder Passwort stimmt nicht.');
-    else await done();
+    else await afterSignIn();
+    setBusy(false);
   };
+
+  const withGoogle = async () => {
+    setError(null);
+    setBusy(true);
+    try {
+      await signInWithGoogle(next);
+    } catch {
+      setError('Die Anmeldung mit Google hat nicht geklappt. Bitte noch einmal versuchen.');
+      setBusy(false);
+    }
+  };
+
+  if (!loading && session && (codePending || askCode))
+    return (
+      <main className="auth">
+        <div className="auth-card">
+          <div className="brand">
+            <Logo />
+            <span>mininode</span>
+          </div>
+          <div className="stack" style={{ gap: 6 }}>
+            <h1>Zweiter Schritt</h1>
+            <p className="muted">
+              Öffne deine Authenticator-App und gib den sechsstelligen Code für MiniNode ein.
+            </p>
+          </div>
+          <CodeForm
+            onDone={async () => {
+              // Clear the pending state first, so the session guard does not bounce back here.
+              await recheckCode();
+              setAskCode(false);
+              await done();
+            }}
+            onCancel={async () => {
+              setAskCode(false);
+              await signOut();
+            }}
+          />
+        </div>
+      </main>
+    );
 
   const forgotPassword = async () => {
     setError(null);
@@ -83,6 +156,13 @@ export function Login() {
             disabled={busy}
           >
             Mit Passkey anmelden
+          </button>
+        )}
+
+        {google && (
+          <button type="button" className="button wide" onClick={withGoogle} disabled={busy}>
+            <GoogleMark />
+            Mit Google anmelden
           </button>
         )}
 

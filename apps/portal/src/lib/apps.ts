@@ -1,4 +1,10 @@
-import { platform } from './supabase.ts';
+import { platform, supabase } from './supabase.ts';
+
+/** Last app list per user, so the start page also works offline (PWA, ADR 0005). */
+const cacheKey = async () => {
+  const { data } = await supabase().auth.getSession();
+  return data.session ? `mn-apps:${data.session.user.id}` : null;
+};
 
 export interface AppRow {
   slug: string;
@@ -23,16 +29,37 @@ export interface RemoteStatus {
   my_position: number | null;
 }
 
-/** Apps the signed-in user may open (RLS decides). */
+/** Removes the offline app lists (sign-out). */
+export function forgetOfflineCopies(): void {
+  try {
+    for (const key of Object.keys(localStorage))
+      if (key.startsWith('mn-apps:')) localStorage.removeItem(key);
+  } catch {
+    // Storage blocked: nothing was stored either.
+  }
+}
+
+/** Apps the signed-in user may open (RLS decides); the last known list when offline. */
 export async function listApps(): Promise<AppRow[]> {
+  const key = await cacheKey();
   const { data, error } = await platform()
     .from('apps')
     .select(
       'slug, name, description, kind, target, data_mode, status, is_default, deployed_version, deployed_at, remote_runtime:manifest->remote->>runtime',
     )
     .order('name');
-  if (error) throw error;
-  return (data as AppRow[] | null) ?? [];
+  if (error) {
+    const cached = key && !navigator.onLine ? localStorage.getItem(key) : null;
+    if (cached) return JSON.parse(cached) as AppRow[];
+    throw error;
+  }
+  const rows = (data as AppRow[] | null) ?? [];
+  try {
+    if (key) localStorage.setItem(key, JSON.stringify(rows));
+  } catch {
+    // Storage full or blocked: the list just is not available offline.
+  }
+  return rows;
 }
 
 export async function remoteStatus(): Promise<RemoteStatus[]> {

@@ -43,7 +43,8 @@ export function Home() {
 
   const load = useCallback(async () => {
     try {
-      const [appRows, statuses] = await Promise.all([listApps(), remoteStatus()]);
+      // Remote status needs the network; the app list falls back to the last one offline.
+      const [appRows, statuses] = await Promise.all([listApps(), remoteStatus().catch(() => [])]);
       setApps(appRows);
       setRemote(statuses);
     } catch {

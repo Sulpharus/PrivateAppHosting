@@ -60,6 +60,7 @@ test('admins reach every Host Manager page', async ({ page }) => {
     ['Nutzer & Rollen', 'Nutzer & Rollen'],
     ['Remote-Apps', 'Remote-Apps'],
     ['KI-Proxy', 'KI-Proxy'],
+    ['KI-Werkstatt', 'KI-Werkstatt'],
   ]) {
     await page
       .getByRole('navigation', { name: 'Verwaltung' })
@@ -72,6 +73,22 @@ test('admins reach every Host Manager page', async ({ page }) => {
     .getByRole('link', { name: 'Nutzer & Rollen' })
     .click();
   await expect(page.getByRole('cell', { name: /Lena/ })).toBeVisible();
+});
+
+test('the KI-Werkstatt composes a prompt for a new app', async ({ page }) => {
+  await signIn(page, adminEmail);
+  await page.goto('/admin/workshop');
+  await expect(page.getByRole('heading', { name: 'Dateien für die KI' })).toBeVisible();
+  await page.getByLabel('Name der App').fill('Bücherregal');
+  await page.getByLabel('Was soll die App können?').fill('Gelesene Bücher mit Bewertung.');
+  await page.getByRole('button', { name: 'Archiv und Sammlung' }).click();
+  await page.getByRole('checkbox', { name: /Fotos und Dateien/ }).check();
+  await page.getByLabel('Wo baust du sie?').selectOption({ label: 'Google AI Studio' });
+  const prompt = page.getByLabel('Fertiger Prompt');
+  await expect(prompt).toHaveValue(/# Build the MiniNode app "Bücherregal"/);
+  await expect(prompt).toHaveValue(/data-accent="violet"/);
+  await expect(prompt).toHaveValue(/## Feature: photos and files/);
+  await expect(prompt).toHaveValue(/Vite \+ React \+ TypeScript/);
 });
 
 test('passkey: register on the account page, then sign in with it', async ({ page, context }) => {

@@ -75,6 +75,9 @@ importers:
       '@mininode/gate':
         specifier: workspace:*
         version: link:../../packages/gate
+      '@mininode/manifest':
+        specifier: workspace:*
+        version: link:../../packages/manifest
       '@supabase/supabase-js':
         specifier: 2.117.1
         version: 2.117.1
@@ -91,6 +94,12 @@ importers:
       '@types/node':
         specifier: ^22.20.4
         version: 22.20.4
+      http_ece:
+        specifier: 1.2.0
+        version: 1.2.0
+      postgres:
+        specifier: 3.4.9
+        version: 3.4.9
       vitest:
         specifier: 5.0.1
         version: 5.0.1(@types/node@22.20.4)(happy-dom@20.14.5)(vite@8.3.0(@types/node@22.20.4)(esbuild@0.28.1))
@@ -140,6 +149,9 @@ importers:
       '@mininode/gate':
         specifier: workspace:*
         version: link:../../packages/gate
+      '@mininode/manifest':
+        specifier: workspace:*
+        version: link:../../packages/manifest
       '@mininode/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -1335,6 +1347,10 @@ packages:
     resolution: {integrity: sha512-/Gng7NfoykZl2pjukW5Z6+8Yxm3BPRf86GTbQnt0SbySkvax4fyL4H3HhY1cCpBGmiW9XDRFzRV+CXK2W8QudQ==}
     engines: {node: '>=16.9.0'}
 
+  http_ece@1.2.0:
+    resolution: {integrity: sha512-JrF8SSLVmcvc5NducxgyOrKXe3EsyHMgBFgSaIUGmArKe+rwr0uphRkRXvwiom3I+fpIfoItveHrfudL8/rxuA==}
+    engines: {node: '>=16'}
+
   iceberg-js@0.8.1:
     resolution: {integrity: sha512-1dhVQZXhcHje7798IVM+xoo/1ZdVfzOMIc8/rgVSijRK38EDqOJoGula9N/8ZI5RD8QTxNQtK/Gozpr+qUqRRA==}
     engines: {node: '>=20.0.0'}
@@ -2434,6 +2450,8 @@ snapshots:
       - utf-8-validate
 
   hono@4.13.8: {}
+
+  http_ece@1.2.0: {}
 
   iceberg-js@0.8.1: {}
 

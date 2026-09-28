@@ -11,6 +11,8 @@
   --radius-m: 12px;
   --radius-l: 16px;
   --tap: 44px;
+  /* Scanners need dark-on-light codes, so QR codes stay on white in dark mode too. */
+  --qr-bg: #ffffff;
 
   --bg: #f3f1ec;
   --dot: rgb(23 22 15 / 0.07);

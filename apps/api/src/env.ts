@@ -14,4 +14,14 @@ export interface ApiEnv extends Env {
   /** Cloudflare Access service token for control.mininode.app. */
   ACCESS_CLIENT_ID?: string;
   ACCESS_CLIENT_SECRET?: string;
+  /** Google OAuth client (same as the Supabase Google provider) for Google services in apps. */
+  GOOGLE_CLIENT_ID?: string;
+  GOOGLE_CLIENT_SECRET?: string;
+  /** Base64 of 32 random bytes; encrypts stored Google refresh tokens (ADR 0004). */
+  GOOGLE_TOKEN_KEY?: string;
+  /** Web Push (VAPID, ADR 0005): base64url P-256 public point and private scalar. */
+  VAPID_PUBLIC_KEY?: string;
+  VAPID_PRIVATE_KEY?: string;
+  /** Push requests per cron run (default 40, for the Workers Free subrequest limit). */
+  PUSH_SEND_BUDGET?: string;
 }

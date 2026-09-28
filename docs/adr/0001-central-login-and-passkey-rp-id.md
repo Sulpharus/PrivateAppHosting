@@ -27,3 +27,17 @@ marked experimental and needs an explicit client opt-in.
 - Five-origin limit is never a constraint.
 - One redirect hop for apps whose session has expired (`/auth/refresh?next=`).
 - Upgrading supabase-js requires re-running the passkey e2e test (Playwright virtual authenticator).
+
+## Addendum (2026-09): Google sign-in and authenticator apps
+
+- "Mit Google anmelden" joins passkey and password on `/login`. Sign-ups stay off, so it only
+  reaches existing accounts (same verified email, or Google connected under *Dein Konto*).
+- An authenticator app (TOTP) is an optional second factor. The database enforces it:
+  `platform.has_grant` and `platform.is_admin` require an aal2 session once the user has a
+  verified factor, so the portal, the gate and every app's RLS follow without their own checks.
+  The access token hook reports `mn_role: user` and `mn_mfa: pending` until the code is
+  verified, so the API and NucBox (which trust `mn_role`) follow too, and the gate sends such
+  sessions to the portal's code step.
+  A passkey sign-in (AMR method `webauthn`) counts as enough on its own, because it already
+  proves possession of a device. The e2e test `e2e/mfa.spec.ts` covers that exemption; re-run it
+  after Supabase upgrades, as with the passkey test.

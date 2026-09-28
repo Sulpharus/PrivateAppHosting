@@ -18,8 +18,14 @@ beforeAll(async () => {
   verifier = createVerifier(SUPABASE_URL, createLocalJWKSet({ keys: [jwk] }));
 });
 
-async function token(options: { expiresIn?: string; issuer?: string; sub?: string } = {}) {
-  return new SignJWT({ role: 'authenticated', mn_role: 'user' })
+async function token(
+  options: { expiresIn?: string; issuer?: string; sub?: string; mn_mfa?: 'pending' } = {},
+) {
+  return new SignJWT({
+    role: 'authenticated',
+    mn_role: 'user',
+    ...(options.mn_mfa ? { mn_mfa: options.mn_mfa } : {}),
+  })
     .setProtectedHeader({ alg: 'ES256', kid: 'k1' })
     .setSubject(options.sub ?? '11111111-1111-1111-1111-111111111111')
     .setIssuer(options.issuer ?? ISSUER)
@@ -104,6 +110,18 @@ describe('decide', () => {
     const decision = await decide({
       url,
       cookieHeader: cookie({ access_token: foreign }),
+      appSlug: 'rezepte',
+      portalUrl: PORTAL,
+      verifier,
+      checkGrant: allowAll,
+    });
+    expect(decision.action === 'redirect' && decision.reason).toBe('login');
+  });
+
+  it('sends sessions without the authenticator code to the login page', async () => {
+    const decision = await decide({
+      url,
+      cookieHeader: cookie({ access_token: await token({ mn_mfa: 'pending' }) }),
       appSlug: 'rezepte',
       portalUrl: PORTAL,
       verifier,

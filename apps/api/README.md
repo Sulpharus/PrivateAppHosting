@@ -7,6 +7,11 @@ Hono Worker for everything that needs the service role or a secret:
 | `POST /invites` | admin, signed in < 10 min | Create invite, pre-create the account, send mail via Cloudflare Email; returns the link for sharing |
 | `DELETE /invites/:id` | admin, recent | Revoke; deletes the pre-created account if never used |
 | `POST /hooks/send-email` | Supabase (Standard Webhooks signature) | Renders and sends every auth mail |
+| `POST /google/connect` | signed-in user | Stores the Google refresh token from a Google sign-in, encrypted (ADR 0004) |
+| `GET /google` / `DELETE /google` | signed-in user | Status of the Google grant / revoke it at Google and forget it |
+| `POST /google/token` | signed-in user with grant, from the app's own origin | Short-lived Google access token limited to the app's `google` scopes |
+| `GET /push/config` | anyone | VAPID public key for the portal's push subscription (ADR 0005) |
+| `POST /push/test` | signed-in user | Sends a test notification to all of the caller's devices |
 | `POST /remote/sessions` | signed-in user with grant | Queue or start a remote session; returns a Guacamole link |
 | `POST /remote/sessions/:id/heartbeat` | session owner | Keeps the session alive |
 | `DELETE /remote/sessions/:id` | owner or admin | Ends the session, promotes the next in queue |
@@ -14,7 +19,7 @@ Hono Worker for everything that needs the service role or a secret:
 | `GET /remote/installs/:id` | admin | Install job status |
 | `POST /admin/users/:id/recovery-link` | admin, recent | One-time password-reset link to share (no email needed) |
 | `DELETE /admin/users/:id` | admin, recent | Deletes a user |
-| cron `*/5 * * * *` | — | Expires idle sessions, releases stale AI reservations, syncs NucBox runtimes, keeps Supabase awake |
+| cron `* * * * *` | — | Every minute: releases due reminders and pushes new notifications (ADR 0005). Every fifth minute also: expires idle sessions, releases stale AI reservations, syncs NucBox runtimes, keeps Supabase awake |
 
 Email is optional: without the `EMAIL` binding (Workers Paid) invites return only the link and
 `POST /admin/users/:id/recovery-link` (admin, recent) creates password-reset links to share.

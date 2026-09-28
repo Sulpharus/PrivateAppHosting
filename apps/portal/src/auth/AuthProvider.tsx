@@ -6,9 +6,14 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react';
+import { forgetOfflineCopies } from '../lib/apps.ts';
+import { forgetThisDevice, releaseForeignSubscription } from '../lib/push.ts';
 import { platform, supabase } from '../lib/supabase.ts';
+import { handOverGoogleGrant } from './google.ts';
+import { codeRequired } from './mfa.ts';
 
 export type Role = 'admin' | 'trusted' | 'user';
 
@@ -22,8 +27,12 @@ export interface Profile {
 interface AuthState {
   loading: boolean;
   session: Session | null;
+  /** Signed in, but the code from the authenticator app is still missing (aal1 of aal2). */
+  codePending: boolean;
   profile: Profile | null;
   refreshProfile(): Promise<void>;
+  /** Re-reads whether the code is still missing (right after it was verified). */
+  recheckCode(): Promise<void>;
   signOut(): Promise<void>;
 }
 
@@ -32,7 +41,16 @@ const AuthContext = createContext<AuthState | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [codePending, setCodePending] = useState(false);
   const [loading, setLoading] = useState(true);
+  // Auth events can overlap; only the newest code check may set `codePending`.
+  const codeCheck = useRef(0);
+
+  const recheckCode = useCallback(async (signedIn = true) => {
+    const id = ++codeCheck.current;
+    const pending = signedIn && (await codeRequired());
+    if (id === codeCheck.current) setCodePending(pending);
+  }, []);
 
   const loadProfile = useCallback(async (current: Session | null) => {
     if (!current) {
@@ -63,30 +81,49 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .then(async ({ data }) => {
         if (!active) return;
         setSession(data.session);
+        if (data.session) {
+          void handOverGoogleGrant(data.session);
+          void releaseForeignSubscription().catch(() => undefined);
+        }
+        await recheckCode(data.session !== null);
         await loadProfile(data.session);
         setLoading(false);
       });
     const { data: listener } = supabase().auth.onAuthStateChange((_event, next) => {
       setSession(next);
-      void loadProfile(next);
+      // Other auth calls inside this callback can deadlock supabase-js, so run them after it.
+      setTimeout(() => {
+        if (!active) return;
+        if (next) void handOverGoogleGrant(next);
+        void recheckCode(next !== null);
+        void loadProfile(next);
+      }, 0);
     });
     return () => {
       active = false;
       listener.subscription.unsubscribe();
     };
-  }, [loadProfile]);
+  }, [loadProfile, recheckCode]);
 
   const value = useMemo<AuthState>(
     () => ({
       loading,
       session,
+      codePending,
       profile,
       refreshProfile: () => loadProfile(session),
+      recheckCode: () => recheckCode(),
       async signOut() {
-        await supabase().auth.signOut();
+        // This device should not keep receiving this account's notifications, and the offline
+        // copy of the app list belongs to this account.
+        await forgetThisDevice();
+        forgetOfflineCopies();
+        const { error } = await supabase().auth.signOut();
+        // Offline with an expired token supabase-js keeps the session: drop it locally at least.
+        if (error) await supabase().auth.signOut({ scope: 'local' });
       },
     }),
-    [loading, session, profile, loadProfile],
+    [loading, session, codePending, profile, loadProfile, recheckCode],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

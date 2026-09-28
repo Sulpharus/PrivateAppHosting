@@ -39,6 +39,17 @@ describe('wrangler config', () => {
     expect(config.vars).toMatchObject({ APP_SLUG: 'haushalt', PORTAL_URL: 'https://mininode.app' });
   });
 
+  it('lets apps with a google block call the Google APIs', () => {
+    expect(
+      appWranglerConfig({ manifest, env: production, assetsDir: '/tmp/a' }).vars.CONNECT_SRC,
+    ).toBe('');
+    const withGoogle = { ...manifest, google: { calendar: 'write' as const } };
+    expect(
+      appWranglerConfig({ manifest: withGoogle, env: production, assetsDir: '/tmp/a' }).vars
+        .CONNECT_SRC,
+    ).toBe('https://www.googleapis.com');
+  });
+
   it('has no routes locally', () => {
     const local = environmentSettings('local', { SUPABASE_PUBLISHABLE_KEY: 'pk' });
     expect(appWranglerConfig({ manifest, env: local, assetsDir: '/tmp/a' })).not.toHaveProperty(
@@ -136,12 +147,18 @@ describe('stageAssets', () => {
         '_mininode/sdk.js',
         '_mininode/ui.css',
         '_mininode/ui.js',
+        '_mininode/sw.js',
+        '_mininode/pwa.js',
         '_mininode/fonts/bricolage-grotesque-latin-wght-normal.woff2',
         '_mininode/fonts/instrument-sans-latin-wght-normal.woff2',
         '_mininode/fonts/jetbrains-mono-latin-wght-normal.woff2',
       ])
         expect(existsSync(join(root, file)), file).toBe(true);
       expect(existsSync(join(root, 'README.md'))).toBe(false);
+      // Each deploy stamps a new service worker version.
+      expect(readFileSync(join(root, '_mininode/sw.js'), 'utf8')).toMatch(
+        /const VERSION = 'regal-[a-z0-9]+';/,
+      );
       // Every font ui.css asks for must be there: a missing file would come back as index.html.
       const css = readFileSync(join(root, '_mininode/ui.css'), 'utf8');
       const urls = [...css.matchAll(/url\(([^)]+)\)/g)].map((m) => m[1] ?? '');

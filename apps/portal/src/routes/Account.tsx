@@ -1,6 +1,8 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 import { useAuth } from '../auth/AuthProvider.tsx';
+import { googleErrorFromUrl } from '../auth/google.ts';
+import { needsAal2 } from '../auth/mfa.ts';
 import {
   deletePasskey,
   listPasskeys,
@@ -14,6 +16,8 @@ import { useStepUp } from '../auth/StepUp.tsx';
 import { TopBar } from '../components/TopBar.tsx';
 import { isReauthError } from '../lib/api.ts';
 import { platform, supabase } from '../lib/supabase.ts';
+import { NotificationsCard } from './AccountNotifications.tsx';
+import { AuthenticatorCard, GoogleCard } from './AccountSecurity.tsx';
 
 const ROLE_LABEL = { admin: 'Admin', trusted: 'Vertrauenswürdig', user: 'Nutzer' } as const;
 
@@ -27,16 +31,31 @@ function formatDate(value: string | null): string {
 }
 
 export function Account() {
-  const { profile, refreshProfile, signOut } = useAuth();
+  const { profile, refreshProfile } = useAuth();
   const navigate = useNavigate();
   const { run: stepUp } = useStepUp();
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
   const resetMode = params.get('reset') === '1';
   const [name, setName] = useState(profile?.displayName ?? '');
   const [passkeys, setPasskeys] = useState<PasskeyInfo[]>([]);
   const [password, setPassword] = useState('');
   const [message, setMessage] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(() => googleErrorFromUrl(params));
+  const feedback = useMemo(
+    () => ({
+      ok(text: string) {
+        setError(null);
+        setMessage(text);
+      },
+      fail(text: string) {
+        setMessage(null);
+        setError(text);
+      },
+    }),
+    [],
+  );
+
+  const clearLinked = useCallback(() => setParams({}, { replace: true }), [setParams]);
 
   const reload = useCallback(async () => {
     if (passkeysSupported()) setPasskeys(await listPasskeys().catch(() => []));
@@ -54,10 +73,12 @@ export function Account() {
     setError(null);
     setMessage(null);
     try {
-      await action();
+      // Accounts with an authenticator app confirm passkey changes with its code (aal2).
+      await stepUp(action);
       setMessage(success);
       await reload();
     } catch (err) {
+      if (err instanceof Error && err.message === 'Bestätigung abgebrochen.') return;
       setError(passkeyErrorMessage(err));
     }
   };
@@ -85,7 +106,9 @@ export function Account() {
       setMessage('Passwort geändert.');
     } catch (err) {
       setError(
-        isReauthError(err) || (err instanceof Error && err.message === 'Bestätigung abgebrochen.')
+        isReauthError(err) ||
+          needsAal2(err) ||
+          (err instanceof Error && err.message === 'Bestätigung abgebrochen.')
           ? 'Bitte bestätige kurz deine Identität und versuch es noch einmal.'
           : 'Das Passwort ist zu schwach (mindestens 10 Zeichen, Buchstaben und Ziffern).',
       );
@@ -196,6 +219,14 @@ export function Account() {
           </section>
         )}
 
+        <NotificationsCard feedback={feedback} />
+        <AuthenticatorCard feedback={feedback} />
+        <GoogleCard
+          feedback={feedback}
+          linked={params.get('linked') === 'google'}
+          onLinkedShown={clearLinked}
+        />
+
         <section className="card" aria-labelledby="password-title">
           <h2 id="password-title" className="section-title">
             {resetMode ? 'Neues Passwort festlegen' : 'Passwort'}
@@ -229,11 +260,8 @@ export function Account() {
         <button
           type="button"
           className="button danger"
-          onClick={async () => {
-            // Leave the protected area first so the session guard does not add ?next=/account.
-            navigate('/login', { replace: true });
-            await signOut();
-          }}
+          // /logout signs out (push off, offline copies gone) and only then shows the login page.
+          onClick={() => navigate('/logout', { replace: true, state: { fromPortal: true } })}
         >
           Abmelden
         </button>

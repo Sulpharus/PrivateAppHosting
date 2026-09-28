@@ -3,6 +3,11 @@
 Household budget book with automatic transfer into the German income tax return. Private per
 user (`data.mode: private`). Static HTML with ES modules, no build.
 
+The look is the MiniNode App Kit (`/_mininode/ui.css`, `docs/ai/DESIGN-SYSTEM.md`) with the
+amber accent: side navigation from 960 px, bottom tabs on phones, month and year steppers in
+the header, dialogs through `mnui.sheet`. `style.css` only adds what the kit lacks (year chart,
+tax form tables, budget inputs, print).
+
 ## What it does
 
 - **Buchungen:** expenses, income and transfers (savings, not counted as spending), with
