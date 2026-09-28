@@ -34,17 +34,18 @@ test('sportplaner stores activities with photos per user', async ({ browser }) =
   const dialog = page.getByRole('dialog');
   await dialog.getByLabel('Name').fill('Bouldern');
   await dialog.getByLabel('Sportart').fill('Klettern');
-  // Every weekday, so it shows up on today's tiles whatever day the test runs.
+  await dialog
+    .locator('#file')
+    .setInputFiles({ name: 'wand.png', mimeType: 'image/png', buffer: PNG });
+  await expect(dialog.getByText('Titelbild', { exact: true })).toBeVisible({ timeout: 15_000 });
+  // Step 2: every weekday, so it shows up on today's tiles whatever day the test runs.
+  await dialog.getByRole('button', { name: 'Weiter' }).click();
   const row = dialog.locator('.trow').first();
   for (const day of ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']) {
     const button = row.getByRole('button', { name: day, exact: true });
     if ((await button.getAttribute('aria-pressed')) !== 'true') await button.click();
   }
-  await dialog
-    .locator('#file')
-    .setInputFiles({ name: 'wand.png', mimeType: 'image/png', buffer: PNG });
-  await expect(dialog.getByText('Titelbild', { exact: true })).toBeVisible({ timeout: 15_000 });
-  await dialog.getByRole('button', { name: 'Aktivität anlegen' }).click();
+  await dialog.getByRole('button', { name: 'Anlegen', exact: true }).click();
   await expect(page.getByRole('dialog').getByRole('heading', { name: 'Bouldern' })).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(page.getByRole('dialog')).toHaveCount(0);

@@ -16,7 +16,14 @@ scheduling logic are unchanged. What changed:
 - **Photos:** the artifact `assets` store became `mn.files` (`photos/<id>.jpg` plus a 640 px
   thumbnail `photos/<id>-klein.jpg`). Images are fetched with signed URLs and shown from `blob:`
   URLs, which also works under the gate's CSP. At most four load at once.
-- **Fonts:** Barlow and Barlow Condensed are self-hosted in `fonts/` (OFL) instead of Google Fonts.
+- **Fonts:** Bricolage Grotesque and Instrument Sans (the platform fonts) are self-hosted in
+  `fonts/` (OFL) instead of Google Fonts.
+- **Code:** plain classic scripts in `js/`, loaded in order by `index.html` and sharing one global
+  scope: `core` (helpers, state, schedule), `views`, `detail`, `editor`, `actions`, `stats`,
+  `backup`, `boot`. No build step.
+- **Layout:** bottom tab bar on phones, side navigation from 960 px; sheets become centred
+  dialogs on desktop. The activity editor is split into four steps (Grundlagen, Zeiten,
+  Teilnahme, Details) and can save from any step.
 - **CSP:** inline `onsubmit` handlers removed (the gate allows only `script-src 'self'`).
 - **Fixes:** the statistics progress bars reused the `.bar` class of the sheet header, which
   squashed the header of every dialog; they are now `.meter`. Dialogs move focus in, trap Tab
