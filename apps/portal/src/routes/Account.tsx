@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 import { useAuth } from '../auth/AuthProvider.tsx';
+import { googleErrorFromUrl } from '../auth/google.ts';
 import {
   deletePasskey,
   listPasskeys,
@@ -14,6 +15,7 @@ import { useStepUp } from '../auth/StepUp.tsx';
 import { TopBar } from '../components/TopBar.tsx';
 import { isReauthError } from '../lib/api.ts';
 import { platform, supabase } from '../lib/supabase.ts';
+import { AuthenticatorCard, GoogleCard } from './AccountSecurity.tsx';
 
 const ROLE_LABEL = { admin: 'Admin', trusted: 'Vertrauenswürdig', user: 'Nutzer' } as const;
 
@@ -36,7 +38,20 @@ export function Account() {
   const [passkeys, setPasskeys] = useState<PasskeyInfo[]>([]);
   const [password, setPassword] = useState('');
   const [message, setMessage] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(() => googleErrorFromUrl(params));
+  const feedback = useMemo(
+    () => ({
+      ok(text: string) {
+        setError(null);
+        setMessage(text);
+      },
+      fail(text: string) {
+        setMessage(null);
+        setError(text);
+      },
+    }),
+    [],
+  );
 
   const reload = useCallback(async () => {
     if (passkeysSupported()) setPasskeys(await listPasskeys().catch(() => []));
@@ -195,6 +210,9 @@ export function Account() {
             ))}
           </section>
         )}
+
+        <AuthenticatorCard feedback={feedback} />
+        <GoogleCard feedback={feedback} linked={params.get('linked') === 'google'} />
 
         <section className="card" aria-labelledby="password-title">
           <h2 id="password-title" className="section-title">

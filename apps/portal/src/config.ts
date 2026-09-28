@@ -34,3 +34,7 @@ export function setRuntimeConfig(config: PortalConfig): void {
 export function emailEnabled(): boolean {
   return current?.emailEnabled === true;
 }
+
+export function runtimeConfig(): PortalConfig | undefined {
+  return current;
+}

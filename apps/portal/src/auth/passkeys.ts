@@ -47,10 +47,15 @@ export async function deletePasskey(id: string): Promise<void> {
 /** Human-readable German message for WebAuthn/Supabase passkey errors. */
 export function passkeyErrorMessage(error: unknown): string {
   const text = error instanceof Error ? `${error.name} ${error.message}` : String(error);
-  if (/NotAllowed|ABORTED|cancel/i.test(text)) return 'Vorgang abgebrochen.';
+  if (/passkey_disabled|Passkeys are disabled/i.test(text))
+    return 'Passkeys sind auf dem Server gerade ausgeschaltet. Melde dich mit Passwort an.';
+  if (/NotAllowed|ABORTED|cancel/i.test(text))
+    return 'Abgebrochen oder kein passender Passkey auf diesem Gerät. Wähle im Dialog dein Handy oder einen Sicherheitsschlüssel, oder melde dich mit Passwort an.';
   if (/credential_exists/i.test(text)) return 'Dieses Gerät ist bereits registriert.';
   if (/credential_not_found/i.test(text))
-    return 'Dieser Passkey ist nicht (mehr) bei MiniNode registriert.';
+    return 'Dieser Passkey ist nicht (mehr) bei MiniNode registriert. Melde dich mit Passwort an und lege unter „Dein Konto“ einen neuen an.';
+  if (/verification_failed|SecurityError|rp.?id/i.test(text))
+    return 'Der Passkey passt nicht zu dieser Adresse. Öffne mininode.app direkt und versuche es noch einmal.';
   if (/challenge_expired/i.test(text))
     return 'Das hat zu lange gedauert. Bitte noch einmal versuchen.';
   if (/too_many_passkeys/i.test(text)) return 'Du hast bereits die maximale Anzahl an Passkeys.';

@@ -26,10 +26,11 @@ const Ai = lazy(() => import('./admin/Ai.tsx').then((m) => ({ default: m.Ai })))
 const Workshop = lazy(() => import('./admin/Workshop.tsx').then((m) => ({ default: m.Workshop })));
 
 function RequireSession() {
-  const { session, loading } = useAuth();
+  const { session, codePending, loading } = useAuth();
   const location = useLocation();
   if (loading) return null;
-  if (!session) {
+  // Without the authenticator code the database shows nothing yet; the login page asks for it.
+  if (!session || codePending) {
     const next = `${location.pathname}${location.search}`;
     return <Navigate to={`/login?next=${encodeURIComponent(next)}`} replace />;
   }

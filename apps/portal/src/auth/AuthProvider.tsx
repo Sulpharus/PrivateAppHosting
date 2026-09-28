@@ -9,6 +9,7 @@ import {
   useState,
 } from 'react';
 import { platform, supabase } from '../lib/supabase.ts';
+import { codeRequired } from './mfa.ts';
 
 export type Role = 'admin' | 'trusted' | 'user';
 
@@ -22,6 +23,8 @@ export interface Profile {
 interface AuthState {
   loading: boolean;
   session: Session | null;
+  /** Signed in, but the code from the authenticator app is still missing (aal1 of aal2). */
+  codePending: boolean;
   profile: Profile | null;
   refreshProfile(): Promise<void>;
   signOut(): Promise<void>;
@@ -32,6 +35,7 @@ const AuthContext = createContext<AuthState | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [codePending, setCodePending] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const loadProfile = useCallback(async (current: Session | null) => {
@@ -63,12 +67,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .then(async ({ data }) => {
         if (!active) return;
         setSession(data.session);
+        setCodePending(data.session ? await codeRequired() : false);
         await loadProfile(data.session);
         setLoading(false);
       });
     const { data: listener } = supabase().auth.onAuthStateChange((_event, next) => {
       setSession(next);
-      void loadProfile(next);
+      // Other auth calls inside this callback can deadlock supabase-js, so run them after it.
+      setTimeout(() => {
+        void (next ? codeRequired() : Promise.resolve(false)).then((pending) => {
+          if (active) setCodePending(pending);
+        });
+        void loadProfile(next);
+      }, 0);
     });
     return () => {
       active = false;
@@ -80,13 +91,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     () => ({
       loading,
       session,
+      codePending,
       profile,
       refreshProfile: () => loadProfile(session),
       async signOut() {
         await supabase().auth.signOut();
       },
     }),
-    [loading, session, profile, loadProfile],
+    [loading, session, codePending, profile, loadProfile],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

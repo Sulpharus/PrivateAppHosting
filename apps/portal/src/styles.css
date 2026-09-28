@@ -942,3 +942,20 @@ code,
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 12px;
 }
+
+/* Account: authenticator app setup */
+.totp-qr {
+  width: 200px;
+  height: 200px;
+  align-self: center;
+  padding: 8px;
+  border-radius: var(--radius-m);
+  background: var(--qr-bg);
+}
+.totp-secret {
+  text-align: center;
+  font-size: 14px;
+  letter-spacing: 0.04em;
+  overflow-wrap: anywhere;
+  user-select: all;
+}

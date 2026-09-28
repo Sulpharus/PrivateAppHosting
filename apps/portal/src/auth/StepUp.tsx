@@ -6,6 +6,8 @@ import { Dialog } from '../components/Dialog.tsx';
 import { isReauthError } from '../lib/api.ts';
 import { supabase } from '../lib/supabase.ts';
 import { useAuth } from './AuthProvider.tsx';
+import { CodeForm } from './CodeForm.tsx';
+import { codeRequired } from './mfa.ts';
 import { passkeyErrorMessage, passkeysSupported, signInWithPasskey } from './passkeys.ts';
 
 interface StepUp {
@@ -19,6 +21,7 @@ export function StepUpProvider({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [password, setPassword] = useState('');
+  const [askCode, setAskCode] = useState(false);
   const pending = useRef<{ resolve(): void; reject(error: Error): void } | null>(null);
 
   const confirm = () =>
@@ -26,6 +29,7 @@ export function StepUpProvider({ children }: { children: ReactNode }) {
       pending.current = { resolve, reject };
       setError(null);
       setPassword('');
+      setAskCode(false);
       setOpen(true);
     });
 
@@ -51,6 +55,8 @@ export function StepUpProvider({ children }: { children: ReactNode }) {
       password,
     });
     if (signInError) setError('Passwort stimmt nicht.');
+    // A new password session starts at aal1 again: accounts with an authenticator app confirm it.
+    else if (await codeRequired()) setAskCode(true);
     else finish(true);
   };
 
@@ -68,32 +74,38 @@ export function StepUpProvider({ children }: { children: ReactNode }) {
     <StepUpContext.Provider value={{ run }}>
       {children}
       <Dialog open={open} title="Kurz bestätigen" onClose={() => finish(false)}>
-        <p className="muted">Für diese Aktion musst du dich noch einmal bestätigen.</p>
-        {passkeysSupported() && (
-          <button type="button" className="button primary wide" onClick={withPasskey}>
-            Mit Passkey bestätigen
-          </button>
+        {askCode ? (
+          <CodeForm onDone={() => finish(true)} />
+        ) : (
+          <>
+            <p className="muted">Für diese Aktion musst du dich noch einmal bestätigen.</p>
+            {passkeysSupported() && (
+              <button type="button" className="button primary wide" onClick={withPasskey}>
+                Mit Passkey bestätigen
+              </button>
+            )}
+            <form
+              className="stack"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void withPassword();
+              }}
+            >
+              <label className="field">
+                <span>Oder mit Passwort</span>
+                <input
+                  type="password"
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                />
+              </label>
+              <button type="submit" className="button wide" disabled={!password}>
+                Bestätigen
+              </button>
+            </form>
+          </>
         )}
-        <form
-          className="stack"
-          onSubmit={(event) => {
-            event.preventDefault();
-            void withPassword();
-          }}
-        >
-          <label className="field">
-            <span>Oder mit Passwort</span>
-            <input
-              type="password"
-              autoComplete="current-password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-            />
-          </label>
-          <button type="submit" className="button wide" disabled={!password}>
-            Bestätigen
-          </button>
-        </form>
         {error && (
           <p className="error" role="alert">
             {error}
