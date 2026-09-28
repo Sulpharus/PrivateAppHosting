@@ -1,41 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
+import { type AuditRow, describeActivity } from '../lib/activity.ts';
 import { type AppRow, listApps } from '../lib/apps.ts';
 import { platform } from '../lib/supabase.ts';
 import { dateTime, euro } from './AdminLayout.tsx';
-
-interface AuditRow {
-  id: number;
-  at: string;
-  action: string;
-  app_slug: string | null;
-  actor_id: string | null;
-  detail: Record<string, unknown> | null;
-}
-
-const ROLE: Record<string, string> = { admin: 'Admin', trusted: 'Trusted', user: 'User' };
-
-/** One readable line per audit entry, with the names of the people involved. */
-function describe(row: AuditRow, names: Map<string, string>): string {
-  const detail = row.detail ?? {};
-  const name = (id: unknown) => (typeof id === 'string' && names.get(id)) || 'gelöschter Nutzer';
-  switch (row.action) {
-    case 'user.created':
-      return `${name(row.actor_id)} ist beigetreten (${ROLE[String(detail.role)] ?? 'User'})`;
-    case 'user.role_changed':
-      return `${name(detail.user_id)} ist jetzt ${ROLE[String(detail.role)] ?? detail.role}`;
-    case 'user.recovery_link':
-      return `Passwort-Link für ${name(detail.user_id)} erstellt`;
-    case 'user.deleted':
-      return `Nutzer ${typeof detail.email === 'string' ? detail.email : ''} gelöscht`.trim();
-    case 'app.state_changed':
-      return detail.disabled ? 'App deaktiviert' : 'App-Einstellungen geändert';
-    case 'remote.install':
-      return 'Programm auf der NucBox installiert';
-    default:
-      return row.action;
-  }
-}
 
 export function Overview() {
   const [apps, setApps] = useState<AppRow[]>([]);
@@ -148,7 +116,7 @@ export function Overview() {
             <span className="muted mono" style={{ minWidth: 110 }}>
               {dateTime(row.at)}
             </span>
-            <span>{describe(row, names)}</span>
+            <span>{describeActivity(row, names)}</span>
             {row.app_slug && <span className="pill mono">{row.app_slug}</span>}
           </div>
         ))}

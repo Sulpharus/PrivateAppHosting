@@ -44,20 +44,32 @@ app.delete('/admin/users/:id', requireUser({ role: 'admin', recentAuth: 600 }), 
   if (id === c.get('claims').sub)
     return problem(400, 'invalid_request', 'Du kannst dich nicht selbst löschen.');
   const db = adminClient(c.env);
-  const { data: found } = await db.auth.admin.getUserById(id);
-  const { error } = await db.auth.admin.deleteUser(id);
-  if (error) return problem(500, 'auth_error', error.message);
-  // The user row is gone now; keep who removed whom in the audit log.
-  const { error: auditError } = await db
+  const { data: found, error: userError } = await db.auth.admin.getUserById(id);
+  if (userError || !found.user) return problem(404, 'not_found', 'Nutzer nicht gefunden.');
+  const { data: profile } = await db
+    .schema('platform')
+    .from('profiles')
+    .select('display_name')
+    .eq('user_id', id)
+    .maybeSingle();
+  // Audit first: no account disappears without a record of who removed it. Only the display
+  // name is kept, not the email address of someone who asked to be removed.
+  const { data: entry, error: auditError } = await db
     .schema('platform')
     .from('audit_log')
     .insert({
       actor_id: c.get('claims').sub,
       action: 'user.deleted',
-      detail: { user_id: id, email: found.user?.email ?? null },
-    });
-  if (auditError)
-    console.error(JSON.stringify({ event: 'audit_failed', error: auditError.message }));
+      detail: { user_id: id, display_name: profile?.display_name ?? null },
+    })
+    .select('id')
+    .single();
+  if (auditError) return problem(500, 'db_error', auditError.message);
+  const { error } = await db.auth.admin.deleteUser(id);
+  if (error) {
+    await db.schema('platform').from('audit_log').delete().eq('id', entry.id);
+    return problem(500, 'auth_error', error.message);
+  }
   return c.body(null, 204);
 });
 

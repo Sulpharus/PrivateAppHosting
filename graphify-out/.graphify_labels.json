@@ -97,7 +97,7 @@
   "95": "detailBodyHTML",
   "96": "saveDraft",
   "97": "src/auth.ts",
-  "98": "AuthProvider.tsx",
+  "98": "StepUp.tsx",
   "99": "haushalt/mininode.json",
   "100": "sportplaner/mininode.json",
   "101": "ref_node_fs",
@@ -105,5 +105,9 @@
   "103": "manifest/src/index.ts",
   "104": "Haushalt",
   "105": "Sportplaner",
-  "106": "ci-clean-secret.sh"
+  "106": "ci-clean-secret.sh",
+  "107": "deploy.test.ts",
+  "108": "Overview.tsx",
+  "109": "8. Platform SDK (`@mininode/sdk`)",
+  "110": "manifest"
 }

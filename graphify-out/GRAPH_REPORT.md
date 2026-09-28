@@ -1,17 +1,17 @@
-# Graph Report - PrivateAppHosting  (2026-09-24)
+# Graph Report - PrivateAppHosting  (2026-09-28)
 
 ## Corpus Check
-- 192 files · ~88,399 words
+- 194 files · ~90,034 words
 - Verdict: corpus is large enough that graph structure adds value.
-- Unclassified: 38 file(s) not represented in the graph (top: (none) 10, .css 10, .woff2 5)
+- Unclassified: 39 file(s) not represented in the graph (top: (none) 10, .css 10, .woff2 5)
 
 ## Summary
-- 1273 nodes · 2738 edges · 107 communities (63 shown, 44 thin omitted)
+- 1281 nodes · 2758 edges · 111 communities (66 shown, 45 thin omitted)
 - Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 51 edges (avg confidence: 0.89)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `799c3676`
+- Built from commit: `adeff2d0`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -101,7 +101,7 @@
 - detailBodyHTML
 - saveDraft
 - src/auth.ts
-- AuthProvider.tsx
+- StepUp.tsx
 - haushalt/mininode.json
 - sportplaner/mininode.json
 - ref_node_fs
@@ -110,6 +110,10 @@
 - Haushalt
 - Sportplaner
 - ci-clean-secret.sh
+- deploy.test.ts
+- Overview.tsx
+- 8. Platform SDK (`@mininode/sdk`)
+- manifest
 
 ## God Nodes (most connected - your core abstractions)
 1. `platform()` - 27 edges
@@ -132,28 +136,28 @@
   CLAUDE.md → apps/portal/src/lib/supabase.ts
 - `5. First deploy and first login` --references--> `main()`  [INFERRED]
   docs/runbooks/first-setup.md → packages/cli/src/bin.ts
-- `8. Platform SDK (`@mininode/sdk`)` --references--> `app()`  [INFERRED]
-  PLAN.md → packages/cli/src/doctor.test.ts
+- `Layout` --references--> `api()`  [INFERRED]
+  CLAUDE.md → apps/portal/src/lib/api.ts
 
 ## Import Cycles
 - None detected.
 
-## Communities (107 total, 44 thin omitted)
+## Communities (111 total, 45 thin omitted)
 
 ### Community 0 - "Account.tsx"
 Cohesion: 0.15
-Nodes (29): AuthState, deletePasskey(), listPasskeys(), passkeyErrorMessage(), PasskeyInfo, passkeysSupported(), registerPasskey(), renamePasskey() (+21 more)
+Nodes (29): AuthState, useAuth(), deletePasskey(), listPasskeys(), passkeyErrorMessage(), PasskeyInfo, passkeysSupported(), registerPasskey() (+21 more)
 
 ### Community 1 - "deploy/index.ts"
-Cohesion: 0.13
-Nodes (28): parsed, production, DeployEnv, environmentSettings, required(), deployApp(), DeployOptions, devApp() (+20 more)
+Cohesion: 0.18
+Nodes (20): DeployEnv, deployApp(), DeployOptions, devApp(), ensureSdkBundle(), exposeLocally(), NOT_SERVED, REPO_ROOT (+12 more)
 
 ### Community 2 - "remote.ts"
 Cohesion: 0.07
 Nodes (50): enabled, AUTH_COPY, authEmail(), AuthEmailAction, Email, escapeHtml(), inviteEmail(), layout() (+42 more)
 
 ### Community 3 - "decide.ts"
-Cohesion: 0.15
+Cohesion: 0.14
 Nodes (16): decide(), DecideInput, Decision, loginUrl(), refreshUrl(), url, base64UrlToString(), parseCookies() (+8 more)
 
 ### Community 4 - "ai-proxy/src/index.ts"
@@ -189,8 +193,8 @@ Cohesion: 0.12
 Nodes (19): user(), 10. Remote apps, 11. AI proxy, 12. UI, 13. Repository layout, 14. Engineering standards, 15. Phases, 16. Review log (v1 → v2) (+11 more)
 
 ### Community 12 - "server.ts"
-Cohesion: 0.15
-Nodes (10): @mininode/nucbox-control, Installer, Scheduler, bearer(), createServer(), installSchema, prepareSchema, ServerDeps (+2 more)
+Cohesion: 0.14
+Nodes (11): @mininode/nucbox-control, Installer, Scheduler, bearer(), createServer(), installSchema, prepareSchema, ServerDeps (+3 more)
 
 ### Community 13 - "notizen/mininode.json"
 Cohesion: 0.12
@@ -237,12 +241,12 @@ Cohesion: 0.24
 Nodes (8): app_kv_owner_idx, app_kv_touch, app_kv_unique_idx, platform.app_kv, auth, auth.users, platform.apps, platform.touch_updated_at
 
 ### Community 24 - "MiniNode.app"
-Cohesion: 0.22
-Nodes (8): Commands, Knowledge graph (graphify), Layout, MiniNode.app, Rules, UI, @mininode/cli — `pnpm mininode`, manifest()
+Cohesion: 0.40
+Nodes (5): Commands, Knowledge graph (graphify), MiniNode.app, Rules, UI
 
 ### Community 25 - "mininode"
-Cohesion: 0.24
-Nodes (7): AiError, createAi(), createMininode(), mininode, requireLogin(), enabled, 8. Platform SDK (`@mininode/sdk`)
+Cohesion: 0.36
+Nodes (6): AiError, createAi(), createMininode(), mininode, createKv(), enabled
 
 ### Community 26 - "ref_vite"
 Cohesion: 0.32
@@ -293,16 +297,12 @@ Cohesion: 0.40
 Nodes (4): ADR 0001: Central login origin and permanent passkey RP ID, Consequences, Context, Decision
 
 ### Community 40 - "doctor.ts"
-Cohesion: 0.14
-Nodes (19): checkLayout(), checkSources(), doctor(), DoctorReport, Finding, IGNORED_DIRS, SECRET_PATTERNS, Severity (+11 more)
+Cohesion: 0.15
+Nodes (18): checkLayout(), checkSources(), doctor(), DoctorReport, Finding, IGNORED_DIRS, SECRET_PATTERNS, Severity (+10 more)
 
 ### Community 46 - "20_app_isolation.test.sql"
 Cohesion: 0.50
 Nodes (3): app_haushalt.entries, app_pinnwand.notes, app_rezepte.recipes
-
-### Community 50 - "kv.ts"
-Cohesion: 0.50
-Nodes (3): createKv(), Json, KvScope
 
 ### Community 78 - "sportplaner/app.js"
 Cohesion: 0.05
@@ -321,8 +321,8 @@ Cohesion: 0.17
 Nodes (11): access, default, data, mode, description, kind, name, $schema (+3 more)
 
 ### Community 88 - "Users.tsx"
-Cohesion: 0.12
-Nodes (28): dateTime(), euro(), Ai(), Apps(), ACTION_LABEL, AuditRow, Overview(), InstallJob (+20 more)
+Cohesion: 0.10
+Nodes (32): AdminLayout(), dateTime(), euro(), EXTERNAL, LINKS, Ai(), BudgetRow, SCOPE_LABEL (+24 more)
 
 ### Community 89 - "updCal"
 Cohesion: 0.26
@@ -341,12 +341,12 @@ Cohesion: 0.24
 Nodes (16): STATUS, TARGET, PLATFORM_LABEL, RemoteCard(), SessionResponse, AppRow, appUrl(), monogram() (+8 more)
 
 ### Community 93 - "worker.ts"
-Cohesion: 0.18
+Cohesion: 0.19
 Nodes (16): fetch(), portalConfig(), supabaseGrantChecker(), contentSecurityPolicy(), CspOptions, securityHeaders(), withHeaders(), packages_gate_src_index_securityheaders (+8 more)
 
 ### Community 94 - "portal/src/main.tsx"
-Cohesion: 0.19
-Nodes (14): BudgetRow, SCOPE_LABEL, UsageRow, loadConfig(), PortalConfig, setRuntimeConfig(), initApi(), initSupabase() (+6 more)
+Cohesion: 0.32
+Nodes (9): loadConfig(), PortalConfig, setRuntimeConfig(), initApi(), initSupabase(), Apps, router, start() (+1 more)
 
 ### Community 95 - "detailBodyHTML"
 Cohesion: 0.22
@@ -360,9 +360,9 @@ Nodes (14): addPhotos(), closeSheet(), collectForm(), normUrl(), openDetail(), o
 Cohesion: 0.24
 Nodes (11): forbiddenPage(), forwardAuth(), ForwardAuthOptions, pick(), slugFromHost(), GrantChecker, isNavigation(), packages_gate_src_index_decide (+3 more)
 
-### Community 98 - "AuthProvider.tsx"
-Cohesion: 0.20
-Nodes (10): AdminLayout(), EXTERNAL, LINKS, AuthContext, AuthProvider(), Profile, Role, useAuth() (+2 more)
+### Community 98 - "StepUp.tsx"
+Cohesion: 0.24
+Nodes (8): AuthContext, AuthProvider(), Profile, Role, StepUp, StepUpContext, Dialog(), ref_react
 
 ### Community 99 - "haushalt/mininode.json"
 Cohesion: 0.17
@@ -385,32 +385,48 @@ Cohesion: 0.24
 Nodes (7): checkMigrations(), appSchemaName(), MANIFEST_FILENAME, ManifestResult, parseManifest(), PLATFORM_DOMAIN, spa
 
 ### Community 104 - "Haushalt"
-Cohesion: 0.40
-Nodes (4): Check, Data, Haushalt, What it does
+Cohesion: 0.33
+Nodes (5): Check, Data, Haushalt, Tests, What it does
 
 ### Community 105 - "Sportplaner"
 Cohesion: 0.40
 Nodes (4): Check, Moving data over from the artifact, Origin, Sportplaner
 
+### Community 107 - "deploy.test.ts"
+Cohesion: 0.26
+Nodes (9): parsed, production, environmentSettings, required(), appRow(), registerApp(), COMPATIBILITY_DATE, GATE_ENTRY (+1 more)
+
+### Community 108 - "Overview.tsx"
+Cohesion: 0.33
+Nodes (5): AuditRow, describeActivity(), ROLE, names, Overview
+
+### Community 109 - "8. Platform SDK (`@mininode/sdk`)"
+Cohesion: 0.40
+Nodes (3): app(), requireLogin(), 8. Platform SDK (`@mininode/sdk`)
+
+### Community 110 - "manifest"
+Cohesion: 0.50
+Nodes (3): Layout, @mininode/cli — `pnpm mininode`, manifest()
+
 ## Knowledge Gaps
-- **358 isolated node(s):** `supabase`, `cloudflare-docs`, `context7`, `npx`, `@playwright/mcp` (+353 more)
-  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 500 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
-- **44 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **359 isolated node(s):** `supabase`, `cloudflare-docs`, `context7`, `npx`, `@playwright/mcp` (+354 more)
+  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 502 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+- **45 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `platform()` connect `Users.tsx` to `Account.tsx`, `AuthProvider.tsx`, `20260923000100_platform_core.sql`, `TopBar.tsx`, `MiniNode.app — Project Plan (v2)`, `platform.app_kv`, `Home.tsx`, `portal/src/main.tsx`?**
-  _High betweenness centrality (0.038) - this node is a cross-community bridge._
+- **Why does `platform()` connect `Users.tsx` to `Account.tsx`, `StepUp.tsx`, `20260923000100_platform_core.sql`, `TopBar.tsx`, `MiniNode.app — Project Plan (v2)`, `Overview.tsx`, `platform.app_kv`, `Home.tsx`, `portal/src/main.tsx`?**
+  _High betweenness centrality (0.042) - this node is a cross-community bridge._
 - **Why does `base()` connect `TopBar.tsx` to `remote.ts`, `NucBox install (Proxmox, Linux VM, Windows VM)`, `Restore`?**
-  _High betweenness centrality (0.026) - this node is a cross-community bridge._
-- **Why does `MiniNode.app — Project Plan (v2)` connect `MiniNode.app — Project Plan (v2)` to `mininode`, `README.md`?**
-  _High betweenness centrality (0.022) - this node is a cross-community bridge._
+  _High betweenness centrality (0.030) - this node is a cross-community bridge._
+- **Why does `MiniNode.app — Project Plan (v2)` connect `MiniNode.app — Project Plan (v2)` to `README.md`, `8. Platform SDK (`@mininode/sdk`)`?**
+  _High betweenness centrality (0.028) - this node is a cross-community bridge._
 - **What connects `supabase`, `cloudflare-docs`, `context7` to the rest of the system?**
-  _358 weakly-connected nodes found - possible documentation gaps or missing edges._
-- **Should `Account.tsx` be split into smaller, more focused modules?**
-  _Cohesion score 0.14871794871794872 - nodes in this community are weakly interconnected._
-- **Should `deploy/index.ts` be split into smaller, more focused modules?**
-  _Cohesion score 0.12834224598930483 - nodes in this community are weakly interconnected._
+  _359 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `remote.ts` be split into smaller, more focused modules?**
   _Cohesion score 0.06806526806526807 - nodes in this community are weakly interconnected._
+- **Should `decide.ts` be split into smaller, more focused modules?**
+  _Cohesion score 0.14492753623188406 - nodes in this community are weakly interconnected._
+- **Should `ai-proxy/src/index.ts` be split into smaller, more focused modules?**
+  _Cohesion score 0.08562367864693446 - nodes in this community are weakly interconnected._

@@ -2,6 +2,7 @@ import { parseManifest } from '@mininode/manifest';
 import { describe, expect, it } from 'vitest';
 import { appsFromPaths } from '../changed.ts';
 import { environmentSettings } from './environment.ts';
+import { schemaList } from './index.ts';
 import { plan } from './migrate.ts';
 import { appRow } from './register.ts';
 import { appWranglerConfig, GATE_ENTRY } from './wrangler-config.ts';
@@ -81,5 +82,22 @@ describe('changed apps', () => {
         '',
       ]),
     ).toEqual(['budget', 'rezepte']);
+  });
+});
+
+describe('schemaList', () => {
+  it('adds the app schema once and drops blanks and missing schemas', () => {
+    expect(schemaList('public, platform,,app_a', 'app_b', null)).toEqual([
+      'public',
+      'platform',
+      'app_a',
+      'app_b',
+    ]);
+    expect(schemaList('public,platform,app_a', 'app_a', null)).toEqual([
+      'public',
+      'platform',
+      'app_a',
+    ]);
+    expect(schemaList('public,app_gone', 'app_static', new Set(['public']))).toEqual(['public']);
   });
 });

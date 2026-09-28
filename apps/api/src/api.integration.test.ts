@@ -222,8 +222,11 @@ describe.skipIf(!enabled)('api against local Supabase', () => {
       .from('audit_log')
       .select('detail')
       .eq('action', 'user.deleted')
-      .contains('detail', { user_id: id, email });
+      .contains('detail', { user_id: id });
     expect(audit).toHaveLength(1);
+    expect((await call(`/admin/users/${id}`, { method: 'DELETE', token: adminToken })).status).toBe(
+      404,
+    );
   });
 
   it('refuses remote sessions for apps the user may not use', async () => {

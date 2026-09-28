@@ -356,7 +356,7 @@ export function Users() {
                     <div className="muted">{user.email}</div>
                   </td>
                   <td>
-                    {self || user.role === 'admin' ? (
+                    {self ? (
                       <span className="pill accent">Admin</span>
                     ) : (
                       <select
@@ -364,6 +364,12 @@ export function Users() {
                         value={user.role}
                         onChange={(event) => void setRole(user, event.target.value as Role)}
                       >
+                        {/* There is exactly one admin; another admin can only be demoted. */}
+                        {user.role === 'admin' && (
+                          <option value="admin" disabled>
+                            Admin
+                          </option>
+                        )}
                         <option value="user">User</option>
                         <option value="trusted">Trusted</option>
                       </select>

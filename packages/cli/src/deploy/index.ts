@@ -82,24 +82,33 @@ async function exposeLocally(databaseUrl: string, schema: string): Promise<void>
            join pg_roles r on r.oid = s.setrole, unnest(s.setconfig) c
           where r.rolname = 'authenticator' and c like 'pgrst.db_schemas=%'),
         'public,graphql_public,platform') as schemas`;
-    const wanted = [...(row?.schemas ?? '').split(','), schema]
-      .map((s) => s.trim())
-      .filter(Boolean);
+    const current = row?.schemas ?? '';
+    const candidates = schemaList(current, schema, null);
     const existing = new Set(
       (
         await sql<{ nspname: string }[]>`
-          select nspname from pg_namespace where nspname = any(${[...new Set(wanted)]})`
+          select nspname from pg_namespace where nspname = any(${candidates})`
       ).map((r) => r.nspname),
     );
-    const next = [...new Set(wanted)].filter((s) => existing.has(s)).join(',');
-    if (next === (row?.schemas ?? '')) return;
-    await sql.unsafe(
-      `alter role authenticator set pgrst.db_schemas = '${next.replaceAll("'", '')}'`,
-    );
+    const next = schemaList(current, schema, existing);
+    if (next.join(',') === schemaList(current, '', null).join(',')) return;
+    // ALTER ROLE takes no bind parameters; let Postgres quote the value.
+    const [quoted] = await sql<{ q: string }[]>`select quote_literal(${next.join(',')}) as q`;
+    if (!quoted) return;
+    await sql.unsafe(`alter role authenticator set pgrst.db_schemas = ${quoted.q}`);
     await sql`notify pgrst, 'reload config'`;
   } finally {
     await sql.end();
   }
+}
+
+/**
+ * The PostgREST schema list with `schema` added, without duplicates or blanks, keeping only
+ * schemas that exist (when `existing` is given).
+ */
+export function schemaList(current: string, schema: string, existing: Set<string> | null) {
+  const all = [...new Set([...current.split(','), schema].map((s) => s.trim()).filter(Boolean))];
+  return existing ? all.filter((s) => existing.has(s)) : all;
 }
 
 /** After a schema change the local PostgREST reloads (and backs off if it was broken): wait. */
@@ -111,6 +120,7 @@ async function waitForRest(supabaseUrl: string, key: string): Promise<void> {
     if (response && response.status < 500) return;
     await new Promise((resolve) => setTimeout(resolve, 2000));
   }
+  throw new Error(`local PostgREST at ${supabaseUrl} did not become ready within 60 s`);
 }
 
 export async function deployApp(appDir: string, options: DeployOptions): Promise<void> {

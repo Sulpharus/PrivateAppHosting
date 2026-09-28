@@ -151,7 +151,8 @@ jobs:
           # have to be redeployed, not only the ones whose folder changed.
           shared=""
           if [ -n "$before" ] && [ "$before" != "0000000000000000000000000000000000000000" ]; then
-            shared=$(git diff --name-only "$before" HEAD -- packages/sdk packages/gate packages/manifest packages/cli || echo all)
+            shared=$(git diff --name-only "$before" HEAD -- pnpm-lock.yaml \
+              'packages/sdk/src' 'packages/gate/src' 'packages/manifest/src' 'packages/cli/src' || echo all)
           fi
           if [ "${{ inputs.all_apps }}" = "true" ] || [ -z "$before" ] || [ -n "$shared" ] \
              || [ "$before" = "0000000000000000000000000000000000000000" ]; then
