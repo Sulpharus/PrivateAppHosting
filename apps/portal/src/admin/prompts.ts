@@ -225,7 +225,7 @@ export function compose(brief: Brief, lib: Library): string {
   lines.push('');
   lines.push(
     [
-      `- \`mininode.json\` has slug \`${slug}\`, data mode \`${audience.mode}\`${modules.some((m) => m.id === 'ai') ? ', and the AI models with a small monthly budget' : ''}.`,
+      `- \`mininode.json\` has slug \`${slug}\`, data mode \`${audience.mode}\`${modules.some((m) => m.id === 'ai') ? ', the AI models with a small monthly budget' : ''}${modules.some((m) => m.id === 'google') ? ', the `google` block with the least access the app needs' : ''}.`,
       `- \`<html lang="de" data-accent="${brief.accent}">\`, \`<body class="mn-app">\`, the App Kit shell (\`mn-nav\`, \`mn-top\`, \`mn-main\`).`,
       '- Every view checked at 360 px and 1280 px, in light and dark mode.',
       '- No localStorage for user data, no CDN scripts, no API keys, no raw colours or fonts in app CSS.',

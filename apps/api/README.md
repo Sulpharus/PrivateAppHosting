@@ -7,6 +7,9 @@ Hono Worker for everything that needs the service role or a secret:
 | `POST /invites` | admin, signed in < 10 min | Create invite, pre-create the account, send mail via Cloudflare Email; returns the link for sharing |
 | `DELETE /invites/:id` | admin, recent | Revoke; deletes the pre-created account if never used |
 | `POST /hooks/send-email` | Supabase (Standard Webhooks signature) | Renders and sends every auth mail |
+| `POST /google/connect` | signed-in user | Stores the Google refresh token from a Google sign-in, encrypted (ADR 0004) |
+| `GET /google` / `DELETE /google` | signed-in user | Status of the Google grant / revoke it at Google and forget it |
+| `POST /google/token` | signed-in user with grant, from the app's own origin | Short-lived Google access token limited to the app's `google` scopes |
 | `POST /remote/sessions` | signed-in user with grant | Queue or start a remote session; returns a Guacamole link |
 | `POST /remote/sessions/:id/heartbeat` | session owner | Keeps the session alive |
 | `DELETE /remote/sessions/:id` | owner or admin | Ends the session, promotes the next in queue |

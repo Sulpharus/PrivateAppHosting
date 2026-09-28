@@ -14,6 +14,7 @@ await mn.kv.set('motd', 'Hallo', 'shared');          // visible to everyone with
 const { data } = await mn.db.from('recipes').select(); // tables in app_<slug>, secured by RLS
 await mn.files.upload('fotos/a.jpg', file);
 const answer = await mn.ai.chat('Fasse zusammen: …');  // via ai.mininode.app, no keys in the client
+const events = await mn.google.fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events'); // "google" in mininode.json (ADR 0004)
 await mn.notify('Erinnerung', 'Müll rausbringen');
 mn.realtime('board').on('broadcast', { event: 'move' }, handler).subscribe();
 ```

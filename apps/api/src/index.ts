@@ -4,6 +4,7 @@ import { z } from 'zod';
 import type { ApiEnv } from './env.ts';
 import { type AppContext, problem, requireUser } from './lib/auth.ts';
 import { adminClient } from './lib/supabase.ts';
+import { google } from './routes/google.ts';
 import { hooks } from './routes/hooks.ts';
 import { confirmUrl, invites } from './routes/invites.ts';
 import { controlHeaders, remote } from './routes/remote.ts';
@@ -33,6 +34,7 @@ app.use(
 );
 
 app.get('/health', (c) => c.json({ ok: true }));
+app.route('/google', google);
 app.route('/hooks', hooks);
 app.route('/invites', invites);
 app.route('/remote', remote);

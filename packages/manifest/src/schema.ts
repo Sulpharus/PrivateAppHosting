@@ -64,6 +64,55 @@ const aiSchema = z
   })
   .strict();
 
+export const googleAccessSchema = z.enum(['read', 'write']);
+
+/**
+ * Google services the app uses on behalf of the signed-in user (ADR 0004). `read` sees mails or
+ * events; `write` also sends mails, changes labels and creates or edits events.
+ */
+const googleSchema = z
+  .object({
+    gmail: googleAccessSchema.optional(),
+    calendar: googleAccessSchema.optional(),
+  })
+  .strict()
+  .refine((g) => g.gmail || g.calendar, 'google needs at least one service (gmail, calendar)');
+
+/** OAuth scope for each service and access level. */
+export const GOOGLE_SCOPES = {
+  gmail: {
+    read: 'https://www.googleapis.com/auth/gmail.readonly',
+    write: 'https://www.googleapis.com/auth/gmail.modify',
+  },
+  calendar: {
+    read: 'https://www.googleapis.com/auth/calendar.readonly',
+    write: 'https://www.googleapis.com/auth/calendar',
+  },
+} as const;
+
+/** Every scope the portal asks Google for, so any app's subset can be issued later. */
+export const ALL_GOOGLE_SCOPES = Object.values(GOOGLE_SCOPES).flatMap((levels) =>
+  Object.values(levels),
+);
+
+/** The scopes one app may use, from its manifest `google` block. */
+export function googleScopes(google: Manifest['google']): string[] {
+  if (!google) return [];
+  const scopes: string[] = [];
+  if (google.gmail) scopes.push(GOOGLE_SCOPES.gmail[google.gmail]);
+  if (google.calendar) scopes.push(GOOGLE_SCOPES.calendar[google.calendar]);
+  return scopes;
+}
+
+/** Google API origins an app with a `google` block may call from the browser (CSP). */
+export function googleConnectSrc(google: Manifest['google']): string[] {
+  if (!google) return [];
+  return [
+    ...(google.gmail ? ['https://gmail.googleapis.com'] : []),
+    ...(google.calendar ? ['https://www.googleapis.com'] : []),
+  ];
+}
+
 const buildSchema = z
   .object({
     command: z.string().min(1).optional(),
@@ -119,6 +168,7 @@ export const manifestSchema = z
     access: accessSchema.default({ default: false, roles: ['user', 'trusted', 'admin'] }),
     data: dataSchema.default({ mode: 'none' }),
     ai: aiSchema.optional(),
+    google: googleSchema.optional(),
     build: buildSchema.optional(),
     container: containerSchema.optional(),
     remote: remoteSchema.optional(),

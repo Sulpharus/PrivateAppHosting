@@ -71,14 +71,19 @@ deploy workflow uses them and also uploads the Worker secrets, so nothing has to
 | `CF_ACCESS_API_CLIENT_ID` / `_SECRET` | Access service token `mininode-api` (from `bootstrap.sh`) | NucBox |
 | `SUPABASE_DB_URL` | *Connect → Session pooler* string | apps with own tables |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | the Google OAuth client from step 3.1 | "Mit Google anmelden" |
+| `GOOGLE_TOKEN_KEY` | `openssl rand -base64 32` (encrypts stored Google grants; keep a copy) | Gmail/Calendar in apps |
 
 ### 3.1 Google sign-in (optional, 10 min)
 
 1. [Google Cloud console](https://console.cloud.google.com/) → a project (any) → *APIs & Services →
    OAuth consent screen*: app name *MiniNode*, user type *External*, your email as support and
-   developer contact, scopes `openid`, `email`, `profile` (nothing sensitive, so no review). Set
-   the publishing status to *In production* (in *Testing* only listed test users can sign in and
-   their sign-ins expire after seven days).
+   developer contact. Scopes: `openid`, `email`, `profile`, and for apps that use Gmail and
+   Calendar (ADR 0004) also `gmail.readonly`, `gmail.modify`, `calendar.readonly` and
+   `calendar`. Set the publishing status to *In production*: in *Testing* only listed test users
+   can sign in and Google's grants expire after seven days. Do not submit it for verification;
+   unverified, the consent screen shows a warning ("Google hat diese App nicht überprüft →
+   Erweitert → Weiter zu MiniNode") and at most 100 accounts can use it, which is fine here.
+   *APIs & Services → Library*: enable the **Gmail API** and the **Google Calendar API**.
 2. *Credentials → Create credentials → OAuth client ID*, type *Web application*:
    - Authorized JavaScript origins: `https://mininode.app`
    - Authorized redirect URIs: `https://ojicmpgqvoyakigvubek.supabase.co/auth/v1/callback`
@@ -87,7 +92,9 @@ deploy workflow uses them and also uploads the Worker secrets, so nothing has to
    switches providers that are not in `config.toml` off again on every deploy.
 
 Sign-ups stay off, so Google only signs in accounts that exist: its email must match the invited
-address, or the user connects Google under *Dein Konto* first.
+address, or the user connects Google under *Dein Konto* first. With `GOOGLE_TOKEN_KEY` set, the
+same sign-in also lets apps that declare `google` in `mininode.json` use the user's Gmail and
+Calendar (ADR 0004); *Dein Konto → Google* shows the state and can revoke it.
 
 ## 4. Apps
 

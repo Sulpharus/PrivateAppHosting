@@ -2,7 +2,19 @@
 
 import type { UserIdentity } from '@supabase/supabase-js';
 import { useCallback, useEffect, useState } from 'react';
-import { connectGoogle, disconnectGoogle, googleEnabled, googleIdentity } from '../auth/google.ts';
+import { useAuth } from '../auth/AuthProvider.tsx';
+import {
+  connectGoogle,
+  disconnectGoogle,
+  GOOGLE_CONNECTED,
+  type GoogleServices,
+  googleEnabled,
+  googleIdentity,
+  googleServices,
+  grantedForOtherUser,
+  grantGoogleServices,
+  revokeGoogleServices,
+} from '../auth/google.ts';
 import {
   type AuthenticatorInfo,
   type Enrolment,
@@ -191,23 +203,33 @@ export function GoogleCard({
   onLinkedShown(): void;
 }) {
   const { run: stepUp } = useStepUp();
+  const { profile } = useAuth();
   const [available, setAvailable] = useState(false);
   const [identity, setIdentity] = useState<UserIdentity | null>(null);
+  const [services, setServices] = useState<GoogleServices | null>(null);
 
   const reload = useCallback(async () => {
     setIdentity(await googleIdentity().catch(() => null));
+    setServices(await googleServices().catch(() => null));
   }, []);
 
   useEffect(() => {
     void googleEnabled().then(setAvailable);
     void reload();
+    const refresh = () => void reload();
+    window.addEventListener(GOOGLE_CONNECTED, refresh);
+    return () => window.removeEventListener(GOOGLE_CONNECTED, refresh);
   }, [reload]);
 
   useEffect(() => {
-    if (!linked || !identity) return;
-    feedback.ok('Google-Konto verbunden.');
+    if (!linked || !identity || !profile) return;
+    if (grantedForOtherUser(profile.userId))
+      feedback.fail(
+        'Achtung: Du bist jetzt mit einem anderen MiniNode-Konto angemeldet, weil du bei Google ein anderes Konto gewählt hast.',
+      );
+    else feedback.ok('Google-Konto verbunden.');
     onLinkedShown();
-  }, [linked, identity, feedback, onLinkedShown]);
+  }, [linked, identity, feedback, onLinkedShown, profile]);
 
   // Hidden while Google is switched off, unless an old connection is still there to remove.
   if (!available && !identity) return null;
@@ -215,7 +237,7 @@ export function GoogleCard({
     typeof identity?.identity_data?.email === 'string' ? identity.identity_data.email : null;
 
   return (
-    <section className="card" aria-labelledby="google-title">
+    <section className="card" id="google" aria-labelledby="google-title">
       <div className="row" style={{ flexWrap: 'wrap' }}>
         <div style={{ flex: 1, minWidth: 200 }}>
           <h2 id="google-title" className="section-title">
@@ -234,7 +256,10 @@ export function GoogleCard({
             onClick={async () => {
               if (!confirm('Google-Konto trennen?')) return;
               try {
-                await stepUp(() => disconnectGoogle(identity));
+                await stepUp(async () => {
+                  if (services?.connected) await revokeGoogleServices();
+                  await disconnectGoogle(identity);
+                });
                 feedback.ok('Google-Konto getrennt.');
                 await reload();
               } catch {
@@ -262,6 +287,50 @@ export function GoogleCard({
           </button>
         )}
       </div>
+      {identity && services?.available && (
+        <div className="row" style={{ flexWrap: 'wrap' }}>
+          <div style={{ flex: 1, minWidth: 200 }}>
+            <strong>Gmail und Kalender in Apps</strong>
+            <p className="muted" style={{ fontSize: 13 }}>
+              {services.connected
+                ? 'Freigegeben. Apps, die Google nutzen, lesen und schreiben Mails und Termine ohne eigene Anmeldung, jede nur so weit, wie sie es angemeldet hat.'
+                : 'Noch nicht freigegeben. Apps für Mail oder Kalender brauchen einmal deine Zustimmung bei Google. Danach meldest du dich neu an (mit Code, falls du eine Authenticator-App nutzt).'}
+            </p>
+          </div>
+          {services.connected ? (
+            <button
+              type="button"
+              className="button small danger"
+              onClick={async () => {
+                if (!confirm('Den Apps den Zugriff auf Gmail und Kalender entziehen?')) return;
+                try {
+                  await revokeGoogleServices();
+                  feedback.ok('Zugriff auf Gmail und Kalender entzogen.');
+                  await reload();
+                } catch {
+                  feedback.fail('Das hat nicht geklappt. Bitte noch einmal versuchen.');
+                }
+              }}
+            >
+              Zugriff entziehen
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="button small primary"
+              onClick={async () => {
+                try {
+                  await grantGoogleServices(profile?.userId ?? '', googleEmail);
+                } catch {
+                  feedback.fail('Die Freigabe bei Google hat nicht geklappt.');
+                }
+              }}
+            >
+              Freigeben
+            </button>
+          )}
+        </div>
+      )}
     </section>
   );
 }

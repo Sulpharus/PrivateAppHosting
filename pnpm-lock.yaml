@@ -75,6 +75,9 @@ importers:
       '@mininode/gate':
         specifier: workspace:*
         version: link:../../packages/gate
+      '@mininode/manifest':
+        specifier: workspace:*
+        version: link:../../packages/manifest
       '@supabase/supabase-js':
         specifier: 2.117.1
         version: 2.117.1
@@ -91,6 +94,9 @@ importers:
       '@types/node':
         specifier: ^22.20.4
         version: 22.20.4
+      postgres:
+        specifier: 3.4.9
+        version: 3.4.9
       vitest:
         specifier: 5.0.1
         version: 5.0.1(@types/node@22.20.4)(happy-dom@20.14.5)(vite@8.3.0(@types/node@22.20.4)(esbuild@0.28.1))
@@ -140,6 +146,9 @@ importers:
       '@mininode/gate':
         specifier: workspace:*
         version: link:../../packages/gate
+      '@mininode/manifest':
+        specifier: workspace:*
+        version: link:../../packages/manifest
       '@mininode/ui':
         specifier: workspace:*
         version: link:../../packages/ui

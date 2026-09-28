@@ -39,6 +39,17 @@ describe('wrangler config', () => {
     expect(config.vars).toMatchObject({ APP_SLUG: 'haushalt', PORTAL_URL: 'https://mininode.app' });
   });
 
+  it('lets apps with a google block call the Google APIs', () => {
+    expect(
+      appWranglerConfig({ manifest, env: production, assetsDir: '/tmp/a' }).vars.CONNECT_SRC,
+    ).toBe('');
+    const withGoogle = { ...manifest, google: { calendar: 'write' as const } };
+    expect(
+      appWranglerConfig({ manifest: withGoogle, env: production, assetsDir: '/tmp/a' }).vars
+        .CONNECT_SRC,
+    ).toBe('https://www.googleapis.com');
+  });
+
   it('has no routes locally', () => {
     const local = environmentSettings('local', { SUPABASE_PUBLISHABLE_KEY: 'pk' });
     expect(appWranglerConfig({ manifest, env: local, assetsDir: '/tmp/a' })).not.toHaveProperty(

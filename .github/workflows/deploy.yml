@@ -134,6 +134,9 @@ jobs:
           NUCBOX_CONTROL_TOKEN: ${{ secrets.NUCBOX_CONTROL_TOKEN }}
           ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_API_CLIENT_ID }}
           ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_API_CLIENT_SECRET }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          GOOGLE_TOKEN_KEY: ${{ secrets.GOOGLE_TOKEN_KEY }}
         run: |
           upload() { # worker-dir NAME...
             local dir=$1 args=() name
@@ -149,7 +152,8 @@ jobs:
               (cd "$dir" && pnpm exec wrangler secret bulk "$file")
             fi
           }
-          upload apps/api SUPABASE_SECRET_KEY GUACAMOLE_JSON_SECRET NUCBOX_CONTROL_TOKEN ACCESS_CLIENT_ID ACCESS_CLIENT_SECRET
+          upload apps/api SUPABASE_SECRET_KEY GUACAMOLE_JSON_SECRET NUCBOX_CONTROL_TOKEN ACCESS_CLIENT_ID ACCESS_CLIENT_SECRET \
+            GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET GOOGLE_TOKEN_KEY
           upload apps/ai-proxy SUPABASE_SECRET_KEY ANTHROPIC_API_KEY GEMINI_API_KEY AI_GATEWAY_TOKEN
 
   apps:

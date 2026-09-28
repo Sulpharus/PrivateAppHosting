@@ -62,6 +62,12 @@ mn.realtime('board').on('broadcast', { event: 'move' }, ({ payload }) => apply(p
 // Notification in the portal's bell for the current user:
 await mn.notify('Erinnerung', 'Müll rausbringen', '/heute');
 
+// Gmail and Google Calendar of the signed-in user (declare "google" in mininode.json). The user
+// connected Google once in the portal; the app never asks for a Google login or client ID:
+const res = await mn.google.fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events');
+const mails = await mn.google.fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=20');
+if (!(await mn.google.connected())) showLink(mn.google.connectUrl()); // "Google verbinden"
+
 // Relational data (only if kv is not enough): tables in your own schema, see "Tables".
 const { data } = await mn.db.from('recipes').select('*').order('created_at');
 ```
@@ -101,6 +107,7 @@ select platform.secure_table('<slug>', 'recipes', 'private');
   "access": { "default": true },            // true: every user gets it; false: admin grants it
   "data": { "mode": "private" },            // none | private | shared-account | group | readonly
   "ai": { "models": ["gemini-flash"], "monthlyBudgetEur": 2, "maxOutputTokens": 1500 },
+  "google": { "gmail": "write", "calendar": "read" },   // only if the app uses Gmail/Calendar
   "build": { "command": "pnpm build", "output": "dist" }   // omit for static apps
 }
 ```
@@ -108,3 +115,7 @@ select platform.secure_table('<slug>', 'recipes', 'private');
 Data modes: `private` = each user their own data · `shared-account` = trusted users work on the
 owner's data (e.g. a shared household budget) · `group` = everyone with the app shares all data ·
 `readonly` = users read, only the admin writes.
+
+Google: `"read"` sees mails or events; `"write"` also sends mails, changes labels and creates or
+edits events. Ask for `write` only when the app needs it. Google API origins are allowed by the
+platform automatically; do not add Google scripts or a Google client ID.

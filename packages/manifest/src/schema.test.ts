@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { appSchemaName, parseManifest } from './index.ts';
+import {
+  ALL_GOOGLE_SCOPES,
+  appSchemaName,
+  googleConnectSrc,
+  googleScopes,
+  parseManifest,
+} from './index.ts';
 
 const spa = {
   specVersion: 1,
@@ -76,5 +82,34 @@ describe('parseManifest', () => {
 describe('appSchemaName', () => {
   it('maps dashes to underscores', () => {
     expect(appSchemaName('habit-tracker')).toBe('app_habit_tracker');
+  });
+});
+
+describe('google', () => {
+  it('maps services and access levels to scopes and API origins', () => {
+    const result = parseManifest({ ...spa, google: { gmail: 'write', calendar: 'read' } });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(googleScopes(result.manifest.google)).toEqual([
+      'https://www.googleapis.com/auth/gmail.modify',
+      'https://www.googleapis.com/auth/calendar.readonly',
+    ]);
+    expect(googleConnectSrc(result.manifest.google)).toEqual([
+      'https://gmail.googleapis.com',
+      'https://www.googleapis.com',
+    ]);
+    for (const scope of googleScopes(result.manifest.google))
+      expect(ALL_GOOGLE_SCOPES).toContain(scope);
+  });
+
+  it('rejects an empty or unknown google block', () => {
+    expect(parseManifest({ ...spa, google: {} }).ok).toBe(false);
+    expect(parseManifest({ ...spa, google: { drive: 'read' } }).ok).toBe(false);
+    expect(parseManifest({ ...spa, google: { gmail: 'admin' } }).ok).toBe(false);
+  });
+
+  it('apps without a google block get no scopes', () => {
+    expect(googleScopes(undefined)).toEqual([]);
+    expect(googleConnectSrc(undefined)).toEqual([]);
   });
 });

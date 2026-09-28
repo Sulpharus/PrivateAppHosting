@@ -10,6 +10,7 @@ import {
   useState,
 } from 'react';
 import { platform, supabase } from '../lib/supabase.ts';
+import { handOverGoogleGrant } from './google.ts';
 import { codeRequired } from './mfa.ts';
 
 export type Role = 'admin' | 'trusted' | 'user';
@@ -78,6 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .then(async ({ data }) => {
         if (!active) return;
         setSession(data.session);
+        if (data.session) void handOverGoogleGrant(data.session);
         await recheckCode(data.session !== null);
         await loadProfile(data.session);
         setLoading(false);
@@ -87,6 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Other auth calls inside this callback can deadlock supabase-js, so run them after it.
       setTimeout(() => {
         if (!active) return;
+        if (next) void handOverGoogleGrant(next);
         void recheckCode(next !== null);
         void loadProfile(next);
       }, 0);

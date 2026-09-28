@@ -5,9 +5,11 @@ import { createBrowserClient } from '@supabase/ssr';
 import type { RealtimeChannel, SupabaseClient, User } from '@supabase/supabase-js';
 import { type AiChatOptions, type AiMessage, createAi } from './ai.ts';
 import { appSchema, loadConfig, type MininodeConfig } from './config.ts';
+import { createGoogle } from './google.ts';
 import { createKv, type KvScope } from './kv.ts';
 
 export { appSchema, assertConfig } from './config.ts';
+export { GoogleError } from './google.ts';
 export type { AiChatOptions, AiMessage, KvScope, MininodeConfig };
 
 export type Role = 'admin' | 'trusted' | 'user';
@@ -40,6 +42,8 @@ export interface Mininode {
   };
   realtime(channel: string): RealtimeChannel;
   readonly ai: ReturnType<typeof createAi>;
+  /** Gmail and Calendar of the signed-in user, for apps with a `google` block (ADR 0004). */
+  readonly google: ReturnType<typeof createGoogle>;
   notify(title: string, body?: string, url?: string): Promise<void>;
 }
 
@@ -80,6 +84,8 @@ export function createMininode(config: MininodeConfig): Mininode {
   };
 
   const currentUser = async () => (await supabase.auth.getUser()).data.user;
+  const sessionToken = async () =>
+    (await supabase.auth.getSession()).data.session?.access_token ?? null;
 
   // Resolves the owner folder for file paths: shared-account apps store under the app owner.
   const ownerFolder = async (shared?: boolean): Promise<string> => {
@@ -154,10 +160,8 @@ export function createMininode(config: MininodeConfig): Mininode {
       },
     },
     realtime: (channel) => supabase.channel(`${config.appSlug}:${channel}`),
-    ai: createAi(
-      config,
-      async () => (await supabase.auth.getSession()).data.session?.access_token ?? null,
-    ),
+    ai: createAi(config, sessionToken),
+    google: createGoogle(config, sessionToken),
     async notify(title, body, url) {
       const { error } = await supabase.schema('platform').rpc('notify_self', {
         p_app_slug: config.appSlug,

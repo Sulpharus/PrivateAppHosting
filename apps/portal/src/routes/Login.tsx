@@ -2,7 +2,12 @@ import { useEffect, useState } from 'react';
 import { Navigate, useNavigate, useSearchParams } from 'react-router';
 import { useAuth } from '../auth/AuthProvider.tsx';
 import { CodeForm } from '../auth/CodeForm.tsx';
-import { googleEnabled, googleErrorFromUrl, signInWithGoogle } from '../auth/google.ts';
+import {
+  googleEnabled,
+  googleErrorFromUrl,
+  googleHandOverDone,
+  signInWithGoogle,
+} from '../auth/google.ts';
 import { codeRequired } from '../auth/mfa.ts';
 import { passkeyErrorMessage, passkeysSupported, signInWithPasskey } from '../auth/passkeys.ts';
 import { GoogleMark, Logo } from '../components/icons.tsx';
@@ -28,12 +33,17 @@ export function Login() {
     void googleEnabled().then(setGoogle);
   }, []);
 
-  const done = () => goTo(next, navigate);
+  // Leave only after a Google grant was taken out of the shared session cookie.
+  const done = async () => {
+    await googleHandOverDone();
+    await goTo(next, navigate);
+  };
   const ready = !loading && session && !codePending && !askCode && !busy;
 
   // Back from Google (possibly to an app on another subdomain): finish like a password sign-in.
   useEffect(() => {
-    if (ready && fromGoogle && !next.startsWith('/')) void goTo(next, navigate);
+    if (ready && fromGoogle && !next.startsWith('/'))
+      void googleHandOverDone().then(() => goTo(next, navigate));
   }, [ready, fromGoogle, next, navigate]);
 
   if (ready && next.startsWith('/')) return <Navigate to={next} replace />;

@@ -1,5 +1,5 @@
 import { fileURLToPath } from 'node:url';
-import type { Manifest } from '@mininode/manifest';
+import { googleConnectSrc, type Manifest } from '@mininode/manifest';
 import type { EnvironmentSettings } from './environment.ts';
 
 export const COMPATIBILITY_DATE = '2026-09-23';
@@ -35,7 +35,8 @@ export function appWranglerConfig(input: {
       SUPABASE_URL: env.supabaseUrl,
       SUPABASE_PUBLISHABLE_KEY: env.supabasePublishableKey,
       PORTAL_URL: env.portalUrl,
-      CONNECT_SRC: (input.connectSrc ?? []).join(','),
+      // Apps with a `google` block call the Google APIs directly with tokens from the API.
+      CONNECT_SRC: [...(input.connectSrc ?? []), ...googleConnectSrc(manifest.google)].join(','),
     },
   };
 }
