@@ -1,5 +1,5 @@
 begin;
-select plan(22);
+select plan(24);
 select tests.reset();
 
 select tests.create_user('owner@example.com') as owner_id \gset
@@ -75,6 +75,15 @@ select is((select count(*)::int from platform.push_claim(10)), 0, 'after three a
 select throws_ok(
   format($$insert into platform.notifications (user_id, title, url) values (%L, 'x', '/\evil.example')$$, :'anna_id'),
   '23514', null, 'bell links cannot point to another site');
+
+-- Refused subscriptions (401/403) are counted and removed at the fifth refusal.
+select id as device_id from platform.push_subscriptions order by endpoint limit 1 \gset
+select platform.push_reject(array[:'device_id'::uuid]) from generate_series(1, 4);
+select is((select rejected_count::int from platform.push_subscriptions where id = :'device_id'), 4,
+  'refusals are counted');
+select platform.push_reject(array[:'device_id'::uuid]);
+select is((select count(*)::int from platform.push_subscriptions where id = :'device_id'), 0,
+  'the fifth refusal removes the subscription');
 
 select * from finish();
 rollback;

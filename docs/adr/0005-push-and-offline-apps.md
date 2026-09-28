@@ -27,8 +27,9 @@ permission.
 - The API cron now runs every minute: `push_release_due()` moves due reminders into the bell
   (dropping them when the user lost access), `push_claim()` takes new notifications (skipping
   ones older than an hour, e.g. from before push was configured), and the API sends them to all
-  of the user's devices within a send budget per run (default 40, for the Workers Free limit of
-  50 subrequests; `PUSH_SEND_BUDGET`). What does not fit goes back to the queue; a notification
+  of the user's devices within a send budget per run (default 35, for the Workers Free limit of
+  50 subrequests, leaving room for the database calls and the five-minute maintenance;
+  `PUSH_SEND_BUDGET`). What does not fit goes back to the queue; a notification
   that failed on every device is retried, at most three attempts (at-least-once is not
   guaranteed beyond that). The VAPID JWT is signed once per push service and run.
 - Subscriptions are accepted only for the browsers' push services (FCM, Mozilla, Apple, WNS),
@@ -39,8 +40,9 @@ permission.
 - Web Push is implemented with Web Crypto (RFC 8291 aes128gcm payload encryption, RFC 8292
   VAPID), verified against the reference implementation `http_ece` in tests.
 - A tap opens `https://<slug>.mininode.app<path>`.
-- Apps sign out through the portal's `/logout`, which also switches the device's push off; on
-  start the portal switches off a browser subscription that belongs to another user.
+- Apps sign out through the portal's `/logout` (only from the portal or its apps, checked by
+  referrer), which also switches the device's push off; on start the portal switches off a
+  browser subscription that the server says belongs to another user (never on network errors).
 
 **Every app is a PWA.** The gate serves `/_mininode/manifest.webmanifest` (name, colours, a
 generated SVG icon, or the app's own `icon-192.png`/`icon-512.png`) and adds the manifest link
@@ -62,7 +64,9 @@ refusal (403, 4xx validation, RLS) drops it, and the local copy then takes the s
 again. The SDK remembers the last confirmed user of the app, so the local copy stays reachable
 when the access token expires offline.
 `mn.offline` exposes `online()`, `onChange()`, `pending()`, `onSynced()` and `sync()`.
-`mn.auth.requireLogin()` accepts the stored session while offline. `mn.db` and `mn.files` stay
+`mn.auth.requireLogin()` works offline with the remembered user, but only while the shared
+session cookie still names that user (signing out anywhere removes it, so the next person on a
+shared device does not open the previous user's data). `mn.db` and `mn.files` stay
 online-only; apps show those views read-only offline.
 
 ## Consequences

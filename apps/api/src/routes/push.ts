@@ -18,7 +18,6 @@ import {
 interface SubscriptionRow extends PushSubscription {
   id: string;
   user_id: string;
-  rejected_count: number;
 }
 
 interface ClaimedNotification {
@@ -39,12 +38,11 @@ export interface PushMessage {
 }
 
 /**
- * Push requests one cron run may make. Workers Free allows 50 subrequests per invocation and
- * the database calls around them need a few; override with PUSH_SEND_BUDGET on Workers Paid.
+ * Push requests one cron run may make. Workers Free allows 50 subrequests per invocation: the
+ * run needs up to 8 database calls around the pushes, and every fifth minute the maintenance
+ * (4 more) shares the invocation. Override with PUSH_SEND_BUDGET on Workers Paid.
  */
-const DEFAULT_SEND_BUDGET = 40;
-/** A subscription refused this many times in a row (e.g. after a key change) is deleted. */
-const MAX_REJECTIONS = 5;
+const DEFAULT_SEND_BUDGET = 35;
 
 function vapid(env: ApiEnv): VapidKeys | null {
   if (!env.VAPID_PUBLIC_KEY || !env.VAPID_PRIVATE_KEY) return null;
@@ -116,25 +114,16 @@ async function sendAll(env: ApiEnv, keys: VapidKeys, jobs: Job[]) {
     ...new Set(results.filter((r) => r.result === result).map((r) => r.job.subscription.id)),
   ];
   const table = () => db.schema('platform').from('push_subscriptions');
-  const rejected = results.filter((r) => r.result === 'rejected').map((r) => r.job.subscription);
-  const dead = [
-    ...ids('gone'),
-    ...rejected.filter((s) => s.rejected_count + 1 >= MAX_REJECTIONS).map((s) => s.id),
-  ];
+  const rejected = ids('rejected');
+  // One call each, whatever the number of devices (subrequest budget).
   const updates = [
-    dead.length ? table().delete().in('id', dead) : null,
+    ids('gone').length ? table().delete().in('id', ids('gone')) : null,
     ids('sent').length
       ? table()
           .update({ last_success_at: new Date().toISOString(), rejected_count: 0 })
           .in('id', ids('sent'))
       : null,
-    ...rejected
-      .filter((s) => s.rejected_count + 1 < MAX_REJECTIONS)
-      .map((s) =>
-        table()
-          .update({ rejected_count: s.rejected_count + 1 })
-          .eq('id', s.id),
-      ),
+    rejected.length ? db.schema('platform').rpc('push_reject', { p_ids: rejected }) : null,
   ];
   for (const result of await Promise.all(updates))
     if (result?.error)
@@ -146,7 +135,7 @@ async function sendAll(env: ApiEnv, keys: VapidKeys, jobs: Job[]) {
     results,
     sent: results.filter((r) => r.result === 'sent').length,
     gone: ids('gone').length,
-    rejected: rejected.length,
+    rejected: results.filter((r) => r.result === 'rejected').length,
     failed: results.filter((r) => r.result === 'failed').length,
   };
 }
@@ -156,7 +145,7 @@ async function subscriptionsOf(env: ApiEnv, userIds: string[]): Promise<Subscrip
   const { data, error } = await adminClient(env)
     .schema('platform')
     .from('push_subscriptions')
-    .select('id, user_id, endpoint, p256dh, auth, rejected_count')
+    .select('id, user_id, endpoint, p256dh, auth')
     .in('user_id', userIds);
   if (error) throw new Error(error.message);
   return (data ?? []) as SubscriptionRow[];
@@ -179,7 +168,25 @@ export async function deliverPushes(env: ApiEnv): Promise<void> {
   if (claimed.error) throw new Error(claimed.error.message);
   const notifications = (claimed.data ?? []) as ClaimedNotification[];
   if (notifications.length === 0) return;
+  try {
+    await sendClaimed(env, keys, notifications, budget, released.data);
+  } catch (error) {
+    // Claimed but not sent: back into the queue (counts as an attempt), then report.
+    await db
+      .schema('platform')
+      .rpc('push_unclaim', { p_ids: notifications.map((n) => n.id), p_count_attempt: true });
+    throw error;
+  }
+}
 
+async function sendClaimed(
+  env: ApiEnv,
+  keys: VapidKeys,
+  notifications: ClaimedNotification[],
+  budget: number,
+  released: unknown,
+): Promise<void> {
+  const db = adminClient(env);
   const subscriptions = await subscriptionsOf(env, [
     ...new Set(notifications.map((n) => n.user_id)),
   ]);
@@ -228,7 +235,7 @@ export async function deliverPushes(env: ApiEnv): Promise<void> {
     JSON.stringify({
       event: 'push_delivered',
       notifications: notifications.length,
-      released: released.data,
+      released,
       sent: outcome.sent,
       gone: outcome.gone,
       rejected: outcome.rejected,
@@ -256,10 +263,10 @@ push.post('/test', requireUser(), async (c) => {
   const userId = c.get('claims').sub;
   if ((lastTest.get(userId) ?? 0) > Date.now() - 30_000)
     return problem(429, 'rate_limited', 'Warte kurz, bevor du noch eine Testnachricht sendest.');
-  lastTest.set(userId, Date.now());
   const subscriptions = await subscriptionsOf(c.env, [userId]);
   if (subscriptions.length === 0)
     return problem(409, 'no_devices', 'Auf keinem Gerät sind Benachrichtigungen eingeschaltet.');
+  lastTest.set(userId, Date.now());
   const outcome = await sendAll(
     c.env,
     keys,

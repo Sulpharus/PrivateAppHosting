@@ -1,4 +1,4 @@
-import { lazy, StrictMode, Suspense, useEffect } from 'react';
+import { lazy, StrictMode, Suspense, useEffect, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
 import {
   createBrowserRouter,
@@ -60,10 +60,31 @@ function RequireSession() {
 function Logout() {
   const { signOut } = useAuth();
   const navigate = useNavigate();
+  const started = useRef(false);
   useEffect(() => {
+    if (started.current) return;
+    started.current = true;
+    // Only the portal and its apps may sign the user out this way (no logout from other sites).
+    if (!fromPlatform(document.referrer)) {
+      navigate('/', { replace: true });
+      return;
+    }
     void signOut().finally(() => navigate('/login', { replace: true }));
   }, [signOut, navigate]);
   return null;
+}
+
+function fromPlatform(referrer: string): boolean {
+  if (!referrer) return false;
+  try {
+    const from = new URL(referrer);
+    const home = location.hostname;
+    return (
+      from.hostname === home || from.hostname.endsWith(`.${home}`) || from.hostname === 'localhost'
+    );
+  } catch {
+    return false;
+  }
 }
 
 const router = createBrowserRouter([

@@ -15,6 +15,7 @@ import {
   memoryStore,
 } from './offline.ts';
 import { createPush } from './push.ts';
+import { cookieSessionUserId } from './session-cookie.ts';
 
 export { appSchema, assertConfig } from './config.ts';
 export { GoogleError } from './google.ts';
@@ -110,10 +111,12 @@ export function createMininode(config: MininodeConfig): Mininode {
       // Storage blocked: offline start just is not possible then.
     }
   };
+  /** The remembered user, but only while the session cookie still belongs to them. */
   const remembered = (): User | null => {
     try {
       const raw = localStorage.getItem(userKey);
-      return raw ? (JSON.parse(raw) as User) : null;
+      const user = raw ? (JSON.parse(raw) as User) : null;
+      return user && cookieSessionUserId(document.cookie) === user.id ? user : null;
     } catch {
       return null;
     }

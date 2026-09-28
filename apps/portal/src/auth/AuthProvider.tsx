@@ -118,7 +118,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // copy of the app list belongs to this account.
         await forgetThisDevice();
         forgetOfflineCopies();
-        await supabase().auth.signOut();
+        const { error } = await supabase().auth.signOut();
+        // Offline with an expired token supabase-js keeps the session: drop it locally at least.
+        if (error) await supabase().auth.signOut({ scope: 'local' });
       },
     }),
     [loading, session, codePending, profile, loadProfile, recheckCode],

@@ -244,7 +244,22 @@ as $$
   where id = any (p_ids);
 $$;
 
+-- API cron: counts refusals (401/403) per subscription in one call; five in a row delete it.
+create function platform.push_reject(p_ids uuid[]) returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  update platform.push_subscriptions
+  set rejected_count = rejected_count + 1
+  where id = any (p_ids);
+  delete from platform.push_subscriptions where id = any (p_ids) and rejected_count >= 5;
+end;
+$$;
+
 revoke execute on function platform.push_subscribe(text, text, text, text) from public, anon;
+revoke execute on function platform.push_reject(uuid[]) from public, anon, authenticated;
 revoke execute on function platform.push_device_count() from public, anon;
 revoke execute on function platform.push_schedule(text, text, timestamptz, text, text, text) from public, anon;
 revoke execute on function platform.push_cancel(text, text) from public, anon;
@@ -260,3 +275,4 @@ grant execute on function platform.push_list(text) to authenticated;
 grant execute on function platform.push_release_due() to service_role;
 grant execute on function platform.push_claim(integer) to service_role;
 grant execute on function platform.push_unclaim(uuid[], boolean) to service_role;
+grant execute on function platform.push_reject(uuid[]) to service_role;

@@ -48,17 +48,22 @@ export async function deviceStatus(): Promise<DeviceStatus> {
   const subscription = await reg?.pushManager.getSubscription();
   if (!subscription || Notification.permission !== 'granted') return 'off';
   // On a shared device the browser subscription may belong to someone else.
-  return (await ownedByMe(subscription)) ? 'on' : 'off';
+  return (await owner(subscription)) === 'foreign' ? 'off' : 'on';
 }
 
-/** Whether the server has this subscription for the signed-in user (RLS: own rows only). */
-async function ownedByMe(subscription: PushSubscription): Promise<boolean> {
-  const { data } = await platform()
+/**
+ * Whose subscription this is: `mine` (the server has it for the signed-in user; RLS shows own
+ * rows only), `foreign` (the query worked and found nothing), `unknown` (offline, errors).
+ */
+async function owner(subscription: PushSubscription): Promise<'mine' | 'foreign' | 'unknown'> {
+  if (!navigator.onLine) return 'unknown';
+  const { data, error } = await platform()
     .from('push_subscriptions')
     .select('id')
     .eq('endpoint', subscription.endpoint)
     .maybeSingle();
-  return data !== null;
+  if (error) return 'unknown';
+  return data ? 'mine' : 'foreign';
 }
 
 /**
@@ -70,7 +75,8 @@ export async function releaseForeignSubscription(): Promise<void> {
   if (!pushSupported()) return;
   const reg = await navigator.serviceWorker.getRegistration('/');
   const subscription = await reg?.pushManager.getSubscription();
-  if (subscription && !(await ownedByMe(subscription))) await subscription.unsubscribe();
+  // Only when the server clearly says it is not ours: never on a network error or offline.
+  if (subscription && (await owner(subscription)) === 'foreign') await subscription.unsubscribe();
 }
 
 function applicationServerKey(base64url: string): Uint8Array<ArrayBuffer> {
