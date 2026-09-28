@@ -60,17 +60,19 @@ function RequireSession() {
 function Logout() {
   const { signOut } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const fromPortal = (location.state as { fromPortal?: boolean } | null)?.fromPortal === true;
   const started = useRef(false);
   useEffect(() => {
     if (started.current) return;
     started.current = true;
     // Only the portal and its apps may sign the user out this way (no logout from other sites).
-    if (!fromPlatform(document.referrer)) {
+    if (!fromPortal && !fromPlatform(document.referrer)) {
       navigate('/', { replace: true });
       return;
     }
     void signOut().finally(() => navigate('/login', { replace: true }));
-  }, [signOut, navigate]);
+  }, [signOut, navigate, fromPortal]);
   return null;
 }
 

@@ -91,6 +91,7 @@ test('authenticator app: set up, then required after a password sign-in', async 
 
   // In the portal: sign out, password again, then the code step.
   await page.getByRole('button', { name: 'Abmelden' }).click();
+  await expect(page.getByLabel('E-Mail')).toBeVisible();
   await passwordSignIn(page);
   await expect(page.getByRole('heading', { name: 'Zweiter Schritt' })).toBeVisible();
   await page.goto('/account');

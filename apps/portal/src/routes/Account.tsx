@@ -31,7 +31,7 @@ function formatDate(value: string | null): string {
 }
 
 export function Account() {
-  const { profile, refreshProfile, signOut } = useAuth();
+  const { profile, refreshProfile } = useAuth();
   const navigate = useNavigate();
   const { run: stepUp } = useStepUp();
   const [params, setParams] = useSearchParams();
@@ -260,11 +260,8 @@ export function Account() {
         <button
           type="button"
           className="button danger"
-          onClick={async () => {
-            // Leave the protected area first so the session guard does not add ?next=/account.
-            navigate('/login', { replace: true });
-            await signOut();
-          }}
+          // /logout signs out (push off, offline copies gone) and only then shows the login page.
+          onClick={() => navigate('/logout', { replace: true, state: { fromPortal: true } })}
         >
           Abmelden
         </button>
