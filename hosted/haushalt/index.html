@@ -1,33 +1,38 @@
 <!doctype html>
-<html lang="de">
+<html lang="de" data-accent="amber">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Haushalt</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231f5c4a'/%3E%3Ctext x='16' y='22.5' font-family='system-ui,sans-serif' font-size='19' font-weight='700' text-anchor='middle' fill='white'%3EH%3C/text%3E%3C/svg%3E">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%238a5a00'/%3E%3Cpath d='M8 15l8-7 8 7v9H8z' fill='none' stroke='white' stroke-width='2.4' stroke-linejoin='round'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/_mininode/ui.css">
   <link rel="stylesheet" href="/style.css">
+  <script src="/_mininode/ui.js"></script>
   <script src="/_mininode/sdk.js" defer></script>
   <script type="module" src="/app.js"></script>
 </head>
-<body data-tab="overview">
-  <header class="top">
-    <div class="top-inner">
-      <div>
-        <a class="home" href="https://mininode.app">← Alle Apps</a>
-        <h1>Haushalt</h1>
-      </div>
-      <button id="add" class="btn primary" type="button">+ Buchung</button>
+<body class="mn-app">
+  <nav class="mn-nav" aria-label="Bereiche">
+    <div class="mn-brand">
+      <a class="mn-home" href="https://mininode.app"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>Alle Apps</a>
+      <span class="mn-brand-name"><span class="mn-brand-mark"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M4 11l8-7 8 7v9H4z"/><path d="M10 20v-5h4v5"/></svg></span>Haushalt</span>
+      <button type="button" class="mn-btn mn-btn--primary" data-add><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Buchung hinzufügen</button>
     </div>
-    <nav class="tabs" aria-label="Bereiche">
-      <button type="button" data-tab="overview" aria-current="page">Übersicht</button>
-      <button type="button" data-tab="bookings">Buchungen</button>
-      <button type="button" data-tab="budget">Budget</button>
-      <button type="button" data-tab="tax">Steuer</button>
-      <button type="button" data-tab="settings">Einstellungen</button>
-    </nav>
-  </header>
-  <main id="view"></main>
-  <dialog id="dlg"></dialog>
-  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    <div class="mn-tabs">
+      <button type="button" class="mn-tab" data-tab="overview" aria-current="page"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3.5" y="3.5" width="7" height="7" rx="1.8"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.8"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.8"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.8"/></svg>Übersicht</button>
+      <button type="button" class="mn-tab" data-tab="bookings"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 5.5h16M4 12h16M4 18.5h10"/></svg>Buchungen</button>
+      <button type="button" class="mn-tab" data-tab="budget"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5V12l6 6"/></svg>Budget</button>
+      <button type="button" class="mn-tab" data-tab="tax"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5h8l4 4v13H6z"/><path d="M14 3.5v4h4M9 12h6M9 16h6"/></svg>Steuer</button>
+      <button type="button" class="mn-tab" data-tab="settings"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>Einstellungen</button>
+    </div>
+  </nav>
+  <div class="mn-page">
+    <header class="mn-top"><div class="mn-top-inner">
+      <div class="mn-top-text"><a class="mn-home" href="https://mininode.app">← Alle Apps</a><h1 id="title">Übersicht</h1><p class="mn-sub" id="subtitle"></p></div>
+      <div class="mn-top-tools" id="tools"></div>
+      <button type="button" class="mn-fab" data-add aria-label="Buchung hinzufügen"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+    </div></header>
+    <main class="mn-main" id="view"></main>
+  </div>
 </body>
 </html>

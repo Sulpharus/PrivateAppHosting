@@ -28,7 +28,7 @@ test('haushalt books, imports a bank CSV and fills the tax forms', async ({ page
   await expect(page.getByText('Noch keine Buchungen in diesem Monat')).toBeVisible();
 
   // A craftsman's invoice: only the labour part counts for § 35a.
-  await page.getByRole('button', { name: '+ Buchung' }).click();
+  await page.getByRole('button', { name: 'Buchung hinzufügen' }).first().click();
   const dialog = page.getByRole('dialog');
   await dialog.getByLabel('Betrag in €').fill('500');
   await dialog.getByLabel('Beschreibung').fill('Heizungswartung');

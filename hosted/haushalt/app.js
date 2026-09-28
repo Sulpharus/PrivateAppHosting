@@ -60,6 +60,9 @@ function h(tag, props, ...children) {
   return el;
 }
 const ICON_PATHS = {
+  search: 'M16 16l4 4M11 17.5a6.5 6.5 0 110-13 6.5 6.5 0 010 13z',
+  list: 'M4 5.5h16M4 12h16M4 18.5h10',
+  upload: 'M12 15V4M7.5 8.5L12 4l4.5 4.5M5 15v4h14v-4',
   left: 'M15 5l-7 7 7 7',
   right: 'M9 5l7 7-7 7',
   plus: 'M12 5v14M5 12h14',
@@ -69,19 +72,17 @@ function icon(name) {
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   svg.setAttribute('viewBox', '0 0 24 24');
   svg.setAttribute('aria-hidden', 'true');
+  svg.setAttribute('fill', 'none');
+  svg.setAttribute('stroke', 'currentColor');
+  svg.setAttribute('stroke-width', '2');
+  svg.setAttribute('stroke-linecap', 'round');
+  svg.setAttribute('stroke-linejoin', 'round');
   const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
   path.setAttribute('d', ICON_PATHS[name]);
   svg.append(path);
   return svg;
 }
-let toastTimer;
-function toast(message) {
-  const t = $('#toast');
-  t.textContent = message;
-  t.classList.add('show');
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.remove('show'), 2600);
-}
+const toast = (message) => window.mnui.toast(message);
 
 // ---------- state ----------
 const S = {
@@ -213,23 +214,26 @@ async function load() {
 }
 
 // ---------- shared view parts ----------
-function monthNav(onChange) {
+/** A month or year stepper for the header tools. */
+function stepper(label, value, prev, next, onChange) {
   return h(
     'div',
-    { class: 'period' },
+    { class: 'mn-stepper', role: 'group', 'aria-label': label },
     h(
       'button',
-      { class: 'icon', 'aria-label': 'Vorheriger Monat', onclick: () => onChange(-1) },
+      { type: 'button', class: 'mn-icon-btn', 'aria-label': prev, onclick: () => onChange(-1) },
       icon('left'),
     ),
-    h('h2', {}, monthName(S.month)),
+    h('b', {}, value),
     h(
       'button',
-      { class: 'icon', 'aria-label': 'Nächster Monat', onclick: () => onChange(1) },
+      { type: 'button', class: 'mn-icon-btn', 'aria-label': next, onclick: () => onChange(1) },
       icon('right'),
     ),
   );
 }
+const monthStepper = () =>
+  stepper('Monat', monthName(S.month), 'Vorheriger Monat', 'Nächster Monat', changeMonth);
 async function changeMonth(n) {
   S.month = shiftMonth(S.month, n);
   await ensureYear(Number(S.month.slice(0, 4))).catch(() => toast('Laden fehlgeschlagen.'));
@@ -238,19 +242,39 @@ async function changeMonth(n) {
 function meter(value, max, over) {
   const pct = max > 0 ? Math.min(100, Math.max(2, (value / max) * 100)) : 0;
   const bar = h('i', {});
-  bar.style.width = `${pct}%`;
-  return h('span', { class: `meter${over ? ' over' : ''}`, 'aria-hidden': 'true' }, bar);
+  bar.style.setProperty('--mn-value', String(pct));
+  return h('span', { class: `mn-meter${over ? ' over' : ''}`, 'aria-hidden': 'true' }, bar);
 }
 function kpi(label, value, cls) {
-  return h('div', { class: 'kpi' }, h('b', { class: cls }, value), h('span', {}, label));
+  return h('div', { class: 'mn-kpi' }, h('b', { class: cls }, value), h('span', {}, label));
+}
+function sect(title, ...extra) {
+  return h('div', { class: 'mn-sect' }, h('h2', {}, title), ...extra);
 }
 function empty(title, text, ...actions) {
-  return h('div', { class: 'empty' }, h('h3', {}, title), h('p', {}, text), ...actions);
+  return h(
+    'div',
+    { class: 'mn-empty' },
+    h('div', { class: 'mn-empty-icon' }, icon('list')),
+    h('h3', {}, title),
+    h('p', {}, text),
+    actions.length ? h('div', { class: 'actions' }, actions) : null,
+  );
 }
 function signed(b) {
   if (b.kind === 'income') return `+${euro(b.cents)}`;
   if (b.kind === 'transfer') return euro(b.cents);
   return `−${euro(b.cents)}`;
+}
+/** One "label … value" row with a meter below, as in the kit's bar list. */
+function barRow(label, value, meterEl, extra) {
+  return h(
+    'div',
+    { class: 'mn-bar' },
+    h('span', { class: 'mn-bar-top' }, h('b', {}, label), h('span', {}, value)),
+    meterEl,
+    extra,
+  );
 }
 
 // ---------- Übersicht ----------
@@ -281,27 +305,71 @@ function viewOverview() {
     0,
   );
 
-  return [
-    monthNav(changeMonth),
-    list.length === 0 && !S.loading
-      ? empty(
-          'Noch keine Buchungen in diesem Monat',
-          'Trage Ausgaben und Einnahmen ein oder importiere den Kontoauszug deiner Bank als CSV.',
-          h(
-            'div',
-            { class: 'actions' },
-            h(
-              'button',
-              { class: 'btn primary', onclick: () => editBooking(null) },
-              'Buchung hinzufügen',
-            ),
-            h('button', { class: 'btn', onclick: () => openImport() }, 'Kontoauszug importieren'),
-          ),
-        )
-      : null,
+  if (list.length === 0)
+    return [
+      empty(
+        'Noch keine Buchungen in diesem Monat',
+        'Trage Ausgaben und Einnahmen ein oder importiere den Kontoauszug deiner Bank als CSV.',
+        h(
+          'button',
+          { class: 'mn-btn mn-btn--primary', onclick: () => editBooking(null) },
+          'Buchung hinzufügen',
+        ),
+        h('button', { class: 'mn-btn', onclick: () => openImport() }, 'Kontoauszug importieren'),
+      ),
+    ];
+
+  const chart = h(
+    'div',
+    { class: 'mn-card' },
     h(
       'div',
-      { class: 'kpis' },
+      { class: 'chart', role: 'img', 'aria-label': `Einnahmen und Ausgaben je Monat ${year}` },
+      months.map((x) => {
+        const col = (v, cls) => {
+          const bar = h('i', { class: cls });
+          bar.style.height = `${(v / maxBar) * 100}%`;
+          return bar;
+        };
+        return h(
+          'button',
+          {
+            type: 'button',
+            class: `col${x.ym === S.month ? ' sel' : ''}`,
+            'aria-label': `${monthName(x.ym)}: Einnahmen ${euro(x.income)}, Ausgaben ${euro(x.expense)}`,
+            'aria-pressed': String(x.ym === S.month),
+            onclick: () => {
+              S.month = x.ym;
+              render();
+            },
+          },
+          h('span', { class: 'pair' }, col(x.income, 'in'), col(x.expense, 'out')),
+          h('small', {}, shortMonth(x.m)),
+        );
+      }),
+    ),
+    h(
+      'p',
+      { class: 'legend' },
+      h(
+        'span',
+        {},
+        h('i', { class: 'in' }),
+        `Einnahmen ${euro(months.reduce((s, x) => s + x.income, 0))}`,
+      ),
+      h(
+        'span',
+        {},
+        h('i', { class: 'out' }),
+        `Ausgaben ${euro(months.reduce((s, x) => s + x.expense, 0))}`,
+      ),
+    ),
+  );
+
+  return [
+    h(
+      'div',
+      { class: 'mn-kpis' },
       kpi('Einnahmen', euro(income), 'pos'),
       kpi('Ausgaben', euro(expense)),
       kpi(
@@ -311,134 +379,92 @@ function viewOverview() {
       ),
       kpi('Sparquote', income > 0 ? `${Math.round((saldo / income) * 100)} %` : '–'),
     ),
-    budget > 0
-      ? h(
-          'section',
-          { class: 'card' },
-          h(
-            'div',
-            { class: 'card-head' },
-            h('h3', {}, 'Budget'),
-            h('button', { class: 'link', onclick: () => go('budget') }, 'Details'),
-          ),
-          h(
-            'p',
-            { class: 'line' },
-            h('span', {}, `${euro(spentInBudget)} von ${euro(budget)}`),
-            h(
-              'span',
-              { class: spentInBudget > budget ? 'neg' : 'muted' },
-              spentInBudget > budget
-                ? `${euro(spentInBudget - budget)} drüber`
-                : `${euro(budget - spentInBudget)} übrig`,
-            ),
-          ),
-          meter(spentInBudget, budget, spentInBudget > budget),
-          overCats.length
-            ? h(
-                'p',
-                { class: 'muted small' },
-                `Überschritten: ${overCats.map((c) => c.name).join(', ')}`,
-              )
-            : null,
-        )
-      : null,
-    top.length
-      ? h(
-          'section',
-          { class: 'card' },
-          h('div', { class: 'card-head' }, h('h3', {}, 'Ausgaben nach Kategorie')),
-          h(
-            'ul',
-            { class: 'bars' },
-            top.map(([cat, cents]) =>
-              h(
-                'li',
-                {},
-                h(
-                  'p',
-                  { class: 'line' },
-                  h('span', {}, catName(cat)),
-                  h('span', {}, `${euro(cents)}, ${Math.round((cents / expense) * 100)} %`),
-                ),
-                meter(cents, top[0][1]),
-              ),
-            ),
-          ),
-        )
-      : null,
     h(
-      'section',
-      { class: 'card' },
+      'div',
+      { class: 'mn-cols' },
       h(
         'div',
-        { class: 'card-head' },
-        h('h3', {}, `Jahr ${year}`),
-        h(
-          'span',
-          { class: 'legend' },
-          h('i', { class: 'in' }),
-          'Einnahmen',
-          h('i', { class: 'out' }),
-          'Ausgaben',
-        ),
+        {},
+        budget > 0
+          ? [
+              sect(
+                'Budget',
+                h('button', { class: 'mn-link', onclick: () => go('budget') }, 'Details'),
+              ),
+              h(
+                'div',
+                { class: 'mn-list' },
+                barRow(
+                  `${euro(spentInBudget)} von ${euro(budget)}`,
+                  spentInBudget > budget
+                    ? `${euro(spentInBudget - budget)} drüber`
+                    : `${euro(budget - spentInBudget)} übrig`,
+                  meter(spentInBudget, budget, spentInBudget > budget),
+                  overCats.length
+                    ? h(
+                        'span',
+                        { class: 'mn-chip mn-chip--bad over-note' },
+                        `Überschritten: ${overCats.map((c) => c.name).join(', ')}`,
+                      )
+                    : null,
+                ),
+              ),
+            ]
+          : null,
+        top.length
+          ? [
+              sect('Ausgaben nach Kategorie'),
+              h(
+                'div',
+                { class: 'mn-list' },
+                top.map(([cat, cents]) =>
+                  barRow(
+                    catName(cat),
+                    `${euro(cents)}, ${Math.round((cents / expense) * 100)} %`,
+                    meter(cents, top[0][1]),
+                  ),
+                ),
+              ),
+            ]
+          : null,
       ),
       h(
         'div',
-        { class: 'chart', role: 'img', 'aria-label': `Einnahmen und Ausgaben je Monat ${year}` },
-        months.map((x) => {
-          const col = (v, cls) => {
-            const bar = h('i', { class: cls });
-            bar.style.height = `${(v / maxBar) * 100}%`;
-            return bar;
-          };
-          return h(
+        {},
+        sect(`Jahr ${year}`),
+        chart,
+        sect(
+          'Steuerlich relevant',
+          h(
             'button',
             {
-              class: `col${x.ym === S.month ? ' sel' : ''}`,
-              'aria-label': `${monthName(x.ym)}: Einnahmen ${euro(x.income)}, Ausgaben ${euro(x.expense)}`,
+              class: 'mn-link',
               onclick: () => {
-                S.month = x.ym;
-                render();
+                S.year = Number(year);
+                go('tax');
               },
             },
-            h('span', { class: 'pair' }, col(x.income, 'in'), col(x.expense, 'out')),
-            h('small', {}, shortMonth(x.m)),
-          );
-        }),
-      ),
-      h(
-        'p',
-        { class: 'line small' },
-        h('span', {}, `Einnahmen ${euro(months.reduce((s, x) => s + x.income, 0))}`),
-        h('span', {}, `Ausgaben ${euro(months.reduce((s, x) => s + x.expense, 0))}`),
-      ),
-    ),
-    h(
-      'section',
-      { class: 'card' },
-      h(
-        'div',
-        { class: 'card-head' },
-        h('h3', {}, 'Steuerlich relevant'),
-        h(
-          'button',
-          {
-            class: 'link',
-            onclick: () => {
-              S.year = Number(year);
-              go('tax');
-            },
-          },
-          'Zur Steuer',
+            'Zur Steuer',
+          ),
         ),
-      ),
-      h(
-        'p',
-        {},
-        taxYear.length
-          ? `${taxYear.length} ${taxYear.length === 1 ? 'Buchung' : 'Buchungen'} mit ${euro(taxSum)} fließen ${year} automatisch in die Steuererklärung.`
-          : `Noch keine steuerlich relevanten Buchungen in ${year}. Kategorien wie Handwerker, Spenden oder Arbeitsmittel werden automatisch übernommen.`,
+        h(
+          'div',
+          { class: 'mn-card' },
+          taxYear.length
+            ? [
+                h('span', { class: 'mn-big' }, euro(taxSum)),
+                h(
+                  'p',
+                  { class: 'mn-note' },
+                  `${taxYear.length} ${taxYear.length === 1 ? 'Buchung fließt' : 'Buchungen fließen'} ${year} automatisch in die Steuererklärung.`,
+                ),
+              ]
+            : h(
+                'p',
+                { class: 'mn-note' },
+                `Noch keine steuerlich relevanten Buchungen in ${year}. Kategorien wie Handwerker, Spenden oder Arbeitsmittel werden automatisch übernommen.`,
+              ),
+        ),
       ),
     ),
   ];
@@ -448,32 +474,41 @@ function viewOverview() {
 function bookingRow([key, b]) {
   const field = taxFieldOf(b);
   return h(
-    'li',
-    {},
+    'button',
+    { type: 'button', class: 'mn-row mn-row--text', onclick: () => editBooking(key) },
     h(
-      'button',
-      { class: 'tx', onclick: () => editBooking(key) },
+      'span',
+      { class: 'tx-main' },
+      h('span', { class: 'mn-row-title' }, b.text || b.party || KINDS[b.kind]),
       h(
         'span',
-        { class: 'tx-main' },
-        h('b', {}, b.text || b.party || KINDS[b.kind]),
-        h(
-          'small',
-          {},
-          [catName(b.cat), b.text && b.party ? b.party : ''].filter(Boolean).join(' · '),
-        ),
+        { class: 'mn-row-sub' },
+        [catName(b.cat), b.text && b.party ? b.party : ''].filter(Boolean).join(' · '),
       ),
+      field || b.receipt
+        ? h(
+            'span',
+            { class: 'tx-tags' },
+            field ? h('span', { class: 'mn-chip' }, `Steuer: ${FIELDS[field].label}`) : null,
+            b.receipt
+              ? h('span', { class: 'mn-chip mn-chip--plain' }, icon('clip'), 'Beleg')
+              : null,
+          )
+        : null,
+    ),
+    h(
+      'span',
+      { class: 'mn-row-side' },
       h(
-        'span',
-        { class: 'tx-side' },
-        h(
-          'b',
-          { class: b.kind === 'income' ? 'pos' : b.kind === 'transfer' ? 'muted' : '' },
-          signed(b),
-        ),
-        field ? h('small', { class: 'tag' }, `Steuer: ${FIELDS[field].label}`) : null,
-        b.receipt ? h('small', { class: 'muted' }, 'Beleg') : null,
+        'b',
+        { class: b.kind === 'income' ? 'pos' : b.kind === 'transfer' ? 'mn-muted' : '' },
+        signed(b),
       ),
+      !b.cat
+        ? h('span', { class: 'neg' }, 'ohne Kategorie')
+        : b.kind === 'expense'
+          ? null
+          : KINDS[b.kind],
     ),
   );
 }
@@ -488,11 +523,12 @@ function filteredMonth() {
 function bookingList() {
   const rows = filteredMonth();
   if (!rows.length)
-    return h(
-      'p',
-      { class: 'muted' },
-      S.q || S.cat ? 'Keine Buchung passt zum Filter.' : 'Keine Buchungen in diesem Monat.',
-    );
+    return S.q || S.cat
+      ? h('p', { class: 'mn-note' }, 'Keine Buchung passt zum Filter.')
+      : empty(
+          'Keine Buchungen in diesem Monat',
+          'Trage eine Buchung ein oder importiere den Kontoauszug deiner Bank.',
+        );
   const days = new Map();
   for (const row of rows) {
     if (!days.has(row[1].date)) days.set(row[1].date, []);
@@ -506,7 +542,7 @@ function bookingList() {
         'section',
         { class: 'day' },
         h('h3', {}, dayLabel(day)),
-        h('ul', { class: 'txs' }, list.map(bookingRow)),
+        h('div', { class: 'mn-list' }, list.map(bookingRow)),
       ),
     ),
   );
@@ -516,38 +552,31 @@ function viewBookings() {
   const listHost = h('div', { id: 'txlist' }, bookingList());
   const refresh = () => listHost.replaceChildren(bookingList());
   return [
-    monthNav(changeMonth),
-    h(
-      'div',
-      { class: 'toolbar' },
-      h(
-        'button',
-        { class: 'btn primary', onclick: () => editBooking(null) },
-        icon('plus'),
-        'Buchung',
-      ),
-      h('button', { class: 'btn', onclick: () => openImport() }, 'Kontoauszug importieren'),
-    ),
     h(
       'div',
       { class: 'filters' },
-      h('label', { class: 'sr-only', for: 'q' }, 'Buchungen durchsuchen'),
-      h('input', {
-        id: 'q',
-        type: 'search',
-        placeholder: 'Suchen',
-        value: S.q,
-        autocomplete: 'off',
-        oninput: (e) => {
-          S.q = e.target.value;
-          refresh();
-        },
-      }),
-      h('label', { class: 'sr-only', for: 'catfilter' }, 'Nach Kategorie filtern'),
+      h(
+        'div',
+        { class: 'mn-search' },
+        icon('search'),
+        h('input', {
+          id: 'q',
+          type: 'search',
+          placeholder: 'Beschreibung, Empfänger oder Kategorie',
+          'aria-label': 'Buchungen durchsuchen',
+          value: S.q,
+          autocomplete: 'off',
+          oninput: (e) => {
+            S.q = e.target.value;
+            refresh();
+          },
+        }),
+      ),
       h(
         'select',
         {
           id: 'catfilter',
+          'aria-label': 'Nach Kategorie filtern',
           value: S.cat,
           onchange: (e) => {
             S.cat = e.target.value;
@@ -558,16 +587,26 @@ function viewBookings() {
         h('option', { value: '-' }, 'Ohne Kategorie'),
         cats().map((c) => h('option', { value: c.id }, c.name)),
       ),
+      h(
+        'button',
+        { class: 'mn-btn', onclick: () => openImport() },
+        icon('upload'),
+        'Kontoauszug importieren',
+      ),
     ),
-    uncategorised
+    uncategorised && S.cat !== '-'
       ? h(
-          'p',
-          { class: 'note' },
-          `${uncategorised} ${uncategorised === 1 ? 'Buchung ist' : 'Buchungen sind'} noch ohne Kategorie.`,
+          'div',
+          { class: 'mn-banner mn-banner--warn', role: 'note' },
+          h(
+            'span',
+            {},
+            `${uncategorised} ${uncategorised === 1 ? 'Buchung ist' : 'Buchungen sind'} noch ohne Kategorie.`,
+          ),
           h(
             'button',
             {
-              class: 'link',
+              class: 'mn-link',
               onclick: () => {
                 S.cat = '-';
                 render();
@@ -589,17 +628,70 @@ function viewBudget() {
   const total = expenseCats.reduce((s, c) => s + c.budget, 0);
   const totalSpent = expenseCats.filter((c) => c.budget).reduce((s, c) => s + spent(c.id), 0);
   const rest = sum(list, 'expense') - totalSpent;
+  const row = (c) => {
+    const s = spent(c.id);
+    const over = c.budget > 0 && s > c.budget;
+    const id = `budget-${c.id}`;
+    return h(
+      'div',
+      { class: 'mn-bar budget-row' },
+      h(
+        'span',
+        { class: 'mn-bar-top' },
+        h('label', { for: id }, c.name),
+        h(
+          'span',
+          { class: 'budget-input' },
+          h('input', {
+            id,
+            inputmode: 'decimal',
+            autocomplete: 'off',
+            placeholder: 'kein Budget',
+            value: c.budget ? plain(c.budget) : '',
+            onchange: async (e) => {
+              const v = e.target.value.trim() ? parseAmount(e.target.value) : 0;
+              if (v === null || v < 0) {
+                toast('Gib einen Betrag wie 250 oder 99,90 ein.');
+                return;
+              }
+              c.budget = v;
+              try {
+                await saveSettings();
+                render();
+              } catch {
+                toast('Speichern fehlgeschlagen.');
+              }
+            },
+          }),
+          h('span', { 'aria-hidden': 'true' }, '€'),
+        ),
+      ),
+      c.budget
+        ? [
+            meter(s, c.budget, over),
+            h(
+              'span',
+              { class: 'mn-bar-top budget-state' },
+              h('span', {}, `${euro(s)} ausgegeben`),
+              h(
+                'span',
+                { class: over ? 'neg' : '' },
+                over ? `${euro(s - c.budget)} drüber` : `${euro(c.budget - s)} übrig`,
+              ),
+            ),
+          ]
+        : s
+          ? h('span', { class: 'mn-note budget-state' }, `${euro(s)} ausgegeben, kein Budget`)
+          : null,
+    );
+  };
+  const withBudget = expenseCats.filter((c) => c.budget > 0);
+  const without = expenseCats.filter((c) => !c.budget);
   return [
-    monthNav(changeMonth),
-    h(
-      'p',
-      { class: 'muted' },
-      'Monatsbudget je Kategorie. Leer lassen, wenn es für eine Kategorie kein Budget gibt. Änderungen gelten für alle Monate.',
-    ),
     total
       ? h(
           'div',
-          { class: 'kpis three' },
+          { class: 'mn-kpis' },
           kpi('Budget', euro(total)),
           kpi('Ausgegeben', euro(totalSpent), totalSpent > total ? 'neg' : ''),
           kpi(
@@ -610,67 +702,29 @@ function viewBudget() {
         )
       : null,
     h(
-      'ul',
-      { class: 'budgets card' },
-      expenseCats.map((c) => {
-        const s = spent(c.id);
-        const over = c.budget > 0 && s > c.budget;
-        const id = `budget-${c.id}`;
-        return h(
-          'li',
-          {},
-          h(
-            'div',
-            { class: 'line' },
-            h('label', { for: id }, c.name),
-            h(
-              'span',
-              { class: 'budget-input' },
-              h('input', {
-                id,
-                inputmode: 'decimal',
-                autocomplete: 'off',
-                placeholder: 'kein Budget',
-                value: c.budget ? plain(c.budget) : '',
-                onchange: async (e) => {
-                  const v = e.target.value.trim() ? parseAmount(e.target.value) : 0;
-                  if (v === null || v < 0) {
-                    toast('Gib einen Betrag wie 250 oder 99,90 ein.');
-                    return;
-                  }
-                  c.budget = v;
-                  try {
-                    await saveSettings();
-                    render();
-                  } catch {
-                    toast('Speichern fehlgeschlagen.');
-                  }
-                },
-              }),
-              h('span', { 'aria-hidden': 'true' }, '€'),
-            ),
-          ),
-          c.budget
-            ? [
-                h(
-                  'p',
-                  { class: 'line small' },
-                  h('span', {}, `${euro(s)} ausgegeben`),
-                  h(
-                    'span',
-                    { class: over ? 'neg' : 'muted' },
-                    over ? `${euro(s - c.budget)} drüber` : `${euro(c.budget - s)} übrig`,
-                  ),
-                ),
-                meter(s, c.budget, over),
-              ]
-            : s
-              ? h('p', { class: 'small muted' }, `${euro(s)} ausgegeben`)
-              : null,
-        );
-      }),
+      'div',
+      { class: 'mn-cols' },
+      h(
+        'div',
+        {},
+        sect('Mit Budget', h('small', {}, String(withBudget.length))),
+        withBudget.length
+          ? h('div', { class: 'mn-list' }, withBudget.map(row))
+          : h('p', { class: 'mn-note' }, 'Trag rechts bei einer Kategorie einen Monatsbetrag ein.'),
+        rest > 0 ? h('p', { class: 'mn-note' }, `${euro(rest)} in Kategorien ohne Budget.`) : null,
+      ),
+      h(
+        'div',
+        {},
+        sect('Ohne Budget', h('small', {}, String(without.length))),
+        h('div', { class: 'mn-list' }, without.map(row)),
+        h(
+          'p',
+          { class: 'mn-note' },
+          'Das Budget gilt für jeden Monat. Leer lassen, wenn es für eine Kategorie keins gibt.',
+        ),
+      ),
     ),
-    rest > 0 ? h('p', { class: 'muted' }, `${euro(rest)} in Kategorien ohne Budget.`) : null,
   ];
 }
 
@@ -680,7 +734,7 @@ function profileForm(year) {
   const field = (key, label, hint, opts = {}) =>
     h(
       'label',
-      { class: 'f' },
+      { class: 'mn-field' },
       label,
       h('input', {
         name: key,
@@ -689,12 +743,12 @@ function profileForm(year) {
         value: opts.money ? (p[key] ? plain(p[key]) : '') : p[key] ? String(p[key]) : '',
         placeholder: opts.placeholder ?? '0',
       }),
-      hint ? h('small', {}, hint) : null,
+      hint ? h('small', { class: 'hint' }, hint) : null,
     );
   const form = h(
     'form',
     {
-      class: 'profile',
+      class: 'profile mn-form',
       onchange: async () => {
         const fd = new FormData(form);
         const num = (k) => Math.max(0, Number(String(fd.get(k) || '0').replace(',', '.')) || 0);
@@ -719,7 +773,7 @@ function profileForm(year) {
     },
     h(
       'div',
-      { class: 'grid2' },
+      { class: 'profile-fields' },
       field('commuteKm', 'Entfernung zur Arbeit (km, einfach)'),
       field('commuteDays', 'Tage im Büro'),
       field('homeofficeDays', 'Tage im Homeoffice', 'Tage ohne Weg zur Arbeit'),
@@ -730,22 +784,31 @@ function profileForm(year) {
       }),
     ),
     h(
-      'label',
-      { class: 'check' },
-      h('input', { type: 'checkbox', name: 'employee', checked: p.employee }),
-      'Ich bin Arbeitnehmer:in (Anlage N)',
-    ),
-    h(
-      'label',
-      { class: 'check' },
-      h('input', { type: 'checkbox', name: 'car', checked: p.car }),
-      'Mit dem eigenen Auto zur Arbeit (keine Obergrenze von 4.500 €)',
-    ),
-    h(
-      'label',
-      { class: 'check' },
-      h('input', { type: 'checkbox', name: 'married', checked: p.married }),
-      'Zusammenveranlagung (verheiratet)',
+      'div',
+      { class: 'mn-checks' },
+      h(
+        'label',
+        {},
+        h('input', { type: 'checkbox', name: 'employee', checked: p.employee }),
+        'Ich bin Arbeitnehmer:in (Anlage N)',
+      ),
+      h(
+        'label',
+        {},
+        h('input', { type: 'checkbox', name: 'car', checked: p.car }),
+        h(
+          'span',
+          {},
+          'Mit dem eigenen Auto zur Arbeit',
+          h('small', {}, 'Keine Obergrenze von 4.500 €'),
+        ),
+      ),
+      h(
+        'label',
+        {},
+        h('input', { type: 'checkbox', name: 'married', checked: p.married }),
+        'Zusammenveranlagung (verheiratet)',
+      ),
     ),
   );
   form.addEventListener('submit', (e) => e.preventDefault());
@@ -775,7 +838,7 @@ function formsView(year) {
     const rows = f.rows.filter((r) => r.cents > 0);
     return h(
       'section',
-      { class: 'form-sheet', 'aria-labelledby': `form-${f.id}` },
+      { class: 'form-sheet mn-card', 'aria-labelledby': `form-${f.id}` },
       h('header', {}, h('h3', { id: `form-${f.id}` }, f.title), h('p', {}, f.sub)),
       rows.length
         ? h(
@@ -848,7 +911,7 @@ function formsView(year) {
                     h(
                       'button',
                       {
-                        class: 'btn small no-print',
+                        class: 'mn-btn mn-btn--small no-print',
                         'aria-label': `${r.label}: ${plain(r.cents)} kopieren`,
                         onclick: () => copy(plain(r.cents)),
                       },
@@ -869,7 +932,7 @@ function formsView(year) {
               ),
             ),
           )
-        : h('p', { class: 'muted' }, 'Keine Einträge.'),
+        : h('p', { class: 'mn-note' }, 'Keine Einträge.'),
       f.summary ? h('p', { class: 'summary' }, f.summary) : null,
     );
   });
@@ -903,37 +966,43 @@ function viewTax() {
   return [
     h(
       'div',
-      { class: 'period' },
+      { class: 'mn-split mn-split--start' },
       h(
-        'button',
-        { class: 'icon', 'aria-label': 'Vorheriges Jahr', onclick: () => changeYear(-1) },
-        icon('left'),
+        'div',
+        { class: 'no-print tax-side' },
+        h(
+          'div',
+          { class: 'mn-card' },
+          h('h3', {}, `Angaben für ${year}`),
+          h(
+            'p',
+            { class: 'mn-note' },
+            'Fließen in Pauschalen und Grenzen ein. Änderungen gelten sofort.',
+          ),
+          profileForm(year),
+        ),
+        h(
+          'div',
+          { class: 'tax-actions' },
+          h(
+            'button',
+            { class: 'mn-btn', onclick: () => window.print() },
+            'Drucken oder als PDF sichern',
+          ),
+          h(
+            'button',
+            { class: 'mn-btn', onclick: () => exportTaxCsv(year) },
+            'Als CSV exportieren',
+          ),
+        ),
+        h(
+          'p',
+          { class: 'mn-note' },
+          'Buchungen mit steuerlicher Zuordnung landen automatisch im passenden Formular. Die Zuordnung kommt von der Kategorie und lässt sich pro Buchung ändern. Übertrage die Beträge in ELSTER; die App reicht nichts ein und ersetzt keine Steuerberatung.',
+        ),
       ),
-      h('h2', {}, `Steuererklärung ${year}`),
-      h(
-        'button',
-        { class: 'icon', 'aria-label': 'Nächstes Jahr', onclick: () => changeYear(1) },
-        icon('right'),
-      ),
+      h('div', { id: 'forms', class: 'forms' }, formsView(year)),
     ),
-    h(
-      'p',
-      { class: 'muted' },
-      'Buchungen mit steuerlicher Zuordnung landen automatisch im passenden Formular. Die Zuordnung kommt von der Kategorie und lässt sich pro Buchung ändern. Übertrage die Beträge in ELSTER, die App reicht nichts ein und ersetzt keine Steuerberatung.',
-    ),
-    h(
-      'section',
-      { class: 'card no-print' },
-      h('div', { class: 'card-head' }, h('h3', {}, `Angaben für ${year}`)),
-      profileForm(year),
-    ),
-    h(
-      'div',
-      { class: 'toolbar no-print' },
-      h('button', { class: 'btn', onclick: () => window.print() }, 'Drucken oder als PDF sichern'),
-      h('button', { class: 'btn', onclick: () => exportTaxCsv(year) }, 'Als CSV exportieren'),
-    ),
-    h('div', { id: 'forms' }, formsView(year)),
   ];
 }
 async function changeYear(n) {
@@ -977,153 +1046,129 @@ function catSelect(name, value, kind) {
 }
 function viewSettings() {
   const recs = [...S.recs.values()].sort((a, b) => a.text.localeCompare(b.text, 'de'));
+  const row = (title, sub, onclick) =>
+    h(
+      'button',
+      { type: 'button', class: 'mn-row mn-row--text', onclick },
+      h(
+        'span',
+        {},
+        h('span', { class: 'mn-row-title' }, title),
+        sub ? h('span', { class: 'mn-row-sub' }, sub) : null,
+      ),
+      h('span', { class: 'mn-row-side' }, icon('right')),
+    );
+  const add = (onclick) => h('button', { class: 'mn-link', onclick }, 'Hinzufügen');
   return [
     h(
-      'section',
-      { class: 'card' },
+      'div',
+      { class: 'mn-cols' },
       h(
         'div',
-        { class: 'card-head' },
-        h('h3', {}, 'Kategorien'),
-        h('button', { class: 'link', onclick: () => editCategory(null) }, 'Hinzufügen'),
-      ),
-      h(
-        'ul',
-        { class: 'plain' },
+        {},
+        sect(
+          'Kategorien',
+          add(() => editCategory(null)),
+        ),
         Object.keys(KINDS).map((kind) => [
           h(
-            'li',
-            { class: 'group' },
-            KINDS[kind] === 'Umbuchung'
-              ? 'Umbuchungen (zählen nicht als Ausgabe)'
-              : `${KINDS[kind]}n`,
+            'h3',
+            { class: 'group-head' },
+            kind === 'transfer' ? 'Umbuchungen (zählen nicht als Ausgabe)' : `${KINDS[kind]}n`,
           ),
-          cats()
-            .filter((c) => c.kind === kind)
-            .map((c) =>
-              h(
-                'li',
-                {},
-                h(
-                  'button',
-                  { class: 'rowbtn', onclick: () => editCategory(c.id) },
-                  h('span', {}, c.name),
-                  h(
-                    'small',
-                    {},
-                    [c.budget ? `${euro(c.budget)} / Monat` : '', c.tax ? FIELDS[c.tax].label : '']
-                      .filter(Boolean)
-                      .join(' · '),
-                  ),
+          h(
+            'div',
+            { class: 'mn-list' },
+            cats()
+              .filter((c) => c.kind === kind)
+              .map((c) =>
+                row(
+                  c.name,
+                  [c.budget ? `${euro(c.budget)} / Monat` : '', c.tax ? FIELDS[c.tax].label : '']
+                    .filter(Boolean)
+                    .join(' · '),
+                  () => editCategory(c.id),
                 ),
               ),
-            ),
+          ),
         ]),
       ),
-    ),
-    h(
-      'section',
-      { class: 'card' },
       h(
         'div',
-        { class: 'card-head' },
-        h('h3', {}, 'Daueraufträge'),
-        h('button', { class: 'link', onclick: () => editRecurring(null) }, 'Hinzufügen'),
-      ),
-      recs.length
-        ? h(
-            'ul',
-            { class: 'plain' },
-            recs.map((r) =>
-              h(
-                'li',
-                {},
-                h(
-                  'button',
-                  { class: 'rowbtn', onclick: () => editRecurring(r.id) },
-                  h('span', {}, r.text || catName(r.cat)),
-                  h(
-                    'small',
-                    {},
-                    `${r.kind === 'income' ? '+' : '−'}${euro(r.cents)} ${{ 1: 'monatlich', 3: 'vierteljährlich', 6: 'halbjährlich', 12: 'jährlich' }[r.every]} am ${r.day}.${r.end ? `, bis ${monthName(r.end)}` : ''}`,
-                  ),
+        {},
+        sect(
+          'Daueraufträge',
+          add(() => editRecurring(null)),
+        ),
+        recs.length
+          ? h(
+              'div',
+              { class: 'mn-list' },
+              recs.map((r) =>
+                row(
+                  r.text || catName(r.cat),
+                  `${r.kind === 'income' ? '+' : '−'}${euro(r.cents)} ${{ 1: 'monatlich', 3: 'vierteljährlich', 6: 'halbjährlich', 12: 'jährlich' }[r.every]} am ${r.day}.${r.end ? `, bis ${monthName(r.end)}` : ''}`,
+                  () => editRecurring(r.id),
                 ),
               ),
+            )
+          : h(
+              'p',
+              { class: 'mn-note' },
+              'Miete, Versicherungen oder Gehalt werden jeden Monat automatisch gebucht.',
             ),
-          )
-        : h(
-            'p',
-            { class: 'muted' },
-            'Miete, Versicherungen oder Gehalt werden jeden Monat automatisch gebucht.',
-          ),
-    ),
-    h(
-      'section',
-      { class: 'card' },
-      h(
-        'div',
-        { class: 'card-head' },
-        h('h3', {}, 'Regeln für den Import'),
-        h('button', { class: 'link', onclick: () => editRule(null) }, 'Hinzufügen'),
-      ),
-      h(
-        'p',
-        { class: 'muted small' },
-        'Enthält der Empfänger oder Verwendungszweck eines der Wörter, bekommt die Buchung die Kategorie. Mehrere Wörter mit | trennen.',
-      ),
-      h(
-        'ul',
-        { class: 'plain' },
-        S.settings.rules.map((r, i) =>
-          h(
-            'li',
-            {},
-            h(
-              'button',
-              { class: 'rowbtn', onclick: () => editRule(i) },
-              h('span', {}, r.match),
-              h('small', {}, `→ ${catName(r.cat)}`),
-            ),
-          ),
+        sect(
+          'Regeln für den Import',
+          add(() => editRule(null)),
         ),
-      ),
-      h(
-        'button',
-        { class: 'btn', onclick: applyRules },
-        'Regeln auf Buchungen ohne Kategorie anwenden',
-      ),
-    ),
-    h(
-      'section',
-      { class: 'card' },
-      h('div', { class: 'card-head' }, h('h3', {}, 'Daten')),
-      h(
-        'p',
-        { class: 'muted small' },
-        'Die Sicherung enthält alle Buchungen, Kategorien, Regeln, Daueraufträge und Steuerangaben, aber keine Belege.',
-      ),
-      h(
-        'div',
-        { class: 'toolbar' },
-        h('button', { class: 'btn', onclick: exportBackup }, 'Sicherung exportieren'),
         h(
-          'label',
-          { class: 'btn filebtn' },
-          'Sicherung importieren',
-          h('input', {
-            type: 'file',
-            accept: '.json,application/json',
-            onchange: (e) => {
-              const f = e.target.files[0];
-              e.target.value = '';
-              if (f) importBackup(f);
-            },
-          }),
+          'p',
+          { class: 'mn-note rules-note' },
+          'Enthält der Empfänger oder Verwendungszweck eines der Wörter, bekommt die Buchung die Kategorie. Mehrere Wörter mit | trennen.',
+        ),
+        h(
+          'div',
+          { class: 'mn-list' },
+          S.settings.rules.map((r, i) => row(r.match, `→ ${catName(r.cat)}`, () => editRule(i))),
         ),
         h(
           'button',
-          { class: 'btn', onclick: exportYearCsv },
-          `Buchungen ${S.month.slice(0, 4)} als CSV`,
+          { class: 'mn-btn apply-rules', onclick: applyRules },
+          'Regeln auf Buchungen ohne Kategorie anwenden',
+        ),
+        sect('Daten'),
+        h(
+          'div',
+          { class: 'mn-card' },
+          h(
+            'p',
+            { class: 'mn-note data-note' },
+            'Die Sicherung enthält alle Buchungen, Kategorien, Regeln, Daueraufträge und Steuerangaben, aber keine Belege.',
+          ),
+          h(
+            'div',
+            { class: 'data-actions' },
+            h('button', { class: 'mn-btn', onclick: exportBackup }, 'Sicherung exportieren'),
+            h(
+              'label',
+              { class: 'mn-btn filebtn' },
+              'Sicherung importieren',
+              h('input', {
+                type: 'file',
+                accept: '.json,application/json',
+                onchange: (e) => {
+                  const f = e.target.files[0];
+                  e.target.value = '';
+                  if (f) importBackup(f);
+                },
+              }),
+            ),
+            h(
+              'button',
+              { class: 'mn-btn', onclick: exportYearCsv },
+              `Buchungen ${S.month.slice(0, 4)} als CSV`,
+            ),
+          ),
         ),
       ),
     ),
@@ -1151,44 +1196,65 @@ async function applyRules() {
   render();
 }
 
-// ---------- dialogs ----------
-const dlg = () => $('#dlg');
-function openDialog(title, body, actions) {
-  const d = dlg();
+// ---------- dialogs (App Kit sheets: focus trap, Escape, inert page) ----------
+let sheetOpen = false;
+/** Opens a sheet with a bar (Abbrechen, title), the form and a footer with the actions. */
+function openDialog(title, body, actions, onClose) {
   const form = h(
     'form',
-    { method: 'dialog', class: 'dlg-form' },
-    h('header', {}, h('h2', { id: 'dlg-title' }, title)),
-    h('div', { class: 'dlg-body' }, body),
-    h('p', { class: 'error', role: 'alert', hidden: true }),
-    h('footer', {}, actions),
+    { class: 'mn-form mn-sheet-body', novalidate: true },
+    body,
+    h('p', { class: 'mn-error', role: 'alert', hidden: true }),
   );
-  form.addEventListener('submit', (e) => e.preventDefault());
-  d.setAttribute('aria-labelledby', 'dlg-title');
-  d.replaceChildren(form);
+  const foot = h('div', { class: 'mn-sheet-foot' }, actions);
+  // Enter in a field triggers the primary action instead of reloading the page.
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    foot.querySelector('.mn-btn--primary:not([disabled])')?.click();
+  });
+  const content = document.createDocumentFragment();
+  content.append(
+    h(
+      'div',
+      { class: 'mn-sheet-bar' },
+      h(
+        'button',
+        { type: 'button', class: 'mn-btn mn-btn--ghost', 'data-mn-close': true },
+        'Abbrechen',
+      ),
+      h('h2', {}, title),
+      h('span', {}),
+    ),
+    form,
+    foot,
+  );
   nameSelects(form);
   new MutationObserver(() => nameSelects(form)).observe(form, { childList: true, subtree: true });
-  if (!d.open) d.showModal();
-  d.querySelector('input:not([type=hidden]),select,textarea')?.focus();
+  sheetOpen = true;
+  window.mnui.sheet.open(content, {
+    tall: true,
+    onClose: () => {
+      sheetOpen = false;
+      onClose?.();
+    },
+  });
+  form.querySelector('input:not([type=hidden]):not([type=radio]),select,textarea')?.focus();
   return form;
 }
 /** A select wrapped in its label gets the selected option text in its accessible name; name it
  * after the label text only. */
 function nameSelects(root) {
-  for (const select of root.querySelectorAll('label.f > select')) {
+  for (const select of root.querySelectorAll('label.mn-field > select')) {
     const text = select.parentElement.firstChild;
     if (text?.nodeType === Node.TEXT_NODE)
       select.setAttribute('aria-label', text.textContent.trim());
   }
 }
 function closeDialog() {
-  if (!dlg().open) return;
-  dlg().close();
-  // The close event fires later; clear now so no stale form lingers in the page meanwhile.
-  dlg().replaceChildren();
+  window.mnui.sheet.close();
 }
 function formError(form, message) {
-  const p = form.querySelector('.error');
+  const p = form.querySelector('.mn-error');
   p.textContent = message;
   p.hidden = false;
 }
@@ -1218,17 +1284,17 @@ function editBooking(key) {
       receipt
         ? h(
             'span',
-            { class: 'line' },
+            { class: 'receipt-actions' },
             h(
               'button',
-              { type: 'button', class: 'link', onclick: () => openReceipt(receipt) },
+              { type: 'button', class: 'mn-link', onclick: () => openReceipt(receipt) },
               'Beleg öffnen',
             ),
             h(
               'button',
               {
                 type: 'button',
-                class: 'link danger',
+                class: 'mn-link danger',
                 onclick: () => {
                   receipt = undefined;
                   drawReceipt();
@@ -1239,7 +1305,7 @@ function editBooking(key) {
           )
         : h(
             'label',
-            { class: 'btn filebtn' },
+            { class: 'mn-btn filebtn' },
             icon('clip'),
             'Beleg anhängen',
             h('input', {
@@ -1273,7 +1339,7 @@ function editBooking(key) {
   drawReceipt();
   const kindSeg = h(
     'div',
-    { class: 'seg', role: 'radiogroup', 'aria-label': 'Art' },
+    { class: 'mn-seg kind-seg', role: 'radiogroup', 'aria-label': 'Art' },
     Object.entries(KINDS).map(([k, label]) =>
       h(
         'label',
@@ -1283,7 +1349,7 @@ function editBooking(key) {
       ),
     ),
   );
-  const catHost = h('label', { class: 'f' }, 'Kategorie', catSelect('cat', b.cat, b.kind));
+  const catHost = h('label', { class: 'mn-field' }, 'Kategorie', catSelect('cat', b.cat, b.kind));
   kindSeg.addEventListener('change', () => {
     const kind = val(form, 'kind');
     catHost.replaceChildren(
@@ -1297,7 +1363,7 @@ function editBooking(key) {
   };
   const taxHost = h(
     'label',
-    { class: 'f' },
+    { class: 'mn-field' },
     'Steuererklärung',
     taxSelect('taxField', b.taxField ?? '', inherit(b.cat)),
   );
@@ -1315,10 +1381,10 @@ function editBooking(key) {
     kindSeg,
     h(
       'div',
-      { class: 'grid2' },
+      { class: 'mn-grid-2' },
       h(
         'label',
-        { class: 'f' },
+        { class: 'mn-field' },
         'Betrag in €',
         h('input', {
           name: 'amount',
@@ -1331,14 +1397,14 @@ function editBooking(key) {
       ),
       h(
         'label',
-        { class: 'f' },
+        { class: 'mn-field' },
         'Datum',
         h('input', { name: 'date', type: 'date', required: true, value: b.date }),
       ),
     ),
     h(
       'label',
-      { class: 'f' },
+      { class: 'mn-field' },
       'Beschreibung',
       h('input', {
         name: 'text',
@@ -1349,7 +1415,7 @@ function editBooking(key) {
     ),
     h(
       'label',
-      { class: 'f' },
+      { class: 'mn-field' },
       'Empfänger oder Auftraggeber',
       h('input', { name: 'party', maxlength: 120, value: b.party }),
     ),
@@ -1357,7 +1423,7 @@ function editBooking(key) {
     taxHost,
     h(
       'label',
-      { class: 'f' },
+      { class: 'mn-field' },
       'Davon steuerlich absetzbar in €',
       h('input', {
         name: 'taxAmount',
@@ -1370,78 +1436,84 @@ function editBooking(key) {
     ),
     receiptHost,
   ];
-  const form = openDialog(old ? 'Buchung bearbeiten' : 'Neue Buchung', body, [
-    old
-      ? h(
-          'button',
-          {
-            type: 'button',
-            class: 'btn danger',
-            onclick: async () => {
-              try {
-                await deleteBooking(key);
-                closeDialog();
-                toast('Buchung gelöscht');
-                render();
-              } catch {
-                formError(form, 'Löschen fehlgeschlagen.');
-              }
-            },
-          },
-          'Löschen',
-        )
-      : null,
-    h('span', { class: 'spacer' }),
-    h('button', { type: 'button', class: 'btn', onclick: closeDialog }, 'Abbrechen'),
-    h(
-      'button',
-      {
-        type: 'submit',
-        class: 'btn primary',
-        onclick: async (e) => {
-          e.preventDefault();
-          const cents = parseAmount(val(form, 'amount'));
-          if (cents === null || cents <= 0)
-            return formError(form, 'Gib einen Betrag größer als 0 ein, z. B. 12,50.');
-          const date = val(form, 'date');
-          if (!isDay(date)) return formError(form, 'Gib ein Datum an.');
-          const taxRaw = val(form, 'taxAmount');
-          const taxCents = taxRaw ? parseAmount(taxRaw) : undefined;
-          if (taxRaw && (taxCents === null || taxCents < 0 || taxCents > cents))
-            return formError(form, 'Der absetzbare Anteil muss zwischen 0 und dem Betrag liegen.');
-          const next = cleanBooking(
+  const form = openDialog(
+    old ? 'Buchung bearbeiten' : 'Neue Buchung',
+    body,
+    [
+      old
+        ? h(
+            'button',
             {
-              ...b,
-              cents: Math.abs(cents),
-              date,
-              kind: val(form, 'kind'),
-              text: val(form, 'text'),
-              party: val(form, 'party'),
-              cat: val(form, 'cat'),
-              taxField: val(form, 'taxField') || undefined,
-              taxCents,
-              receipt,
+              type: 'button',
+              class: 'mn-btn mn-btn--danger',
+              onclick: async () => {
+                try {
+                  await deleteBooking(key);
+                  closeDialog();
+                  toast('Buchung gelöscht');
+                  render();
+                } catch {
+                  formError(form, 'Löschen fehlgeschlagen.');
+                }
+              },
             },
-            FIELDS,
-          );
-          try {
-            await ensureYear(Number(date.slice(0, 4)));
-            await saveBooking(next, key);
-            uploaded.delete(receipt);
-            if (old?.receipt && old.receipt !== receipt)
-              ready.then((mn) => mn.files.remove(old.receipt)).catch(() => {});
-            closeDialog();
-            toast(old ? 'Gespeichert' : 'Buchung hinzugefügt');
-            render();
-          } catch {
-            formError(form, 'Speichern fehlgeschlagen. Prüfe deine Verbindung.');
-          }
+            'Löschen',
+          )
+        : null,
+      h('span', { class: 'mn-grow' }),
+      h(
+        'button',
+        {
+          type: 'submit',
+          class: 'mn-btn mn-btn--primary',
+          onclick: async (e) => {
+            e.preventDefault();
+            const cents = parseAmount(val(form, 'amount'));
+            if (cents === null || cents <= 0)
+              return formError(form, 'Gib einen Betrag größer als 0 ein, z. B. 12,50.');
+            const date = val(form, 'date');
+            if (!isDay(date)) return formError(form, 'Gib ein Datum an.');
+            const taxRaw = val(form, 'taxAmount');
+            const taxCents = taxRaw ? parseAmount(taxRaw) : undefined;
+            if (taxRaw && (taxCents === null || taxCents < 0 || taxCents > cents))
+              return formError(
+                form,
+                'Der absetzbare Anteil muss zwischen 0 und dem Betrag liegen.',
+              );
+            const next = cleanBooking(
+              {
+                ...b,
+                cents: Math.abs(cents),
+                date,
+                kind: val(form, 'kind'),
+                text: val(form, 'text'),
+                party: val(form, 'party'),
+                cat: val(form, 'cat'),
+                taxField: val(form, 'taxField') || undefined,
+                taxCents,
+                receipt,
+              },
+              FIELDS,
+            );
+            try {
+              await ensureYear(Number(date.slice(0, 4)));
+              await saveBooking(next, key);
+              uploaded.delete(receipt);
+              if (old?.receipt && old.receipt !== receipt)
+                ready.then((mn) => mn.files.remove(old.receipt)).catch(() => {});
+              closeDialog();
+              toast(old ? 'Gespeichert' : 'Buchung hinzugefügt');
+              render();
+            } catch {
+              formError(form, 'Speichern fehlgeschlagen. Prüfe deine Verbindung.');
+            }
+          },
         },
-      },
-      'Speichern',
-    ),
-  ]);
-  dlg().addEventListener('close', dropUnsaved, { once: true });
+        'Speichern',
+      ),
+    ],
+    dropUnsaved,
+  );
 }
 async function openReceipt(path) {
   // Open the tab synchronously so popup blockers allow it, then point it at the signed URL.
@@ -1467,13 +1539,13 @@ function editCategory(id) {
     [
       h(
         'label',
-        { class: 'f' },
+        { class: 'mn-field' },
         'Name',
         h('input', { name: 'name', required: true, maxlength: 60, value: c.name }),
       ),
       h(
         'label',
-        { class: 'f' },
+        { class: 'mn-field' },
         'Art',
         h(
           'select',
@@ -1483,7 +1555,7 @@ function editCategory(id) {
       ),
       h(
         'label',
-        { class: 'f' },
+        { class: 'mn-field' },
         'Monatsbudget in €',
         h('input', {
           name: 'budget',
@@ -1494,7 +1566,7 @@ function editCategory(id) {
       ),
       h(
         'label',
-        { class: 'f' },
+        { class: 'mn-field' },
         'Steuererklärung',
         taxSelect('tax', c.tax, null),
         h('small', {}, 'Buchungen dieser Kategorie fließen automatisch in dieses Feld.'),
@@ -1506,7 +1578,7 @@ function editCategory(id) {
             'button',
             {
               type: 'button',
-              class: 'btn danger',
+              class: 'mn-btn mn-btn--danger',
               onclick: async () => {
                 S.settings.categories = cats().filter((x) => x.id !== id);
                 S.settings.rules = S.settings.rules.filter((r) => r.cat !== id);
@@ -1527,13 +1599,12 @@ function editCategory(id) {
             'Löschen',
           )
         : null,
-      h('span', { class: 'spacer' }),
-      h('button', { type: 'button', class: 'btn', onclick: closeDialog }, 'Abbrechen'),
+      h('span', { class: 'mn-grow' }),
       h(
         'button',
         {
           type: 'submit',
-          class: 'btn primary',
+          class: 'mn-btn mn-btn--primary',
           onclick: async (e) => {
             e.preventDefault();
             const name = val(form, 'name');
@@ -1573,7 +1644,7 @@ function editRule(index) {
     [
       h(
         'label',
-        { class: 'f' },
+        { class: 'mn-field' },
         'Enthält',
         h('input', {
           name: 'match',
@@ -1582,7 +1653,7 @@ function editRule(index) {
           placeholder: 'z. B. REWE|EDEKA',
         }),
       ),
-      h('label', { class: 'f' }, 'Kategorie', catSelect('cat', r.cat)),
+      h('label', { class: 'mn-field' }, 'Kategorie', catSelect('cat', r.cat)),
     ],
     [
       index !== null
@@ -1590,7 +1661,7 @@ function editRule(index) {
             'button',
             {
               type: 'button',
-              class: 'btn danger',
+              class: 'mn-btn mn-btn--danger',
               onclick: async () => {
                 S.settings.rules = S.settings.rules.filter((_, i) => i !== index);
                 try {
@@ -1605,13 +1676,12 @@ function editRule(index) {
             'Löschen',
           )
         : null,
-      h('span', { class: 'spacer' }),
-      h('button', { type: 'button', class: 'btn', onclick: closeDialog }, 'Abbrechen'),
+      h('span', { class: 'mn-grow' }),
       h(
         'button',
         {
           type: 'submit',
-          class: 'btn primary',
+          class: 'mn-btn mn-btn--primary',
           onclick: async (e) => {
             e.preventDefault();
             const next = { match: val(form, 'match'), cat: val(form, 'cat') };
@@ -1655,7 +1725,7 @@ function editRecurring(id) {
     [
       h(
         'label',
-        { class: 'f' },
+        { class: 'mn-field' },
         'Beschreibung',
         h('input', {
           name: 'text',
@@ -1667,10 +1737,10 @@ function editRecurring(id) {
       ),
       h(
         'div',
-        { class: 'grid2' },
+        { class: 'mn-grid-2' },
         h(
           'label',
-          { class: 'f' },
+          { class: 'mn-field' },
           'Betrag in €',
           h('input', {
             name: 'amount',
@@ -1681,7 +1751,7 @@ function editRecurring(id) {
         ),
         h(
           'label',
-          { class: 'f' },
+          { class: 'mn-field' },
           'Art',
           h(
             'select',
@@ -1690,13 +1760,13 @@ function editRecurring(id) {
           ),
         ),
       ),
-      h('label', { class: 'f' }, 'Kategorie', catSelect('cat', r.cat)),
+      h('label', { class: 'mn-field' }, 'Kategorie', catSelect('cat', r.cat)),
       h(
         'div',
-        { class: 'grid2' },
+        { class: 'mn-grid-2' },
         h(
           'label',
-          { class: 'f' },
+          { class: 'mn-field' },
           'Rhythmus',
           h(
             'select',
@@ -1711,23 +1781,23 @@ function editRecurring(id) {
         ),
         h(
           'label',
-          { class: 'f' },
+          { class: 'mn-field' },
           'Am Tag',
           h('input', { name: 'day', type: 'number', min: 1, max: 28, value: String(r.day) }),
         ),
       ),
       h(
         'div',
-        { class: 'grid2' },
+        { class: 'mn-grid-2' },
         h(
           'label',
-          { class: 'f' },
+          { class: 'mn-field' },
           'Erste Buchung',
           h('input', { name: 'start', type: 'month', value: r.start }),
         ),
         h(
           'label',
-          { class: 'f' },
+          { class: 'mn-field' },
           'Letzte Buchung',
           h('input', { name: 'end', type: 'month', value: r.end }),
           h('small', {}, 'Leer lassen, solange er läuft'),
@@ -1735,7 +1805,7 @@ function editRecurring(id) {
       ),
       h(
         'p',
-        { class: 'muted small' },
+        { class: 'mn-note' },
         'Fällige Buchungen entstehen beim Öffnen der App, auch rückwirkend ab der ersten Buchung.',
       ),
     ],
@@ -1745,7 +1815,7 @@ function editRecurring(id) {
             'button',
             {
               type: 'button',
-              class: 'btn danger',
+              class: 'mn-btn mn-btn--danger',
               onclick: async () => {
                 try {
                   const mn = await ready;
@@ -1762,13 +1832,12 @@ function editRecurring(id) {
             'Löschen',
           )
         : null,
-      h('span', { class: 'spacer' }),
-      h('button', { type: 'button', class: 'btn', onclick: closeDialog }, 'Abbrechen'),
+      h('span', { class: 'mn-grow' }),
       h(
         'button',
         {
           type: 'submit',
-          class: 'btn primary',
+          class: 'mn-btn mn-btn--primary',
           onclick: async (e) => {
             e.preventDefault();
             const cents = parseAmount(val(form, 'amount'));
@@ -1828,7 +1897,7 @@ function openImport() {
       ),
       h(
         'label',
-        { class: 'btn filebtn' },
+        { class: 'mn-btn filebtn' },
         'CSV-Datei wählen',
         h('input', {
           type: 'file',
@@ -1848,17 +1917,14 @@ function openImport() {
         }),
       ),
     ],
-    [
-      h('span', { class: 'spacer' }),
-      h('button', { type: 'button', class: 'btn', onclick: closeDialog }, 'Abbrechen'),
-    ],
+    [h('span', { class: 'mn-grow' })],
   );
 }
 async function previewImport(parsed) {
   const pick = (name, label, index) =>
     h(
       'label',
-      { class: 'f' },
+      { class: 'mn-field' },
       label,
       h(
         'select',
@@ -1886,7 +1952,7 @@ async function previewImport(parsed) {
       summary.replaceChildren(
         h(
           'p',
-          { class: 'neg' },
+          { class: 'mn-error' },
           'Deine bisherigen Buchungen konnten nicht geladen werden. Versuche es gleich noch einmal.',
         ),
       );
@@ -1920,7 +1986,7 @@ async function previewImport(parsed) {
       fresh.length
         ? h(
             'ul',
-            { class: 'preview' },
+            { class: 'mn-list preview' },
             fresh
               .slice(0, 5)
               .map((b) =>
@@ -1945,7 +2011,7 @@ async function previewImport(parsed) {
     'button',
     {
       type: 'submit',
-      class: 'btn primary',
+      class: 'mn-btn mn-btn--primary',
       onclick: async (e) => {
         e.preventDefault();
         const fresh = prepared.filter((b) => !S.tx.has(keyOf(b)));
@@ -1992,11 +2058,7 @@ async function previewImport(parsed) {
       ),
       summary,
     ],
-    [
-      h('span', { class: 'spacer' }),
-      h('button', { type: 'button', class: 'btn', onclick: closeDialog }, 'Abbrechen'),
-      importBtn,
-    ],
+    [h('span', { class: 'mn-grow' }), importBtn],
   );
   await update();
 }
@@ -2104,25 +2166,61 @@ const VIEWS = {
   tax: viewTax,
   settings: viewSettings,
 };
+const TITLES = {
+  overview: 'Übersicht',
+  bookings: 'Buchungen',
+  budget: 'Budget',
+  tax: 'Steuer',
+  settings: 'Einstellungen',
+};
+function subtitle() {
+  const list = inMonth(S.month);
+  if (S.tab === 'overview' || S.tab === 'bookings') {
+    const open = list.filter((b) => !b.cat).length;
+    return `${list.length} ${list.length === 1 ? 'Buchung' : 'Buchungen'}${open ? `, ${open} ohne Kategorie` : ''}`;
+  }
+  if (S.tab === 'budget') return 'Monatsbudget je Kategorie';
+  if (S.tab === 'tax') return 'Automatisch aus deinen Buchungen';
+  return 'Kategorien, Daueraufträge, Regeln und Daten';
+}
 function render() {
-  for (const tab of document.querySelectorAll('[data-tab]')) {
+  for (const tab of document.querySelectorAll('.mn-tab')) {
     if (tab.dataset.tab === S.tab) tab.setAttribute('aria-current', 'page');
     else tab.removeAttribute('aria-current');
   }
-  document.body.dataset.tab = S.tab;
+  $('#title').textContent = TITLES[S.tab];
   const view = $('#view');
+  const tools = $('#tools');
   if (S.loading) {
-    view.replaceChildren(h('p', { class: 'muted loading' }, 'Wird geladen …'));
+    $('#subtitle').textContent = 'Wird geladen …';
+    tools.replaceChildren();
+    view.replaceChildren(
+      h(
+        'div',
+        { class: 'loading', 'aria-hidden': 'true' },
+        h('span', { class: 'mn-sk' }),
+        h('span', { class: 'mn-sk' }),
+        h('span', { class: 'mn-sk' }),
+      ),
+    );
     return;
   }
-  view.replaceChildren(...VIEWS[S.tab]().flat().filter(Boolean));
+  $('#subtitle').textContent = subtitle();
+  tools.replaceChildren(
+    ...(S.tab === 'settings'
+      ? []
+      : S.tab === 'tax'
+        ? [stepper('Steuerjahr', String(S.year), 'Vorheriges Jahr', 'Nächstes Jahr', changeYear)]
+        : [monthStepper()]),
+  );
+  view.replaceChildren(...VIEWS[S.tab]().flat(Number.POSITIVE_INFINITY).filter(Boolean));
 }
 function go(tab) {
   S.tab = tab;
   render();
   window.scrollTo(0, 0);
 }
-for (const tab of document.querySelectorAll('[data-tab]'))
+for (const tab of document.querySelectorAll('.mn-tab'))
   tab.addEventListener('click', () => {
     if (tab.dataset.tab === 'tax')
       ensureProfile(S.year).then(
@@ -2131,10 +2229,9 @@ for (const tab of document.querySelectorAll('[data-tab]'))
       );
     else go(tab.dataset.tab);
   });
-// The header button exists before the data: wait for categories so the dialog is complete.
-$('#add').addEventListener('click', () => firstLoad.then(() => editBooking(null)));
-// A closed dialog keeps no stale form behind (Escape closes it natively).
-dlg().addEventListener('close', () => dlg().replaceChildren());
+// The add buttons exist before the data: wait for categories so the dialog is complete.
+for (const add of document.querySelectorAll('[data-add]'))
+  add.addEventListener('click', () => firstLoad.then(() => editBooking(null)));
 // Other devices may have changed something while this tab was hidden: reload quietly and swap
 // the data in one step, at most every 30 seconds.
 let refreshedAt = Date.now();
@@ -2165,7 +2262,7 @@ async function refresh() {
   S.profiles.clear();
   await ensureProfile(S.year);
   await runRecurring();
-  if (!dlg().open) render();
+  if (!sheetOpen) render();
 }
 document.addEventListener('visibilitychange', () => {
   if (document.hidden || S.loading || Date.now() - refreshedAt < 30_000) return;
