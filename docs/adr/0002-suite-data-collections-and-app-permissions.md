@@ -31,9 +31,21 @@ Per-app permissions therefore first need a trustworthy app identity.
   `notify_self`, and closes the gap above (migration `20260928100740_app_identity`).
 - Server-side apps (NucBox containers) identify themselves with a per-app service token
   through the API Worker, never with the user's JWT alone.
-- Limit: a user who scripts requests with their own session can set any `Origin`. That only
-  exposes data that user may already see. The goal is to isolate apps from each other, not
-  users from their own data.
+- Deploys only add origins; old ones (a renamed domain, earlier dev ports) stay until the app
+  row is deleted. That is harmless, because they still point at the same app.
+
+**Limits.** Origin isolation protects against buggy apps, not hostile ones.
+- A user who scripts requests with their own session can set any `Origin`. That only exposes
+  data the user may already see.
+- The session cookie `mn-auth` lives on `.mininode.app` and is readable by JavaScript, and the
+  gate CSP allows `img-src https:`. A malicious app can therefore read the user's tokens,
+  send them to its own server and replay them with a forged `Origin`. Only apps the admin
+  integrated run on the platform, so we accept this for now. Hardening later means an
+  HttpOnly session cookie per app host and a narrower `img-src`.
+- Realtime does not pass request headers to the database. `postgres_changes` on app data
+  therefore delivers nothing. `mn.realtime` broadcast channels (`<slug>:<channel>`) are not
+  authorised, so another app could join them. Suite realtime (phase 4) uses private
+  channels with an authorisation policy on `realtime.messages`.
 
 ### 2. One generic record store with a type registry
 

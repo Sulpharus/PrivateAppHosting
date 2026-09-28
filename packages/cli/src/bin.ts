@@ -4,7 +4,7 @@ import { join, resolve } from 'node:path';
 import { changedApps } from './changed.ts';
 import type { DeployEnv } from './deploy/environment.ts';
 import { deployApp, devApp, readVersion } from './deploy/index.ts';
-import { cloudflareApps, pruneApps } from './deploy/prune.ts';
+import { hostedTargets, pruneApps } from './deploy/prune.ts';
 import { type DoctorReport, doctor, hostedApps } from './doctor.ts';
 
 const ROOT = resolve(import.meta.dirname, '../../..');
@@ -37,6 +37,12 @@ function flag(args: string[], name: string): string | undefined {
   return index >= 0 ? args[index + 1] : undefined;
 }
 
+function envFlag(args: string[]): DeployEnv {
+  const env = flag(args, '--env') ?? 'production';
+  if (env === 'production' || env === 'staging' || env === 'local') return env;
+  throw new Error(`unknown --env ${env} (production, staging or local)`);
+}
+
 async function main(args: string[]): Promise<number> {
   const [command, target] = args;
   switch (command) {
@@ -50,9 +56,11 @@ async function main(args: string[]): Promise<number> {
       return dirs.map((dir) => print(doctor(dir))).every(Boolean) ? 0 : 1;
     }
     case 'prune': {
-      const env = (flag(args, '--env') ?? 'production') as DeployEnv;
       const dirs = existsSync(join(ROOT, 'hosted')) ? readdirSync(join(ROOT, 'hosted')) : [];
-      await pruneApps(env, cloudflareApps(ROOT, dirs), { dryRun: args.includes('--dry-run') });
+      await pruneApps(envFlag(args), hostedTargets(ROOT, dirs), {
+        dryRun: args.includes('--dry-run'),
+        force: args.includes('--force'),
+      });
       return 0;
     }
     case 'changed': {
@@ -67,7 +75,7 @@ async function main(args: string[]): Promise<number> {
     }
     case 'deploy': {
       if (!target) break;
-      const env = (flag(args, '--env') ?? 'production') as DeployEnv;
+      const env = envFlag(args);
       const dryRun = args.includes('--dry-run');
       const base = flag(args, '--changed');
       const dirs = base

@@ -21,6 +21,11 @@ mn.realtime('board').on('broadcast', { event: 'move' }, handler).subscribe();
 Plain HTML apps load the standalone build instead: `<script src="/_mininode/sdk.js"></script>`,
 then `const mn = await window.mininode.mininode();`.
 
+Data calls (`kv`, `db`, `files`, `notify`) only work from the app's registered origin, because
+RLS identifies the calling app by the browser's `Origin` header (ADR 0002). Deploys register
+`https://<slug>.<domain>`, and `mininode dev` registers its localhost port. Requests from any
+other page, e.g. a plain Vite dev server on another port, see no data.
+
 ## Development
 
 - `pnpm build` → `dist/mininode.js` (ESM) and `dist/mininode.iife.js` (`window.mininode`)

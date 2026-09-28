@@ -61,16 +61,9 @@ function decodeRole(accessToken: string | undefined): Role | null {
   }
 }
 
-/**
- * `headers` is for clients outside a browser (tests, tools): browsers send the page's `Origin`
- * themselves, and RLS uses it to tell apps apart.
- */
-export function createMininode(
-  config: MininodeConfig,
-  options: { headers?: Record<string, string> } = {},
-): Mininode {
+/** Data calls only work from the app's registered origin: RLS uses it to tell apps apart. */
+export function createMininode(config: MininodeConfig): Mininode {
   const supabase = createBrowserClient(config.supabaseUrl, config.supabasePublishableKey, {
-    ...(options.headers ? { global: { headers: options.headers } } : {}),
     cookieOptions: {
       name: 'mn-auth',
       path: '/',

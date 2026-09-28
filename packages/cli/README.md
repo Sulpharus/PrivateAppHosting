@@ -6,6 +6,7 @@ mininode dev <app-dir> [--port 8790]       Serve an app locally behind the gate 
 mininode deploy <app-dir> [--env staging]  Build, migrate, deploy and register one app
 mininode deploy --changed <base-ref>       Deploy every app changed since <base-ref> (--dry-run)
 mininode changed <base-ref>                List hosted apps changed since <base-ref>
+mininode prune [--env staging] [--dry-run] Delete Workers of apps gone from hosted/ (--force if empty)
 ```
 
 **doctor** is the gate every AI-integrated app must pass (CI runs `--all`). Errors block the
@@ -26,3 +27,11 @@ deploy, warnings are shown in review:
 static assets on `<slug>.mininode.app`, and registers the app in `platform.apps`. Other targets
 are registered only; their rollout happens in the deploy workflow (NucBox) or the admin UI
 (remote installs).
+
+Deploys also register the app's origin (`https://<slug>.<domain>`, or `http://localhost:<port>`
+for `dev`) in `platform.app_origins`. RLS uses it to tell apps apart (ADR 0002).
+
+**prune** runs after every deploy. It deletes `mn-app-*` Workers whose app is no longer a
+Cloudflare app in `hosted/`. Apps missing from `hosted/` altogether are first set to
+`disabled`; their data stays until the admin deletes it. It refuses to run when `hosted/` is
+empty, unless `--force` is given.

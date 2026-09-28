@@ -17,7 +17,8 @@ create policy app_origins_admin_select on platform.app_origins for select to aut
   using ((select platform.is_admin()));
 grant select on platform.app_origins to authenticated;
 
--- Production apps deployed before this migration.
+-- Production apps deployed before this migration. The domain is hardcoded: on staging these rows
+-- are useless but harmless, and every deploy registers the right origin for its environment.
 insert into platform.app_origins (origin, app_slug)
 select 'https://' || slug || '.mininode.app', slug
 from platform.apps
@@ -25,7 +26,8 @@ where target = 'cloudflare'
 on conflict (origin) do nothing;
 
 -- The app whose page sent this request, or null (no Origin, unknown origin, server clients).
--- Data API requests carry request.headers; Storage and Realtime may not, which also yields null.
+-- PostgREST and Storage pass request.headers. Realtime does not, so postgres_changes on app data
+-- delivers nothing; apps use broadcast channels instead (ADR 0002 §1).
 create function platform.calling_app() returns text
 language sql
 stable

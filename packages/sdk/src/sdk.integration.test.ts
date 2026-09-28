@@ -43,11 +43,12 @@ describe.skipIf(!enabled)('sdk against local Supabase', () => {
       .insert({ user_id: userId, app_slug: slug });
     if (grant.error) throw grant.error;
 
-    // happy-dom behaves like a browser: requests carry the page origin (vitest.config.ts).
+    // happy-dom behaves like a browser: requests carry the page origin (vitest.config.ts), and
+    // RLS only lets the app's registered origin through.
     const registered = await admin
       .schema('platform')
       .from('app_origins')
-      .upsert({ origin: 'http://localhost:5173', app_slug: slug });
+      .upsert({ origin: 'http://localhost:5199', app_slug: slug });
     if (registered.error) throw registered.error;
 
     mn = createMininode({

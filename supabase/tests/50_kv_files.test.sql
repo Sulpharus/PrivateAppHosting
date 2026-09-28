@@ -1,5 +1,5 @@
 begin;
-select plan(12);
+select plan(14);
 select tests.reset();
 
 select tests.create_user('owner@example.com') as owner_id \gset
@@ -35,6 +35,9 @@ select throws_ok(
   format($$insert into platform.app_kv (app_slug, owner_id, key, value) values ('todo', %L, 'x', '1')$$, :'user_id'),
   '42501', null, 'kasse cannot write todo kv');
 select ok(not platform.may_access_app_file('todo/' || :'user_id' || '/a.png'), 'kasse cannot reach todo files');
+select throws_ok($$select platform.notify_self('todo', 'Fake')$$, '42501', null, 'kasse cannot notify as todo');
+select tests.as_app('todo');
+select isnt(platform.notify_self('todo', 'Erinnerung'), null, 'todo notifies under its own name');
 select tests.as_app('todo');
 select throws_ok(
   $$insert into platform.app_kv (app_slug, owner_id, key, value) values ('fremd', null, 'x', '1')$$,
