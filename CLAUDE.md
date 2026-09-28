@@ -51,7 +51,8 @@ built from; run `pnpm kb` after structural changes and commit `graphify-out/` wi
 - TypeScript strict, ESM only, no `any`, no non-null assertions. Validate external input
   with zod at boundaries.
 - **RLS is the security boundary.** Every table in an `app_*` schema has RLS enabled, and every
-  policy calls `platform.has_grant('<slug>')`. The pgTAP meta-test enforces this.
+  policy calls `platform.app_access('<slug>')` (user grant and calling app, ADR 0002). The pgTAP
+  meta-test enforces this.
 - Never grant anything to `anon` in app schemas. Never put secrets in the repo, in client
   bundles or in `mininode.json`.
 - All auth UI lives in `apps/portal` at `/login` (ADR 0001). Apps call `sdk.auth.requireLogin()`.

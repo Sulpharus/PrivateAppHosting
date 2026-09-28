@@ -1,17 +1,17 @@
 # Graph Report - PrivateAppHosting  (2026-09-28)
 
 ## Corpus Check
-- 188 files · ~91,692 words
+- 189 files · ~93,058 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 36 file(s) not represented in the graph (top: (none) 10, .css 7, .woff2 5)
 
 ## Summary
-- 1261 nodes · 2753 edges · 99 communities (60 shown, 39 thin omitted)
-- Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 52 edges (avg confidence: 0.89)
+- 1272 nodes · 2764 edges · 100 communities (61 shown, 39 thin omitted)
+- Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 51 edges (avg confidence: 0.89)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `c331cc85`
+- Built from commit: `45e7696a`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -85,6 +85,7 @@
 - sportplaner/app.js
 - Decision
 - ADR 0003: Construction prompts, app kit and the suite build order
+- 20260928100740_app_identity.sql
 - Users.tsx
 - updCal
 - esc
@@ -105,7 +106,7 @@
 - 8. Platform SDK (`@mininode/sdk`)
 
 ## God Nodes (most connected - your core abstractions)
-1. `platform()` - 28 edges
+1. `platform()` - 27 edges
 2. `editBooking()` - 26 edges
 3. `h()` - 25 edges
 4. `supabase()` - 24 edges
@@ -123,15 +124,15 @@
   docs/runbooks/restore.md → apps/portal/src/components/icons.tsx
 - `Rules` --references--> `supabase()`  [INFERRED]
   CLAUDE.md → apps/portal/src/lib/supabase.ts
-- `1. App identity from the browser origin` --references--> `platform()`  [INFERRED]
-  docs/adr/0002-suite-data-collections-and-app-permissions.md → apps/portal/src/lib/supabase.ts
 - `5. First deploy and first login` --references--> `main()`  [INFERRED]
   docs/runbooks/first-setup.md → packages/cli/src/bin.ts
+- `Layout` --references--> `api()`  [INFERRED]
+  CLAUDE.md → apps/portal/src/lib/api.ts
 
 ## Import Cycles
 - None detected.
 
-## Communities (99 total, 39 thin omitted)
+## Communities (100 total, 39 thin omitted)
 
 ### Community 0 - "Account.tsx"
 Cohesion: 0.15
@@ -287,7 +288,7 @@ Nodes (4): ADR 0001: Central login origin and permanent passkey RP ID, Consequen
 
 ### Community 40 - "deploy/index.ts"
 Cohesion: 0.05
-Nodes (71): @mininode/cli — `pnpm mininode`, flag(), main(), ROOT, appsFromPaths(), changedApps(), parsed, production (+63 more)
+Nodes (72): ADR-0002, @mininode/cli — `pnpm mininode`, flag(), main(), ROOT, appsFromPaths(), changedApps(), parsed (+64 more)
 
 ### Community 46 - "20_app_isolation.test.sql"
 Cohesion: 0.50
@@ -304,6 +305,10 @@ Nodes (9): 1. App identity from the browser origin, 2. One generic record store 
 ### Community 80 - "ADR 0003: Construction prompts, app kit and the suite build order"
 Cohesion: 0.25
 Nodes (7): 1. Construction prompt library ("Konstruktions-Prompts"), 2. App kit (design system for apps), 3. Build order, ADR 0003: Construction prompts, app kit and the suite build order, Consequences, Context, Decision
+
+### Community 81 - "20260928100740_app_identity.sql"
+Cohesion: 0.28
+Nodes (4): app_origins_app_slug_idx, platform.app_origins, platform.calling_app(), platform.apps
 
 ### Community 88 - "Users.tsx"
 Cohesion: 0.10
@@ -374,24 +379,24 @@ Cohesion: 0.40
 Nodes (3): app(), requireLogin(), 8. Platform SDK (`@mininode/sdk`)
 
 ## Knowledge Gaps
-- **347 isolated node(s):** `supabase`, `cloudflare-docs`, `context7`, `npx`, `@playwright/mcp` (+342 more)
-  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 485 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+- **349 isolated node(s):** `supabase`, `cloudflare-docs`, `context7`, `npx`, `@playwright/mcp` (+344 more)
+  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 493 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
 - **39 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `platform()` connect `Users.tsx` to `Account.tsx`, `StepUp.tsx`, `20260923000100_platform_core.sql`, `TopBar.tsx`, `MiniNode.app — Project Plan (v2)`, `Overview.tsx`, `Decision`, `platform.app_kv`, `Home.tsx`, `portal/src/main.tsx`?**
-  _High betweenness centrality (0.057) - this node is a cross-community bridge._
+- **Why does `platform()` connect `Users.tsx` to `Account.tsx`, `StepUp.tsx`, `20260923000100_platform_core.sql`, `TopBar.tsx`, `MiniNode.app — Project Plan (v2)`, `Overview.tsx`, `platform.app_kv`, `Home.tsx`, `portal/src/main.tsx`?**
+  _High betweenness centrality (0.039) - this node is a cross-community bridge._
 - **Why does `base()` connect `TopBar.tsx` to `remote.ts`, `NucBox install (Proxmox, Linux VM, Windows VM)`, `Restore`?**
-  _High betweenness centrality (0.027) - this node is a cross-community bridge._
-- **Why does `1. App identity from the browser origin` connect `Decision` to `Users.tsx`?**
-  _High betweenness centrality (0.018) - this node is a cross-community bridge._
-- **Are the 2 inferred relationships involving `platform()` (e.g. with `1. App identity from the browser origin` and `5. Data`) actually correct?**
-  _`platform()` has 2 INFERRED edges - model-reasoned connections that need verification._
+  _High betweenness centrality (0.026) - this node is a cross-community bridge._
+- **Why does `platform.notifications` connect `20260923000100_platform_core.sql` to `Users.tsx`?**
+  _High betweenness centrality (0.015) - this node is a cross-community bridge._
 - **What connects `supabase`, `cloudflare-docs`, `context7` to the rest of the system?**
-  _347 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _349 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `remote.ts` be split into smaller, more focused modules?**
   _Cohesion score 0.06806526806526807 - nodes in this community are weakly interconnected._
 - **Should `ai-proxy/src/index.ts` be split into smaller, more focused modules?**
   _Cohesion score 0.08748615725359911 - nodes in this community are weakly interconnected._
+- **Should `schema.ts` be split into smaller, more focused modules?**
+  _Cohesion score 0.06666666666666667 - nodes in this community are weakly interconnected._

@@ -10,7 +10,7 @@ you have checked it. Do not edit files.
 1. `git diff <base>...HEAD` (and `git diff` for uncommitted work) to see the change. Use
    `graphify explain/affected` (see CLAUDE.md) to find callers of changed symbols.
 2. Check, in this order, and only report what you can point to with file:line:
-   - **Security:** RLS on every `app_*` table through `platform.secure_table`/`has_grant`,
+   - **Security:** RLS on every `app_*` table through `platform.secure_table`/`app_access`,
      nothing granted to `anon`, no secrets or provider keys in code or client bundles, input
      validated with zod at every boundary, auth/step-up (`recentAuth`) on admin routes,
      identity headers never trusted from clients, webhooks verified and idempotent.

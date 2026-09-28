@@ -43,6 +43,13 @@ describe.skipIf(!enabled)('sdk against local Supabase', () => {
       .insert({ user_id: userId, app_slug: slug });
     if (grant.error) throw grant.error;
 
+    // happy-dom behaves like a browser: requests carry the page origin (vitest.config.ts).
+    const registered = await admin
+      .schema('platform')
+      .from('app_origins')
+      .upsert({ origin: 'http://localhost:5173', app_slug: slug });
+    if (registered.error) throw registered.error;
+
     mn = createMininode({
       appSlug: slug,
       appName: 'SDK Test',

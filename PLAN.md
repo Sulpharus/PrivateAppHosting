@@ -40,7 +40,7 @@ Non-goals: public sign-up, multi-tenant SaaS, a hot standby database.
 | Auth | Supabase Auth, invite-only. **Passkeys** (Face ID, fingerprint, Windows Hello) primary, email + password fallback. All auth UI lives at **`mininode.app/login`** (ADR 0001) |
 | Email | **Off for now** (Cloudflare Email Sending needs Workers Paid). Invites and password resets are one-time links the admin shares directly. The Email Sending binding and Send Email hook stay implemented and switch on with one config change |
 | Roles | `admin` (owner), `trusted` (shared-account apps), `user` |
-| Isolation | **RLS is the security boundary.** Every app table policy calls `platform.has_grant(slug)`; a schema per app is for tidiness only |
+| Isolation | **RLS is the security boundary.** Every app table policy calls `platform.app_access(slug)` (user grant **and** the calling app, identified by its origin; ADR 0002); a schema per app is for tidiness only |
 | Deploy | `git push` to `main` runs GitHub Actions. Cloud targets deploy with `wrangler`. The NucBox deploys by pulling a digest-pinned image through a forced-command SSH over Access |
 | Integration | The `integrate-app` skill (Claude Code, local PC or cloud) runs against **local Supabase only**, then `mininode doctor` |
 | AI | `ai.mininode.app` Worker (auth, per-app model allow-list, reserve/settle budget) forwarding through **Cloudflare AI Gateway** |
@@ -134,7 +134,7 @@ DNS is explicit: CI creates one record per app. There is no wildcard catch-all.
   - `platform`: profiles, grants, invites, apps, deployments, remote sessions and queue,
     AI budgets/usage, audit, notifications.
   - `app_<slug>`: one per app. CI adds each to the exposed schemas via the Management API.
-- **RLS templates** (every one includes `platform.has_grant(slug)`):
+- **RLS templates** (every one includes `platform.app_access(slug)`):
   - `private`: the owner is `auth.uid()`.
   - `shared-account`: the owner is `effective_owner()`.
   - `group`: all users with a grant.

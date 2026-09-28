@@ -29,6 +29,8 @@ export interface DeployOptions {
   version: string;
   dryRun?: boolean;
   log?: (line: string) => void;
+  /** Origins the app is served from; defaults to https://<slug>.<domain> outside local. */
+  origins?: string[];
 }
 
 function run(
@@ -171,13 +173,19 @@ export async function deployApp(appDir: string, options: DeployOptions): Promise
   if (!secret) throw new Error('SUPABASE_SECRET_KEY is required to register the app');
   if (env.name === 'local') await waitForRest(env.supabaseUrl, secret);
   const db = createClient(env.supabaseUrl, secret, { auth: { persistSession: false } });
-  await registerApp(db, manifest, options.version);
+  const origins =
+    options.origins ?? (env.name === 'local' ? [] : [`https://${manifest.slug}.${env.domain}`]);
+  await registerApp(db, manifest, options.version, origins);
   log(`  registered ${manifest.slug} (${options.version})`);
 }
 
 /** Local preview: registers the app in the local database and serves it through the gate. */
 export async function devApp(appDir: string, port = 8790): Promise<void> {
-  await deployApp(appDir, { env: 'local', version: 'dev' });
+  await deployApp(appDir, {
+    env: 'local',
+    version: 'dev',
+    origins: [`http://localhost:${port}`, `http://127.0.0.1:${port}`],
+  });
   const report = doctor(appDir);
   const manifest = report.manifest;
   if (manifest?.target !== 'cloudflare') return;

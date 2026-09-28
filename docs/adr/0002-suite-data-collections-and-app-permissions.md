@@ -1,6 +1,6 @@
 # ADR 0002: Suite data, shared collections and app permissions
 
-- Status: proposed
+- Status: accepted (phase 1 implemented)
 - Date: 2026-09-28
 
 ## Context
@@ -22,12 +22,13 @@ Per-app permissions therefore first need a trustworthy app identity.
 
 - Every app runs on its own origin (`https://<slug>.mininode.app`). Browsers set the `Origin`
   header themselves, and page scripts cannot forge it.
-- A database function `platform.calling_app()` reads the origin from PostgREST's
-  `request.headers` and maps it to the app slug. The portal counts as `platform`. Local dev maps
-  `localhost:<port>` through a dev table. Anything else gets `null`, which means no app rights.
-- Every policy on shared data checks the user **and** `calling_app()`. The same check is added
-  to `app_kv` and app file storage, which closes the gap above. This is a separate migration
-  shipped first, with an expand/contract rollout.
+- A database function `platform.calling_app()` reads the origin from the request headers that
+  PostgREST and Storage pass on, and looks it up in `platform.app_origins`. Deploys register
+  `https://<slug>.<domain>`; `mininode dev` registers `http://localhost:<port>`. Unknown or
+  missing origins give `null`, which means no app rights. The portal has no app identity.
+- Every policy on app or shared data checks the user **and** `calling_app()` through
+  `platform.app_access(slug)`. It covers `app_kv`, app files, app tables (`secure_table`) and
+  `notify_self`, and closes the gap above (migration `20260928100740_app_identity`).
 - Server-side apps (NucBox containers) identify themselves with a per-app service token
   through the API Worker, never with the user's JWT alone.
 - Limit: a user who scripts requests with their own session can set any `Origin`. That only

@@ -1,5 +1,5 @@
 begin;
-select plan(15);
+select plan(20);
 select tests.reset();
 
 select tests.create_user('owner@example.com', 'Owner') as owner_id \gset
@@ -32,6 +32,7 @@ select platform.secure_table('pinnwand', 'notes', 'group');
 
 -- private: each user sees only their own rows
 select tests.login(:'user_id');
+select tests.as_app('rezepte');
 insert into app_rezepte.recipes (title) values ('Linsensuppe');
 select tests.login(:'trusted_id');
 insert into app_rezepte.recipes (title) values ('Pasta');
@@ -42,6 +43,7 @@ select throws_ok(
 
 -- shared-account: trusted users act on the owner's rows, plain users on their own
 select tests.login(:'owner_id');
+select tests.as_app('haushalt');
 insert into app_haushalt.entries (label) values ('Strom');
 select tests.login(:'trusted_id');
 select is((select count(*)::int from app_haushalt.entries), 1, 'trusted user sees the owner rows');
@@ -58,6 +60,7 @@ select is(
 
 -- group: everyone with a grant; users without the grant see nothing
 select tests.login(:'trusted_id');
+select tests.as_app('pinnwand');
 insert into app_pinnwand.notes (body) values ('Hallo');
 select is((select count(*)::int from app_pinnwand.notes), 1, 'group rows visible with grant');
 select tests.login(:'user_id');
@@ -69,13 +72,29 @@ select throws_ok($$insert into app_pinnwand.notes (body) values ('x')$$, '42501'
 select tests.logout();
 delete from platform.app_grants where user_id = :'user_id' and app_slug = 'rezepte';
 select tests.login(:'user_id');
+select tests.as_app('rezepte');
 select is((select count(*)::int from app_rezepte.recipes), 0, 'revoked grant hides own rows too');
 select tests.logout();
 
 -- disabled apps are closed for everyone
 update platform.apps set status = 'disabled' where slug = 'pinnwand';
 select tests.login(:'trusted_id');
+select tests.as_app('pinnwand');
 select is((select count(*)::int from app_pinnwand.notes), 0, 'disabled app hides all rows');
+select tests.logout();
+
+-- apps are isolated from each other, even for a user who has both
+update platform.apps set status = 'online' where slug = 'pinnwand';
+select tests.login(:'trusted_id');
+select tests.as_app('rezepte');
+select is((select count(*)::int from app_rezepte.recipes), 1, 'the owning app sees its rows');
+select tests.as_app('pinnwand');
+select is((select count(*)::int from app_rezepte.recipes), 0, 'another app of the same user sees nothing');
+select throws_ok($$insert into app_rezepte.recipes (title) values ('Fremd')$$, '42501', null,
+  'another app cannot write');
+select tests.as_app(null);
+select is((select count(*)::int from app_pinnwand.notes), 0, 'requests without an app origin see nothing');
+select is(platform.calling_app(), null, 'no origin means no calling app');
 select tests.logout();
 
 -- Meta checks over every app schema in the database (fixtures above and applied hosted apps).
@@ -86,8 +105,8 @@ select is(
 select is(
   (select count(*)::int from pg_policies
     where schemaname like 'app\_%'
-      and coalesce(qual, '') || coalesce(with_check, '') not like '%has_grant%'),
-  0, 'every app policy checks platform.has_grant');
+      and coalesce(qual, '') || coalesce(with_check, '') not like '%app_access%'),
+  0, 'every app policy checks platform.app_access (user grant and calling app)');
 select is(
   (select count(*)::int from information_schema.role_table_grants
     where table_schema like 'app\_%' and grantee in ('anon', 'PUBLIC')),

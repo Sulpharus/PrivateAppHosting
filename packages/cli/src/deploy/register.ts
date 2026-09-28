@@ -24,6 +24,7 @@ export async function registerApp(
   db: SupabaseClient,
   manifest: Manifest,
   version: string,
+  origins: string[] = [],
 ): Promise<void> {
   const platform = db.schema('platform');
   const { data: admin } = await platform
@@ -51,6 +52,15 @@ export async function registerApp(
       : { is_default: manifest.access.default }),
   });
   if (error) throw new Error(`registering ${manifest.slug} failed: ${error.message}`);
+
+  // The origins the app's pages are served from: RLS uses them to tell apps apart (ADR 0002).
+  if (origins.length > 0) {
+    const { error: originError } = await platform
+      .from('app_origins')
+      .upsert(origins.map((origin) => ({ origin: origin.toLowerCase(), app_slug: manifest.slug })));
+    if (originError)
+      throw new Error(`registering origins of ${manifest.slug} failed: ${originError.message}`);
+  }
 
   if (manifest.ai) {
     const { error: budgetError } = await platform.from('ai_budgets').upsert({

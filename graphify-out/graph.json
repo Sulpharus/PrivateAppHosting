@@ -430,7 +430,7 @@
       "file_type": "code",
       "norm_label": "mininode",
       "source_file": "packages/sdk/src/index.ts",
-      "source_location": "L175"
+      "source_location": "L183"
     },
     {
       "id": "apps_nucbox_control_src_proxmox_hypervisor",
@@ -3751,7 +3751,7 @@
       "file_type": "code",
       "norm_label": "createmininode()",
       "source_file": "packages/sdk/src/index.ts",
-      "source_location": "L64"
+      "source_location": "L68"
     },
     {
       "id": "packages_sdk_src_kv_createkv",
@@ -4291,7 +4291,7 @@
       "file_type": "code",
       "norm_label": "deployapp()",
       "source_file": "packages/cli/src/deploy/index.ts",
-      "source_location": "L126"
+      "source_location": "L128"
     },
     {
       "id": "packages_cli_src_deploy_index_devapp",
@@ -4303,7 +4303,7 @@
       "file_type": "code",
       "norm_label": "devapp()",
       "source_file": "packages/cli/src/deploy/index.ts",
-      "source_location": "L179"
+      "source_location": "L183"
     },
     {
       "id": "packages_cli_src_deploy_index_ensuresdkbundle",
@@ -4315,7 +4315,7 @@
       "file_type": "code",
       "norm_label": "ensuresdkbundle()",
       "source_file": "packages/cli/src/deploy/index.ts",
-      "source_location": "L45"
+      "source_location": "L47"
     },
     {
       "id": "packages_cli_src_deploy_index_exposelocally",
@@ -4327,7 +4327,7 @@
       "file_type": "code",
       "norm_label": "exposelocally()",
       "source_file": "packages/cli/src/deploy/index.ts",
-      "source_location": "L76"
+      "source_location": "L78"
     },
     {
       "id": "packages_cli_src_deploy_index_readversion",
@@ -4339,7 +4339,7 @@
       "file_type": "code",
       "norm_label": "readversion()",
       "source_file": "packages/cli/src/deploy/index.ts",
-      "source_location": "L203"
+      "source_location": "L211"
     },
     {
       "id": "packages_cli_src_deploy_index_run",
@@ -4351,7 +4351,7 @@
       "file_type": "code",
       "norm_label": "run()",
       "source_file": "packages/cli/src/deploy/index.ts",
-      "source_location": "L34"
+      "source_location": "L36"
     },
     {
       "id": "packages_cli_src_deploy_index_schemalist",
@@ -4363,7 +4363,7 @@
       "file_type": "code",
       "norm_label": "schemalist()",
       "source_file": "packages/cli/src/deploy/index.ts",
-      "source_location": "L109"
+      "source_location": "L111"
     },
     {
       "id": "packages_cli_src_deploy_index_stageassets",
@@ -4375,7 +4375,7 @@
       "file_type": "code",
       "norm_label": "stageassets()",
       "source_file": "packages/cli/src/deploy/index.ts",
-      "source_location": "L50"
+      "source_location": "L52"
     },
     {
       "id": "packages_cli_src_deploy_index_waitforrest",
@@ -4387,7 +4387,7 @@
       "file_type": "code",
       "norm_label": "waitforrest()",
       "source_file": "packages/cli/src/deploy/index.ts",
-      "source_location": "L115"
+      "source_location": "L117"
     },
     {
       "id": "packages_cli_src_deploy_migrate_exposeschemas",
@@ -9843,7 +9843,7 @@
       "node_kind": "heading",
       "norm_label": "ui",
       "source_file": "CLAUDE.md",
-      "source_location": "L74"
+      "source_location": "L75"
     },
     {
       "id": "packages_sdk_src_browser",
@@ -11408,6 +11408,17 @@
       "source_location": "L1"
     },
     {
+      "id": "docref_adr_0002",
+      "label": "ADR-0002",
+      "_origin": "ast",
+      "community": 40,
+      "community_name": "deploy/index.ts",
+      "file_type": "concept",
+      "norm_label": "adr-0002",
+      "source_file": "packages/cli/src/deploy/register.ts",
+      "source_location": "L56"
+    },
+    {
       "id": "packages_cli_readme",
       "label": "cli/README.md",
       "_origin": "ast",
@@ -11498,6 +11509,17 @@
       "source_location": null
     },
     {
+      "id": "supabase_tests_00_helpers_test_tests_as_app",
+      "label": "tests.as_app()",
+      "_origin": "ast",
+      "community": 42,
+      "community_name": "00_helpers.test.sql",
+      "file_type": "code",
+      "norm_label": "tests.as_app()",
+      "source_file": "supabase/tests/00_helpers.test.sql",
+      "source_location": "L60"
+    },
+    {
       "id": "supabase_tests_00_helpers_test_tests_create_user",
       "label": "tests.create_user()",
       "_origin": "ast",
@@ -11539,7 +11561,7 @@
       "file_type": "code",
       "norm_label": "tests.reset()",
       "source_file": "supabase/tests/00_helpers.test.sql",
-      "source_location": "L59"
+      "source_location": "L81"
     },
     {
       "id": "fixtures_claude_artifact_expected_notizen_src_app",
@@ -13433,7 +13455,7 @@
       "node_kind": "heading",
       "norm_label": "2. one generic record store with a type registry",
       "source_file": "docs/adr/0002-suite-data-collections-and-app-permissions.md",
-      "source_location": "L37"
+      "source_location": "L38"
     },
     {
       "id": "docs_adr_0002_suite_data_collections_and_app_permissions_3_collections_sammlungen",
@@ -13445,7 +13467,7 @@
       "node_kind": "heading",
       "norm_label": "3. collections (sammlungen)",
       "source_file": "docs/adr/0002-suite-data-collections-and-app-permissions.md",
-      "source_location": "L61"
+      "source_location": "L62"
     },
     {
       "id": "docs_adr_0002_suite_data_collections_and_app_permissions_4_app_permissions_request_approval_priority",
@@ -13457,7 +13479,7 @@
       "node_kind": "heading",
       "norm_label": "4. app permissions: request \u2192 approval \u2192 priority",
       "source_file": "docs/adr/0002-suite-data-collections-and-app-permissions.md",
-      "source_location": "L72"
+      "source_location": "L73"
     },
     {
       "id": "docs_adr_0002_suite_data_collections_and_app_permissions_5_sdk_surface",
@@ -13469,7 +13491,7 @@
       "node_kind": "heading",
       "norm_label": "5. sdk surface",
       "source_file": "docs/adr/0002-suite-data-collections-and-app-permissions.md",
-      "source_location": "L114"
+      "source_location": "L115"
     },
     {
       "id": "docs_adr_0002_suite_data_collections_and_app_permissions_adr_0002_suite_data_shared_collections_and_app_permissions",
@@ -13493,7 +13515,7 @@
       "node_kind": "heading",
       "norm_label": "consequences",
       "source_file": "docs/adr/0002-suite-data-collections-and-app-permissions.md",
-      "source_location": "L127"
+      "source_location": "L128"
     },
     {
       "id": "docs_adr_0002_suite_data_collections_and_app_permissions_context",
@@ -13878,6 +13900,105 @@
       "norm_label": "decision",
       "source_file": "docs/adr/0003-construction-prompts-and-app-kit.md",
       "source_location": "L17"
+    },
+    {
+      "id": "supabase_migrations_20260928100740_app_identity",
+      "label": "20260928100740_app_identity.sql",
+      "_origin": "ast",
+      "community": 81,
+      "community_name": "20260928100740_app_identity.sql",
+      "file_type": "code",
+      "norm_label": "20260928100740_app_identity.sql",
+      "source_file": "supabase/migrations/20260928100740_app_identity.sql",
+      "source_location": null
+    },
+    {
+      "id": "supabase_migrations_20260928100740_app_identity_app_origins_app_slug_idx",
+      "label": "app_origins_app_slug_idx",
+      "_origin": "ast",
+      "community": 81,
+      "community_name": "20260928100740_app_identity.sql",
+      "file_type": "code",
+      "norm_label": "app_origins_app_slug_idx",
+      "source_file": "supabase/migrations/20260928100740_app_identity.sql",
+      "source_location": "L11"
+    },
+    {
+      "id": "supabase_migrations_20260928100740_app_identity_platform_app_access",
+      "label": "platform.app_access()",
+      "_origin": "ast",
+      "community": 81,
+      "community_name": "20260928100740_app_identity.sql",
+      "file_type": "code",
+      "norm_label": "platform.app_access()",
+      "source_file": "supabase/migrations/20260928100740_app_identity.sql",
+      "source_location": "L41"
+    },
+    {
+      "id": "supabase_migrations_20260928100740_app_identity_platform_app_origins",
+      "label": "platform.app_origins",
+      "_origin": "ast",
+      "community": 81,
+      "community_name": "20260928100740_app_identity.sql",
+      "file_type": "code",
+      "norm_label": "platform.app_origins",
+      "source_file": "supabase/migrations/20260928100740_app_identity.sql",
+      "source_location": "L7"
+    },
+    {
+      "id": "supabase_migrations_20260928100740_app_identity_platform_calling_app",
+      "label": "platform.calling_app()",
+      "_origin": "ast",
+      "community": 81,
+      "community_name": "20260928100740_app_identity.sql",
+      "file_type": "code",
+      "norm_label": "platform.calling_app()",
+      "source_file": "supabase/migrations/20260928100740_app_identity.sql",
+      "source_location": "L29"
+    },
+    {
+      "id": "supabase_migrations_20260928100740_app_identity_platform_may_access_app_file",
+      "label": "platform.may_access_app_file()",
+      "_origin": "ast",
+      "community": 81,
+      "community_name": "20260928100740_app_identity.sql",
+      "file_type": "code",
+      "norm_label": "platform.may_access_app_file()",
+      "source_file": "supabase/migrations/20260928100740_app_identity.sql",
+      "source_location": "L67"
+    },
+    {
+      "id": "supabase_migrations_20260928100740_app_identity_platform_notify_self",
+      "label": "platform.notify_self()",
+      "_origin": "ast",
+      "community": 81,
+      "community_name": "20260928100740_app_identity.sql",
+      "file_type": "code",
+      "norm_label": "platform.notify_self()",
+      "source_file": "supabase/migrations/20260928100740_app_identity.sql",
+      "source_location": "L81"
+    },
+    {
+      "id": "supabase_migrations_20260928100740_app_identity_platform_secure_table",
+      "label": "platform.secure_table()",
+      "_origin": "ast",
+      "community": 81,
+      "community_name": "20260928100740_app_identity.sql",
+      "file_type": "code",
+      "norm_label": "platform.secure_table()",
+      "source_file": "supabase/migrations/20260928100740_app_identity.sql",
+      "source_location": "L101"
+    },
+    {
+      "id": "supabase_migrations_20260928100740_app_identity_sql_platform_apps",
+      "label": "platform.apps",
+      "_origin": "ast",
+      "community": 81,
+      "community_name": "20260928100740_app_identity.sql",
+      "file_type": "code",
+      "norm_label": "platform.apps",
+      "source_file": "",
+      "source_location": ""
     },
     {
       "id": "apps_portal_src_admin_adminlayout",
@@ -24155,7 +24276,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "packages/cli/src/deploy/index.ts",
-      "source_location": "L128",
+      "source_location": "L130",
       "weight": 1.0
     },
     {
@@ -24167,7 +24288,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "packages/cli/src/deploy/index.ts",
-      "source_location": "L136",
+      "source_location": "L138",
       "weight": 1.0
     },
     {
@@ -24179,7 +24300,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "packages/cli/src/deploy/index.ts",
-      "source_location": "L140",
+      "source_location": "L142",
       "weight": 1.0
     },
     {
@@ -24191,7 +24312,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "packages/cli/src/deploy/index.ts",
-      "source_location": "L141",
+      "source_location": "L143",
       "weight": 1.0
     },
     {
@@ -24203,7 +24324,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "packages/cli/src/deploy/index.ts",
-      "source_location": "L147",
+      "source_location": "L149",
       "weight": 1.0
     },
     {
@@ -24215,7 +24336,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "packages/cli/src/deploy/index.ts",
-      "source_location": "L160",
+      "source_location": "L162",
       "weight": 1.0
     },
     {
@@ -24227,7 +24348,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "packages/cli/src/deploy/index.ts",
-      "source_location": "L162",
+      "source_location": "L164",
       "weight": 1.0
     },
     {
@@ -24239,7 +24360,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "packages/cli/src/deploy/index.ts",
-      "source_location": "L162",
+      "source_location": "L164",
       "weight": 1.0
     },
     {
@@ -24251,7 +24372,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "packages/cli/src/deploy/index.ts",
-      "source_location": "L167",
+      "source_location": "L169",
       "weight": 1.0
     },
     {
@@ -24263,7 +24384,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "packages/cli/src/deploy/index.ts",
-      "source_location": "L172",
+      "source_location": "L174",
       "weight": 1.0
     },
     {
@@ -24275,7 +24396,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "packages/cli/src/deploy/index.ts",
-      "source_location": "L174",
+      "source_location": "L178",
       "weight": 1.0
     },
     {
@@ -24287,7 +24408,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "packages/cli/src/deploy/index.ts",
-      "source_location": "L180",
+      "source_location": "L184",
       "weight": 1.0
     },
     {
@@ -24299,7 +24420,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "packages/cli/src/deploy/index.ts",
-      "source_location": "L181",
+      "source_location": "L189",
       "weight": 1.0
     },
     {
@@ -24311,7 +24432,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "packages/cli/src/deploy/index.ts",
-      "source_location": "L184",
+      "source_location": "L192",
       "weight": 1.0
     },
     {
@@ -24323,7 +24444,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "packages/cli/src/deploy/index.ts",
-      "source_location": "L185",
+      "source_location": "L193",
       "weight": 1.0
     },
     {
@@ -24335,7 +24456,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "packages/cli/src/deploy/index.ts",
-      "source_location": "L190",
+      "source_location": "L198",
       "weight": 1.0
     },
     {
@@ -24347,7 +24468,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "packages/cli/src/deploy/index.ts",
-      "source_location": "L196",
+      "source_location": "L204",
       "weight": 1.0
     },
     {
@@ -24359,7 +24480,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "packages/cli/src/deploy/index.ts",
-      "source_location": "L46",
+      "source_location": "L48",
       "weight": 1.0
     },
     {
@@ -24371,7 +24492,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "packages/cli/src/deploy/index.ts",
-      "source_location": "L86",
+      "source_location": "L88",
       "weight": 1.0
     },
     {
@@ -24383,7 +24504,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "packages/cli/src/deploy/index.ts",
-      "source_location": "L51",
+      "source_location": "L53",
       "weight": 1.0
     },
     {
@@ -24395,7 +24516,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "packages/cli/src/deploy/index.ts",
-      "source_location": "L65",
+      "source_location": "L67",
       "weight": 1.0
     },
     {
@@ -24443,7 +24564,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "packages/cli/src/deploy/register.ts",
-      "source_location": "L45",
+      "source_location": "L46",
       "weight": 1.0
     },
     {
@@ -24803,7 +24924,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "packages/sdk/src/index.ts",
-      "source_location": "L119",
+      "source_location": "L127",
       "weight": 1.0
     },
     {
@@ -24815,7 +24936,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "packages/sdk/src/index.ts",
-      "source_location": "L120",
+      "source_location": "L128",
       "weight": 1.0
     },
     {
@@ -24827,7 +24948,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "packages/sdk/src/index.ts",
-      "source_location": "L156",
+      "source_location": "L164",
       "weight": 1.0
     },
     {
@@ -24839,7 +24960,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "packages/sdk/src/index.ts",
-      "source_location": "L176",
+      "source_location": "L184",
       "weight": 1.0
     },
     {
@@ -34674,6 +34795,17 @@
       "weight": 1.0
     },
     {
+      "source": "packages_cli_src_deploy_register",
+      "target": "docref_adr_0002",
+      "relation": "cites",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "packages/cli/src/deploy/register.ts",
+      "source_location": "L56",
+      "weight": 1.0
+    },
+    {
       "source": "agents",
       "target": "agents_agent_instructions",
       "relation": "contains",
@@ -37563,7 +37695,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CLAUDE.md",
-      "source_location": "L74",
+      "source_location": "L75",
       "weight": 1.0
     },
     {
@@ -37629,7 +37761,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/adr/0002-suite-data-collections-and-app-permissions.md",
-      "source_location": "L127",
+      "source_location": "L128",
       "weight": 1.0
     },
     {
@@ -37662,7 +37794,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/adr/0002-suite-data-collections-and-app-permissions.md",
-      "source_location": "L114",
+      "source_location": "L115",
       "weight": 1.0
     },
     {
@@ -37684,7 +37816,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/adr/0002-suite-data-collections-and-app-permissions.md",
-      "source_location": "L37",
+      "source_location": "L38",
       "weight": 1.0
     },
     {
@@ -37695,7 +37827,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/adr/0002-suite-data-collections-and-app-permissions.md",
-      "source_location": "L61",
+      "source_location": "L62",
       "weight": 1.0
     },
     {
@@ -37706,7 +37838,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/adr/0002-suite-data-collections-and-app-permissions.md",
-      "source_location": "L72",
+      "source_location": "L73",
       "weight": 1.0
     },
     {
@@ -42161,7 +42293,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "packages/cli/src/deploy/index.ts",
-      "source_location": "L109",
+      "source_location": "L111",
       "weight": 1.0
     },
     {
@@ -42172,7 +42304,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "packages/cli/src/deploy/index.ts",
-      "source_location": "L115",
+      "source_location": "L117",
       "weight": 1.0
     },
     {
@@ -42183,7 +42315,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "packages/cli/src/deploy/index.ts",
-      "source_location": "L126",
+      "source_location": "L128",
       "weight": 1.0
     },
     {
@@ -42227,7 +42359,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "packages/cli/src/deploy/index.ts",
-      "source_location": "L179",
+      "source_location": "L183",
       "weight": 1.0
     },
     {
@@ -42238,7 +42370,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "packages/cli/src/deploy/index.ts",
-      "source_location": "L203",
+      "source_location": "L211",
       "weight": 1.0
     },
     {
@@ -42260,7 +42392,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "packages/cli/src/deploy/index.ts",
-      "source_location": "L34",
+      "source_location": "L36",
       "weight": 1.0
     },
     {
@@ -42271,7 +42403,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "packages/cli/src/deploy/index.ts",
-      "source_location": "L45",
+      "source_location": "L47",
       "weight": 1.0
     },
     {
@@ -42282,7 +42414,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "packages/cli/src/deploy/index.ts",
-      "source_location": "L50",
+      "source_location": "L52",
       "weight": 1.0
     },
     {
@@ -42293,7 +42425,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "packages/cli/src/deploy/index.ts",
-      "source_location": "L76",
+      "source_location": "L78",
       "weight": 1.0
     },
     {
@@ -43470,7 +43602,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "packages/sdk/src/index.ts",
-      "source_location": "L175",
+      "source_location": "L183",
       "weight": 1.0
     },
     {
@@ -43591,7 +43723,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "packages/sdk/src/index.ts",
-      "source_location": "L64",
+      "source_location": "L68",
       "weight": 1.0
     },
     {
@@ -44629,6 +44761,83 @@
       "weight": 1.0
     },
     {
+      "source": "supabase_migrations_20260928100740_app_identity",
+      "target": "supabase_migrations_20260928100740_app_identity_platform_secure_table",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "supabase/migrations/20260928100740_app_identity.sql",
+      "source_location": "L101",
+      "weight": 1.0
+    },
+    {
+      "source": "supabase_migrations_20260928100740_app_identity",
+      "target": "supabase_migrations_20260928100740_app_identity_app_origins_app_slug_idx",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "supabase/migrations/20260928100740_app_identity.sql",
+      "source_location": "L11",
+      "weight": 1.0
+    },
+    {
+      "source": "supabase_migrations_20260928100740_app_identity",
+      "target": "supabase_migrations_20260928100740_app_identity_platform_calling_app",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "supabase/migrations/20260928100740_app_identity.sql",
+      "source_location": "L29",
+      "weight": 1.0
+    },
+    {
+      "source": "supabase_migrations_20260928100740_app_identity",
+      "target": "supabase_migrations_20260928100740_app_identity_platform_app_access",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "supabase/migrations/20260928100740_app_identity.sql",
+      "source_location": "L41",
+      "weight": 1.0
+    },
+    {
+      "source": "supabase_migrations_20260928100740_app_identity",
+      "target": "supabase_migrations_20260928100740_app_identity_platform_may_access_app_file",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "supabase/migrations/20260928100740_app_identity.sql",
+      "source_location": "L67",
+      "weight": 1.0
+    },
+    {
+      "source": "supabase_migrations_20260928100740_app_identity",
+      "target": "supabase_migrations_20260928100740_app_identity_platform_app_origins",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "supabase/migrations/20260928100740_app_identity.sql",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "supabase_migrations_20260928100740_app_identity",
+      "target": "supabase_migrations_20260928100740_app_identity_platform_notify_self",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "supabase/migrations/20260928100740_app_identity.sql",
+      "source_location": "L81",
+      "weight": 1.0
+    },
+    {
       "source": "supabase_tests_00_helpers_test",
       "target": "supabase_tests_00_helpers_test_tests_create_user",
       "relation": "contains",
@@ -44663,13 +44872,24 @@
     },
     {
       "source": "supabase_tests_00_helpers_test",
+      "target": "supabase_tests_00_helpers_test_tests_as_app",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "supabase/tests/00_helpers.test.sql",
+      "source_location": "L60",
+      "weight": 1.0
+    },
+    {
+      "source": "supabase_tests_00_helpers_test",
       "target": "supabase_tests_00_helpers_test_tests_reset",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "supabase/tests/00_helpers.test.sql",
-      "source_location": "L59",
+      "source_location": "L81",
       "weight": 1.0
     },
     {
@@ -45140,6 +45360,17 @@
       "confidence_score": 1.0,
       "source_file": "supabase/migrations/20260923000500_app_kv_and_files.sql",
       "source_location": "L15",
+      "weight": 1.0
+    },
+    {
+      "source": "supabase_migrations_20260928100740_app_identity_app_origins_app_slug_idx",
+      "target": "supabase_migrations_20260928100740_app_identity_platform_app_origins",
+      "relation": "indexes",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "supabase/migrations/20260928100740_app_identity.sql",
+      "source_location": "L11",
       "weight": 1.0
     },
     {
@@ -45690,6 +45921,17 @@
       "confidence_score": 1.0,
       "source_file": "supabase/migrations/20260923000600_invite_helpers.sql",
       "source_location": "L10",
+      "weight": 1.0
+    },
+    {
+      "source": "supabase_migrations_20260928100740_app_identity_platform_calling_app",
+      "target": "supabase_migrations_20260928100740_app_identity_platform_app_origins",
+      "relation": "reads_from",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "supabase/migrations/20260928100740_app_identity.sql",
+      "source_location": "L36",
       "weight": 1.0
     },
     {
@@ -46276,6 +46518,17 @@
       "weight": 1.0
     },
     {
+      "source": "supabase_migrations_20260928100740_app_identity_platform_app_origins",
+      "target": "supabase_migrations_20260928100740_app_identity_sql_platform_apps",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "supabase/migrations/20260928100740_app_identity.sql",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
       "source": "supabase_migrations_20260923000100_platform_core_apps_touch",
       "target": "supabase_migrations_20260923000100_platform_core_sql_platform_touch_updated_at",
       "relation": "triggers",
@@ -46544,7 +46797,7 @@
       "confidence_score": 0.85,
       "context": "argument",
       "source_file": "packages/sdk/src/index.ts",
-      "source_location": "L176",
+      "source_location": "L184",
       "weight": 1.0
     },
     {
@@ -46812,18 +47065,6 @@
       "weight": 1.0
     },
     {
-      "source": "docs_adr_0002_suite_data_collections_and_app_permissions_1_app_identity_from_the_browser_origin",
-      "target": "apps_portal_src_lib_supabase_platform",
-      "relation": "references",
-      "_origin": "ast",
-      "confidence": "INFERRED",
-      "confidence_score": 0.95,
-      "context": "platform",
-      "source_file": "docs/adr/0002-suite-data-collections-and-app-permissions.md",
-      "source_location": "L26",
-      "weight": 1.0
-    },
-    {
       "source": "plan_5_data",
       "target": "apps_portal_src_lib_supabase_platform",
       "relation": "references",
@@ -46880,7 +47121,7 @@
       "confidence_score": 0.95,
       "context": "supabase",
       "source_file": "CLAUDE.md",
-      "source_location": "L63",
+      "source_location": "L64",
       "weight": 1.0
     },
     {
@@ -46945,5 +47186,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "c331cc85ace5ab3185fde616b0bc37d69911b4a5"
+  "built_at_commit": "45e7696a26785931ccda4513413424920f2fba10"
 }
