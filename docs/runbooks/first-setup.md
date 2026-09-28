@@ -71,15 +71,12 @@ deploy workflow uses them and also uploads the Worker secrets, so nothing has to
 | `CF_ACCESS_API_CLIENT_ID` / `_SECRET` | Access service token `mininode-api` (from `bootstrap.sh`) | NucBox |
 | `SUPABASE_DB_URL` | *Connect → Session pooler* string | apps with own tables |
 
-## 4. Test apps
+## 4. Apps
 
-`hosted/notizen` (private notes), `hosted/einkauf` (shared list) and `hosted/ideen` (AI) deploy
-with the first run and are granted to every user. They check private data, shared data and the
-AI proxy; each README says what to try.
-
-Two everyday apps deploy with them: `hosted/sportplaner` (sports offers, planned participation,
-visits and costs; photos in `mn.files`) and `hosted/haushalt` (household budget with bank CSV
-import, standing orders and the automatic transfer into the income tax forms).
+`hosted/sportplaner` (sports offers, planned participation, visits and costs; photos in
+`mn.files`) and `hosted/haushalt` (household budget with bank CSV import, standing orders and the
+automatic transfer into the income tax forms) deploy with every run. Apps removed from `hosted/`
+are pruned: their Workers are deleted and their registry rows disabled (data is kept).
 
 ## 5. First deploy and first login
 

@@ -18,7 +18,8 @@
     "@supabase/supabase-js": "2.117.1",
     "postgres": "3.4.9",
     "@mininode/gate": "workspace:*",
-    "@mininode/sdk": "workspace:*"
+    "@mininode/sdk": "workspace:*",
+    "@mininode/ui": "workspace:*"
   },
   "devDependencies": {
     "@mininode/config": "workspace:*",

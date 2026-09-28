@@ -1,7 +1,8 @@
 import { spawnSync } from 'node:child_process';
 import { cpSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { basename, dirname, join, resolve } from 'node:path';
 import { appSchemaName, type Manifest } from '@mininode/manifest';
 import { createClient } from '@supabase/supabase-js';
 import postgres from 'postgres';
@@ -13,6 +14,16 @@ import { appWranglerConfig } from './wrangler-config.ts';
 
 const REPO_ROOT = resolve(import.meta.dirname, '../../../..');
 const SDK_BUNDLE = join(REPO_ROOT, 'packages/sdk/dist/mininode.iife.js');
+/** The app kit (design system), served next to the SDK as /_mininode/ui.css and ui.js. */
+const KIT = join(REPO_ROOT, 'packages/ui/kit');
+/** The kit's fonts, resolved from @mininode/ui's own dependencies (the packages only export CSS). */
+function kitFonts(): string[] {
+  const require = createRequire(join(KIT, '..', 'package.json'));
+  return ['bricolage-grotesque', 'instrument-sans', 'jetbrains-mono'].map((name) => {
+    const css = require.resolve(`@fontsource-variable/${name}`);
+    return join(dirname(css), 'files', `${name}-latin-wght-normal.woff2`);
+  });
+}
 /** Files that belong to the integration, never to the served site. */
 const NOT_SERVED = new Set([
   'mininode.json',
@@ -29,6 +40,8 @@ export interface DeployOptions {
   version: string;
   dryRun?: boolean;
   log?: (line: string) => void;
+  /** Origins the app is served from; defaults to https://<slug>.<domain> outside local. */
+  origins?: string[];
 }
 
 function run(
@@ -63,8 +76,12 @@ export function stageAssets(appDir: string, manifest: Manifest): string {
     },
   });
   ensureSdkBundle();
-  mkdirSync(join(assets, '_mininode'), { recursive: true });
-  cpSync(SDK_BUNDLE, join(assets, '_mininode', 'sdk.js'));
+  const platform = join(assets, '_mininode');
+  mkdirSync(join(platform, 'fonts'), { recursive: true });
+  cpSync(SDK_BUNDLE, join(platform, 'sdk.js'));
+  cpSync(join(KIT, 'ui.css'), join(platform, 'ui.css'));
+  cpSync(join(KIT, 'ui.js'), join(platform, 'ui.js'));
+  for (const font of kitFonts()) cpSync(font, join(platform, 'fonts', basename(font)));
   return stage;
 }
 
@@ -171,13 +188,19 @@ export async function deployApp(appDir: string, options: DeployOptions): Promise
   if (!secret) throw new Error('SUPABASE_SECRET_KEY is required to register the app');
   if (env.name === 'local') await waitForRest(env.supabaseUrl, secret);
   const db = createClient(env.supabaseUrl, secret, { auth: { persistSession: false } });
-  await registerApp(db, manifest, options.version);
+  const origins =
+    options.origins ?? (env.name === 'local' ? [] : [`https://${manifest.slug}.${env.domain}`]);
+  await registerApp(db, manifest, options.version, origins);
   log(`  registered ${manifest.slug} (${options.version})`);
 }
 
 /** Local preview: registers the app in the local database and serves it through the gate. */
 export async function devApp(appDir: string, port = 8790): Promise<void> {
-  await deployApp(appDir, { env: 'local', version: 'dev' });
+  await deployApp(appDir, {
+    env: 'local',
+    version: 'dev',
+    origins: [`http://localhost:${port}`, `http://127.0.0.1:${port}`],
+  });
   const report = doctor(appDir);
   const manifest = report.manifest;
   if (manifest?.target !== 'cloudflare') return;

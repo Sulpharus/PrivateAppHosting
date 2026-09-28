@@ -38,9 +38,12 @@ export default defineConfig({
       timeout: 120_000,
     },
     // The real hosted apps, each behind its own local gate.
-    ...['notizen', 'einkauf', 'ideen', 'sportplaner', 'haushalt'].map((slug, index) => ({
-      command: `pnpm mininode dev hosted/${slug} --port ${8791 + index}`,
-      url: `http://localhost:${8791 + index}/_mininode/config.json`,
+    ...[
+      ['sportplaner', 8794],
+      ['haushalt', 8795],
+    ].map(([slug, port]) => ({
+      command: `pnpm mininode dev hosted/${slug} --port ${port}`,
+      url: `http://localhost:${port}/_mininode/config.json`,
       reuseExistingServer: !process.env.CI,
       timeout: 120_000,
     })),

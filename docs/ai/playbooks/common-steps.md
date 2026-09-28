@@ -20,8 +20,15 @@
 6. **CSP.** No external scripts. Fonts and images from third parties are allowed (`img-src https:`)
    but prefer bundling. API calls to third-party hosts need to be listed in the manifest in a
    later spec version; for now avoid them or proxy through `mn.ai`.
-7. **UI.** German copy, 44 px touch targets, light/dark, loading and error states. Keep the
-   original look unless it breaks these rules.
+7. **UI.** German copy, 44 px touch targets, light/dark, loading and error states. The look is
+   the App Kit (`docs/ai/DESIGN-SYSTEM.md`):
+   - An app that already uses `mn-*` classes with the kit CSS inlined (built outside MiniNode):
+     delete the inlined copy and link `/_mininode/ui.css` and `/_mininode/ui.js` instead, keep
+     `body.mn-app` and `data-accent`.
+   - An app with its own styling: map its colours, fonts and radii to the `--mn-*` tokens and
+     its shell, buttons, lists and dialogs to the kit components where that is a small change.
+     Otherwise keep its layout, but take colours and fonts from the tokens; note what is left in
+     the README.
 8. **README.** `hosted/<slug>/README.md`: what the app does, where it came from, what changed.
 9. **Verify locally.**
    ```bash

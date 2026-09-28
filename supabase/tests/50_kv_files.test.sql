@@ -1,5 +1,5 @@
 begin;
-select plan(9);
+select plan(14);
 select tests.reset();
 
 select tests.create_user('owner@example.com') as owner_id \gset
@@ -14,6 +14,7 @@ insert into platform.app_grants (user_id, app_slug) values
   (:'user_id', 'todo'), (:'trusted_id', 'todo'), (:'trusted_id', 'kasse'), (:'user_id', 'kasse');
 
 select tests.login(:'user_id');
+select tests.as_app('todo');
 insert into platform.app_kv (app_slug, owner_id, key, value) values ('todo', :'user_id', 'list', '["a"]');
 insert into platform.app_kv (app_slug, owner_id, key, value) values ('todo', null, 'motd', '"hi"');
 select throws_ok(
@@ -22,11 +23,22 @@ select throws_ok(
 
 select tests.login(:'trusted_id');
 select is((select count(*)::int from platform.app_kv where app_slug = 'todo'), 1, 'only shared kv rows of others are visible');
+select tests.as_app('kasse');
 insert into platform.app_kv (app_slug, owner_id, key, value) values ('kasse', :'owner_id', 'saldo', '10');
 select is((select count(*)::int from platform.app_kv where app_slug = 'kasse'), 1, 'trusted writes shared-account kv as owner');
 
 select tests.login(:'user_id');
 select is((select count(*)::int from platform.app_kv where app_slug = 'kasse'), 0, 'plain user cannot see owner kv');
+select tests.as_app('kasse');
+select is((select count(*)::int from platform.app_kv where app_slug = 'todo'), 0, 'kasse cannot read todo kv');
+select throws_ok(
+  format($$insert into platform.app_kv (app_slug, owner_id, key, value) values ('todo', %L, 'x', '1')$$, :'user_id'),
+  '42501', null, 'kasse cannot write todo kv');
+select ok(not platform.may_access_app_file('todo/' || :'user_id' || '/a.png'), 'kasse cannot reach todo files');
+select throws_ok($$select platform.notify_self('todo', 'Fake')$$, '42501', null, 'kasse cannot notify as todo');
+select tests.as_app('todo');
+select isnt(platform.notify_self('todo', 'Erinnerung'), null, 'todo notifies under its own name');
+select tests.as_app('todo');
 select throws_ok(
   $$insert into platform.app_kv (app_slug, owner_id, key, value) values ('fremd', null, 'x', '1')$$,
   '42501', null, 'no kv access to apps without grant');
@@ -35,6 +47,7 @@ select ok(platform.may_access_app_file('todo/' || :'user_id' || '/a.png'), 'own 
 select ok(platform.may_access_app_file('todo/shared/a.png'), 'shared file path allowed');
 select ok(not platform.may_access_app_file('todo/' || :'trusted_id' || '/a.png'), 'foreign file path denied');
 select tests.login(:'trusted_id');
+select tests.as_app('kasse');
 select ok(platform.may_access_app_file('kasse/' || :'owner_id' || '/beleg.pdf'), 'trusted may use owner files in shared-account app');
 select tests.logout();
 

@@ -61,6 +61,7 @@ function decodeRole(accessToken: string | undefined): Role | null {
   }
 }
 
+/** Data calls only work from the app's registered origin: RLS uses it to tell apps apart. */
 export function createMininode(config: MininodeConfig): Mininode {
   const supabase = createBrowserClient(config.supabaseUrl, config.supabasePublishableKey, {
     cookieOptions: {

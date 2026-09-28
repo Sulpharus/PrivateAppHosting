@@ -51,6 +51,28 @@ as $$
 begin
   perform set_config('role', 'postgres', true);
   perform set_config('request.jwt.claims', '', true);
+  perform set_config('request.headers', '', true);
+end;
+$$;
+
+-- Makes the following requests come from app `p_slug` (its page's Origin header), registering a
+-- test origin for it. `null` sends no Origin, like a server-side client.
+create or replace function tests.as_app(p_slug text)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if p_slug is null then
+    perform set_config('request.headers', '', true);
+    return;
+  end if;
+  insert into platform.app_origins (origin, app_slug)
+  values ('https://' || p_slug || '.test', p_slug)
+  on conflict (origin) do nothing;
+  perform set_config('request.headers',
+    json_build_object('origin', 'https://' || p_slug || '.test')::text, true);
 end;
 $$;
 
