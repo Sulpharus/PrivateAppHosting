@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="de" data-accent="green">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>MiniNode App Kit</title>
+<!-- In a hosted app these are /_mininode/ui.css and /_mininode/ui.js. -->
+<link rel="stylesheet" href="ui.css">
+<script src="ui.js"></script>
+<script src="preview.js" defer></script>
+</head>
+<body class="mn-app">
+<nav class="mn-nav" aria-label="Bereiche">
+  <div class="mn-brand">
+    <a class="mn-home" href="https://mininode.app"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>Alle Apps</a>
+    <span class="mn-brand-name"><span class="mn-brand-mark"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4.5h4v15H5zM10.5 4.5h4v15h-4zM16 6l3.5-1 3 14-3.5 1z"/></svg></span>Bücherregal</span>
+    <button type="button" class="mn-btn mn-btn--primary" data-open="editor"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Buch hinzufügen</button>
+  </div>
+  <div class="mn-tabs">
+    <a class="mn-tab" href="#start" aria-current="page"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3.5" y="3.5" width="7" height="7" rx="1.8"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.8"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.8"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.8"/></svg>Start</a>
+    <a class="mn-tab" href="#liste"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 5.5h16M4 12h16M4 18.5h10"/></svg>Liste</a>
+    <a class="mn-tab" href="#kalender"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>Kalender</a>
+    <a class="mn-tab" href="#statistik"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 20v-7M12 20V5M19 20v-10"/></svg>Statistik</a>
+  </div>
+</nav>
+
+<div class="mn-page">
+  <header class="mn-top"><div class="mn-top-inner">
+    <div class="mn-top-text"><a class="mn-home" href="https://mininode.app">← Alle Apps</a><h1>Start</h1><p class="mn-sub">3 Bücher am Lesen, 23 gelesen</p></div>
+    <div class="mn-top-tools">
+      <div class="mn-seg" id="theme">
+        <button type="button" aria-pressed="true" data-theme-set="system">Auto</button>
+        <button type="button" aria-pressed="false" data-theme-set="light">Hell</button>
+        <button type="button" aria-pressed="false" data-theme-set="dark">Dunkel</button>
+      </div>
+    </div>
+    <button type="button" class="mn-fab" data-open="editor" aria-label="Buch hinzufügen"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+  </div></header>
+
+  <main class="mn-main">
+    <section id="start">
+      <div class="mn-sect" style="margin-top:8px"><h2>Akzentfarbe</h2></div>
+      <div class="mn-chips" id="accents">
+        <button type="button" class="mn-filter" aria-pressed="true" data-accent-set="green">Grün</button>
+        <button type="button" class="mn-filter" aria-pressed="false" data-accent-set="blue">Blau</button>
+        <button type="button" class="mn-filter" aria-pressed="false" data-accent-set="violet">Violett</button>
+        <button type="button" class="mn-filter" aria-pressed="false" data-accent-set="amber">Bernstein</button>
+        <button type="button" class="mn-filter" aria-pressed="false" data-accent-set="rose">Rosé</button>
+        <button type="button" class="mn-filter" aria-pressed="false" data-accent-set="teal">Petrol</button>
+      </div>
+
+      <div class="mn-sect"><h2>Am Lesen<small>3</small></h2><button class="mn-link" type="button">Alle anzeigen</button></div>
+      <div class="mn-tiles">
+        <div class="mn-tile-wrap">
+          <button class="mn-tile" type="button" data-open="detail"><span class="mn-tile-media"><span class="mn-tile-initials">DZ</span><span class="mn-tile-badge">Seite 212 von 480</span></span><span class="mn-tile-cap"><span class="mn-tile-title">Der Zauberberg</span><span class="mn-tile-sub">Thomas Mann · Roman</span></span></button>
+          <button class="mn-tile-action" type="button" aria-pressed="true" aria-label="Der Zauberberg ist Favorit"><span><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span></button>
+        </div>
+        <div class="mn-tile-wrap">
+          <button class="mn-tile" type="button" data-open="detail"><span class="mn-tile-media"><span class="mn-tile-initials">KL</span><span class="mn-tile-badge">Seite 64 von 190</span></span><span class="mn-tile-cap"><span class="mn-tile-title">Kleine Leute</span><span class="mn-tile-sub">Hans Fallada · Roman</span></span></button>
+          <button class="mn-tile-action" type="button" aria-pressed="false" aria-label="Kleine Leute als Favorit markieren"><span><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 6v12M6 12h12"/></svg></span></button>
+        </div>
+        <div class="mn-tile-wrap">
+          <button class="mn-tile" type="button" data-open="detail"><span class="mn-tile-media"><span class="mn-tile-initials">GS</span><span class="mn-tile-badge">Hörbuch, 4 h 10 min</span><span class="mn-tile-status"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Beendet</span></span><span class="mn-tile-cap"><span class="mn-tile-title">Gehen, ging, gegangen</span><span class="mn-tile-sub">Jenny Erpenbeck</span></span></button>
+        </div>
+      </div>
+
+      <div class="mn-sect"><h2>Knöpfe und Auswahl</h2></div>
+      <div class="mn-card" style="display:grid;gap:16px">
+        <div style="display:flex;flex-wrap:wrap;gap:8px">
+          <button class="mn-btn mn-btn--primary" type="button">Speichern</button>
+          <button class="mn-btn" type="button">Weiter</button>
+          <button class="mn-btn mn-btn--ghost" type="button">Abbrechen</button>
+          <button class="mn-btn mn-btn--danger" type="button">Buch löschen</button>
+          <button class="mn-btn" type="button" disabled>Nicht verfügbar</button>
+        </div>
+        <div class="mn-seg" data-select>
+          <button type="button" aria-pressed="true">Autor</button>
+          <button type="button" aria-pressed="false">Genre</button>
+          <button type="button" aria-pressed="false">Jahr</button>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">
+          <span class="mn-chip">Roman</span><span class="mn-chip mn-chip--plain">Deutsch</span><span class="mn-chip mn-chip--ok">Zurückgegeben</span><span class="mn-chip mn-chip--warn">Fällig in 2 Tagen</span><span class="mn-chip mn-chip--bad">Überfällig</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          <div class="mn-stepper"><button class="mn-icon-btn" type="button" aria-label="Vorheriges Jahr"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button><b>2026</b><button class="mn-icon-btn" type="button" aria-label="Nächstes Jahr"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button></div>
+          <button class="mn-btn" type="button" data-toast>Toast zeigen</button>
+          <button class="mn-btn" type="button" data-open="editor">Dialog mit Schritten</button>
+        </div>
+        <div class="mn-banner mn-banner--warn" role="note"><b>Hinweis</b><span>„Kleine Leute“ ist seit dem 12. September an Jana verliehen.</span></div>
+      </div>
+    </section>
+
+    <section id="liste">
+      <div class="mn-sect"><h2>Liste</h2></div>
+      <div class="mn-split mn-split--end">
+        <div style="display:grid;gap:12px">
+          <div class="mn-search"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4-4"/></svg><input type="search" id="q" placeholder="Titel, Autor oder Genre" aria-label="Bücher durchsuchen"></div>
+          <div class="mn-chips" data-select>
+            <button type="button" class="mn-filter" aria-pressed="true">Alle</button>
+            <button type="button" class="mn-filter" aria-pressed="false">Roman</button>
+            <button type="button" class="mn-filter" aria-pressed="false">Sachbuch</button>
+            <button type="button" class="mn-filter" aria-pressed="false">Lyrik</button>
+          </div>
+          <div class="mn-list">
+            <button class="mn-row" type="button" data-open="detail"><span class="mn-thumb">DZ</span><span><span class="mn-row-title">Der Zauberberg</span><span class="mn-row-sub">Thomas Mann, 1924, Roman</span></span><span class="mn-row-side"><b>44 %</b>am Lesen</span></button>
+            <button class="mn-row" type="button" data-open="detail"><span class="mn-thumb">SR</span><span><span class="mn-row-title">Stiller</span><span class="mn-row-sub">Max Frisch, 1954, Roman</span></span><span class="mn-row-side"><b>★ 5</b>12. Aug</span></button>
+            <button class="mn-row" type="button" data-open="detail"><span class="mn-thumb">DA</span><span><span class="mn-row-title">Die Anomalie</span><span class="mn-row-sub">Hervé Le Tellier, 2020, Roman</span></span><span class="mn-row-side"><b>★ 4</b>3. Jul</span></button>
+          </div>
+        </div>
+        <aside class="mn-card mn-sticky" aria-label="Datensicherung">
+          <h3>Datensicherung</h3>
+          <p class="mn-note" style="margin:0 0 16px">Zuletzt exportiert am 14. Sept. 2026. Der Export enthält alle Bücher, Notizen und Cover.</p>
+          <div class="mn-grid-2"><button class="mn-btn" type="button">Exportieren</button><button class="mn-btn" type="button">Importieren</button></div>
+        </aside>
+      </div>
+    </section>
+
+    <section id="kalender">
+      <div class="mn-sect"><h2>Kalender</h2></div>
+      <div class="mn-week">
+        <button class="mn-icon-btn" type="button" aria-label="Vorherige Woche"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+        <span class="mn-week-label">28. Sept. bis 4. Okt.</span>
+        <div class="mn-week-days" data-select>
+          <button class="mn-day today" type="button" aria-pressed="true"><small>Mo</small><b>28</b><i></i></button>
+          <button class="mn-day has" type="button" aria-pressed="false"><small>Di</small><b>29</b><i></i></button>
+          <button class="mn-day" type="button" aria-pressed="false"><small>Mi</small><b>30</b><i></i></button>
+          <button class="mn-day has" type="button" aria-pressed="false"><small>Do</small><b>1</b><i></i></button>
+          <button class="mn-day" type="button" aria-pressed="false"><small>Fr</small><b>2</b><i></i></button>
+          <button class="mn-day has" type="button" aria-pressed="false"><small>Sa</small><b>3</b><i></i></button>
+          <button class="mn-day" type="button" aria-pressed="false"><small>So</small><b>4</b><i></i></button>
+        </div>
+        <button class="mn-icon-btn" type="button" aria-label="Nächste Woche"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button>
+      </div>
+      <div class="mn-split mn-split--start" style="margin-top:16px">
+        <div class="mn-card">
+          <div class="mn-cal-head"><button class="mn-icon-btn" type="button" aria-label="Vorheriger Monat"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button><h2>September 2026</h2><button class="mn-icon-btn" type="button" aria-label="Nächster Monat"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button></div>
+          <div class="mn-cal"><span class="mn-dow">Mo</span><span class="mn-dow">Di</span><span class="mn-dow">Mi</span><span class="mn-dow">Do</span><span class="mn-dow">Fr</span><span class="mn-dow">Sa</span><span class="mn-dow">So</span></div>
+          <div class="mn-cal" id="cells" data-select></div>
+        </div>
+        <div>
+          <div class="mn-sect" style="margin-top:8px"><h3>Montag, 28. September</h3></div>
+          <div class="mn-list">
+            <div class="mn-row mn-row--text"><span><span class="mn-row-title">Rückgabe Stadtbibliothek</span><span class="mn-row-sub">„Die Anomalie“, Zweigstelle Giesing</span></span><span class="mn-row-side"><b>18:00</b>fällig</span></div>
+            <div class="mn-row mn-row--text"><span><span class="mn-row-title">Lesekreis</span><span class="mn-row-sub">Kapitel 5 bis 7, bei Jana</span></span><span class="mn-row-side"><b>19:30</b>bis 21:00</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="statistik">
+      <div class="mn-sect"><h2>Statistik</h2></div>
+      <div class="mn-kpis">
+        <div class="mn-kpi"><b>23</b><span>Bücher gelesen</span></div>
+        <div class="mn-kpi"><b>7.412</b><span>Seiten</span></div>
+        <div class="mn-kpi"><b>186,40 €</b><span>Ausgaben bisher</span></div>
+      </div>
+      <div class="mn-cols">
+        <div>
+          <div class="mn-sect"><h3>Genres</h3></div>
+          <div class="mn-list">
+            <div class="mn-bar"><span class="mn-bar-top"><b>Roman</b><span>14 Bücher, 61 %</span></span><span class="mn-meter"><i style="--mn-value:100"></i></span></div>
+            <div class="mn-bar"><span class="mn-bar-top"><b>Sachbuch</b><span>6 Bücher, 26 %</span></span><span class="mn-meter"><i style="--mn-value:43"></i></span></div>
+            <div class="mn-bar"><span class="mn-bar-top"><b>Lyrik</b><span>3 Bücher, 13 %</span></span><span class="mn-meter"><i style="--mn-value:21"></i></span></div>
+          </div>
+        </div>
+        <div>
+          <div class="mn-sect"><h3>Leseaktivität September</h3></div>
+          <div class="mn-card"><div class="mn-heat" id="heat" role="img" aria-label="Lesetage im September"></div></div>
+        </div>
+      </div>
+      <div class="mn-sect"><h3>Leer und Laden</h3></div>
+      <div class="mn-cols" style="gap:16px">
+        <div class="mn-empty"><div class="mn-empty-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 5.5h16M4 12h16M4 18.5h10"/></svg></div><h3>Noch keine Wunschliste</h3><p>Merke dir Bücher, die du lesen möchtest. Sie erscheinen dann hier.</p><button class="mn-btn mn-btn--primary" type="button">Buch merken</button></div>
+        <div style="display:grid;gap:12px;align-content:start" aria-hidden="true"><span class="mn-sk" style="height:56px"></span><span class="mn-sk" style="height:56px"></span><span class="mn-sk" style="height:56px"></span></div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<template id="tpl-detail">
+  <div class="mn-sheet-bar mn-sheet-bar--float"><button class="mn-icon-btn" type="button" data-mn-close aria-label="Schließen"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button><button class="mn-btn" type="button">Bearbeiten</button></div>
+  <div class="mn-sheet-hero"></div>
+  <div class="mn-sheet-body">
+    <h2 class="mn-sheet-title">Der Zauberberg</h2>
+    <p style="display:flex;gap:6px;margin:12px 0 0"><span class="mn-chip">Roman</span><span class="mn-chip mn-chip--plain">1924</span></p>
+    <dl class="mn-facts" style="margin-top:20px">
+      <div><dt>Autor</dt><dd>Thomas Mann</dd></div>
+      <div><dt>Fortschritt</dt><dd>Seite 212 von 480<span class="mn-meter"><i style="--mn-value:44"></i></span></dd></div>
+      <div><dt>Notiz</dt><dd>Empfehlung von Jana, Ausgabe S. Fischer.</dd></div>
+    </dl>
+  </div>
+</template>
+
+<template id="tpl-editor">
+  <div class="mn-sheet-bar"><button class="mn-btn mn-btn--ghost" type="button" data-mn-close>Abbrechen</button><h2>Neues Buch</h2><span></span></div>
+  <nav class="mn-steps" aria-label="Schritte"><button type="button" aria-current="step"><i>1</i>Buch</button><button type="button"><i>2</i>Lesen</button><button type="button"><i>3</i>Details</button></nav>
+  <form class="mn-form mn-sheet-body" novalidate>
+    <fieldset><legend>Buch</legend>
+      <label class="mn-field">Titel<input name="title" value="Der Zauberberg"></label>
+      <div class="mn-grid-2"><label class="mn-field">Autor<input name="author" value="Thomas Mann"></label><label class="mn-field">Jahr<input name="year" inputmode="numeric" value="1924"></label></div>
+      <label class="mn-field">Genre<select name="genre"><option>Roman</option><option>Sachbuch</option><option>Lyrik</option></select></label>
+      <p class="mn-hint">Das Cover lädst du im nächsten Schritt hoch.</p>
+    </fieldset>
+    <fieldset><legend>Lesetage</legend>
+      <div class="mn-group"><div class="mn-daypick" data-select-many><button type="button" aria-pressed="true">Mo</button><button type="button" aria-pressed="false">Di</button><button type="button" aria-pressed="true">Mi</button><button type="button" aria-pressed="false">Do</button><button type="button" aria-pressed="false">Fr</button><button type="button" aria-pressed="true">Sa</button><button type="button" aria-pressed="true">So</button></div></div>
+      <div class="mn-checks"><label><input type="checkbox" checked>Erinnerung am Abend</label><label><input type="checkbox"><span>Im Lesekreis teilen<small>Nur Mitglieder der Sammlung „Lesekreis“ sehen es</small></span></label></div>
+    </fieldset>
+    <details class="mn-more"><summary>Verlag, ISBN und Notizen</summary><div><label class="mn-field">ISBN<input name="isbn" placeholder="978-3-…"></label><label class="mn-field">Notizen<textarea name="notes"></textarea></label></div></details>
+    <p class="mn-error" role="alert">Gib ein gültiges Erscheinungsjahr an, z. B. 1924.</p>
+  </form>
+  <div class="mn-sheet-foot"><span class="mn-grow"></span><button class="mn-btn" type="button">Weiter</button><button class="mn-btn mn-btn--primary" type="button" data-mn-close>Anlegen</button></div>
+</template>
+</body>
+</html>

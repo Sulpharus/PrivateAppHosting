@@ -88,12 +88,19 @@ then extracted from it, so the kit starts from a proven app and not from a blank
   segmented control, form fields, KPI card, meter, toast, empty state and skeleton.
 - Standard patterns: week strip and calendar, search and filter row, backup section.
 
-**How apps get it.** The gate serves the kit as `/_mininode/ui.css` + `/_mininode/ui.js`, like
-the SDK, so apps pick up fixes on redeploy.
+**How apps get it.** Deploys copy the kit into every app's assets as `/_mininode/ui.css` +
+`/_mininode/ui.js` (plus the fonts), like the SDK, so apps pick up fixes on redeploy.
 
-**Fonts.** Open decision: the platform uses Bricolage Grotesque / Instrument Sans, the
-Sportplaner uses Barlow. The kit uses one family set for the whole suite; the choice is made
-during the Sportplaner rework with side-by-side screenshots.
+**Fonts.** Decided in the Sportplaner rework: the kit uses the platform fonts, Bricolage
+Grotesque (display) and Instrument Sans (text), plus JetBrains Mono for code.
+
+**Colour.** All apps share the neutrals, type, spacing and components. Each app picks one of six
+accents (`data-accent`: green, blue, violet, amber, rose, teal), each checked for WCAG AA in
+light and dark mode. The portal keeps its own terracotta palette.
+
+**Status.** The kit is in `packages/ui/kit/` and deploys serve it with every app; the spec is
+`docs/ai/DESIGN-SYSTEM.md`. Switching Sportplaner and Haushalt over to the kit classes, and a
+doctor rule for kit usage, complete phase 3.
 
 ### 3. Build order
 

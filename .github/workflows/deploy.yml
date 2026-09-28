@@ -147,12 +147,12 @@ jobs:
       - name: Deploy changed apps
         run: |
           before="${{ github.event.before }}"
-          # Every app ships the SDK bundle and runs behind the gate: when those change, all apps
+          # Every app ships the SDK bundle and the app kit and runs behind the gate: when those change, all apps
           # have to be redeployed, not only the ones whose folder changed.
           shared=""
           if [ -n "$before" ] && [ "$before" != "0000000000000000000000000000000000000000" ]; then
             shared=$(git diff --name-only "$before" HEAD -- pnpm-lock.yaml \
-              'packages/sdk/src' 'packages/gate/src' 'packages/manifest/src' 'packages/cli/src' || echo all)
+              'packages/sdk/src' 'packages/ui/kit' 'packages/gate/src' 'packages/manifest/src' 'packages/cli/src' || echo all)
           fi
           if [ "${{ inputs.all_apps }}" = "true" ] || [ -z "$before" ] || [ -n "$shared" ] \
              || [ "$before" = "0000000000000000000000000000000000000000" ]; then

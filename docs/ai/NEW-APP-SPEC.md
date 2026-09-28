@@ -26,6 +26,9 @@ needs a backend. Do not build your own login, backend or API-key handling.**
    across devices). Use `mn.kv` for simple data, or tables (below) for relational data.
 5. **UI language German**, informal "du". Mobile-first, works from 360 px wide, touch targets
    at least 44 px, light and dark mode (`prefers-color-scheme`), WCAG AA contrast.
+   **Look:** use the MiniNode App Kit (`DESIGN-SYSTEM.md`): link `/_mininode/ui.css` and
+   `/_mininode/ui.js`, put `class="mn-app"` on `<body>`, pick a `data-accent` and build from
+   its `mn-*` components and `--mn-*` tokens.
 6. Deliver a **ZIP** containing the project (source, `package.json` if any, `mininode.json`).
 
 ### The SDK
@@ -113,7 +116,10 @@ owner's data (e.g. a shared household budget) · `group` = everyone with the app
 
 ### Design guidance
 
-- Clean, calm, no gradients or emoji as UI. System or bundled fonts; generous spacing.
+The full design system, with tokens for light and dark mode, the app shell and every
+component, is `DESIGN-SYSTEM.md`. Paste it together with this spec. In short:
+
+- Clean, calm, no gradients or emoji as UI. Fonts come from the kit; generous spacing.
 - One primary action per screen. Clear empty states ("Noch keine Rezepte – leg das erste an").
 - Show loading and error states for every `await` that talks to the network.
 - Respect `prefers-reduced-motion`. Animate only `transform` and `opacity`; never `transition: all`.

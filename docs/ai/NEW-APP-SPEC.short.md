@@ -22,6 +22,9 @@ needs a backend. Do not build your own login, backend or API-key handling.**
    across devices). Use `mn.kv` for simple data, or tables (below) for relational data.
 5. **UI language German**, informal "du". Mobile-first, works from 360 px wide, touch targets
    at least 44 px, light and dark mode (`prefers-color-scheme`), WCAG AA contrast.
+   **Look:** use the MiniNode App Kit (`DESIGN-SYSTEM.md`): link `/_mininode/ui.css` and
+   `/_mininode/ui.js`, put `class="mn-app"` on `<body>`, pick a `data-accent` and build from
+   its `mn-*` components and `--mn-*` tokens.
 6. Deliver a **ZIP** containing the project (source, `package.json` if any, `mininode.json`).
 
 ### The SDK

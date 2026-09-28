@@ -1,7 +1,8 @@
 import { spawnSync } from 'node:child_process';
 import { cpSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { basename, dirname, join, resolve } from 'node:path';
 import { appSchemaName, type Manifest } from '@mininode/manifest';
 import { createClient } from '@supabase/supabase-js';
 import postgres from 'postgres';
@@ -13,6 +14,16 @@ import { appWranglerConfig } from './wrangler-config.ts';
 
 const REPO_ROOT = resolve(import.meta.dirname, '../../../..');
 const SDK_BUNDLE = join(REPO_ROOT, 'packages/sdk/dist/mininode.iife.js');
+/** The app kit (design system), served next to the SDK as /_mininode/ui.css and ui.js. */
+const KIT = join(REPO_ROOT, 'packages/ui/kit');
+/** The kit's fonts, resolved from @mininode/ui's own dependencies (the packages only export CSS). */
+function kitFonts(): string[] {
+  const require = createRequire(join(KIT, '..', 'package.json'));
+  return ['bricolage-grotesque', 'instrument-sans', 'jetbrains-mono'].map((name) => {
+    const css = require.resolve(`@fontsource-variable/${name}`);
+    return join(dirname(css), 'files', `${name}-latin-wght-normal.woff2`);
+  });
+}
 /** Files that belong to the integration, never to the served site. */
 const NOT_SERVED = new Set([
   'mininode.json',
@@ -65,8 +76,12 @@ export function stageAssets(appDir: string, manifest: Manifest): string {
     },
   });
   ensureSdkBundle();
-  mkdirSync(join(assets, '_mininode'), { recursive: true });
-  cpSync(SDK_BUNDLE, join(assets, '_mininode', 'sdk.js'));
+  const platform = join(assets, '_mininode');
+  mkdirSync(join(platform, 'fonts'), { recursive: true });
+  cpSync(SDK_BUNDLE, join(platform, 'sdk.js'));
+  cpSync(join(KIT, 'ui.css'), join(platform, 'ui.css'));
+  cpSync(join(KIT, 'ui.js'), join(platform, 'ui.js'));
+  for (const font of kitFonts()) cpSync(font, join(platform, 'fonts', basename(font)));
   return stage;
 }
 

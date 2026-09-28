@@ -1,8 +1,11 @@
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { parseManifest } from '@mininode/manifest';
 import { describe, expect, it } from 'vitest';
 import { appsFromPaths } from '../changed.ts';
 import { environmentSettings } from './environment.ts';
-import { schemaList } from './index.ts';
+import { schemaList, stageAssets } from './index.ts';
 import { plan } from './migrate.ts';
 import { workersToPrune } from './prune.ts';
 import { appRow } from './register.ts';
@@ -108,5 +111,45 @@ describe('workersToPrune', () => {
     const names = ['mn-app-haushalt', 'mn-app-notizen', 'mininode-portal', 'mn-stg-notizen'];
     expect(workersToPrune(names, 'mn-app-', new Set(['haushalt']))).toEqual(['mn-app-notizen']);
     expect(workersToPrune(names, 'mn-app-', new Set(['haushalt', 'notizen']))).toEqual([]);
+  });
+});
+
+describe('stageAssets', () => {
+  it('serves the SDK and the app kit next to the app files', () => {
+    const appDir = mkdtempSync(join(tmpdir(), 'mininode-app-'));
+    writeFileSync(join(appDir, 'index.html'), '<!doctype html>');
+    writeFileSync(join(appDir, 'README.md'), 'not served');
+    const staticApp = parseManifest({
+      specVersion: 1,
+      slug: 'regal',
+      name: 'Regal',
+      description: 'Bücher',
+      kind: 'static',
+      target: 'cloudflare',
+    });
+    if (!staticApp.ok) throw new Error(staticApp.errors.join());
+    const stage = stageAssets(appDir, staticApp.manifest);
+    try {
+      const root = join(stage, 'assets-root');
+      for (const file of [
+        'index.html',
+        '_mininode/sdk.js',
+        '_mininode/ui.css',
+        '_mininode/ui.js',
+        '_mininode/fonts/bricolage-grotesque-latin-wght-normal.woff2',
+        '_mininode/fonts/instrument-sans-latin-wght-normal.woff2',
+        '_mininode/fonts/jetbrains-mono-latin-wght-normal.woff2',
+      ])
+        expect(existsSync(join(root, file)), file).toBe(true);
+      expect(existsSync(join(root, 'README.md'))).toBe(false);
+      // Every font ui.css asks for must be there: a missing file would come back as index.html.
+      const css = readFileSync(join(root, '_mininode/ui.css'), 'utf8');
+      const urls = [...css.matchAll(/url\(([^)]+)\)/g)].map((m) => m[1] ?? '');
+      expect(urls.length).toBeGreaterThan(0);
+      for (const url of urls) expect(existsSync(join(root, '_mininode', url)), url).toBe(true);
+    } finally {
+      rmSync(stage, { recursive: true, force: true });
+      rmSync(appDir, { recursive: true, force: true });
+    }
   });
 });

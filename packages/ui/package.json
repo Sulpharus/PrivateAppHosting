@@ -5,11 +5,20 @@
   "type": "module",
   "exports": {
     "./tokens.css": "./src/tokens.css",
-    "./fonts.css": "./src/fonts.css"
+    "./fonts.css": "./src/fonts.css",
+    "./kit/ui.css": "./kit/ui.css",
+    "./kit/ui.js": "./kit/ui.js"
   },
   "dependencies": {
     "@fontsource-variable/bricolage-grotesque": "5.3.0",
     "@fontsource-variable/instrument-sans": "5.3.0",
     "@fontsource-variable/jetbrains-mono": "5.3.0"
+  },
+  "scripts": {
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "happy-dom": "20.14.5",
+    "vitest": "5.0.1"
   }
 }
