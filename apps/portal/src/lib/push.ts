@@ -16,7 +16,10 @@ export function pushSupported(): boolean {
   );
 }
 
-const isIos = () => /iPad|iPhone|iPod/.test(navigator.userAgent);
+// iPadOS reports a Mac user agent; touch support tells them apart.
+const isIos = () =>
+  /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+  (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
 const isStandalone = () =>
   window.matchMedia('(display-mode: standalone)').matches ||
   (navigator as Navigator & { standalone?: boolean }).standalone === true;
@@ -43,7 +46,31 @@ export async function deviceStatus(): Promise<DeviceStatus> {
   if (Notification.permission === 'denied') return 'denied';
   const reg = await registration();
   const subscription = await reg?.pushManager.getSubscription();
-  return subscription && Notification.permission === 'granted' ? 'on' : 'off';
+  if (!subscription || Notification.permission !== 'granted') return 'off';
+  // On a shared device the browser subscription may belong to someone else.
+  return (await ownedByMe(subscription)) ? 'on' : 'off';
+}
+
+/** Whether the server has this subscription for the signed-in user (RLS: own rows only). */
+async function ownedByMe(subscription: PushSubscription): Promise<boolean> {
+  const { data } = await platform()
+    .from('push_subscriptions')
+    .select('id')
+    .eq('endpoint', subscription.endpoint)
+    .maybeSingle();
+  return data !== null;
+}
+
+/**
+ * On start with a session: a browser subscription that does not belong to this user (someone
+ * else used the device, or their session ran out) is switched off, so their messages stop
+ * appearing here.
+ */
+export async function releaseForeignSubscription(): Promise<void> {
+  if (!pushSupported()) return;
+  const reg = await navigator.serviceWorker.getRegistration('/');
+  const subscription = await reg?.pushManager.getSubscription();
+  if (subscription && !(await ownedByMe(subscription))) await subscription.unsubscribe();
 }
 
 function applicationServerKey(base64url: string): Uint8Array<ArrayBuffer> {
@@ -51,6 +78,9 @@ function applicationServerKey(base64url: string): Uint8Array<ArrayBuffer> {
   const raw = atob(base64 + '='.repeat((4 - (base64.length % 4)) % 4));
   return Uint8Array.from(raw, (char) => char.charCodeAt(0));
 }
+
+const sameBytes = (a: Uint8Array, b: Uint8Array) =>
+  a.length === b.length && a.every((byte, index) => byte === b[index]);
 
 async function store(subscription: PushSubscription): Promise<void> {
   const json = subscription.toJSON();
@@ -72,13 +102,17 @@ export async function enablePush(): Promise<void> {
   if (!publicKey) throw new Error('not_configured');
   const reg = await registration();
   if (!reg) throw new Error('unsupported');
-  const existing = await reg.pushManager.getSubscription();
+  const key = applicationServerKey(publicKey);
+  let existing = await reg.pushManager.getSubscription();
+  // Made with an older key (after a VAPID key change): useless, subscribe again.
+  const existingKey = existing?.options.applicationServerKey;
+  if (existing && (!existingKey || !sameBytes(new Uint8Array(existingKey), key))) {
+    await existing.unsubscribe();
+    existing = null;
+  }
   const subscription =
     existing ??
-    (await reg.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: applicationServerKey(publicKey),
-    }));
+    (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key }));
   await store(subscription);
 }
 

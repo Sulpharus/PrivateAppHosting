@@ -3,15 +3,22 @@
 -- scheduled reminders (`mn.push.schedule`) when they are due. A cron in the API runs every minute.
 
 -- One row per device and browser. An endpoint belongs to one user at a time (shared devices).
+-- Only the browsers' push services are accepted, so the API never posts to arbitrary hosts.
 create table platform.push_subscriptions (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users (id) on delete cascade,
-  endpoint text not null unique check (endpoint ~ '^https://'),
-  p256dh text not null,
-  auth text not null,
+  endpoint text not null unique check (
+    char_length(endpoint) <= 1000
+    and endpoint ~ '^https://(fcm\.googleapis\.com|[a-z0-9.-]+\.push\.services\.mozilla\.com|[a-z0-9.-]+\.push\.apple\.com|[a-z0-9.-]+\.notify\.windows\.com)/'
+  ),
+  -- base64url of the 65-byte P-256 key and the 16-byte auth secret
+  p256dh text not null check (p256dh ~ '^[A-Za-z0-9_-]{87}$'),
+  auth text not null check (auth ~ '^[A-Za-z0-9_-]{22}$'),
   user_agent text check (char_length(user_agent) <= 300),
   created_at timestamptz not null default now(),
-  last_success_at timestamptz
+  last_success_at timestamptz,
+  -- Refusals (401/403) in a row, e.g. after a VAPID key change; the API deletes it at five.
+  rejected_count smallint not null default 0
 );
 create index push_subscriptions_user_id_idx on platform.push_subscriptions (user_id);
 alter table platform.push_subscriptions enable row level security;
@@ -34,7 +41,8 @@ create table platform.scheduled_pushes (
   due_at timestamptz not null,
   title text not null check (char_length(title) between 1 and 120),
   body text check (char_length(body) <= 500),
-  url text check (url is null or url ~ '^/'),
+  -- An app path; never `//host` or `/\host`, which browsers read as another site.
+  url text check (url is null or url ~ '^/($|[^/\\])'),
   created_at timestamptz not null default now(),
   unique (user_id, app_slug, key)
 );
@@ -45,8 +53,14 @@ revoke all on platform.scheduled_pushes from public, anon, authenticated;
 grant select, insert, update, delete on platform.scheduled_pushes to service_role;
 
 -- New notifications wait for delivery; rows from before this migration stay null (not pushed).
+-- A failed send puts the row back (push_attempts counts tries, at most three).
 alter table platform.notifications add column push_pending boolean;
 alter table platform.notifications alter column push_pending set default true;
+alter table platform.notifications add column push_attempts smallint not null default 0;
+-- Same rule for bell links (checked for new rows; older rows are left as they are).
+alter table platform.notifications
+  add constraint notifications_url_no_other_host
+  check (url is null or url !~ '^/[/\\]') not valid;
 create index notifications_push_pending_idx on platform.notifications (created_at)
   where push_pending;
 
@@ -67,6 +81,14 @@ begin
   on conflict (endpoint) do update
     set user_id = excluded.user_id, p256dh = excluded.p256dh, auth = excluded.auth,
         user_agent = excluded.user_agent, created_at = now(), last_success_at = null;
+  -- At most ten devices per user: the oldest go.
+  delete from platform.push_subscriptions
+  where id in (
+    select id from platform.push_subscriptions
+    where user_id = (select auth.uid())
+    order by created_at desc
+    offset 10
+  );
 end;
 $$;
 
@@ -93,9 +115,14 @@ begin
   if (select auth.uid()) is null or not (select platform.app_access(p_app_slug)) then
     raise exception 'not allowed' using errcode = '42501';
   end if;
+  if p_url is not null and p_url !~ '^/($|[^/\\])' then
+    raise exception 'url must be an app path' using errcode = '22023';
+  end if;
   if p_due_at > now() + interval '400 days' then
     raise exception 'due_at too far in the future' using errcode = '22023';
   end if;
+  -- Serialise per user and app so concurrent calls cannot pass the limit together.
+  perform pg_advisory_xact_lock(hashtext('push_schedule:' || (select auth.uid())::text || ':' || p_app_slug));
   if (select count(*) from platform.scheduled_pushes
       where user_id = (select auth.uid()) and app_slug = p_app_slug and key <> p_key) >= 500 then
     raise exception 'too many scheduled reminders' using errcode = '54000';
@@ -176,23 +203,45 @@ begin
 end;
 $$;
 
--- API cron: claims up to p_limit notifications to push (each exactly once).
-create function platform.push_claim(p_limit integer default 200)
+-- API cron: claims up to p_limit notifications to push. Older than an hour means the moment has
+-- passed (e.g. push was not configured yet): those are marked done without being sent.
+create function platform.push_claim(p_limit integer default 20)
 returns table (id uuid, user_id uuid, app_slug text, title text, body text, url text)
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  update platform.notifications
+  set push_pending = false
+  where push_pending and created_at < now() - interval '1 hour';
+
+  return query
+    update platform.notifications n
+    set push_pending = false, push_attempts = n.push_attempts + 1
+    where n.id in (
+      select x.id from platform.notifications x
+      where x.push_pending
+      order by x.created_at
+      limit p_limit
+      for update skip locked
+    )
+    returning n.id, n.user_id, n.app_slug, n.title, n.body, n.url;
+end;
+$$;
+
+-- API cron: puts notifications back that could not be sent (transient errors, send budget).
+-- `p_count_attempt = false` for ones that were not even tried.
+create function platform.push_unclaim(p_ids uuid[], p_count_attempt boolean default true)
+returns void
 language sql
 security definer
 set search_path = ''
 as $$
-  update platform.notifications n
-  set push_pending = false
-  where n.id in (
-    select id from platform.notifications
-    where push_pending
-    order by created_at
-    limit p_limit
-    for update skip locked
-  )
-  returning n.id, n.user_id, n.app_slug, n.title, n.body, n.url;
+  update platform.notifications
+  set push_pending = push_attempts < 3 or not p_count_attempt,
+      push_attempts = case when p_count_attempt then push_attempts else push_attempts - 1 end
+  where id = any (p_ids);
 $$;
 
 revoke execute on function platform.push_subscribe(text, text, text, text) from public, anon;
@@ -202,6 +251,7 @@ revoke execute on function platform.push_cancel(text, text) from public, anon;
 revoke execute on function platform.push_list(text) from public, anon;
 revoke execute on function platform.push_release_due() from public, anon, authenticated;
 revoke execute on function platform.push_claim(integer) from public, anon, authenticated;
+revoke execute on function platform.push_unclaim(uuid[], boolean) from public, anon, authenticated;
 grant execute on function platform.push_subscribe(text, text, text, text) to authenticated;
 grant execute on function platform.push_device_count() to authenticated;
 grant execute on function platform.push_schedule(text, text, timestamptz, text, text, text) to authenticated;
@@ -209,3 +259,4 @@ grant execute on function platform.push_cancel(text, text) to authenticated;
 grant execute on function platform.push_list(text) to authenticated;
 grant execute on function platform.push_release_due() to service_role;
 grant execute on function platform.push_claim(integer) to service_role;
+grant execute on function platform.push_unclaim(uuid[], boolean) to service_role;

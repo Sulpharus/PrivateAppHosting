@@ -2,7 +2,9 @@
 // portal usable offline (app shell and hashed assets cached, the rest from the network).
 // Plain JS on purpose: served as-is from /sw.js, no build step.
 
-const VERSION = 'v1';
+// Replaced at build time (vite.config.ts) so every portal deploy installs a fresh worker and
+// drops the previous caches.
+const VERSION = 'dev';
 const SHELL = `portal-shell-${VERSION}`;
 const ASSETS = `portal-assets-${VERSION}`;
 const SHELL_URLS = ['/', '/manifest.webmanifest', '/favicon.svg', '/icon-192.png'];
@@ -119,7 +121,19 @@ self.addEventListener('push', (event) => {
 // Tap: focus a window that already shows the target, otherwise open it.
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const target = new URL(event.notification.data?.url ?? '/', self.location.origin).toString();
+  // Only the portal and its apps (*.mininode.app); anything else opens the start page.
+  let target = new URL('/', self.location.origin).toString();
+  try {
+    const url = new URL(event.notification.data?.url ?? '/', self.location.origin);
+    const home = self.location.hostname;
+    if (
+      url.protocol === self.location.protocol &&
+      (url.hostname === home || url.hostname.endsWith(`.${home}`))
+    )
+      target = url.toString();
+  } catch {
+    // Keep the start page.
+  }
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windows) => {
       const open = windows.find((client) => client.url === target);
@@ -130,9 +144,11 @@ self.addEventListener('notificationclick', (event) => {
 });
 
 // A device may renew its subscription on its own; tell open portal windows to register again.
+// Without an open portal window the device stays unsubscribed until the user switches
+// notifications on again under "Dein Konto" (the card then shows "aus").
 self.addEventListener('pushsubscriptionchange', (event) => {
   event.waitUntil(
-    self.clients.matchAll({ type: 'window' }).then((windows) => {
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windows) => {
       for (const client of windows) client.postMessage({ type: 'push-renew' });
     }),
   );

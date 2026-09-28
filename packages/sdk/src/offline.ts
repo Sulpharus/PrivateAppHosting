@@ -29,6 +29,8 @@ export interface QueuedChange {
 
 /** Where the local copy and the queue live. */
 export interface LocalStore {
+  /** Identifies the store across tabs (one sync at a time per store). */
+  readonly name: string;
   get(id: string): Promise<LocalItem | undefined>;
   put(item: LocalItem): Promise<void>;
   remove(id: string): Promise<void>;
@@ -45,6 +47,7 @@ export function memoryStore(): LocalStore {
   const changes: QueuedChange[] = [];
   let seq = 0;
   return {
+    name: 'memory',
     get: async (id) => items.get(id),
     put: async (item) => {
       items.set(item.id, item);
@@ -90,6 +93,7 @@ export function indexedDbStore(name: string): LocalStore {
   const store = async (table: 'items' | 'queue', mode: IDBTransactionMode) =>
     (await open()).transaction(table, mode).objectStore(table);
   return {
+    name,
     get: async (id) => request((await store('items', 'readonly')).get(id)),
     put: async (item) => {
       await request((await store('items', 'readwrite')).put(item));
@@ -109,22 +113,43 @@ export function indexedDbStore(name: string): LocalStore {
   };
 }
 
+/** The request never reached the server (or no answer came back). */
 export function isNetworkError(error: unknown): boolean {
   if (typeof navigator !== 'undefined' && navigator.onLine === false) return true;
-  const message =
-    error instanceof Error
-      ? error.message
-      : String((error as { message?: unknown } | null)?.message ?? error);
-  return /failed to fetch|networkerror|network request failed|load failed|fetch failed/i.test(
+  const record = error as { name?: unknown; message?: unknown } | null;
+  if (record?.name === 'AuthRetryableFetchError') return true;
+  const message = error instanceof Error ? error.message : String(record?.message ?? error);
+  return /failed to fetch|networkerror|network request failed|load failed|fetch failed|timeout/i.test(
     message,
   );
 }
 
+/**
+ * The server looked at the change and said no (no access, invalid data). Such a change is never
+ * going to succeed, so it is dropped. Everything else (network, 5xx, 401, 408, 429) is retried.
+ */
+export function isRefusal(error: unknown): boolean {
+  if (isNetworkError(error)) return false;
+  const record = error as { status?: unknown; code?: unknown } | null;
+  const status = typeof record?.status === 'number' ? record.status : 0;
+  const code = typeof record?.code === 'string' ? record.code : '';
+  if (/^(42501|23\d{3}|22\d{3}|PGRST1\d\d)$/.test(code)) return true;
+  return status >= 400 && status < 500 && ![401, 408, 429].includes(status);
+}
+
 type Listener = () => void;
+
+/** Runs `task` exclusively across tabs when the browser supports Web Locks. */
+async function exclusive<T>(name: string, task: () => Promise<T>): Promise<T> {
+  const locks = typeof navigator !== 'undefined' ? navigator.locks : undefined;
+  if (!locks) return task();
+  return locks.request(`mininode-sync:${name}`, task) as Promise<T>;
+}
 
 export function createOfflineKv(remote: RemoteKv, localStore: () => Promise<LocalStore>) {
   const synced = new Set<Listener>();
   let syncing: Promise<number> | undefined;
+  let again = false;
 
   const online = () => typeof navigator === 'undefined' || navigator.onLine !== false;
   const pendingIds = async (store: LocalStore) =>
@@ -136,29 +161,63 @@ export function createOfflineKv(remote: RemoteKv, localStore: () => Promise<Loca
     else await store.put({ id, scope: change.scope, key: change.key, value: change.value ?? null });
   };
 
+  /** Puts the local copy back to what it was (after the server refused a change). */
+  const restore = async (store: LocalStore, id: string, previous: LocalItem | undefined) => {
+    if (previous) await store.put(previous);
+    else await store.remove(id);
+  };
+
   const send = (change: QueuedChange) =>
     change.op === 'delete'
       ? remote.delete(change.key, change.scope)
       : remote.set(change.key, change.value ?? null, change.scope);
 
-  /** Sends queued changes in order; stops at the first network error. Returns how many were sent. */
-  const sync = (): Promise<number> => {
-    syncing ??= (async () => {
-      const store = await localStore();
-      let sent = 0;
-      for (const change of await store.queue()) {
-        try {
-          await send(change);
-        } catch (err) {
-          if (isNetworkError(err)) break;
-          // Refused by the server (e.g. access removed): drop it rather than block the queue.
-          console.warn('mininode: dropped an offline change', change.key, err);
-        }
-        if (change.seq !== undefined) await store.dequeue(change.seq);
-        sent += 1;
+  /** One pass over the queue, in order. Returns [sent, stopped by a transient error]. */
+  const pass = async (store: LocalStore): Promise<[number, boolean]> => {
+    let sent = 0;
+    for (const change of await store.queue()) {
+      try {
+        await send(change);
+      } catch (err) {
+        if (!isRefusal(err)) return [sent, true];
+        // The server refused it for good: drop it and take the server's value again.
+        console.warn('mininode: the server refused an offline change', change.key, err);
+        const id = itemId(change.scope, change.key);
+        const current = await remote.get(change.key, change.scope).catch(() => undefined);
+        if (current === null) await store.remove(id);
+        else if (current !== undefined)
+          await store.put({ id, scope: change.scope, key: change.key, value: current });
       }
-      if (sent > 0) for (const listener of synced) listener();
-      return sent;
+      if (change.seq !== undefined) await store.dequeue(change.seq);
+      sent += 1;
+    }
+    return [sent, false];
+  };
+
+  /**
+   * Sends queued changes in order until the queue is empty or a transient error stops it; one
+   * tab at a time. Returns how many were sent (or dropped as refused).
+   */
+  const sync = (): Promise<number> => {
+    if (syncing) {
+      again = true;
+      return syncing;
+    }
+    syncing = (async () => {
+      const store = await localStore();
+      let total = 0;
+      await exclusive(store.name, async () => {
+        for (;;) {
+          again = false;
+          const [sent, stopped] = await pass(store);
+          total += sent;
+          // Changes written during this pass are in the queue now: take them too.
+          if (stopped || (!again && (await store.queue()).length === 0)) break;
+          if (sent === 0 && !again) break;
+        }
+      });
+      if (total > 0) for (const listener of synced) listener();
+      return total;
     })().finally(() => {
       syncing = undefined;
     });
@@ -168,6 +227,8 @@ export function createOfflineKv(remote: RemoteKv, localStore: () => Promise<Loca
   /** Writes locally at once; sends now when possible, otherwise queues it. */
   const write = async (change: QueuedChange) => {
     const store = await localStore();
+    const id = itemId(change.scope, change.key);
+    const previous = await store.get(id);
     await applyLocal(store, change);
     const queued = (await store.queue()).length > 0;
     if (online() && !queued) {
@@ -175,7 +236,10 @@ export function createOfflineKv(remote: RemoteKv, localStore: () => Promise<Loca
         await send(change);
         return;
       } catch (err) {
-        if (!isNetworkError(err)) throw err;
+        if (isRefusal(err)) {
+          await restore(store, id, previous);
+          throw err;
+        }
       }
     }
     await store.enqueue(change);
@@ -196,7 +260,7 @@ export function createOfflineKv(remote: RemoteKv, localStore: () => Promise<Loca
             else await store.put({ id, scope, key, value });
             return value as T | null;
           } catch (err) {
-            if (!isNetworkError(err)) throw err;
+            if (isRefusal(err)) throw err;
           }
         }
         return ((await store.get(id))?.value as T | undefined) ?? null;
@@ -236,7 +300,7 @@ export function createOfflineKv(remote: RemoteKv, localStore: () => Promise<Loca
           }
           return local();
         } catch (err) {
-          if (!isNetworkError(err)) throw err;
+          if (isRefusal(err)) throw err;
           return local();
         }
       },

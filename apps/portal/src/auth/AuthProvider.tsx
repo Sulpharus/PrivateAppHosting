@@ -9,7 +9,8 @@ import {
   useRef,
   useState,
 } from 'react';
-import { forgetThisDevice } from '../lib/push.ts';
+import { forgetOfflineCopies } from '../lib/apps.ts';
+import { forgetThisDevice, releaseForeignSubscription } from '../lib/push.ts';
 import { platform, supabase } from '../lib/supabase.ts';
 import { handOverGoogleGrant } from './google.ts';
 import { codeRequired } from './mfa.ts';
@@ -80,7 +81,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .then(async ({ data }) => {
         if (!active) return;
         setSession(data.session);
-        if (data.session) void handOverGoogleGrant(data.session);
+        if (data.session) {
+          void handOverGoogleGrant(data.session);
+          void releaseForeignSubscription().catch(() => undefined);
+        }
         await recheckCode(data.session !== null);
         await loadProfile(data.session);
         setLoading(false);
@@ -110,8 +114,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       refreshProfile: () => loadProfile(session),
       recheckCode: () => recheckCode(),
       async signOut() {
-        // This device should not keep receiving this account's notifications.
+        // This device should not keep receiving this account's notifications, and the offline
+        // copy of the app list belongs to this account.
         await forgetThisDevice();
+        forgetOfflineCopies();
         await supabase().auth.signOut();
       },
     }),

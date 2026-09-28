@@ -1,6 +1,13 @@
-import { lazy, StrictMode, Suspense } from 'react';
+import { lazy, StrictMode, Suspense, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
-import { createBrowserRouter, Navigate, Outlet, RouterProvider, useLocation } from 'react-router';
+import {
+  createBrowserRouter,
+  Navigate,
+  Outlet,
+  RouterProvider,
+  useLocation,
+  useNavigate,
+} from 'react-router';
 import { AuthProvider, useAuth } from './auth/AuthProvider.tsx';
 import { StepUpProvider } from './auth/StepUp.tsx';
 import { OfflineBanner } from './components/OfflineBanner.tsx';
@@ -46,7 +53,21 @@ function RequireSession() {
   );
 }
 
+/**
+ * `/logout`: apps send the browser here to sign out, so the portal can also switch off this
+ * device's push subscription and forget its offline copies (ADR 0005).
+ */
+function Logout() {
+  const { signOut } = useAuth();
+  const navigate = useNavigate();
+  useEffect(() => {
+    void signOut().finally(() => navigate('/login', { replace: true }));
+  }, [signOut, navigate]);
+  return null;
+}
+
 const router = createBrowserRouter([
+  { path: '/logout', element: <Logout /> },
   { path: '/login', element: <Login /> },
   { path: '/auth/confirm', element: <AuthConfirm /> },
   { path: '/auth/refresh', element: <AuthRefresh /> },

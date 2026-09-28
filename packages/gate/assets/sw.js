@@ -2,7 +2,9 @@
 // the network while online (the gate still checks access) and from the cache offline. App data
 // is kept offline by the SDK (mn.kv with a local copy and a queue), not here.
 
-const VERSION = 'v1';
+// Replaced by the deploy with a new value each time, so every deploy installs a fresh worker and
+// drops the previous caches.
+const VERSION = 'dev';
 const CACHE = `mininode-app-${VERSION}`;
 const PRECACHE = [
   '/',
@@ -87,16 +89,20 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Files: the cached copy at once, refreshed in the background (stale-while-revalidate).
+  // Hashed build files and fonts never change: cache first.
+  if (url.pathname.startsWith('/assets/') || url.pathname.startsWith('/_mininode/fonts/')) {
+    event.respondWith(
+      caches.match(request, { cacheName: CACHE }).then((hit) => hit ?? fromNetwork(request)),
+    );
+    return;
+  }
+
+  // Everything else (app.js, style.css, the SDK) can change with a deploy: network first, so a
+  // new page never runs with old scripts; the cached copy offline.
   event.respondWith(
-    caches.match(request, { cacheName: CACHE }).then((hit) => {
-      const refresh = fromNetwork(request);
-      if (hit) {
-        event.waitUntil(refresh.catch(() => undefined));
-        return hit;
-      }
-      return refresh;
-    }),
+    fromNetwork(request).catch(() =>
+      caches.match(request, { cacheName: CACHE }).then((hit) => hit ?? Response.error()),
+    ),
   );
 });
 

@@ -29,6 +29,16 @@ export interface RemoteStatus {
   my_position: number | null;
 }
 
+/** Removes the offline app lists (sign-out). */
+export function forgetOfflineCopies(): void {
+  try {
+    for (const key of Object.keys(localStorage))
+      if (key.startsWith('mn-apps:')) localStorage.removeItem(key);
+  } catch {
+    // Storage blocked: nothing was stored either.
+  }
+}
+
 /** Apps the signed-in user may open (RLS decides); the last known list when offline. */
 export async function listApps(): Promise<AppRow[]> {
   const key = await cacheKey();

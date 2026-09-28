@@ -5,6 +5,7 @@ import {
   mkdirSync,
   mkdtempSync,
   readdirSync,
+  readFileSync,
   rmSync,
   statSync,
   writeFileSync,
@@ -98,7 +99,15 @@ export function stageAssets(appDir: string, manifest: Manifest): string {
   cpSync(SDK_BUNDLE, join(platform, 'sdk.js'));
   cpSync(join(KIT, 'ui.css'), join(platform, 'ui.css'));
   cpSync(join(KIT, 'ui.js'), join(platform, 'ui.js'));
-  cpSync(join(PWA, 'sw.js'), join(platform, 'sw.js'));
+  // A new version per deploy: browsers reinstall the worker and drop the old caches.
+  const version = `${manifest.slug}-${Date.now().toString(36)}`;
+  writeFileSync(
+    join(platform, 'sw.js'),
+    readFileSync(join(PWA, 'sw.js'), 'utf8').replace(
+      "const VERSION = 'dev';",
+      `const VERSION = '${version}';`,
+    ),
+  );
   cpSync(join(PWA, 'pwa.js'), join(platform, 'pwa.js'));
   for (const font of kitFonts()) cpSync(font, join(platform, 'fonts', basename(font)));
   return stage;

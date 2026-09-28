@@ -7,7 +7,13 @@ import { type AiChatOptions, type AiMessage, createAi } from './ai.ts';
 import { appSchema, loadConfig, type MininodeConfig } from './config.ts';
 import { createGoogle } from './google.ts';
 import { createKv, type KvScope } from './kv.ts';
-import { createOfflineKv, indexedDbStore, type LocalStore, memoryStore } from './offline.ts';
+import {
+  createOfflineKv,
+  indexedDbStore,
+  isNetworkError,
+  type LocalStore,
+  memoryStore,
+} from './offline.ts';
 import { createPush } from './push.ts';
 
 export { appSchema, assertConfig } from './config.ts';
@@ -93,10 +99,34 @@ export function createMininode(config: MininodeConfig): Mininode {
   };
 
   // Offline the server cannot confirm the user: fall back to the stored session (ADR 0005).
-  const currentUser = async () => {
+  // The last confirmed user of this app on this device (ADR 0005): offline, or once the access
+  // token expired without a connection, supabase-js has no session to offer, but the app should
+  // keep working with that user's local data.
+  const userKey = `mininode:user:${config.appSlug}`;
+  const remember = (user: User) => {
+    try {
+      localStorage.setItem(userKey, JSON.stringify(user));
+    } catch {
+      // Storage blocked: offline start just is not possible then.
+    }
+  };
+  const remembered = (): User | null => {
+    try {
+      const raw = localStorage.getItem(userKey);
+      return raw ? (JSON.parse(raw) as User) : null;
+    } catch {
+      return null;
+    }
+  };
+  const currentUser = async (): Promise<User | null> => {
+    // Offline, supabase-js would retry a token refresh for up to 30 s before giving up.
+    if (!navigator.onLine) return remembered();
     const { data, error } = await supabase.auth.getUser();
-    if (data.user || !error || navigator.onLine) return data.user;
-    return (await supabase.auth.getSession()).data.session?.user ?? null;
+    if (data.user) {
+      remember(data.user);
+      return data.user;
+    }
+    return error && isNetworkError(error) ? remembered() : null;
   };
   const sessionToken = async () =>
     (await supabase.auth.getSession()).data.session?.access_token ?? null;
@@ -118,7 +148,13 @@ export function createMininode(config: MininodeConfig): Mininode {
 
   const stores = new Map<string, LocalStore>();
   const localStore = async (): Promise<LocalStore> => {
-    const userId = (await supabase.auth.getSession()).data.session?.user.id ?? 'signed-out';
+    const sessionUser = navigator.onLine
+      ? (await supabase.auth.getSession()).data.session?.user
+      : undefined;
+    if (sessionUser) remember(sessionUser);
+    // Never a store for "nobody": changes written there would never be sent.
+    const userId = sessionUser?.id ?? remembered()?.id;
+    if (!userId) throw new Error('mininode: not signed in');
     let store = stores.get(userId);
     if (!store) {
       store =
@@ -147,10 +183,11 @@ export function createMininode(config: MininodeConfig): Mininode {
         return new Promise<never>(() => {});
       },
       async signOut() {
-        // Cached pages of this app belong to the user who signs out.
+        // Cached pages and the offline user of this app belong to the user who signs out.
         navigator.serviceWorker?.controller?.postMessage({ type: 'mininode:clear' });
-        await supabase.auth.signOut();
-        location.assign(config.portalUrl);
+        localStorage.removeItem(userKey);
+        // The portal signs out the shared session and switches this device's push off.
+        location.assign(new URL('/logout', config.portalUrl).toString());
       },
       accountUrl: () => new URL('/account', config.portalUrl).toString(),
     },

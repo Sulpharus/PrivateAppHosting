@@ -155,6 +155,10 @@ describe('stageAssets', () => {
       ])
         expect(existsSync(join(root, file)), file).toBe(true);
       expect(existsSync(join(root, 'README.md'))).toBe(false);
+      // Each deploy stamps a new service worker version.
+      expect(readFileSync(join(root, '_mininode/sw.js'), 'utf8')).toMatch(
+        /const VERSION = 'regal-[a-z0-9]+';/,
+      );
       // Every font ui.css asks for must be there: a missing file would come back as index.html.
       const css = readFileSync(join(root, '_mininode/ui.css'), 'utf8');
       const urls = [...css.matchAll(/url\(([^)]+)\)/g)].map((m) => m[1] ?? '');

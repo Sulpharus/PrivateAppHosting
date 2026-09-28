@@ -18,4 +18,6 @@ order: 95
   delete all of it.
 - Screens with sensitive numbers get a "Beträge ausblenden" toggle (blur via CSS class),
   remembered in kv.
+- Push notifications and bell entries show on the lock screen: keep their text neutral
+  ("Neue Buchung", "Termin morgen"), never amounts, diagnoses or names of third parties.
 - Never log data to the console in production code.

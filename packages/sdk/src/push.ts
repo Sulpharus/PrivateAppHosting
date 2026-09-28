@@ -36,8 +36,9 @@ export function createPush(config: MininodeConfig, supabase: SupabaseClient) {
     async schedule(options: PushOptions): Promise<void> {
       const at = options.at instanceof Date ? options.at : new Date(options.at);
       if (Number.isNaN(at.getTime())) throw new Error('mininode: invalid push date');
-      if (options.path && !options.path.startsWith('/'))
-        throw new Error('mininode: push path must start with "/"');
+      // An app path; `//host` or `/\host` would open another website.
+      if (options.path && !/^\/($|[^/\\])/.test(options.path))
+        throw new Error('mininode: push path must start with "/" and stay in the app');
       await rpc('push_schedule', {
         p_app_slug: config.appSlug,
         p_key: options.key,
@@ -74,7 +75,10 @@ export function createPush(config: MininodeConfig, supabase: SupabaseClient) {
       if (count > 0) return 'on';
       const capable =
         typeof window !== 'undefined' && 'serviceWorker' in navigator && 'PushManager' in window;
-      const ios = typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent);
+      const ios =
+        typeof navigator !== 'undefined' &&
+        (/iPad|iPhone|iPod/.test(navigator.userAgent) ||
+          (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1));
       return capable || ios ? 'off' : 'unsupported';
     },
 

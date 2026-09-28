@@ -25,6 +25,14 @@ describe('absoluteUrl', () => {
       'https://mininode.app/account',
     );
   });
+
+  it('never leaves the portal and its apps', () => {
+    for (const url of ['//evil.example/x', '/\\evil.example', 'https://evil.example/'])
+      expect(absoluteUrl('https://mininode.app', 'todo', url)).toBe('https://todo.mininode.app/');
+    expect(absoluteUrl('https://mininode.app', null, 'https://rezepte.mininode.app/a')).toBe(
+      'https://rezepte.mininode.app/a',
+    );
+  });
 });
 
 describe.skipIf(!enabled)('push delivery', () => {
@@ -42,16 +50,18 @@ describe.skipIf(!enabled)('push delivery', () => {
   device.generateKeys();
   const auth = randomBytes(16);
   const received: { endpoint: string; body: Uint8Array; headers: Headers }[] = [];
+  let failing = false;
 
   const realFetch = globalThis.fetch;
   vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
     const target = String(input instanceof Request ? input.url : input);
-    if (target.startsWith('https://push.example/')) {
+    if (target.startsWith('https://fcm.googleapis.com/fcm/send/')) {
       received.push({
         endpoint: target,
         body: new Uint8Array(init?.body as Uint8Array),
         headers: new Headers(init?.headers),
       });
+      if (failing) return new Response(null, { status: 503 });
       return new Response(null, { status: target.endsWith('/gone') ? 410 : 201 });
     }
     return realFetch(input, init);
@@ -97,8 +107,8 @@ describe.skipIf(!enabled)('push delivery', () => {
     const p256dh = toBase64Url(new Uint8Array(device.getPublicKey()));
     const authSecret = toBase64Url(new Uint8Array(auth));
     await sql`insert into platform.push_subscriptions (user_id, endpoint, p256dh, auth) values
-      (${userId}, ${`https://push.example/${run}/phone`}, ${p256dh}, ${authSecret}),
-      (${userId}, ${`https://push.example/${run}/gone`}, ${p256dh}, ${authSecret})`;
+      (${userId}, ${`https://fcm.googleapis.com/fcm/send/${run}/phone`}, ${p256dh}, ${authSecret}),
+      (${userId}, ${`https://fcm.googleapis.com/fcm/send/${run}/gone`}, ${p256dh}, ${authSecret})`;
     const client = createClient(url ?? '', publishableKey ?? '', {
       auth: { persistSession: false },
     });
@@ -130,10 +140,26 @@ describe.skipIf(!enabled)('push delivery', () => {
     });
     const devices =
       await sql`select endpoint from platform.push_subscriptions where user_id = ${userId}`;
-    expect(devices.map((d) => d.endpoint)).toEqual([`https://push.example/${run}/phone`]);
+    expect(devices.map((d) => d.endpoint)).toEqual([
+      `https://fcm.googleapis.com/fcm/send/${run}/phone`,
+    ]);
     const [bell] =
       await sql`select push_pending from platform.notifications where user_id = ${userId}`;
     expect(bell?.push_pending).toBe(false);
+  });
+
+  it('retries a notification whose send failed, within the budget', async () => {
+    failing = true;
+    await sql`insert into platform.notifications (user_id, app_slug, title) values (${userId}, ${slug}, 'Nochmal')`;
+    await deliverPushes(env);
+    const [row] =
+      await sql`select push_pending, push_attempts from platform.notifications where title = 'Nochmal' and user_id = ${userId}`;
+    expect(row).toMatchObject({ push_pending: true, push_attempts: 1 });
+    failing = false;
+    await deliverPushes(env);
+    const [done] =
+      await sql`select push_pending from platform.notifications where title = 'Nochmal' and user_id = ${userId}`;
+    expect(done?.push_pending).toBe(false);
   });
 
   it('does not push the same notification twice', async () => {
@@ -150,6 +176,12 @@ describe.skipIf(!enabled)('push delivery', () => {
     );
     expect(res.status).toBe(200);
     expect(await res.json()).toMatchObject({ devices: 1, sent: 1 });
+    const again = await app.request(
+      '/push/test',
+      { method: 'POST', headers: { Authorization: `Bearer ${token}` } },
+      env,
+    );
+    expect(again.status).toBe(429);
     expect(open(received.at(-1)?.body ?? new Uint8Array()).url).toBe(
       'https://mininode.app/account',
     );

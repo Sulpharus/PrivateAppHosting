@@ -1,23 +1,25 @@
 ---
 id: scanning
 title: Kamera und Scannen
-summary: Barcodes und QR-Codes scannen, Dokumente fotografieren, Texterkennung per KI
+summary: Barcodes und QR-Codes per Foto erkennen, Dokumente fotografieren
 order: 18
 ---
 
 ## Feature: camera and scanning
 
-- Barcodes/QR: use `BarcodeDetector` where available (Chrome, Android); otherwise a
-  photo input (`<input type="file" accept="image/*" capture="environment">`) and decode the
-  still image with the same detector or let the user type the code. Never load a scanning
-  library from a CDN; bundle one only if the app depends on scanning on iPhone.
-- Live camera: `getUserMedia({ video: { facingMode: 'environment' } })` inside a sheet with a
-  viewfinder frame, a torch toggle when the track supports it, and a "Abbrechen" button that
-  stops all tracks. Ask for the camera only after the user pressed "Scannen".
+- MiniNode apps cannot open a live camera stream (`getUserMedia` is blocked by the platform's
+  Permissions-Policy). Take photos with a file input instead:
+  `<input type="file" accept="image/*" capture="environment">` opens the camera on phones and a
+  file picker on desktops.
+- Barcodes/QR: decode the photo with `BarcodeDetector` where available (Chrome, Android):
+  `await new BarcodeDetector({ formats: ['qr_code', 'ean_13', 'code_128'] }).detect(bitmap)`.
+  Where it is missing (iPhone, Firefox) let the user type the code; bundle a decoding library
+  only if the app depends on scanning everywhere. Never load one from a CDN.
 - Document photos: crop to the page with a simple four-corner editor, scale to at most 2000 px
   and store via the files module.
-- Text from photos (receipts, labels): send the scaled image to `mn.ai.json` with a JSON
-  schema for the fields you need, then show the result in the form for the user to check;
-  never save extracted data without confirmation.
-- Product lookups by EAN go through `mn.ai` or are typed in; no third-party APIs without an
-  entry in `mininode.json` and the admin's approval.
+- Text on photos (receipts, labels): `mn.ai` accepts text only, so there is no image
+  recognition on the platform yet. Show the photo next to the form and let the user type the
+  few fields that matter; pasted text (e.g. from the phone's own text recognition) can go
+  through `mn.ai.json` to fill the form, always shown for confirmation before saving.
+- Product lookups by EAN are typed in or found via `mn.ai`; no third-party APIs without the
+  admin's approval.

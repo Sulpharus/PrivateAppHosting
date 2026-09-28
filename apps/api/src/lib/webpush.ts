@@ -155,7 +155,11 @@ export async function vapidAuthorization(endpoint: string, keys: VapidKeys): Pro
   return `vapid t=${header}.${claims}.${toBase64Url(signature)}, k=${keys.publicKey}`;
 }
 
-export type SendResult = 'sent' | 'gone' | 'failed';
+/**
+ * `gone`: the subscription is dead (404/410). `rejected`: the push service refused our
+ * credentials for it (401/403, e.g. subscribed with an older VAPID key). `failed`: transient.
+ */
+export type SendResult = 'sent' | 'gone' | 'rejected' | 'failed';
 
 /**
  * Sends one push message. `gone` (404/410) means the subscription is dead and should be deleted.
@@ -164,13 +168,20 @@ export async function sendPush(
   subscription: PushSubscription,
   message: object,
   keys: VapidKeys,
-  options: { ttlSeconds?: number; urgency?: 'normal' | 'high'; topic?: string } = {},
+  options: {
+    ttlSeconds?: number;
+    urgency?: 'normal' | 'high';
+    topic?: string;
+    /** Precomputed VAPID header for the endpoint's origin (one signature per origin and run). */
+    authorization?: string;
+  } = {},
 ): Promise<SendResult> {
   const body = await encryptPayload(subscription, encoder.encode(JSON.stringify(message)));
   const response = await fetch(subscription.endpoint, {
     method: 'POST',
     headers: {
-      Authorization: await vapidAuthorization(subscription.endpoint, keys),
+      Authorization:
+        options.authorization ?? (await vapidAuthorization(subscription.endpoint, keys)),
       'Content-Encoding': 'aes128gcm',
       'Content-Type': 'application/octet-stream',
       TTL: String(options.ttlSeconds ?? 24 * 3600),
@@ -179,6 +190,8 @@ export async function sendPush(
     },
     body,
   });
+  await response.body?.cancel();
   if (response.status === 404 || response.status === 410) return 'gone';
+  if (response.status === 401 || response.status === 403) return 'rejected';
   return response.ok ? 'sent' : 'failed';
 }

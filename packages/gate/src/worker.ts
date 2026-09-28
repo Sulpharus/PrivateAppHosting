@@ -118,7 +118,8 @@ export async function handleAppRequest(request: Request, env: AppEnv): Promise<R
   }
 
   if (!isNavigation(request)) {
-    return withHeaders(await env.ASSETS.fetch(request), headers);
+    // HTML fetched by the service worker (its offline copy of "/") gets the PWA tags too.
+    return withHeaders(withPwaTags(await env.ASSETS.fetch(request)), headers);
   }
 
   const decision = await decide({

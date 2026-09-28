@@ -22,4 +22,6 @@ export interface ApiEnv extends Env {
   /** Web Push (VAPID, ADR 0005): base64url P-256 public point and private scalar. */
   VAPID_PUBLIC_KEY?: string;
   VAPID_PRIVATE_KEY?: string;
+  /** Push requests per cron run (default 40, for the Workers Free subrequest limit). */
+  PUSH_SEND_BUDGET?: string;
 }
