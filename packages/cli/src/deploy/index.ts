@@ -68,6 +68,11 @@ export function stageAssets(appDir: string, manifest: Manifest): string {
   return stage;
 }
 
+/**
+ * Exposes the app schema through the local PostgREST. Only schemas that exist are listed: one
+ * missing schema (a static app without db/, or a reset database) makes PostgREST fail for every
+ * request, so stale entries are pruned on each run.
+ */
 async function exposeLocally(databaseUrl: string, schema: string): Promise<void> {
   const sql = postgres(databaseUrl, { max: 1, onnotice: () => {} });
   try {
@@ -77,15 +82,34 @@ async function exposeLocally(databaseUrl: string, schema: string): Promise<void>
            join pg_roles r on r.oid = s.setrole, unnest(s.setconfig) c
           where r.rolname = 'authenticator' and c like 'pgrst.db_schemas=%'),
         'public,graphql_public,platform') as schemas`;
-    const current = (row?.schemas ?? '').split(',').map((s) => s.trim());
-    if (current.includes(schema)) return;
-    const next = [...current, schema].join(',');
+    const wanted = [...(row?.schemas ?? '').split(','), schema]
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const existing = new Set(
+      (
+        await sql<{ nspname: string }[]>`
+          select nspname from pg_namespace where nspname = any(${[...new Set(wanted)]})`
+      ).map((r) => r.nspname),
+    );
+    const next = [...new Set(wanted)].filter((s) => existing.has(s)).join(',');
+    if (next === (row?.schemas ?? '')) return;
     await sql.unsafe(
       `alter role authenticator set pgrst.db_schemas = '${next.replaceAll("'", '')}'`,
     );
     await sql`notify pgrst, 'reload config'`;
   } finally {
     await sql.end();
+  }
+}
+
+/** After a schema change the local PostgREST reloads (and backs off if it was broken): wait. */
+async function waitForRest(supabaseUrl: string, key: string): Promise<void> {
+  for (let attempt = 0; attempt < 30; attempt++) {
+    const response = await fetch(`${supabaseUrl}/rest/v1/`, { headers: { apikey: key } }).catch(
+      () => null,
+    );
+    if (response && response.status < 500) return;
+    await new Promise((resolve) => setTimeout(resolve, 2000));
   }
 }
 
@@ -135,6 +159,7 @@ export async function deployApp(appDir: string, options: DeployOptions): Promise
 
   const secret = process.env.SUPABASE_SECRET_KEY;
   if (!secret) throw new Error('SUPABASE_SECRET_KEY is required to register the app');
+  if (env.name === 'local') await waitForRest(env.supabaseUrl, secret);
   const db = createClient(env.supabaseUrl, secret, { auth: { persistSession: false } });
   await registerApp(db, manifest, options.version);
   log(`  registered ${manifest.slug} (${options.version})`);

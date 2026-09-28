@@ -92,7 +92,11 @@ export function Welcome() {
         )}
 
         <label className="field">
-          <span>{hasPasskey ? 'Passwort als Reserve (optional)' : 'Passwort'}</span>
+          <span>
+            {hasPasskey
+              ? 'Passwort als Reserve (optional, mindestens 10 Zeichen)'
+              : 'Passwort (mindestens 10 Zeichen)'}
+          </span>
           <input
             type="password"
             autoComplete="new-password"

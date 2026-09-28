@@ -356,7 +356,7 @@ export function Users() {
                     <div className="muted">{user.email}</div>
                   </td>
                   <td>
-                    {self ? (
+                    {self || user.role === 'admin' ? (
                       <span className="pill accent">Admin</span>
                     ) : (
                       <select

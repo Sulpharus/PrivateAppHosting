@@ -38,11 +38,26 @@ app.route('/invites', invites);
 app.route('/remote', remote);
 
 app.delete('/admin/users/:id', requireUser({ role: 'admin', recentAuth: 600 }), async (c) => {
-  const id = c.req.param('id');
+  const parsed = z.uuid().safeParse(c.req.param('id'));
+  if (!parsed.success) return problem(400, 'invalid_request', 'Ungültige Nutzer-ID.');
+  const id = parsed.data;
   if (id === c.get('claims').sub)
     return problem(400, 'invalid_request', 'Du kannst dich nicht selbst löschen.');
-  const { error } = await adminClient(c.env).auth.admin.deleteUser(id);
+  const db = adminClient(c.env);
+  const { data: found } = await db.auth.admin.getUserById(id);
+  const { error } = await db.auth.admin.deleteUser(id);
   if (error) return problem(500, 'auth_error', error.message);
+  // The user row is gone now; keep who removed whom in the audit log.
+  const { error: auditError } = await db
+    .schema('platform')
+    .from('audit_log')
+    .insert({
+      actor_id: c.get('claims').sub,
+      action: 'user.deleted',
+      detail: { user_id: id, email: found.user?.email ?? null },
+    });
+  if (auditError)
+    console.error(JSON.stringify({ event: 'audit_failed', error: auditError.message }));
   return c.body(null, 204);
 });
 

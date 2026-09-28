@@ -1,6 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router';
 import { useAuth } from '../auth/AuthProvider.tsx';
-import { AppsIcon, PinIcon, ScreenIcon, SharedIcon, UserIcon } from '../components/icons.tsx';
+import {
+  AppsIcon,
+  PinIcon,
+  ScreenIcon,
+  ServerIcon,
+  SharedIcon,
+  UserIcon,
+} from '../components/icons.tsx';
 import { RemoteCard } from '../components/RemoteCard.tsx';
 import { TopBar } from '../components/TopBar.tsx';
 import {
@@ -170,7 +178,7 @@ export function Home() {
                   <button
                     type="button"
                     className="pin"
-                    style={{ position: 'absolute', right: 8, bottom: 8 }}
+                    style={{ position: 'absolute', right: 4, bottom: 4 }}
                     aria-pressed={pins.has(app.slug)}
                     aria-label={pins.has(app.slug) ? `${app.name} lösen` : `${app.name} anheften`}
                     onClick={() => togglePin(app.slug)}
@@ -210,18 +218,26 @@ export function Home() {
       </main>
 
       <nav className="tabbar" aria-label="Hauptnavigation">
-        <a href="/" aria-current="page">
+        <Link to="/" aria-current="page">
           <AppsIcon />
           Apps
-        </a>
-        <a href="#remote">
-          <ScreenIcon />
-          Remote
-        </a>
-        <a href="/account">
+        </Link>
+        {remoteApps.length > 0 && (
+          <a href="#remote">
+            <ScreenIcon />
+            Remote
+          </a>
+        )}
+        {profile?.role === 'admin' && (
+          <Link to="/admin">
+            <ServerIcon />
+            Verwaltung
+          </Link>
+        )}
+        <Link to="/account">
           <UserIcon />
           Profil
-        </a>
+        </Link>
       </nav>
     </>
   );

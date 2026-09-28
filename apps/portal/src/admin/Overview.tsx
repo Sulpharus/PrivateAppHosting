@@ -9,13 +9,33 @@ interface AuditRow {
   at: string;
   action: string;
   app_slug: string | null;
+  actor_id: string | null;
+  detail: Record<string, unknown> | null;
 }
 
-const ACTION_LABEL: Record<string, string> = {
-  'user.created': 'Nutzer angelegt',
-  'user.role_changed': 'Rolle geändert',
-  'app.state_changed': 'App-Status geändert',
-};
+const ROLE: Record<string, string> = { admin: 'Admin', trusted: 'Trusted', user: 'User' };
+
+/** One readable line per audit entry, with the names of the people involved. */
+function describe(row: AuditRow, names: Map<string, string>): string {
+  const detail = row.detail ?? {};
+  const name = (id: unknown) => (typeof id === 'string' && names.get(id)) || 'gelöschter Nutzer';
+  switch (row.action) {
+    case 'user.created':
+      return `${name(row.actor_id)} ist beigetreten (${ROLE[String(detail.role)] ?? 'User'})`;
+    case 'user.role_changed':
+      return `${name(detail.user_id)} ist jetzt ${ROLE[String(detail.role)] ?? detail.role}`;
+    case 'user.recovery_link':
+      return `Passwort-Link für ${name(detail.user_id)} erstellt`;
+    case 'user.deleted':
+      return `Nutzer ${typeof detail.email === 'string' ? detail.email : ''} gelöscht`.trim();
+    case 'app.state_changed':
+      return detail.disabled ? 'App deaktiviert' : 'App-Einstellungen geändert';
+    case 'remote.install':
+      return 'Programm auf der NucBox installiert';
+    default:
+      return row.action;
+  }
+}
 
 export function Overview() {
   const [apps, setApps] = useState<AppRow[]>([]);
@@ -23,14 +43,25 @@ export function Overview() {
   const [aiSpent, setAiSpent] = useState(0);
   const [aiLimit, setAiLimit] = useState<number | null>(null);
   const [audit, setAudit] = useState<AuditRow[]>([]);
+  const [names, setNames] = useState(new Map<string, string>());
 
   useEffect(() => {
     void Promise.all([
       listApps().then(setApps),
       platform()
         .from('profiles')
-        .select('user_id', { count: 'exact', head: true })
-        .then(({ count }) => setUsers(count ?? 0)),
+        .select('user_id, display_name', { count: 'exact' })
+        .then(({ data, count }) => {
+          setUsers(count ?? 0);
+          setNames(
+            new Map(
+              ((data as { user_id: string; display_name: string }[] | null) ?? []).map((p) => [
+                p.user_id,
+                p.display_name,
+              ]),
+            ),
+          );
+        }),
       platform()
         .rpc('admin_ai_usage')
         .then(({ data }) =>
@@ -49,7 +80,7 @@ export function Overview() {
         .then(({ data }) => setAiLimit((data?.monthly_limit_micro as number | undefined) ?? null)),
       platform()
         .from('audit_log')
-        .select('id, at, action, app_slug')
+        .select('id, at, action, app_slug, actor_id, detail')
         .order('at', { ascending: false })
         .limit(8)
         .then(({ data }) => setAudit((data as AuditRow[] | null) ?? [])),
@@ -117,7 +148,7 @@ export function Overview() {
             <span className="muted mono" style={{ minWidth: 110 }}>
               {dateTime(row.at)}
             </span>
-            <span>{ACTION_LABEL[row.action] ?? row.action}</span>
+            <span>{describe(row, names)}</span>
             {row.app_slug && <span className="pill mono">{row.app_slug}</span>}
           </div>
         ))}
