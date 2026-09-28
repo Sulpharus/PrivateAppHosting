@@ -71,6 +71,7 @@ deploy workflow uses them and also uploads the Worker secrets, so nothing has to
 | `CF_ACCESS_API_CLIENT_ID` / `_SECRET` | Access service token `mininode-api` (from `bootstrap.sh`) | NucBox |
 | `SUPABASE_DB_URL` | *Connect → Session pooler* string | apps with own tables |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | the Google OAuth client from step 3.1 | "Mit Google anmelden" |
+| `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | `node scripts/vapid-keys.ts` (Web Push; changing them later means every device switches push on again) | push notifications |
 | `GOOGLE_TOKEN_KEY` | `openssl rand -base64 32` (encrypts stored Google grants; keep a copy) | Gmail/Calendar in apps |
 
 ### 3.1 Google sign-in (optional, 10 min)

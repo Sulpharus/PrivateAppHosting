@@ -25,6 +25,9 @@ export default {
       });
     }
     const response = await env.ASSETS.fetch(request);
+    // The service worker must update as soon as it changes.
+    if (url.pathname === '/sw.js')
+      return withHeaders(response, { ...headers, 'Cache-Control': 'no-cache' });
     const html = response.headers.get('Content-Type')?.includes('text/html');
     return withHeaders(response, html ? { ...headers, 'Cache-Control': 'no-cache' } : headers);
   },

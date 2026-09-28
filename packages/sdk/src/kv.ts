@@ -6,7 +6,7 @@ export type KvScope = 'user' | 'shared';
 /** Rows per request; must not exceed PostgREST's max_rows (supabase/config.toml). */
 const PAGE = 1000;
 
-type Json = string | number | boolean | null | Json[] | { [key: string]: Json };
+export type Json = string | number | boolean | null | Json[] | { [key: string]: Json };
 
 export function createKv(supabase: SupabaseClient, appSlug: string) {
   const table = () => supabase.schema('platform').from('app_kv');

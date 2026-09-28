@@ -19,7 +19,10 @@ needs a backend. Do not build your own login, backend or API-key handling.**
 3. **No custom auth:** the page is only served to signed-in users. Call
    `await mn.auth.requireLogin()` once at start-up. There is no sign-up/login UI in the app.
 4. **Persistence:** never use `localStorage` or `IndexedDB` for user data (it does not sync
-   across devices). Use `mn.kv` for simple data, or tables (below) for relational data.
+   across devices). Use `mn.kv` for simple data (it also works offline), or tables (below) for
+   relational data. Do not add a service worker, web manifest or push code: the platform makes
+   every app installable and offline-capable and delivers notifications (`mn.notify`,
+   `mn.push`).
 5. **UI language German**, informal "du". Mobile-first, works from 360 px wide, touch targets
    at least 44 px, light and dark mode (`prefers-color-scheme`), WCAG AA contrast.
    **Look:** use the MiniNode App Kit (`DESIGN-SYSTEM.md`): link `/_mininode/ui.css` and
@@ -59,8 +62,16 @@ const names = await mn.files.list('fotos');
 // Realtime (live updates between users of the app):
 mn.realtime('board').on('broadcast', { event: 'move' }, ({ payload }) => apply(payload)).subscribe();
 
-// Notification in the portal's bell for the current user:
+// Notification in the portal's bell for the current user (also pushed to their devices):
 await mn.notify('Erinnerung', 'Müll rausbringen', '/heute');
+// Reminder at a set time, delivered even when the app is closed (same key replaces it):
+await mn.push.schedule({ key: `task:${id}`, at: dueDate, title: 'Müll rausbringen', path: '/heute' });
+await mn.push.cancel(`task:${id}`);
+
+// Offline: mn.kv keeps a local copy and queues changes made without internet; they are sent
+// automatically when the device is online again. Reload the view after that:
+mn.offline.onSynced(() => render());
+const waiting = await mn.offline.pending();          // changes not on the server yet
 
 // Gmail and Google Calendar of the signed-in user (declare "google" in mininode.json). The user
 // connected Google once in the portal; the app never asks for a Google login or client ID:

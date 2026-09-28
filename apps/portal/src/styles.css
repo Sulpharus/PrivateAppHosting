@@ -959,3 +959,14 @@ code,
   overflow-wrap: anywhere;
   user-select: all;
 }
+
+/* Offline notice (PWA) */
+.offline-banner {
+  margin: 0;
+  padding: 10px 16px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--line);
+  color: var(--ink);
+  font-size: 14px;
+  text-align: center;
+}

@@ -7,7 +7,7 @@
   "compatibility_flags": ["nodejs_compat"],
   "routes": [{ "pattern": "api.mininode.app", "custom_domain": true }],
   "observability": { "enabled": true, "traces": { "enabled": true } },
-  "triggers": { "crons": ["*/5 * * * *"] },
+  "triggers": { "crons": ["* * * * *"] },
   "vars": {
     "PORTAL_URL": "https://mininode.app",
     "SUPABASE_URL": "https://ojicmpgqvoyakigvubek.supabase.co",

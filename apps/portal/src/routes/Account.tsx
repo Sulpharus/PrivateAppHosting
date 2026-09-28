@@ -16,6 +16,7 @@ import { useStepUp } from '../auth/StepUp.tsx';
 import { TopBar } from '../components/TopBar.tsx';
 import { isReauthError } from '../lib/api.ts';
 import { platform, supabase } from '../lib/supabase.ts';
+import { NotificationsCard } from './AccountNotifications.tsx';
 import { AuthenticatorCard, GoogleCard } from './AccountSecurity.tsx';
 
 const ROLE_LABEL = { admin: 'Admin', trusted: 'Vertrauenswürdig', user: 'Nutzer' } as const;
@@ -218,6 +219,7 @@ export function Account() {
           </section>
         )}
 
+        <NotificationsCard feedback={feedback} />
         <AuthenticatorCard feedback={feedback} />
         <GoogleCard
           feedback={feedback}

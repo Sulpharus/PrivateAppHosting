@@ -19,4 +19,7 @@ export interface ApiEnv extends Env {
   GOOGLE_CLIENT_SECRET?: string;
   /** Base64 of 32 random bytes; encrypts stored Google refresh tokens (ADR 0004). */
   GOOGLE_TOKEN_KEY?: string;
+  /** Web Push (VAPID, ADR 0005): base64url P-256 public point and private scalar. */
+  VAPID_PUBLIC_KEY?: string;
+  VAPID_PRIVATE_KEY?: string;
 }

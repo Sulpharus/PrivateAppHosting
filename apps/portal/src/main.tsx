@@ -3,8 +3,10 @@ import { createRoot } from 'react-dom/client';
 import { createBrowserRouter, Navigate, Outlet, RouterProvider, useLocation } from 'react-router';
 import { AuthProvider, useAuth } from './auth/AuthProvider.tsx';
 import { StepUpProvider } from './auth/StepUp.tsx';
+import { OfflineBanner } from './components/OfflineBanner.tsx';
 import { loadConfig, setRuntimeConfig } from './config.ts';
 import { initApi } from './lib/api.ts';
+import { listenForRenewals, registerServiceWorker } from './lib/push.ts';
 import { initSupabase } from './lib/supabase.ts';
 import { applyStoredTheme } from './lib/theme.ts';
 import { Account } from './routes/Account.tsx';
@@ -36,6 +38,7 @@ function RequireSession() {
   }
   return (
     <StepUpProvider>
+      <OfflineBanner />
       <Suspense fallback={null}>
         <Outlet />
       </Suspense>
@@ -76,6 +79,9 @@ async function start() {
   initSupabase(config);
   initApi(config);
   setRuntimeConfig(config);
+  // Offline shell and push notifications (ADR 0005).
+  void registerServiceWorker();
+  listenForRenewals();
   const root = document.getElementById('root');
   if (!root) throw new Error('#root missing');
   createRoot(root).render(

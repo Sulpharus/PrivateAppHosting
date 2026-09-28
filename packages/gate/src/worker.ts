@@ -4,6 +4,7 @@
 
 import { decide, isNavigation, supabaseGrantChecker } from './decide.ts';
 import { securityHeaders, withHeaders } from './headers.ts';
+import { appIcon, webManifest, withPwaTags } from './pwa.ts';
 import { createVerifier, type Verifier } from './session.ts';
 
 export interface AppEnv {
@@ -41,6 +42,21 @@ export function publicConfig(env: AppEnv) {
   };
 }
 
+/** PNG icons the app ships itself (`/icon-192.png`, `/icon-512.png`), cached per isolate. */
+let iconCache: { slug: string; icons: { src: string; sizes: string }[] } | undefined;
+async function appIcons(env: AppEnv, url: URL): Promise<{ src: string; sizes: string }[]> {
+  if (iconCache?.slug === env.APP_SLUG) return iconCache.icons;
+  const icons: { src: string; sizes: string }[] = [];
+  for (const size of [192, 512]) {
+    const src = `/icon-${size}.png`;
+    const found = await env.ASSETS.fetch(new Request(new URL(src, url), { method: 'HEAD' }));
+    if (found.ok && found.headers.get('Content-Type')?.startsWith('image/png'))
+      icons.push({ src, sizes: `${size}x${size}` });
+  }
+  iconCache = { slug: env.APP_SLUG, icons };
+  return icons;
+}
+
 function forbiddenPage(env: AppEnv): Response {
   const portal = new URL(env.PORTAL_URL).origin;
   const html = `<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Kein Zugriff</title>
@@ -72,6 +88,35 @@ export async function handleAppRequest(request: Request, env: AppEnv): Promise<R
     });
   }
 
+  // PWA (ADR 0005): public metadata, like config.json.
+  const app = { slug: env.APP_SLUG, name: env.APP_NAME };
+  if (url.pathname === '/_mininode/manifest.webmanifest') {
+    return Response.json(webManifest(app, await appIcons(env, url)), {
+      headers: {
+        'Content-Type': 'application/manifest+json',
+        'Cache-Control': 'no-cache',
+        ...headers,
+      },
+    });
+  }
+  if (url.pathname === '/_mininode/icon.svg') {
+    return new Response(appIcon(app), {
+      headers: {
+        'Content-Type': 'image/svg+xml',
+        'Cache-Control': 'public, max-age=86400',
+        ...headers,
+      },
+    });
+  }
+  if (url.pathname === '/_mininode/sw.js') {
+    // Served from /_mininode/ but controls the whole app; must update as soon as it changes.
+    return withHeaders(await env.ASSETS.fetch(request), {
+      ...headers,
+      'Service-Worker-Allowed': '/',
+      'Cache-Control': 'no-cache',
+    });
+  }
+
   if (!isNavigation(request)) {
     return withHeaders(await env.ASSETS.fetch(request), headers);
   }
@@ -87,7 +132,7 @@ export async function handleAppRequest(request: Request, env: AppEnv): Promise<R
 
   switch (decision.action) {
     case 'allow': {
-      const response = await env.ASSETS.fetch(request);
+      const response = withPwaTags(await env.ASSETS.fetch(request));
       return withHeaders(response, { ...headers, 'Cache-Control': 'private, no-cache' });
     }
     case 'redirect':

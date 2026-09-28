@@ -6,8 +6,9 @@ feature they describe.
 
 - `types/*.md`: one per kind of app (organisation, archive, finance, …). Suggests the accent,
   the views and the data shape.
-- `modules/*.md`: one per feature (photos, AI, calendar, …). Adds the SDK calls, patterns and
-  pitfalls for that feature.
+- `modules/*.md`: one per feature (photos, AI, calendar, push, offline, …) or situation
+  (rebuilding an existing app, large data, sensitive data, keyboard-heavy use). Adds the SDK
+  calls, patterns and pitfalls for it.
 
 Every file starts with front matter:
 

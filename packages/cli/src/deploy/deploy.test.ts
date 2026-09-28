@@ -147,6 +147,8 @@ describe('stageAssets', () => {
         '_mininode/sdk.js',
         '_mininode/ui.css',
         '_mininode/ui.js',
+        '_mininode/sw.js',
+        '_mininode/pwa.js',
         '_mininode/fonts/bricolage-grotesque-latin-wght-normal.woff2',
         '_mininode/fonts/instrument-sans-latin-wght-normal.woff2',
         '_mininode/fonts/jetbrains-mono-latin-wght-normal.woff2',
