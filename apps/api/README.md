@@ -20,6 +20,7 @@ Hono Worker for everything that needs the service role or a secret:
 | `DELETE /remote/sessions/:id` | owner or admin | Ends the session, promotes the next in queue |
 | `POST /remote/installs` | admin, recent | Starts an install of a remote app on the NucBox (snapshot → verify → install) |
 | `GET /remote/installs/:id` | admin | Install job status |
+| `GET /admin/nucbox/resources` | admin | NucBox resource report from nucbox-control (Verwaltung → NucBox) |
 | `POST /admin/users/:id/recovery-link` | admin, recent | One-time password-reset link to share (no email needed) |
 | `DELETE /admin/users/:id` | admin, recent | Deletes a user |
 | cron `* * * * *` | — | Every minute: releases due reminders and pushes new notifications (ADR 0005). Every fifth minute also: expires idle sessions, releases stale AI reservations, syncs NucBox runtimes, keeps Supabase awake |

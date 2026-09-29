@@ -45,6 +45,16 @@ NVMe 1: Proxmox + VM disks      NVMe 2: /mnt/backup (restic, vzdump)
    cp /etc/pve/pve-root-ca.pem /root/proxmox-ca.pem          # → proxmox-ca.pem for compose
    ```
    On Proxmox VE 8 use `VM.Monitor` instead of the two `VM.GuestAgent.*` privileges.
+
+   Read-only access for Verwaltung → NucBox (host, all VMs and storage usage):
+
+   ```bash
+   pveum role add MininodeMonitor -privs "Sys.Audit VM.Audit Datastore.Audit"
+   pveum acl modify /nodes/<node> -user mininode@pve -role MininodeMonitor
+   pveum acl modify /vms -user mininode@pve -role MininodeMonitor
+   pveum acl modify /storage -user mininode@pve -role MininodeMonitor
+   ```
+   Without it the page still shows the containers and names what it could not read.
 6. Backup job for the Windows VM (*Datacenter → Backup → Add*): VM 200, storage `backup`,
    daily 02:30, mode *snapshot*, zstd, keep last 3. (App data and the database are covered by
    restic, see below.)

@@ -38,11 +38,17 @@ export async function registerApp(
     throw new Error('shared-account apps need an admin account (sign in once before deploying)');
   }
 
-  const { data: existing } = await platform
+  const { data: existing, error: lookupError } = await platform
     .from('apps')
-    .select('slug, status')
+    .select('slug, status, kind')
     .eq('slug', manifest.slug)
     .maybeSingle();
+  // A failed lookup must not look like a first deploy (which grants the app to everyone).
+  if (lookupError) throw new Error(`looking up ${manifest.slug} failed: ${lookupError.message}`);
+  if (existing?.kind === 'link')
+    throw new Error(
+      `${manifest.slug} is a link tile in Verwaltung → Apps; remove it there or pick another slug`,
+    );
   const row = appRow(manifest, { version, ownerId });
   const { error } = await platform.from('apps').upsert({
     ...row,

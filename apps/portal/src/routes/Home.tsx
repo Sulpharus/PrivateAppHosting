@@ -3,27 +3,50 @@ import { Link } from 'react-router';
 import { useAuth } from '../auth/AuthProvider.tsx';
 import {
   AppsIcon,
-  PinIcon,
+  ExternalIcon,
   ScreenIcon,
   ServerIcon,
   SharedIcon,
+  StarIcon,
   UserIcon,
 } from '../components/icons.tsx';
 import { RemoteCard } from '../components/RemoteCard.tsx';
 import { TopBar } from '../components/TopBar.tsx';
 import {
   type AppRow,
-  appUrl,
   listApps,
   monogram,
-  pinnedApps,
   type RemoteStatus,
   remoteStatus,
-  savePinned,
+  tileUrl,
   tintFor,
 } from '../lib/apps.ts';
+import {
+  type AppSet,
+  type Category,
+  listCategories,
+  listFavorites,
+  listSets,
+  listUsage,
+  recordOpen,
+  SORT_LABEL,
+  type Sort,
+  setFavorite,
+  sortApps,
+} from '../lib/catalog.ts';
 
-type Filter = 'all' | 'pinned' | 'shared';
+/** `all`, `favorites`, `shared` or `cat:<category id>`. */
+type Filter = string;
+
+const SORT_KEY = 'mn-sort';
+function storedSort(): Sort {
+  try {
+    const value = localStorage.getItem(SORT_KEY);
+    return value && value in SORT_LABEL ? (value as Sort) : 'name';
+  } catch {
+    return 'name';
+  }
+}
 
 function greeting(now = new Date()): string {
   const hour = now.getHours();
@@ -32,13 +55,25 @@ function greeting(now = new Date()): string {
   return 'Guten Abend';
 }
 
+function hostOf(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, '');
+  } catch {
+    return url;
+  }
+}
+
 export function Home() {
   const { profile } = useAuth();
   const [apps, setApps] = useState<AppRow[] | null>(null);
   const [remote, setRemote] = useState<RemoteStatus[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [sets, setSets] = useState<AppSet[]>([]);
+  const [usage, setUsage] = useState<Map<string, number>>(new Map());
+  const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [filter, setFilter] = useState<Filter>('all');
+  const [sort, setSort] = useState<Sort>(storedSort);
   const [query, setQuery] = useState('');
-  const [pins, setPins] = useState(pinnedApps);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -47,6 +82,17 @@ export function Home() {
       const [appRows, statuses] = await Promise.all([listApps(), remoteStatus().catch(() => [])]);
       setApps(appRows);
       setRemote(statuses);
+      // The catalog is a convenience: without it the start page still lists every app.
+      const [cats, curated, used, favs] = await Promise.all([
+        listCategories().catch(() => []),
+        listSets().catch(() => []),
+        listUsage().catch(() => []),
+        listFavorites(new Set(appRows.map((app) => app.slug))).catch(() => new Set<string>()),
+      ]);
+      setCategories(cats);
+      setSets(curated);
+      setUsage(new Map(used.map((row) => [row.app_slug, row.opens])));
+      setFavorites(favs);
     } catch {
       setError('Die Apps konnten nicht geladen werden.');
     }
@@ -64,10 +110,9 @@ export function Home() {
     () => (apps ?? []).filter((app) => app.kind === 'remote' && app.status !== 'disabled'),
     [apps],
   );
+  const bySlug = useMemo(() => new Map(webApps.map((app) => [app.slug, app])), [webApps]);
 
-  const visible = webApps.filter((app) => {
-    if (filter === 'pinned' && !pins.has(app.slug)) return false;
-    if (filter === 'shared' && app.data_mode !== 'shared-account') return false;
+  const matchesQuery = (app: AppRow) => {
     const q = query.trim().toLowerCase();
     return (
       !q ||
@@ -75,14 +120,46 @@ export function Home() {
       app.slug.includes(q) ||
       app.description.toLowerCase().includes(q)
     );
-  });
+  };
+  const inFilter = (app: AppRow, id: Filter) => {
+    if (id === 'favorites') return favorites.has(app.slug);
+    if (id === 'shared') return app.data_mode === 'shared-account';
+    if (id.startsWith('cat:')) return app.category_id === id.slice(4);
+    return true;
+  };
+  const visible = sortApps(
+    webApps.filter((app) => inFilter(app, filter) && matchesQuery(app)),
+    sort,
+    usage,
+  );
 
-  const togglePin = (slug: string) => {
-    const next = new Set(pins);
-    if (next.has(slug)) next.delete(slug);
-    else next.add(slug);
-    savePinned(next);
-    setPins(next);
+  const changeSort = (next: Sort) => {
+    setSort(next);
+    try {
+      localStorage.setItem(SORT_KEY, next);
+    } catch {
+      // Remembering the order is a convenience.
+    }
+  };
+
+  const toggleFavorite = async (slug: string) => {
+    const next = !favorites.has(slug);
+    const updated = new Set(favorites);
+    if (next) updated.add(slug);
+    else updated.delete(slug);
+    setFavorites(updated);
+    try {
+      await setFavorite(slug, next);
+    } catch {
+      // Undo only this app: another toggle may have happened meanwhile.
+      setFavorites((current) => {
+        const undone = new Set(current);
+        if (next) undone.delete(slug);
+        else undone.add(slug);
+        return undone;
+      });
+      setError('Favorit konnte nicht gespeichert werden.');
+    }
   };
 
   const down = webApps.filter((app) => app.status === 'down' || app.status === 'degraded');
@@ -91,11 +168,29 @@ export function Home() {
     day: 'numeric',
     month: 'long',
   });
+  const count = (id: Filter) => webApps.filter((app) => inFilter(app, id)).length;
   const chips: [Filter, string, number][] = [
     ['all', 'Alle', webApps.length],
-    ['pinned', 'Angeheftet', webApps.filter((app) => pins.has(app.slug)).length],
-    ['shared', 'Geteilt', webApps.filter((app) => app.data_mode === 'shared-account').length],
+    ['favorites', 'Favoriten', count('favorites')],
+    ...(count('shared') > 0
+      ? [['shared', 'Geteilt', count('shared')] as [Filter, string, number]]
+      : []),
+    ...categories
+      .map((cat): [Filter, string, number] => [`cat:${cat.id}`, cat.name, count(`cat:${cat.id}`)])
+      .filter(([, , n]) => n > 0),
   ];
+  // A category that vanished after a reload (deleted, or no apps left) falls back to "Alle".
+  useEffect(() => {
+    if (filter.startsWith('cat:') && apps && !chips.some(([id]) => id === filter)) setFilter('all');
+  });
+  const curated = sets
+    .map((set) => ({ ...set, members: set.apps.flatMap((slug) => bySlug.get(slug) ?? []) }))
+    .filter((set) => set.members.length > 0);
+  const showSets = filter === 'all' && !query.trim() && curated.length > 0;
+
+  // Link tiles open the external website in a new tab.
+  const target = (app: AppRow) => (app.link_url ? '_blank' : undefined);
+  const rel = (app: AppRow) => (app.link_url ? 'noopener noreferrer' : undefined);
 
   return (
     <>
@@ -126,27 +221,83 @@ export function Home() {
 
         <div className="home-grid">
           <section aria-label="Apps" className="stack" style={{ gap: 20 }}>
-            <div className="row" style={{ flexWrap: 'wrap', gap: 8 }}>
-              {chips.map(([id, label, count]) => (
-                <button
-                  key={id}
-                  type="button"
-                  className="chip"
-                  aria-pressed={filter === id}
-                  onClick={() => setFilter(id)}
-                >
-                  {label}
-                  <span className="count">{count}</span>
-                </button>
-              ))}
+            {showSets && (
+              <section aria-labelledby="sets-title" className="stack" style={{ gap: 12 }}>
+                <h2 id="sets-title" className="section-title">
+                  Pakete
+                </h2>
+                <div className="sets">
+                  {curated.map((set) => (
+                    <section key={set.id} className="set-card" aria-label={set.name}>
+                      <h3>{set.name}</h3>
+                      {set.description && <p className="muted">{set.description}</p>}
+                      <ul className="set-apps">
+                        {set.members.map((app) => (
+                          <li key={app.slug}>
+                            <a
+                              href={tileUrl(app)}
+                              target={target(app)}
+                              rel={rel(app)}
+                              onClick={() => recordOpen(app.slug)}
+                            >
+                              <span
+                                className="monogram small"
+                                style={{ background: tintFor(app.slug) }}
+                                aria-hidden="true"
+                              >
+                                {monogram(app.name)}
+                              </span>
+                              {app.name}
+                              {app.link_url && (
+                                <>
+                                  <ExternalIcon />
+                                  <span className="sr-only"> (öffnet in neuem Tab)</span>
+                                </>
+                              )}
+                            </a>
+                          </li>
+                        ))}
+                      </ul>
+                    </section>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            <div className="filter-bar">
+              <fieldset className="chip-scroll">
+                <legend className="sr-only">Filter</legend>
+                {chips.map(([id, label, n]) => (
+                  <button
+                    key={id}
+                    type="button"
+                    className="chip"
+                    aria-pressed={filter === id}
+                    onClick={() => setFilter(id)}
+                  >
+                    {label}
+                    <span className="count">{n}</span>
+                  </button>
+                ))}
+              </fieldset>
+              <label className="sort-select">
+                <span className="sr-only">Sortieren</span>
+                <select value={sort} onChange={(event) => changeSort(event.target.value as Sort)}>
+                  {(Object.keys(SORT_LABEL) as Sort[]).map((key) => (
+                    <option key={key} value={key}>
+                      {SORT_LABEL[key]}
+                    </option>
+                  ))}
+                </select>
+              </label>
             </div>
 
             {apps && visible.length === 0 && (
               <p className="empty">
                 {webApps.length === 0
                   ? 'Für dich sind noch keine Apps freigegeben.'
-                  : filter === 'pinned'
-                    ? 'Hefte Apps mit der Nadel an, um sie hier zu sammeln.'
+                  : filter === 'favorites'
+                    ? 'Markiere Apps mit dem Stern, um sie hier zu sammeln.'
                     : 'Keine App passt zur Suche.'}
               </p>
             )}
@@ -154,7 +305,13 @@ export function Home() {
             <div className="tiles">
               {visible.map((app) => (
                 <div key={app.slug} style={{ position: 'relative' }}>
-                  <a className="tile" href={appUrl(app.slug)}>
+                  <a
+                    className="tile"
+                    href={tileUrl(app)}
+                    target={target(app)}
+                    rel={rel(app)}
+                    onClick={() => recordOpen(app.slug)}
+                  >
                     <div className="tile-head">
                       <div
                         className="monogram"
@@ -165,8 +322,17 @@ export function Home() {
                       </div>
                       <div className="tile-title">
                         <strong>{app.name}</strong>
-                        <span className="mono">{app.slug}.mininode.app</span>
+                        <span className="mono">
+                          {app.link_url ? hostOf(app.link_url) : `${app.slug}.mininode.app`}
+                        </span>
                       </div>
+                      {app.link_url && (
+                        <span className="pill" title="Externe Website, öffnet in neuem Tab">
+                          <ExternalIcon size={12} />
+                          <span className="pill-label">Link</span>
+                          <span className="sr-only"> (öffnet in neuem Tab)</span>
+                        </span>
+                      )}
                       {app.data_mode === 'shared-account' && (
                         <span className="pill accent" title="Läuft mit geteiltem Account">
                           <SharedIcon />
@@ -178,13 +344,13 @@ export function Home() {
                   </a>
                   <button
                     type="button"
-                    className="pin"
+                    className="pin fav"
                     style={{ position: 'absolute', right: 4, bottom: 4 }}
-                    aria-pressed={pins.has(app.slug)}
-                    aria-label={pins.has(app.slug) ? `${app.name} lösen` : `${app.name} anheften`}
-                    onClick={() => togglePin(app.slug)}
+                    aria-pressed={favorites.has(app.slug)}
+                    aria-label={`${app.name} als Favorit`}
+                    onClick={() => void toggleFavorite(app.slug)}
                   >
-                    <PinIcon />
+                    <StarIcon />
                   </button>
                 </div>
               ))}

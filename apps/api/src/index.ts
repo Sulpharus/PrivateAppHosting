@@ -8,6 +8,7 @@ import { apis } from './routes/apis.ts';
 import { google } from './routes/google.ts';
 import { hooks } from './routes/hooks.ts';
 import { confirmUrl, invites } from './routes/invites.ts';
+import { nucbox } from './routes/nucbox.ts';
 import { deliverPushes, push } from './routes/push.ts';
 import { controlHeaders, remote } from './routes/remote.ts';
 
@@ -39,6 +40,7 @@ app.use(
 
 app.get('/health', (c) => c.json({ ok: true }));
 app.route('/', apis);
+app.route('/', nucbox);
 app.route('/google', google);
 app.route('/hooks', hooks);
 app.route('/push', push);

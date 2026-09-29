@@ -90,6 +90,19 @@ export const PinIcon = ({ size = 16 }: IconProps) => (
   </svg>
 );
 
+/** Outlined; filled via CSS (`.fav[aria-pressed="true"] svg`) when the app is a favourite. */
+export const StarIcon = ({ size = 18 }: IconProps) => (
+  <svg {...base(size)} aria-hidden="true">
+    <path d="M9 2.2l2.1 4.3 4.7.7-3.4 3.3.8 4.7L9 13l-4.2 2.2.8-4.7-3.4-3.3 4.7-.7z" />
+  </svg>
+);
+
+export const ExternalIcon = ({ size = 14 }: IconProps) => (
+  <svg {...base(size)} aria-hidden="true">
+    <path d="M10.5 2.5h5v5M15.5 2.5l-7 7M13 10.5v5h-10.5v-10.5h5" />
+  </svg>
+);
+
 export const SharedIcon = ({ size = 12 }: IconProps) => (
   <svg {...base(size)} aria-hidden="true">
     <circle cx="6.5" cy="6" r="2.6" />

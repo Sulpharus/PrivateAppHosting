@@ -33,6 +33,8 @@ const Users = lazy(() => import('./admin/Users.tsx').then((m) => ({ default: m.U
 const Remote = lazy(() => import('./admin/Remote.tsx').then((m) => ({ default: m.Remote })));
 const Ai = lazy(() => import('./admin/Ai.tsx').then((m) => ({ default: m.Ai })));
 const ApiKeys = lazy(() => import('./admin/ApiKeys.tsx').then((m) => ({ default: m.ApiKeys })));
+const Catalog = lazy(() => import('./admin/Catalog.tsx').then((m) => ({ default: m.Catalog })));
+const NucBox = lazy(() => import('./admin/NucBox.tsx').then((m) => ({ default: m.NucBox })));
 const Workshop = lazy(() => import('./admin/Workshop.tsx').then((m) => ({ default: m.Workshop })));
 
 function RequireSession() {
@@ -107,8 +109,10 @@ const router = createBrowserRouter([
         children: [
           { index: true, element: <Overview /> },
           { path: 'apps', element: <Apps /> },
+          { path: 'catalog', element: <Catalog /> },
           { path: 'users', element: <Users /> },
           { path: 'remote', element: <Remote /> },
+          { path: 'nucbox', element: <NucBox /> },
           { path: 'ai', element: <Ai /> },
           { path: 'api-keys', element: <ApiKeys /> },
           { path: 'workshop', element: <Workshop /> },

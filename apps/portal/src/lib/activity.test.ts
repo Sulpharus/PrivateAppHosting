@@ -28,6 +28,13 @@ describe('describeActivity', () => {
       'Passwort-Link für gelöschter Nutzer erstellt',
     );
     expect(describeActivity(row('something.new', {}), names)).toBe('something.new');
+    expect(describeActivity(row('app.whitelist_set', { whitelist: true }), names)).toBe(
+      'App nur für die Whitelist',
+    );
+    expect(describeActivity(row('app.whitelist_set', { whitelist: false }), names)).toBe(
+      'App wieder freigegeben',
+    );
+    expect(describeActivity(row('app_set.saved', {}), names)).toBe('Paket gespeichert');
   });
   it('tells app changes apart', () => {
     expect(describeActivity(row('app.state_changed', { disabled: true }), names)).toBe(

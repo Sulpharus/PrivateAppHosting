@@ -115,6 +115,33 @@ describe('registerApp', () => {
     ]);
   });
 
+  it('refuses a slug that belongs to a link tile, before changing anything', async () => {
+    const calls: string[] = [];
+    const fn = (async (input: string | URL | Request, init?: RequestInit) => {
+      const url = input instanceof Request ? input.url : String(input);
+      calls.push(`${init?.method ?? 'GET'} ${url}`);
+      if (url.includes('/profiles')) return Response.json([{ user_id: 'admin-1' }]);
+      if (url.includes('/apps?select=slug'))
+        return Response.json({ slug: 'att', status: 'online', kind: 'link' });
+      return new Response(null, { status: 204 });
+    }) as typeof fetch;
+    const db = createClient('https://db.example.com', 'secret', {
+      auth: { persistSession: false },
+      global: { fetch: fn },
+    });
+    const parsed = parseManifest({
+      specVersion: 1,
+      slug: 'att',
+      name: 'Att',
+      description: 'App',
+      kind: 'static',
+      target: 'cloudflare',
+    });
+    if (!parsed.ok) throw new Error(parsed.errors.join());
+    await expect(registerApp(db, parsed.manifest, '1.0.0')).rejects.toThrow(/link tile/);
+    expect(calls.filter((c) => c.startsWith('POST'))).toEqual([]);
+  });
+
   it('grants a new default app to every existing user once', async () => {
     const { fn, calls } = fakeFetch([]);
     const db = createClient('https://db.example.com', 'secret', {

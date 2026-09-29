@@ -57,8 +57,10 @@ test('admins reach every Host Manager page', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Übersicht' })).toBeVisible();
   for (const [link, heading] of [
     ['Apps', 'Apps'],
+    ['Kategorien & Pakete', 'Kategorien & Pakete'],
     ['Nutzer & Rollen', 'Nutzer & Rollen'],
     ['Remote-Apps', 'Remote-Apps'],
+    ['NucBox', 'NucBox'],
     ['KI-Proxy', 'KI-Proxy'],
     ['KI-Werkstatt', 'KI-Werkstatt'],
   ]) {

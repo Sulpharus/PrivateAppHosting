@@ -443,6 +443,88 @@ code,
   color: var(--accent-text);
 }
 
+/* Favourite star: outlined, filled when pressed (the pressed state is also announced) */
+.fav[aria-pressed="true"] svg {
+  fill: currentColor;
+}
+
+/* Start page: filter chips (scroll sideways on phones) and the sort menu */
+.filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.chip-scroll {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+.sort-select select {
+  min-height: var(--tap);
+  padding: 0 12px;
+  border-radius: 20px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+}
+
+/* Curated app sets ("Pakete") */
+.sets {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+.set-card {
+  padding: 16px;
+  border-radius: var(--radius-l);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.set-card h3 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 18px;
+}
+.set-card p {
+  margin: 0;
+  font-size: 14px;
+}
+.set-apps {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.set-apps a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: var(--tap);
+  color: var(--ink);
+  text-decoration: none;
+  font-weight: 600;
+}
+.set-apps a:hover {
+  color: var(--accent-text);
+}
+.monogram.small {
+  width: 32px;
+  height: 32px;
+  font-size: 12px;
+}
+
 .card {
   padding: 16px;
   border-radius: var(--radius-l);
@@ -632,6 +714,35 @@ code,
   height: 100%;
   background: var(--accent);
 }
+.meter.warn > span {
+  background: var(--warn);
+}
+.meter.bad > span {
+  background: var(--bad);
+}
+
+/* NucBox usage: label and value above each bar */
+.usage {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.usage-top {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 12px;
+  font-size: 14px;
+}
+.usage-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 8px 0;
+}
+.usage-group + .usage-group {
+  border-top: 1px solid var(--line);
+}
 
 .admin {
   display: grid;
@@ -686,7 +797,8 @@ code,
 
 @media (max-width: 900px) {
   .home-grid {
-    grid-template-columns: 1fr;
+    /* minmax(0, …): the sideways-scrolling chip row must not widen the page */
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .admin {
@@ -724,6 +836,19 @@ code,
   .tiles {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 12px;
+  }
+
+  .filter-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .chip-scroll {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .chip-scroll .chip {
+    flex-shrink: 0;
   }
 
   .tile {
@@ -1010,6 +1135,55 @@ code,
 /* Count badge in the admin navigation (e.g. missing API keys) */
 .nav-count {
   margin-left: 8px;
+}
+
+/* Kategorien & Pakete: one form row per category, stacking on narrow screens */
+.catalog-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px 12px;
+  padding: 12px 0;
+}
+.catalog-row + .catalog-row {
+  border-top: 1px solid var(--line);
+}
+.catalog-row .field {
+  flex: 1 1 180px;
+  min-width: 0;
+}
+.catalog-row .catalog-grow {
+  flex: 3 1 260px;
+}
+.catalog-row .catalog-narrow {
+  flex: 0 1 110px;
+}
+.catalog-subtitle {
+  margin: 8px 0 0;
+  font-family: var(--font-display);
+  font-size: 18px;
+}
+.catalog-apps {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-m);
+  margin: 0;
+  padding: 8px 12px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0 12px;
+}
+.access-mode {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.access-mode label {
+  min-height: var(--tap);
+}
+.catalog-apps label {
+  min-height: var(--tap);
 }
 
 /* Action buttons at the end of a table row */

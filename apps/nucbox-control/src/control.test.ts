@@ -311,6 +311,14 @@ describe('server', () => {
         verifier,
         checkGrant: async () => granted,
       },
+      resources: async () => ({
+        at: '2026-09-29T08:00:00.000Z',
+        host: null,
+        storage: [],
+        vms: [],
+        containers: [],
+        errors: ['proxmox host: 401'],
+      }),
     });
 
   const forwarded = (cookie?: string, mode = 'navigate') =>
@@ -321,6 +329,14 @@ describe('server', () => {
       'Sec-Fetch-Mode': mode,
       ...(cookie ? { Cookie: cookie } : {}),
     });
+
+  it('serves the resource report only with the control token', async () => {
+    const app = build(true);
+    expect((await app.request('/resources')).status).toBe(401);
+    const res = await app.request('/resources', { headers: { Authorization: `Bearer ${TOKEN}` } });
+    expect(res.status).toBe(200);
+    expect(((await res.json()) as { errors: string[] }).errors).toEqual(['proxmox host: 401']);
+  });
 
   it('allows granted users and passes identity headers', async () => {
     const { jwt, cookie } = await sessionCookie();
