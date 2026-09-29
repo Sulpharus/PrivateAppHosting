@@ -48,8 +48,9 @@ function detailBodyHTML(a, ds) {
     const s = slotsOn(a, ds),
       planned = isPlanned(a, ds);
     if (s.length || planned) {
-      const on = (a.done || []).includes(ds);
-      today = `<div class="today-box"><span><small>${fmt(parse(ds), { weekday: 'long', day: 'numeric', month: 'long' })}</small><b>${esc(s.length ? s.map(timeLabel).join(', ') : 'Geplant')}</b></span><span class="tb-actions"><button class="done-btn ${planned ? 'on' : ''}" data-action="plan-toggle">${planned ? ICON.check + 'Geplant' : 'Einplanen'}</button><button class="done-btn ${on ? 'on' : ''}" data-action="toggle-done">${on ? ICON.check + 'Erledigt' : 'Erledigt'}</button></span></div>`;
+      const on = (a.done || []).includes(ds),
+        off = isCancelled(a, ds);
+      today = `<div class="today-box${off ? ' is-off' : ''}"><span><small>${fmt(parse(ds), { weekday: 'long', day: 'numeric', month: 'long' })}</small><b>${esc(off ? 'Ausgefallen' : s.length ? s.map(timeLabel).join(', ') : 'Geplant')}</b></span><span class="tb-actions">${off ? '' : `<button class="done-btn ${planned ? 'on' : ''}" data-action="plan-toggle" aria-pressed="${planned}">${planned ? ICON.check + 'Geplant' : 'Einplanen'}</button><button class="done-btn ${on ? 'on' : ''}" data-action="toggle-done" aria-pressed="${on}">${on ? ICON.check + 'Erledigt' : 'Erledigt'}</button>`}<button class="done-btn ${off ? 'on' : ''}" data-action="toggle-cancel" aria-pressed="${off}">${off ? ICON.check + 'Ausgefallen' : 'Ausgefallen'}</button></span>${off ? '<small class="tb-note">Nicht stattgefunden. Zählt weder als Teilnahme noch als verpasst.</small>' : ''}</div>`;
     }
   }
   const facts = [];
@@ -64,7 +65,7 @@ function detailBodyHTML(a, ds) {
     const base = parse(todayStr());
     for (let i = 0; i < 120 && nx.length < 3; i++) {
       const d = ymd(addDays(base, i));
-      if (isPlanned(a, d) && !(a.done || []).includes(d)) nx.push(d);
+      if (isPlanned(a, d) && !(a.done || []).includes(d) && !isCancelled(a, d)) nx.push(d);
     }
     facts.push([
       'Geplant',
@@ -122,7 +123,8 @@ function detailBodyHTML(a, ds) {
   const done = [...(a.done || [])].sort(),
     yr = String(new Date().getFullYear()),
     td = todayStr();
-  const yrN = done.filter((d) => d.startsWith(yr)).length;
+  const yrN = done.filter((d) => d.startsWith(yr)).length,
+    offN = (a.cancelled || []).length;
   facts.push([
     'Besuche',
     (done.length
@@ -135,6 +137,9 @@ function detailBodyHTML(a, ds) {
           )
           .join('')}</div>`
       : '<p class="muted">Noch keine Besuche eingetragen</p>') +
+      (offN
+        ? `<p class="muted">${offN} ${offN === 1 ? 'Termin' : 'Termine'} ausgefallen, zählen nicht mit</p>`
+        : '') +
       `<div class="visit-add"><input type="date" id="visitdate" value="${td}" max="${td}" aria-label="Datum des Besuchs"><button class="btn" data-action="add-visit">Eintragen</button></div>`,
   ]);
   const chips = [

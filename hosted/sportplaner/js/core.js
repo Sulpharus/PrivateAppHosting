@@ -283,6 +283,18 @@ function plannedOn(ds) {
   return r;
 }
 const slotsOn = (a, ds) => (onDate(ds).find((e) => e.a.id === a.id) || { s: [] }).s;
+/* a session marked "Ausgefallen" did not take place: it is neither attended nor missed and
+   counts in no statistic */
+const isCancelled = (a, ds) => (a.cancelled || []).includes(ds);
+/* a course runs from course.from to course.until on its weekly slots; every session is planned */
+function courseDates(a) {
+  const c = a.course,
+    out = [];
+  if (!c || !c.from || !c.until) return out;
+  for (let d = parse(c.from), i = 0; ymd(d) <= c.until && i < 800; d = addDays(d, 1), i++)
+    if (slotsOn(a, ymd(d)).length) out.push(ymd(d));
+  return out;
+}
 function nextMap() {
   const t = todayStr();
   if (nextCache && nextCache.t === t) return nextCache.m;
@@ -344,6 +356,11 @@ function periodLabel(p) {
 function plannedSummary(a) {
   const p = a.planned;
   if (!hasPlan(a)) return '';
+  if (a.course) {
+    const all = courseDates(a),
+      off = all.filter((d) => isCancelled(a, d)).length;
+    return `Kurs: alle ${all.length} Termine${off ? `, ${off} ausgefallen` : ''}`;
+  }
   const parts = [];
   if (p.mode === 'weekly' || p.mode === 'both') {
     const n = +p.every || 1;

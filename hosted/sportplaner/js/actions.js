@@ -92,7 +92,31 @@ const H = {
       done = new Set(a.done || []);
     done.has(ds) ? done.delete(ds) : done.add(ds);
     try {
-      await persist({ ...a, done: [...done].sort() });
+      // attended means it took place
+      await persist({
+        ...a,
+        done: [...done].sort(),
+        cancelled: (a.cancelled || []).filter((x) => !done.has(x)),
+      });
+    } catch {
+      toast('Aktualisierung fehlgeschlagen. Bitte erneut versuchen.');
+    }
+  },
+  'toggle-cancel': async () => {
+    const a = S.acts.find((x) => x.id === S.sheet.id);
+    if (!a || !S.sheet.date) return;
+    const ds = S.sheet.date,
+      off = new Set(a.cancelled || []),
+      was = off.has(ds);
+    was ? off.delete(ds) : off.add(ds);
+    try {
+      // a session that did not take place cannot have been attended
+      await persist({
+        ...a,
+        cancelled: [...off].sort(),
+        done: was ? a.done || [] : (a.done || []).filter((x) => x !== ds),
+      });
+      toast(was ? 'Termin findet statt' : 'Als ausgefallen markiert, zählt in keiner Statistik');
     } catch {
       toast('Aktualisierung fehlgeschlagen. Bitte erneut versuchen.');
     }
