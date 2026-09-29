@@ -50,7 +50,7 @@ function detailBodyHTML(a, ds) {
     if (s.length || planned) {
       const on = (a.done || []).includes(ds),
         off = isCancelled(a, ds);
-      today = `<div class="today-box${off ? ' is-off' : ''}"><span><small>${fmt(parse(ds), { weekday: 'long', day: 'numeric', month: 'long' })}</small><b>${esc(off ? 'Ausgefallen' : s.length ? s.map(timeLabel).join(', ') : 'Geplant')}</b></span><span class="tb-actions">${off ? '' : `<button class="done-btn ${planned ? 'on' : ''}" data-action="plan-toggle" aria-pressed="${planned}">${planned ? ICON.check + 'Geplant' : 'Einplanen'}</button><button class="done-btn ${on ? 'on' : ''}" data-action="toggle-done" aria-pressed="${on}">${on ? ICON.check + 'Erledigt' : 'Erledigt'}</button>`}<button class="done-btn ${off ? 'on' : ''}" data-action="toggle-cancel" aria-pressed="${off}">${off ? ICON.check + 'Ausgefallen' : 'Ausgefallen'}</button></span>${off ? '<small class="tb-note">Nicht stattgefunden. Zählt weder als Teilnahme noch als verpasst.</small>' : ''}</div>`;
+      today = `<div class="today-box${off ? ' is-off' : ''}"><span><small>${fmt(parse(ds), { weekday: 'long', day: 'numeric', month: 'long' })}</small><b>${esc(off ? 'Ausgefallen' : s.length ? s.map(timeLabel).join(', ') : 'Geplant')}</b></span><span class="tb-actions">${off ? '' : `<button class="done-btn ${planned ? 'on' : ''}" data-action="plan-toggle" aria-pressed="${planned}">${planned ? ICON.check : ''}Eingeplant</button><button class="done-btn ${on ? 'on' : ''}" data-action="toggle-done" aria-pressed="${on}">${on ? ICON.check + 'Erledigt' : 'Erledigt'}</button>`}<button class="done-btn ${off ? 'on' : ''}" data-action="toggle-cancel" aria-pressed="${off}">${off ? ICON.check + 'Ausgefallen' : 'Ausgefallen'}</button></span>${off ? '<small class="tb-note">Nicht stattgefunden. Zählt weder als Teilnahme noch als verpasst.</small>' : ''}</div>`;
     }
   }
   const facts = [];
@@ -155,7 +155,16 @@ function updDetail() {
   const a = S.acts.find((x) => x.id === S.sheet.id);
   if (!a) return closeSheet();
   setHTML($('#d-gal'), galleryHTML(a) || '<div class="d-hero empty-hero"></div>');
-  if (delArmed !== a.id) setHTML($('#d-body'), detailBodyHTML(a, S.sheet.date));
+  if (delArmed !== a.id) {
+    // keep keyboard focus on the same control when the body is rebuilt
+    const act =
+      document.activeElement && document.activeElement.dataset
+        ? document.activeElement.dataset.action
+        : null;
+    setHTML($('#d-body'), detailBodyHTML(a, S.sheet.date));
+    if (act && (!document.activeElement || document.activeElement === document.body))
+      ($(`#d-body [data-action="${act}"]`) || $('#d-body [data-action=toggle-cancel]'))?.focus();
+  }
 }
 function openDetail(id, ds) {
   if (!S.acts.some((x) => x.id === id)) return;

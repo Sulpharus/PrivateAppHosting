@@ -1077,7 +1077,10 @@ main {
   background: var(--accent);
 }
 .dots i.x {
-  background: var(--line);
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--muted);
+  transform: rotate(45deg);
+  border-radius: 1px;
 }
 .dots i.o {
   background: transparent;
@@ -1778,6 +1781,12 @@ button.ubar:hover b {
 }
 .offer-seg {
   margin-bottom: var(--s2);
+}
+.offer-seg button {
+  min-height: 44px;
+}
+.today-box.is-off {
+  background: var(--surface-2);
 }
 .done-btn svg {
   width: 16px;

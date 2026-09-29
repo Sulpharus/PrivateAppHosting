@@ -527,12 +527,19 @@ function courseFieldSync(t) {
     f = t.dataset.cf;
   if (f === 'row') draft.courseRows[+t.dataset.r][t.dataset.k] = t.value;
   else if (f === 'weeks') {
+    // only a helper that fills in Kursende
     const w = Math.round(+t.value);
     if (!c.from || !(w >= 1 && w <= 104)) return;
     c.until = ymd(addDays(parse(c.from), w * 7 - 1));
     const u = $('[data-cf=until]');
     if (u) u.value = c.until;
-  } else c[f] = t.value;
+  } else {
+    c[f] = t.value;
+    const w = $('[data-cf=weeks]');
+    if (w && document.activeElement !== w)
+      w.value =
+        c.from && c.until && c.until >= c.from ? Math.ceil(dayCount(c.from, c.until) / 7) : '';
+  }
   const sum = $('#coursesum');
   if (sum) setText(sum, courseSummary());
 }
@@ -551,11 +558,16 @@ function showOfferType() {
 }
 /* turns the course into weekly slots over its dates and plans every session; error or null */
 function courseToSlots() {
-  document.querySelectorAll('#coursebox [data-cf]').forEach(courseFieldSync);
+  document
+    .querySelectorAll(
+      '#coursebox [data-cf=from], #coursebox [data-cf=until], #coursebox [data-cf=row]',
+    )
+    .forEach(courseFieldSync);
   const c = draft.course,
     rows = draft.courseRows.filter((r) => r.days.length);
   if (!c.from || !c.until) return 'Gib Kursbeginn und Kursende an.';
   if (c.until < c.from) return 'Das Kursende liegt vor dem Kursbeginn.';
+  if (dayCount(c.from, c.until) > 104 * 7) return 'Ein Kurs dauert höchstens 104 Wochen.';
   if (!rows.length) return 'Wähle mindestens einen Trainingstag für den Kurs.';
   const period = { type: 'range', from: c.from, until: c.until, label: 'Kurs' };
   draft.slots = rows.map((r) => ({
@@ -565,6 +577,10 @@ function courseToSlots() {
     end: r.end || '',
     period,
   }));
+  // single dates (e.g. an extra session) stay
+  for (const x of draft.singles)
+    if (x.date)
+      draft.slots.push({ kind: 'date', date: x.date, start: x.start || '', end: x.end || '' });
   draft.season = { type: 'range', from: c.from, until: c.until };
   const pp = draft.planned || {};
   draft.planned = {
@@ -585,16 +601,47 @@ const BLOCK_HANDLERS = {
     if (course) {
       syncSlotsDOM();
       const from = S.date >= todayStr() ? S.date : todayStr();
-      draft.course = { from, until: ymd(addDays(parse(from), 10 * 7 - 1)) };
+      draft.course = draft._course || { from, until: ymd(addDays(parse(from), 10 * 7 - 1)) };
       if (!draft.courseRows.length) {
-        const rows = draft.blocks.flatMap((b) => b.rows).filter((r) => r.days.length);
-        draft.courseRows = rows.length
-          ? rows.map((r) => ({ ...r, days: [...r.days] }))
-          : [newRow([wIdx(parse(from))])];
+        // one row per distinct time, merged over seasonal blocks
+        const byTime = new Map();
+        for (const r of draft.blocks.flatMap((b) => b.rows).filter((x) => x.days.length)) {
+          const k = `${r.start}|${r.end}`,
+            cur = byTime.get(k);
+          byTime.set(
+            k,
+            cur
+              ? { ...cur, days: [...new Set([...cur.days, ...r.days])] }
+              : { ...r, days: [...r.days] },
+          );
+        }
+        draft.courseRows = byTime.size ? [...byTime.values()] : [newRow([wIdx(parse(from))])];
       }
       renderCourse();
-    } else draft.course = null;
+    } else {
+      document.querySelectorAll('#coursebox [data-cf]').forEach(courseFieldSync);
+      draft._course = draft.course;
+      draft.course = null;
+      // open times plan as chosen in step 3 again; start from "not planned" if it was the course plan
+      if (
+        draft.planned &&
+        draft.planned.mode !== 'none' &&
+        (draft.planned.season || {}).type === 'range' &&
+        draft._course &&
+        draft.planned.season.from === draft._course.from
+      )
+        draft.planned = {
+          mode: (draft.planned.dates || []).length ? 'dates' : 'none',
+          dates: draft.planned.dates || [],
+          skip: draft.planned.skip || [],
+        };
+      const pm = $('#pmode');
+      if (pm) pm.value = draft.planned.mode || 'none';
+      renderPlanned();
+      renderAvail();
+    }
     showOfferType();
+    t.focus();
   },
   'crow-day': (t) => {
     const r = draft.courseRows[+t.dataset.r],
@@ -608,11 +655,13 @@ const BLOCK_HANDLERS = {
     document.querySelectorAll('#coursebox [data-cf=row]').forEach(courseFieldSync);
     draft.courseRows.push(newRow());
     renderCourse();
+    $(`[data-action=crow-day][data-r="${draft.courseRows.length - 1}"]`)?.focus();
   },
   'crow-del': (t) => {
     document.querySelectorAll('#coursebox [data-cf=row]').forEach(courseFieldSync);
     draft.courseRows.splice(+t.dataset.r, 1);
     renderCourse();
+    $('[data-action=crow-add]')?.focus();
   },
   step: (t) => setStep(+t.dataset.step),
   'step-next': () => setStep(Math.min(STEPS.length - 1, S.sheet.step + 1)),
@@ -867,6 +916,7 @@ async function saveDraft() {
   delete act.blocks;
   delete act.singles;
   delete act.courseRows;
+  delete act._course;
   if (!act.course) delete act.course;
   try {
     await persist(act);

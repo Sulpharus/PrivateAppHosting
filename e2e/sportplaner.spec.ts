@@ -142,8 +142,11 @@ test('a course plans every session; cancelled sessions count nowhere', async ({ 
     'true',
   );
   await dialog.getByLabel('Kursbeginn').fill(start);
-  await dialog.getByLabel('Kurslänge in Wochen').fill('1');
-  await expect(dialog.getByLabel('Kursende')).toHaveValue(day(4));
+  await dialog.getByLabel('Kurslänge in Wochen').fill('2');
+  await expect(dialog.getByLabel('Kursende')).toHaveValue(day(11));
+  // Correcting the end afterwards wins over the length.
+  await dialog.getByLabel('Kursende').fill(day(4));
+  await expect(dialog.getByLabel('Kurslänge in Wochen')).toHaveValue('1');
   const row = dialog.locator('#coursebox .trow').first();
   for (const d of ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']) {
     const button = row.getByRole('button', { name: d, exact: true });
@@ -156,6 +159,13 @@ test('a course plans every session; cancelled sessions count nowhere', async ({ 
     dialog.getByText(/Kurs: Du bist automatisch für alle Termine eingeplant/),
   ).toBeVisible();
   await dialog.getByRole('button', { name: 'Anlegen', exact: true }).click();
+  await expect(page.getByRole('dialog').getByText('Kurs: alle 7 Termine')).toBeVisible();
+
+  // Editing and saving unchanged keeps the course as it was.
+  await page.getByRole('dialog').getByRole('button', { name: 'Bearbeiten' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Weiter', exact: true }).click();
+  await expect(page.getByRole('dialog').getByLabel('Kursende')).toHaveValue(day(4));
+  await page.getByRole('dialog').getByRole('button', { name: 'Speichern', exact: true }).click();
   await expect(page.getByRole('dialog').getByText('Kurs: alle 7 Termine')).toBeVisible();
   await page.keyboard.press('Escape');
 
@@ -179,6 +189,10 @@ test('a course plans every session; cancelled sessions count nowhere', async ({ 
   const yearStart = `${new Date().getFullYear()}-01-01`;
   const past = [day(-2), day(-1)].filter((d) => d >= yearStart).length;
   await page.getByRole('button', { name: 'Statistik' }).click();
-  await expect(page.getByText(`Teilnahme: 0 von ${past} geplanten Terminen`)).toBeVisible();
+  await expect(
+    page.getByText(
+      past ? `Teilnahme: 0 von ${past} geplanten Terminen` : 'Teilnahme an geplanten Terminen',
+    ),
+  ).toBeVisible();
   expect(errors).toEqual([]);
 });

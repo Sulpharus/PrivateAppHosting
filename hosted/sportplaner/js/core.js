@@ -358,8 +358,9 @@ function plannedSummary(a) {
   if (!hasPlan(a)) return '';
   if (a.course) {
     const all = courseDates(a),
+      mine = all.filter((d) => isPlanned(a, d)).length,
       off = all.filter((d) => isCancelled(a, d)).length;
-    return `Kurs: alle ${all.length} Termine${off ? `, ${off} ausgefallen` : ''}`;
+    return `Kurs: ${mine === all.length ? `alle ${all.length}` : `${mine} von ${all.length}`} Termine${off ? `, ${off} ausgefallen` : ''}`;
   }
   const parts = [];
   if (p.mode === 'weekly' || p.mode === 'both') {
