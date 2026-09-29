@@ -54,6 +54,13 @@ header names the proxy manages (`Host`, `Cookie`, `Content-Type`, …) cannot ca
 `X-MiniNode-Error`, so the SDK throws `ExternalApiError` for them (`keyMissing` for
 `api_key_missing`) and returns the external API's answers unchanged, errors included.
 
+**Keyless APIs.** `auth: { "type": "none" }` declares a public API that needs no key. The proxy
+forwards it under the same checks (signed-in user, calling app, grant, declared, path below
+`baseUrl`, header allow-lists, limits). Like every proxied call it carries a
+`User-Agent: MiniNode/1.0` header, which some public APIs require. The browser still cannot
+reach it directly, because the gate's CSP allows no third-party hosts and some APIs send no CORS
+headers. The admin page lists such APIs as "Kein Schlüssel nötig".
+
 ## Consequences
 
 - Adding a keyed API to an app is a manifest change; the key is entered once and applies to

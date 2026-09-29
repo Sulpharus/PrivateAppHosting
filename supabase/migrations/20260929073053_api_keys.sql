@@ -13,8 +13,10 @@ create table platform.api_services (
     and base_url !~ '^https://[^/]*\.(/|$)'
   ),
   -- {"type":"header","name":"X-Api-Key","prefix":"…"} | {"type":"bearer"} | {"type":"query","param":"…"}
+  -- | {"type":"none"} (a public API without a key, proxied because browsers cannot reach it)
   auth jsonb not null check (
     (auth ->> 'type' = 'bearer' and auth = '{"type":"bearer"}'::jsonb)
+    or (auth ->> 'type' = 'none' and auth = '{"type":"none"}'::jsonb)
     or (auth ->> 'type' = 'query' and auth ->> 'param' ~ '^[A-Za-z][A-Za-z0-9_-]{0,40}$'
         and auth - 'type' - 'param' = '{}'::jsonb)
     or (auth ->> 'type' = 'header' and auth ->> 'name' ~ '^[A-Za-z][A-Za-z0-9-]{0,40}$'

@@ -39,6 +39,9 @@ Apps that declare the same API `id` share one key.
     - `{ "type": "header", "name": "X-Api-Key" }` for a custom header, with an optional
       `"prefix": "DeepL-Auth-Key "`. `Authorization` is fine; `Cookie`, `Host`, `Content-Type`
       and `Accept*` are not allowed.
+    - `{ "type": "none" }` for a free public API without a key (TVMaze, Open Library, …): it
+      still has to be declared and called through `mn.api`, because the page may not call
+      other hosts directly.
   - `docs`: where the admin gets a key. `reason`: one German sentence the admin sees.
 - Call it with `mn.api(id)`:
   - `const data = await mn.api('openweathermap').json('/weather?q=München&units=metric&lang=de')`;

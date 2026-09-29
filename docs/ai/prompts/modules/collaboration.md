@@ -17,3 +17,12 @@ order: 80
 - Conflicts: keep `updatedAt` on each item; when saving an item that changed meanwhile,
   reload it and ask which version to keep.
 - Also reload when the tab becomes visible again (`visibilitychange`), at most every 30 s.
+- Sharing single items with chosen people in a `private` app (ADR 0008):
+  - `mn.people()` lists the others who may use the app: `[{ id, name }]`.
+  - Keep shared copies in an app table (`db/*.sql`) with `owner_id`, `recipients uuid[]` and
+    a `payload`, secured with `secure_table(slug, table, 'private')`. Recipients read through
+    a `security definer` function (`set search_path = ''`) that checks
+    `platform.app_access('<slug>')` and `auth.uid() = any (recipients)`; no hand-written
+    policies. Never use shared kv for this: every user of the app can read and overwrite it.
+  - Show the sender from `owner_id` (looked up in `mn.people()`), never from the payload.
+  - Leave private notes out of the copy, or say in the share dialog that they are shared.

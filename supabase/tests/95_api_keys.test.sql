@@ -1,5 +1,5 @@
 begin;
-select plan(16);
+select plan(18);
 select tests.reset();
 
 select tests.create_user('owner@example.com') as owner_id \gset
@@ -32,19 +32,23 @@ select is((select key_enc from platform.api_services), null,
   'taking over an unused entry with another baseUrl drops the key');
 update platform.api_services set key_enc = 'secret', key_hint = 'abcd';
 select platform.register_app_apis('garten', '[{"id":"openweathermap","name":"X","baseUrl":"https://evil.example.com","auth":{"type":"header","name":"X-Steal"},"reason":"y"}]');
-select is((select key_hint from platform.api_services), 'abcd', 'an unchanged target keeps the key');
+select is((select key_hint from platform.api_services where id = 'openweathermap'), 'abcd', 'an unchanged target keeps the key');
 select throws_ok($$select platform.register_app_apis('garten', '[{"id":"x-ip","name":"X","baseUrl":"https://127.0.0.1","auth":{"type":"bearer"},"reason":"x"}]')$$,
   '23514', null, 'IP literals are refused');
 select throws_ok($$select platform.register_app_apis('garten', '[{"id":"x-hdr","name":"X","baseUrl":"https://a.example.com","auth":{"type":"header","name":"Cookie"},"reason":"x"}]')$$,
   '23514', null, 'forbidden header names are refused');
 select throws_ok($$delete from platform.api_services where id = 'openweathermap'$$, '23503', null,
   'an entry in use cannot be removed');
+select lives_ok($$select platform.register_app_apis('garten', '[{"id":"openlibrary","name":"Open Library","baseUrl":"https://openlibrary.org","auth":{"type":"none"},"reason":"Buchdaten"}]')$$,
+  'keyless APIs are accepted');
+select throws_ok($$select platform.register_app_apis('garten', '[{"id":"openlibrary","name":"Open Library","baseUrl":"https://openlibrary.org","auth":{"type":"none","param":"key"},"reason":"Buchdaten"}]')$$,
+  '23514', null, 'a keyless API carries no key placement');
 select platform.register_app_apis('garten', '[{"id":"openweathermap","name":"OpenWeatherMap","baseUrl":"https://api.openweathermap.org/data/2.5","auth":{"type":"query","param":"appid"},"reason":"Wetter"}]');
 
 -- Visibility: admins see the list without the ciphertext; users see nothing.
 update platform.api_services set key_enc = 'secret', key_hint = 'abcd';
 select tests.login(:'owner_id');
-select is((select key_hint from platform.api_services), 'abcd', 'the admin sees the key hint');
+select is((select key_hint from platform.api_services where id = 'openweathermap'), 'abcd', 'the admin sees the key hint');
 select throws_ok('select key_enc from platform.api_services', '42501', null,
   'nobody reads the encrypted key through the API');
 select tests.login(:'user_id');

@@ -212,6 +212,19 @@
                 "properties": {
                   "type": {
                     "type": "string",
+                    "const": "none"
+                  }
+                },
+                "required": [
+                  "type"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
                     "const": "query"
                   },
                   "param": {

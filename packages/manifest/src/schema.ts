@@ -148,6 +148,8 @@ const apiAuthSchema = z.discriminatedUnion('type', [
     })
     .strict(),
   z.object({ type: z.literal('bearer') }).strict(),
+  /** Public APIs without a key that browsers cannot call directly (CSP, no CORS). */
+  z.object({ type: z.literal('none') }).strict(),
   z
     .object({ type: z.literal('query'), param: z.string().regex(/^[A-Za-z][A-Za-z0-9_-]{0,40}$/) })
     .strict(),

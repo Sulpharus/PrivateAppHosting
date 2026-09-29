@@ -11,7 +11,8 @@ import { dateTime } from './AdminLayout.tsx';
 type Auth =
   | { type: 'header'; name: string; prefix?: string }
   | { type: 'bearer' }
-  | { type: 'query'; param: string };
+  | { type: 'query'; param: string }
+  | { type: 'none' };
 
 interface ServiceRow {
   id: string;
@@ -30,6 +31,7 @@ interface RequestRow {
 }
 
 function placement(auth: Auth): string {
+  if (auth.type === 'none') return 'ohne Schlüssel (nur weitergeleitet)';
   if (auth.type === 'bearer') return 'Authorization: Bearer …';
   if (auth.type === 'query') return `Query-Parameter ${auth.param}`;
   return `Header ${auth.name}`;
@@ -101,20 +103,26 @@ export function ApiKeys() {
   };
 
   const appsOf = (id: string) => requests.filter((r) => r.service_id === id);
-  const missing = services.filter((s) => !s.key_hint && appsOf(s.id).length > 0);
-  const ready = services.filter((s) => s.key_hint && appsOf(s.id).length > 0);
+  const keyless = (s: ServiceRow) => s.auth.type === 'none';
+  const missing = services.filter((s) => !keyless(s) && !s.key_hint && appsOf(s.id).length > 0);
+  const ready = services.filter((s) => (keyless(s) || s.key_hint) && appsOf(s.id).length > 0);
   const unused = services.filter((s) => appsOf(s.id).length === 0);
 
   const card = (service: ServiceRow) => {
     const apps = appsOf(service.id);
-    const open = editing === service.id || !service.key_hint;
+    const open = !keyless(service) && (editing === service.id || !service.key_hint);
     return (
       <section key={service.id} className="card" aria-labelledby={`api-${service.id}`}>
         <div className="row" style={{ flexWrap: 'wrap', gap: 8 }}>
           <h3 id={`api-${service.id}`} style={{ flex: '1 1 200px', fontSize: 18 }}>
             {service.name}
           </h3>
-          {service.key_hint ? (
+          {keyless(service) ? (
+            <span className="pill ok">
+              <span className="dot" />
+              Kein Schlüssel nötig
+            </span>
+          ) : service.key_hint ? (
             <span className="pill ok">
               <span className="dot" />
               Schlüssel …{service.key_hint}
@@ -135,7 +143,7 @@ export function ApiKeys() {
             <>
               {' · '}
               <a href={service.docs_url} target="_blank" rel="noopener noreferrer">
-                Schlüssel besorgen
+                {service.auth.type === 'none' ? 'Doku' : 'Schlüssel besorgen'}
               </a>
             </>
           )}

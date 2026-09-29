@@ -141,6 +141,13 @@ describe('apis', () => {
     expect(result.ok).toBe(true);
   });
 
+  it('accepts keyless APIs without a key placement', () => {
+    expect(parseManifest({ ...spa, apis: [{ ...weather, auth: { type: 'none' } }] }).ok).toBe(true);
+    expect(
+      parseManifest({ ...spa, apis: [{ ...weather, auth: { type: 'none', param: 'key' } }] }).ok,
+    ).toBe(false);
+  });
+
   it('rejects duplicate ids and unknown auth types', () => {
     expect(parseManifest({ ...spa, apis: [weather, weather] }).ok).toBe(false);
     expect(parseManifest({ ...spa, apis: [{ ...weather, auth: { type: 'cookie' } }] }).ok).toBe(

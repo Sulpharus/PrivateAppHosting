@@ -37,4 +37,12 @@ describe('withKey', () => {
     withKey(url(), header, { type: 'header', name: 'X-Api-Key', prefix: 'Token ' }, 'secret');
     expect(header.get('X-Api-Key')).toBe('Token secret');
   });
+
+  it('leaves keyless requests as the app sent them', () => {
+    const keyless = url();
+    const headers = new Headers({ Authorization: 'Bearer app' });
+    withKey(keyless, headers, { type: 'none' }, '');
+    expect(keyless.searchParams.get('key')).toBe('app');
+    expect(headers.get('Authorization')).toBe('Bearer app');
+  });
 });

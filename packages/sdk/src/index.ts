@@ -61,6 +61,11 @@ export interface Mininode {
   readonly google: ReturnType<typeof createGoogle>;
   /** External APIs declared in mininode.json (`apis`); the key is added on the server (ADR 0006). */
   readonly api: ReturnType<typeof createApi>;
+  /**
+   * The other people who may use this app (display names), e.g. to share something with them.
+   * Only answers from the app's own page.
+   */
+  people(): Promise<{ id: string; name: string }[]>;
   /** Bell notification now; also pushed to the user's devices with notifications on. */
   notify(title: string, body?: string, url?: string): Promise<void>;
   /** Reminders delivered later, also with the app closed (ADR 0005). */
@@ -240,6 +245,16 @@ export function createMininode(config: MininodeConfig): Mininode {
     google: createGoogle(config, sessionToken),
     api: createApi(config, sessionToken),
     push: createPush(config, supabase),
+    async people() {
+      const { data, error } = await supabase
+        .schema('platform')
+        .rpc('app_people', { p_slug: config.appSlug });
+      if (error) throw error;
+      return ((data ?? []) as { user_id: string; display_name: string }[]).map((p) => ({
+        id: p.user_id,
+        name: p.display_name,
+      }));
+    },
     async notify(title, body, url) {
       const { error } = await supabase.schema('platform').rpc('notify_self', {
         p_app_slug: config.appSlug,

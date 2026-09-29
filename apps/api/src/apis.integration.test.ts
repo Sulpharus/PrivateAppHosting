@@ -18,6 +18,7 @@ describe.skipIf(!enabled)('host-level api keys', () => {
   const origin = `https://${slug}.test`;
   const weather = `weather-${run}`;
   const maps = `maps-${run}`;
+  const free = `free-${run}`;
   const password = 'correct horse battery staple';
   const env = {
     SUPABASE_URL: url,
@@ -117,7 +118,20 @@ describe.skipIf(!enabled)('host-level api keys', () => {
       reason: 'Vorhersage',
     };
     for (const [s, apis] of [
-      [slug, [weatherApi, { ...weatherApi, id: maps, name: 'Karten', reason: 'Karte' }]],
+      [
+        slug,
+        [
+          weatherApi,
+          { ...weatherApi, id: maps, name: 'Karten', reason: 'Karte' },
+          {
+            ...weatherApi,
+            id: free,
+            name: 'Frei',
+            auth: { type: 'none' },
+            reason: 'Ohne Schlüssel',
+          },
+        ],
+      ],
       [other, [{ ...weatherApi, reason: 'Frostwarnung' }]],
     ] as const) {
       const { error } = await admin
@@ -129,7 +143,8 @@ describe.skipIf(!enabled)('host-level api keys', () => {
 
   afterAll(async () => {
     await sql`delete from platform.apps where slug in (${slug}, ${other})`;
-    await sql`delete from platform.api_services where id in (${weather}, ${maps})`;
+    await sql`delete from platform.app_api_services where service_id in (${weather}, ${maps}, ${free})`;
+    await sql`delete from platform.api_services where id in (${weather}, ${maps}, ${free})`;
     await sql`delete from platform.audit_log where detail ->> 'service' in (${weather}, ${maps})`;
     for (const id of users) await admin.auth.admin.deleteUser(id);
     await sql.end();
@@ -147,6 +162,34 @@ describe.skipIf(!enabled)('host-level api keys', () => {
     expect(res.status).toBe(503);
     expect(res.headers.get('X-MiniNode-Error')).toBe('1');
     expect(((await res.json()) as { error: string }).error).toBe('api_key_missing');
+  });
+
+  it('proxies keyless APIs without a key, with a User-Agent', async () => {
+    upstream.length = 0;
+    const res = await call(`/proxy/${free}/forecast?q=1`, { origin });
+    expect(res.status).toBe(200);
+    expect(upstream[0]?.url).toBe('https://weather.example/v1/forecast?q=1');
+    expect(upstream[0]?.headers.get('User-Agent')).toMatch(/^MiniNode/);
+
+    // Keyless calls work even where no VAULT_KEY is configured.
+    upstream.length = 0;
+    const { VAULT_KEY: _vault, ...noVault } = env;
+    const bare = await app.request(
+      `/proxy/${free}/forecast?q=2`,
+      { headers: { Authorization: `Bearer ${userToken}`, Origin: origin } },
+      noVault as ApiEnv,
+      ctx,
+    );
+    expect(bare.status).toBe(200);
+    expect(upstream[0]?.url).toBe('https://weather.example/v1/forecast?q=2');
+
+    // …and nobody can store a key for them.
+    const stored = await call(`/admin/api-keys/${free}`, {
+      method: 'PUT',
+      body: JSON.stringify({ key: 'sk-unused-1234' }),
+      token: adminToken,
+    });
+    expect(stored.status).toBe(409);
   });
 
   it('lets only an admin store the key, encrypted', async () => {

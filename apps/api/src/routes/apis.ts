@@ -15,7 +15,8 @@ import { adminClient } from '../lib/supabase.ts';
 type Auth =
   | { type: 'header'; name: string; prefix?: string }
   | { type: 'bearer' }
-  | { type: 'query'; param: string };
+  | { type: 'query'; param: string }
+  | { type: 'none' };
 
 interface ServiceRow {
   id: string;
@@ -99,6 +100,7 @@ export function targetUrl(baseUrl: string, path: string, search: string): URL | 
 
 /** Puts the key where the API expects it; overrides anything the app sent in its place. */
 export function withKey(url: URL, headers: Headers, auth: Auth, key: string): void {
+  if (auth.type === 'none') return;
   if (auth.type === 'query') url.searchParams.set(auth.param, key);
   else if (auth.type === 'bearer') headers.set('Authorization', `Bearer ${key}`);
   else headers.set(auth.name, `${auth.prefix ?? ''}${key}`);
@@ -116,9 +118,6 @@ apis.use('/proxy/*', async (c, next) => {
 apis.all('/proxy/:service/*', requireUser(), async (c) => {
   const id = serviceId.safeParse(c.req.param('service'));
   if (!id.success) return problem(404, 'not_found', 'Unbekannte API.');
-  const vaultKey = c.env.VAULT_KEY;
-  if (!vaultKey)
-    return problem(503, 'vault_not_configured', 'API-Schlüssel sind nicht eingerichtet.');
   const userId = c.get('claims').sub;
   const db = adminClient(c.env);
 
@@ -164,7 +163,12 @@ apis.all('/proxy/:service/*', requireUser(), async (c) => {
     );
   if (!isAllowedApiBase(service.base_url))
     return problem(503, 'api_blocked', `${service.name} hat eine unzulässige Adresse.`);
-  if (!service.key_enc)
+  // Keyless APIs are only proxied (the browser cannot reach them); everything else needs its key.
+  const keyless = service.auth.type === 'none';
+  const vaultKey = c.env.VAULT_KEY;
+  if (!keyless && !vaultKey)
+    return problem(503, 'vault_not_configured', 'API-Schlüssel sind nicht eingerichtet.');
+  if (!keyless && !service.key_enc)
     return problem(
       503,
       'api_key_missing',
@@ -193,13 +197,16 @@ apis.all('/proxy/:service/*', requireUser(), async (c) => {
     const value = c.req.header(name);
     if (value) headers.set(name, value);
   }
+  // Some public APIs refuse requests without a User-Agent (Workers send none by default).
+  headers.set('User-Agent', 'MiniNode/1.0 (+https://mininode.app)');
   try {
-    withKey(
-      url,
-      headers,
-      service.auth,
-      await unseal(vaultKey, service.key_enc, keyBinding(service)),
-    );
+    if (!keyless && vaultKey && service.key_enc)
+      withKey(
+        url,
+        headers,
+        service.auth,
+        await unseal(vaultKey, service.key_enc, keyBinding(service)),
+      );
   } catch (err) {
     log('api_key_unreadable', { service: service.id, error: String(err) });
     return problem(
@@ -273,6 +280,8 @@ apis.put('/admin/api-keys/:service', requireUser({ role: 'admin', recentAuth: 60
     .eq('id', id.data)
     .maybeSingle<Pick<ServiceRow, 'id' | 'base_url' | 'auth'>>();
   if (!service) return problem(404, 'not_found', 'Unbekannte API.');
+  if (service.auth.type === 'none')
+    return problem(409, 'keyless', 'Diese API braucht keinen Schlüssel.');
   // Only if the target is still the one shown to the admin (a deploy may have changed it).
   const { data, error } = await db
     .schema('platform')
