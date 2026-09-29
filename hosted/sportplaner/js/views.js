@@ -23,12 +23,18 @@ function tileHTML(a, s, ds) {
   const more = s.length > 1 ? ` +${s.length - 1}` : '';
   const time = s.length ? timeLabel(s[0]) + more : 'Eingeplant';
   const isDone = (a.done || []).includes(ds),
+    off = isCancelled(a, ds),
     pl = isPlanned(a, ds);
   const sub = [a.category, a.location || a.provider].filter(Boolean).join(' · ');
-  const badge = isDone ? `<span class="tile-done">${ICON.check}Erledigt</span>` : '';
-  const toggle = isDone
-    ? ''
-    : `<button class="tile-pl${pl ? ' on' : ''}" data-action="plan-day" data-id="${esc(a.id)}" data-date="${ds}" aria-pressed="${pl}" aria-label="${esc(a.name)} ${pl ? 'nicht mehr einplanen' : 'einplanen'}"><span>${pl ? ICON.check : ICON.plus}</span></button>`;
+  const badge = isDone
+    ? `<span class="tile-done">${ICON.check}Erledigt</span>`
+    : off
+      ? '<span class="tile-done tile-off">Ausgefallen</span>'
+      : '';
+  const toggle =
+    isDone || off
+      ? ''
+      : `<button class="tile-pl${pl ? ' on' : ''}" data-action="plan-day" data-id="${esc(a.id)}" data-date="${ds}" aria-pressed="${pl}" aria-label="${esc(a.name)} ${pl ? 'nicht mehr einplanen' : 'einplanen'}"><span>${pl ? ICON.check : ICON.plus}</span></button>`;
   return `<div class="tilewrap"><button class="tile${isDone ? ' is-done' : ''}" data-action="open" data-id="${esc(a.id)}" data-date="${ds}"><span class="tile-media">${img}<span class="tile-time">${esc(time)}</span>${badge}</span><span class="tile-cap"><span class="tile-name">${esc(a.name)}</span>${sub ? `<span class="tile-sub">${esc(sub)}</span>` : ''}</span></button>${toggle}</div>`;
 }
 const countLabel = (n) => `${n} ${n === 1 ? 'Aktivität' : 'Aktivitäten'}`;
@@ -116,14 +122,17 @@ function agendaItemHTML(a, s, ds, pl) {
       ? `<img class="thumb" src="${esc(thumbSrc(a, a.photos[0]))}" alt="" decoding="async">`
       : `<span class="thumb">${esc(initials(a.name))}</span>`;
   const done = (a.done || []).includes(ds),
+    off = isCancelled(a, ds),
     planned = !pl && isPlanned(a, ds);
   const time = s.length ? s.map(timeLabel).join(', ') : 'Jederzeit';
   const place = [a.location, a.provider].filter(Boolean).join(', ');
   const state = done
     ? `<span class="ag-state">${ICON.check}Erledigt</span>`
-    : planned
-      ? '<span class="ag-state">Geplant</span>'
-      : '';
+    : off
+      ? '<span class="ag-state off">Ausgefallen</span>'
+      : planned
+        ? '<span class="ag-state">Geplant</span>'
+        : '';
   return `<button class="ag-item${done ? ' done' : ''}" data-action="open" data-id="${esc(a.id)}" data-date="${ds}">${t}<span class="min"><h4>${esc(a.name)}</h4><p>${esc(time)}</p>${place ? `<p>${esc(place)}</p>` : ''}</span>${state}</button>`;
 }
 function updAgenda() {
@@ -240,7 +249,13 @@ function updCal() {
       const dots = pl
         ? list
             .slice(0, 3)
-            .map((x) => ((x.a.done || []).includes(ds) ? '<i></i>' : '<i class="o"></i>'))
+            .map((x) =>
+              (x.a.done || []).includes(ds)
+                ? '<i></i>'
+                : isCancelled(x.a, ds)
+                  ? '<i class="x"></i>'
+                  : '<i class="o"></i>',
+            )
             .join('')
         : '<i></i>'.repeat(Math.min(c, 3));
       const cls = [
@@ -265,7 +280,9 @@ function updCal() {
   const side = (x) =>
     pl && (x.a.done || []).includes(S.date)
       ? `<span class="next"><b>Erledigt</b>${esc((x.s[0] && x.s[0].start) || '')}</span>`
-      : `<span class="next"><b>${esc((x.s[0] && x.s[0].start) || 'Jederzeit')}</b>${x.s[0] && x.s[0].end ? esc('bis ' + x.s[0].end) : ''}</span>`;
+      : isCancelled(x.a, S.date)
+        ? `<span class="next"><b>Ausgefallen</b>${esc((x.s[0] && x.s[0].start) || '')}</span>`
+        : `<span class="next"><b>${esc((x.s[0] && x.s[0].start) || 'Jederzeit')}</b>${x.s[0] && x.s[0].end ? esc('bis ' + x.s[0].end) : ''}</span>`;
   listOrEmpty(
     $('#callist'),
     'list-card',

@@ -192,6 +192,14 @@ function sanitizeAct(raw, keepMedia = false) {
     slots,
     equipment: arr(raw.equipment).map(text),
     done: arr(raw.done).filter(isDay),
+    cancelled: arr(raw.cancelled).filter(isDay),
+    course:
+      raw.course &&
+      isDay(raw.course.from) &&
+      isDay(raw.course.until) &&
+      raw.course.from <= raw.course.until
+        ? { from: raw.course.from, until: raw.course.until }
+        : undefined,
     photos,
     thumbs,
     // Older records keep the offer period in from/until instead of season.

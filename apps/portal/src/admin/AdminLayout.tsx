@@ -1,13 +1,18 @@
-import { Navigate, NavLink, Outlet } from 'react-router';
+import { useEffect, useState } from 'react';
+import { Navigate, NavLink, Outlet, useLocation } from 'react-router';
 import { useAuth } from '../auth/AuthProvider.tsx';
 import { TopBar } from '../components/TopBar.tsx';
+import { platform } from '../lib/supabase.ts';
 
 const LINKS: [string, string][] = [
   ['/admin', 'Übersicht'],
   ['/admin/apps', 'Apps'],
+  ['/admin/catalog', 'Kategorien & Pakete'],
   ['/admin/users', 'Nutzer & Rollen'],
   ['/admin/remote', 'Remote-Apps'],
+  ['/admin/nucbox', 'NucBox'],
   ['/admin/ai', 'KI-Proxy'],
+  ['/admin/api-keys', 'API-Schlüssel'],
   ['/admin/workshop', 'KI-Werkstatt'],
 ];
 
@@ -19,6 +24,7 @@ const EXTERNAL: [string, string][] = [
 
 export function AdminLayout() {
   const { profile, loading } = useAuth();
+  const missing = useMissingKeys(profile?.role === 'admin');
   if (loading) return null;
   if (profile?.role !== 'admin') return <Navigate to="/" replace />;
 
@@ -30,6 +36,12 @@ export function AdminLayout() {
           {LINKS.map(([to, label]) => (
             <NavLink key={to} to={to} end={to === '/admin'}>
               {label}
+              {to === '/admin/api-keys' && missing > 0 && (
+                <span className="pill bad nav-count">
+                  {missing}
+                  <span className="sr-only"> fehlen</span>
+                </span>
+              )}
             </NavLink>
           ))}
           <span className="group">Weitere Dashboards</span>
@@ -45,6 +57,28 @@ export function AdminLayout() {
       </div>
     </>
   );
+}
+
+/** APIs that apps requested and that still have no key (refreshed on every admin navigation). */
+function useMissingKeys(enabled: boolean): number {
+  const { pathname } = useLocation();
+  const [missing, setMissing] = useState(0);
+  useEffect(() => {
+    if (!enabled || !pathname) return;
+    let current = true;
+    void Promise.all([
+      platform().from('api_services').select('id').is('key_hint', null).neq('auth->>type', 'none'),
+      platform().from('app_api_services').select('service_id'),
+    ]).then(([services, requests]) => {
+      if (!current || services.error || requests.error) return;
+      const used = new Set(requests.data.map((r) => r.service_id as string));
+      setMissing(services.data.filter((s) => used.has(s.id as string)).length);
+    });
+    return () => {
+      current = false;
+    };
+  }, [enabled, pathname]);
+  return missing;
 }
 
 export function euro(micro: number): string {

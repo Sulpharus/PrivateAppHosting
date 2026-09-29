@@ -1,11 +1,11 @@
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { parseManifest } from '@mininode/manifest';
 import { describe, expect, it } from 'vitest';
 import { appsFromPaths } from '../changed.ts';
 import { environmentSettings } from './environment.ts';
-import { schemaList, stageAssets } from './index.ts';
+import { checkDatabaseSettings, schemaList, stageAssets } from './index.ts';
 import { plan } from './migrate.ts';
 import { workersToPrune } from './prune.ts';
 import { appRow } from './register.ts';
@@ -97,6 +97,33 @@ describe('changed apps', () => {
         '',
       ]),
     ).toEqual(['budget', 'rezepte']);
+  });
+});
+
+describe('checkDatabaseSettings', () => {
+  it('stops apps with db/ migrations when the database settings are missing', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'mn-db-'));
+    try {
+      expect(() => checkDatabaseSettings(dir, 'plain', 'production', {})).not.toThrow();
+      mkdirSync(join(dir, 'db'));
+      writeFileSync(join(dir, 'db', '001_init.sql'), 'select 1;');
+      expect(() => checkDatabaseSettings(dir, 'wl', 'production', {})).toThrow(/SUPABASE_DB_URL/);
+      expect(() =>
+        checkDatabaseSettings(dir, 'wl', 'production', { SUPABASE_DB_URL: 'postgres://x' }),
+      ).toThrow(/SUPABASE_ACCESS_TOKEN/);
+      expect(() =>
+        checkDatabaseSettings(dir, 'wl', 'local', { SUPABASE_DB_URL: 'postgres://x' }),
+      ).not.toThrow();
+      expect(() =>
+        checkDatabaseSettings(dir, 'wl', 'production', {
+          SUPABASE_DB_URL: 'postgres://x',
+          SUPABASE_PROJECT_REF: 'ref',
+          SUPABASE_ACCESS_TOKEN: 'token',
+        }),
+      ).not.toThrow();
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });
 

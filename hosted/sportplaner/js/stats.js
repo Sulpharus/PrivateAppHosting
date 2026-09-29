@@ -153,8 +153,23 @@ function computeStats(Y) {
     .map((a) => ({ a, n: vis.get(a.id), cost: actCost.get(a.id) || 0 }))
     .filter((x) => x.n || x.cost)
     .sort((x, y) => y.n - x.n || y.cost - x.cost);
+  // Attendance: planned sessions up to today, without the ones that did not take place.
+  let plannedN = 0,
+    attended = 0;
+  for (const a of S.acts) {
+    if (!hasPlan(a)) continue;
+    const done = new Set(a.done || []);
+    for (let d = parse(from); ymd(d) <= to; d = addDays(d, 1)) {
+      const ds = ymd(d);
+      if (!isPlanned(a, ds) || isCancelled(a, ds)) continue;
+      plannedN++;
+      if (done.has(ds)) attended++;
+    }
+  }
   return {
     byDay,
+    plannedN,
+    attended,
     total,
     forecast,
     usage,
@@ -186,7 +201,7 @@ function updStats() {
   );
   setHTML(
     $('#st-sum'),
-    `<div class="kpis"><div><b>${st.sessions}</b><span>Einheiten</span></div><div><b>${st.activeDays}</b><span>Aktive Tage</span></div><div><b>${eur(st.total)}</b><span>${st.isCurrent ? 'Kosten bisher' : 'Kosten'}</span></div></div>`,
+    `<div class="kpis"><div><b>${st.sessions}</b><span>Einheiten</span></div><div><b>${st.activeDays}</b><span>Aktive Tage</span></div><div><b>${st.plannedN ? `${Math.round((st.attended / st.plannedN) * 100)} %` : '–'}</b><span>${st.plannedN ? `Teilnahme: ${st.attended} von ${st.plannedN} geplanten Terminen` : 'Teilnahme an geplanten Terminen'}</span></div><div><b>${eur(st.total)}</b><span>${st.isCurrent ? 'Kosten bisher' : 'Kosten'}</span></div></div>${st.plannedN ? '<p class="note kpi-note">Ausgefallene Termine zählen weder als Teilnahme noch als verpasst.</p>' : ''}`,
   );
 
   const months = [...Array(12)]
@@ -431,7 +446,11 @@ Object.assign(H, {
     if ((a.done || []).includes(d))
       return toast('Für diesen Tag ist bereits ein Besuch eingetragen.');
     try {
-      await persist({ ...a, done: [...(a.done || []), d].sort() });
+      await persist({
+        ...a,
+        done: [...(a.done || []), d].sort(),
+        cancelled: (a.cancelled || []).filter((x) => x !== d),
+      });
       toast('Besuch eingetragen');
     } catch {
       toast('Eintragen fehlgeschlagen. Bitte erneut versuchen.');

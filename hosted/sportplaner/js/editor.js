@@ -44,6 +44,12 @@ function openEditor(a) {
   if (draft.planned.mode !== 'none' && !draft.planned.season)
     draft.planned.season = planSeason(draft.planned) || { type: 'all' };
   draft.thumbs = draft.thumbs || {};
+  draft.courseRows = draft.course
+    ? draft.slots
+        .filter((s) => s.kind === 'weekly')
+        .map((s) => ({ days: [...(s.days || [])], start: s.start || '', end: s.end || '' }))
+    : [];
+  if (draft.course && !draft.courseRows.length) draft.courseRows = [newRow()];
   uploads = new Set();
   removed = new Set();
   uploading = 0;
@@ -71,13 +77,30 @@ function openEditor(a) {
       <fieldset><legend>Fotos</legend><div class="photos" id="photos"></div><p class="hint">Das erste Foto ist das Titelbild. Tippe auf ein anderes Foto, um es zum Titelbild zu machen.</p></fieldset>
     </div>
     <div class="step" data-step="1" hidden>
+      <fieldset><legend>Art des Angebots</legend>
+        <div class="seg offer-seg" role="group" aria-label="Art des Angebots">${[
+          ['open', 'Offene Zeiten'],
+          ['course', 'Kurs'],
+        ]
+          .map(
+            ([k, l]) =>
+              `<button type="button" data-action="offer-type" data-type="${k}" class="${(k === 'course') === !!draft.course ? 'on' : ''}" aria-pressed="${(k === 'course') === !!draft.course}">${l}</button>`,
+          )
+          .join('')}</div>
+        <p class="hint">Bei einem Kurs gibst du nur Kurslänge, Trainingstage und Uhrzeit an. Du wirst dann automatisch für alle Termine eingeplant.</p>
+      </fieldset>
+      <div id="openbox"${draft.course ? ' hidden' : ''}>
       <fieldset><legend>Öffnungszeiten</legend><div id="slots" class="blocks"></div></fieldset>
       <fieldset><legend>Angebotszeitraum</legend><div id="availbox" class="blocks"></div>
         <p class="hint">Gesamtzeitraum des Angebots, z. B. ein Freibad jedes Jahr von Mai bis September. Unterschiedliche Zeiten je Saison stellst du oben pro Block unter „Gilt“ ein.</p>
       </fieldset>
+      </div>
+      <fieldset id="coursefs"${draft.course ? '' : ' hidden'}><legend>Kurs</legend><div id="coursebox" class="blocks"></div></fieldset>
     </div>
     <div class="step" data-step="2" hidden>
       <fieldset><legend>Geplante Teilnahme</legend>
+        <p class="hint flat" id="coursenote"${draft.course ? '' : ' hidden'}>Kurs: Du bist automatisch für alle Termine eingeplant. Einzelne Termine trägst du in der Detailansicht aus oder markierst sie als „Ausgefallen“.</p>
+        <div id="pmodewrap"${draft.course ? ' hidden' : ''}>
         <label class="f">Teilnahme planen<select id="pmode">${[
           ['none', 'Nicht geplant'],
           ['weekly', 'Regelmäßig'],
@@ -87,6 +110,7 @@ function openEditor(a) {
           .map(([k, l]) => opt(k, l, (draft.planned && draft.planned.mode) || 'none'))
           .join('')}</select></label>
         <div id="plannedbox" class="blocks"></div>
+        </div>
       </fieldset>
       <fieldset><legend>Anmeldung</legend>
         <label class="f">Anmeldung<select name="signup">${Object.entries(SIGNUP)
@@ -147,6 +171,7 @@ function openEditor(a) {
     true,
   );
   renderSlots();
+  renderCourse();
   renderPhotos();
   renderPlanned();
   renderAvail();
@@ -452,7 +477,192 @@ function blocksToSlots() {
   draft.slots = out;
   return null;
 }
+/* a course: start and end date, weekly training times; all sessions are planned */
+const dayCount = (from, until) => Math.round((parse(until) - parse(from)) / 864e5) + 1;
+function courseSessions() {
+  const c = draft.course;
+  if (!c || !c.from || !c.until || c.until < c.from) return 0;
+  const days = new Set(draft.courseRows.flatMap((r) => r.days));
+  let n = 0;
+  for (let d = parse(c.from), i = 0; ymd(d) <= c.until && i < 800; d = addDays(d, 1), i++)
+    if (days.has(wIdx(d))) n++;
+  return n;
+}
+function courseSummary() {
+  const c = draft.course,
+    n = courseSessions();
+  if (!c.from || !c.until) return 'Gib Kursbeginn und Kursende an.';
+  if (c.until < c.from) return 'Das Kursende liegt vor dem Kursbeginn.';
+  if (!n) return 'Wähle mindestens einen Trainingstag.';
+  return `${n} ${n === 1 ? 'Termin' : 'Termine'} vom ${dLabel(c.from)} bis ${dLabel(c.until)}. Du bist für alle eingeplant.`;
+}
+function renderCourse() {
+  const el = $('#coursebox');
+  if (!el || !draft || !draft.course) return;
+  const c = draft.course,
+    weeks = c.from && c.until && c.until >= c.from ? Math.ceil(dayCount(c.from, c.until) / 7) : '';
+  el.innerHTML = `<div class="blk">
+      <div class="two"><label class="f">Kursbeginn<input type="date" data-cf="from" value="${esc(c.from || '')}"></label>
+      <label class="f">Kursende<input type="date" data-cf="until" value="${esc(c.until || '')}"></label></div>
+      <label class="f">Kurslänge in Wochen<input type="number" min="1" max="104" inputmode="numeric" data-cf="weeks" value="${weeks}" placeholder="z. B. 10"></label>
+      <p class="hint flat">Die Länge setzt das Kursende ab Kursbeginn.</p>
+    </div>
+    <div class="blk"><div class="blk-title"><b>Trainingstage und Uhrzeit</b></div>
+      ${draft.courseRows
+        .map(
+          (r, j) => `<div class="trow">
+        <div class="daypick">${DAYS2.map((d, k) => `<button type="button" class="${r.days.includes(k) ? 'on' : ''}" data-action="crow-day" data-r="${j}" data-j="${k}" aria-pressed="${r.days.includes(k)}">${d}</button>`).join('')}</div>
+        <div class="ttimes"><label class="f">Beginn<input type="time" data-cf="row" data-r="${j}" data-k="start" value="${esc(r.start)}"></label><label class="f">Ende<input type="time" data-cf="row" data-r="${j}" data-k="end" value="${esc(r.end)}"></label>
+        ${draft.courseRows.length > 1 ? `<button type="button" class="icon" data-action="crow-del" data-r="${j}" aria-label="Trainingszeit entfernen">${DEL_ICON}</button>` : '<span></span>'}</div>
+      </div>`,
+        )
+        .join('')}
+      <div class="blk-actions"><button type="button" class="btn plus" data-action="crow-add">+ Weitere Trainingszeit</button></div>
+    </div>
+    <p class="hint flat" id="coursesum" role="status">${esc(courseSummary())}</p>`;
+}
+function courseFieldSync(t) {
+  if (!draft || !draft.course || !t.dataset || !t.dataset.cf) return;
+  const c = draft.course,
+    f = t.dataset.cf;
+  if (f === 'row') draft.courseRows[+t.dataset.r][t.dataset.k] = t.value;
+  else if (f === 'weeks') {
+    // only a helper that fills in Kursende
+    const w = Math.round(+t.value);
+    if (!c.from || !(w >= 1 && w <= 104)) return;
+    c.until = ymd(addDays(parse(c.from), w * 7 - 1));
+    const u = $('[data-cf=until]');
+    if (u) u.value = c.until;
+  } else {
+    c[f] = t.value;
+    const w = $('[data-cf=weeks]');
+    if (w && document.activeElement !== w)
+      w.value =
+        c.from && c.until && c.until >= c.from ? Math.ceil(dayCount(c.from, c.until) / 7) : '';
+  }
+  const sum = $('#coursesum');
+  if (sum) setText(sum, courseSummary());
+}
+document.addEventListener('input', (e) => courseFieldSync(e.target));
+function showOfferType() {
+  const course = !!draft.course;
+  $('#openbox').hidden = course;
+  $('#coursefs').hidden = !course;
+  $('#coursenote').hidden = !course;
+  $('#pmodewrap').hidden = course;
+  document.querySelectorAll('[data-action=offer-type]').forEach((b) => {
+    const on = (b.dataset.type === 'course') === course;
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-pressed', on);
+  });
+}
+/* turns the course into weekly slots over its dates and plans every session; error or null */
+function courseToSlots() {
+  document
+    .querySelectorAll(
+      '#coursebox [data-cf=from], #coursebox [data-cf=until], #coursebox [data-cf=row]',
+    )
+    .forEach(courseFieldSync);
+  const c = draft.course,
+    rows = draft.courseRows.filter((r) => r.days.length);
+  if (!c.from || !c.until) return 'Gib Kursbeginn und Kursende an.';
+  if (c.until < c.from) return 'Das Kursende liegt vor dem Kursbeginn.';
+  if (dayCount(c.from, c.until) > 104 * 7) return 'Ein Kurs dauert höchstens 104 Wochen.';
+  if (!rows.length) return 'Wähle mindestens einen Trainingstag für den Kurs.';
+  const period = { type: 'range', from: c.from, until: c.until, label: 'Kurs' };
+  draft.slots = rows.map((r) => ({
+    kind: 'weekly',
+    days: [...r.days].sort(),
+    start: r.start || '',
+    end: r.end || '',
+    period,
+  }));
+  // single dates (e.g. an extra session) stay
+  for (const x of draft.singles)
+    if (x.date)
+      draft.slots.push({ kind: 'date', date: x.date, start: x.start || '', end: x.end || '' });
+  draft.season = { type: 'range', from: c.from, until: c.until };
+  const pp = draft.planned || {};
+  draft.planned = {
+    ...pp,
+    mode: (pp.dates || []).length ? 'both' : 'weekly',
+    days: [...new Set(rows.flatMap((r) => r.days))].sort(),
+    every: 1,
+    season: { type: 'range', from: c.from, until: c.until },
+    anchor: c.from,
+  };
+  draft.course = { from: c.from, until: c.until };
+  return null;
+}
 const BLOCK_HANDLERS = {
+  'offer-type': (t) => {
+    const course = t.dataset.type === 'course';
+    if (course === !!draft.course) return;
+    if (course) {
+      syncSlotsDOM();
+      const from = S.date >= todayStr() ? S.date : todayStr();
+      draft.course = draft._course || { from, until: ymd(addDays(parse(from), 10 * 7 - 1)) };
+      if (!draft.courseRows.length) {
+        // one row per distinct time, merged over seasonal blocks
+        const byTime = new Map();
+        for (const r of draft.blocks.flatMap((b) => b.rows).filter((x) => x.days.length)) {
+          const k = `${r.start}|${r.end}`,
+            cur = byTime.get(k);
+          byTime.set(
+            k,
+            cur
+              ? { ...cur, days: [...new Set([...cur.days, ...r.days])] }
+              : { ...r, days: [...r.days] },
+          );
+        }
+        draft.courseRows = byTime.size ? [...byTime.values()] : [newRow([wIdx(parse(from))])];
+      }
+      renderCourse();
+    } else {
+      document.querySelectorAll('#coursebox [data-cf]').forEach(courseFieldSync);
+      draft._course = draft.course;
+      draft.course = null;
+      // open times plan as chosen in step 3 again; start from "not planned" if it was the course plan
+      if (
+        draft.planned &&
+        draft.planned.mode !== 'none' &&
+        (draft.planned.season || {}).type === 'range' &&
+        draft._course &&
+        draft.planned.season.from === draft._course.from
+      )
+        draft.planned = {
+          mode: (draft.planned.dates || []).length ? 'dates' : 'none',
+          dates: draft.planned.dates || [],
+          skip: draft.planned.skip || [],
+        };
+      const pm = $('#pmode');
+      if (pm) pm.value = draft.planned.mode || 'none';
+      renderPlanned();
+      renderAvail();
+    }
+    showOfferType();
+    t.focus();
+  },
+  'crow-day': (t) => {
+    const r = draft.courseRows[+t.dataset.r],
+      k = +t.dataset.j;
+    r.days = r.days.includes(k) ? r.days.filter((x) => x !== k) : [...r.days, k];
+    t.classList.toggle('on', r.days.includes(k));
+    t.setAttribute('aria-pressed', r.days.includes(k));
+    setText($('#coursesum'), courseSummary());
+  },
+  'crow-add': () => {
+    document.querySelectorAll('#coursebox [data-cf=row]').forEach(courseFieldSync);
+    draft.courseRows.push(newRow());
+    renderCourse();
+    $(`[data-action=crow-day][data-r="${draft.courseRows.length - 1}"]`)?.focus();
+  },
+  'crow-del': (t) => {
+    document.querySelectorAll('#coursebox [data-cf=row]').forEach(courseFieldSync);
+    draft.courseRows.splice(+t.dataset.r, 1);
+    renderCourse();
+    $('[data-action=crow-add]')?.focus();
+  },
   step: (t) => setStep(+t.dataset.step),
   'step-next': () => setStep(Math.min(STEPS.length - 1, S.sheet.step + 1)),
   'step-prev': () => setStep(Math.max(0, S.sheet.step - 1)),
@@ -630,7 +840,7 @@ async function saveDraft() {
   if (uploading) return fail('Warte, bis alle Fotos hinzugefügt sind.', 0);
   if (draft.from && draft.until && draft.until < draft.from)
     return fail('Das Enddatum liegt vor dem Startdatum.', 1);
-  const slotErr = blocksToSlots();
+  const slotErr = draft.course ? courseToSlots() : blocksToSlots();
   if (slotErr) return fail(slotErr, 1);
   const pp = draft.planned;
   if (pp.mode === 'weekly' || pp.mode === 'both') {
@@ -705,6 +915,9 @@ async function saveDraft() {
     isNew = S.sheet.isNew;
   delete act.blocks;
   delete act.singles;
+  delete act.courseRows;
+  delete act._course;
+  if (!act.course) delete act.course;
   try {
     await persist(act);
     if (act.access && act.access.membership) {

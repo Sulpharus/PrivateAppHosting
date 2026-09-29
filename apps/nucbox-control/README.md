@@ -11,6 +11,7 @@ hypervisor and the Docker socket.
 | `POST /sessions/prepare` | API (`/remote/sessions`) | Windows: wake the VM from hibernation, answer `ready:false, etaSeconds` until the guest agent responds, then RDP RemoteApp parameters (`remote-app: \|\|<slug>`). Wine: start `mn-wine-<slug>`, answer VNC parameters |
 | `POST /sessions/sync` | API cron (5 min) | Apps with live sessions; also runs the idle reaper |
 | `POST /installers`, `GET /installers/:id` | API (`/remote/installs`) | Background job: wake VM → Proxmox snapshot `pre-<slug>-<time>` → download from R2 (presigned, 15 min) inside the guest → SHA-256 check → silent install → register the RemoteApp alias in `TSAppAllowList`. Wine: same in a one-off container |
+| `GET /resources` | API (`/admin/nucbox/resources`) | CPU, memory, disk of the Proxmox host, its VMs and storage (the Proxmox token needs `Sys.Audit` on the node and `VM.Audit`), and per container memory/CPU from the Docker socket. Each source that fails is named in `errors`, the rest is still reported |
 
 Everything except `/health` and `/auth` requires `Authorization: Bearer $CONTROL_TOKEN`.
 

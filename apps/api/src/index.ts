@@ -4,9 +4,11 @@ import { z } from 'zod';
 import type { ApiEnv } from './env.ts';
 import { type AppContext, problem, requireUser } from './lib/auth.ts';
 import { adminClient } from './lib/supabase.ts';
+import { apis } from './routes/apis.ts';
 import { google } from './routes/google.ts';
 import { hooks } from './routes/hooks.ts';
 import { confirmUrl, invites } from './routes/invites.ts';
+import { nucbox } from './routes/nucbox.ts';
 import { deliverPushes, push } from './routes/push.ts';
 import { controlHeaders, remote } from './routes/remote.ts';
 
@@ -28,13 +30,17 @@ app.use(
         return null;
       }
     },
-    allowHeaders: ['Authorization', 'Content-Type'],
-    allowMethods: ['GET', 'POST', 'DELETE'],
+    allowHeaders: ['Authorization', 'Content-Type', 'Accept', 'Accept-Language'],
+    allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+    // Marks the API proxy's own refusals, so the SDK can tell them from the external API's answers.
+    exposeHeaders: ['X-MiniNode-Error'],
     maxAge: 600,
   }),
 );
 
 app.get('/health', (c) => c.json({ ok: true }));
+app.route('/', apis);
+app.route('/', nucbox);
 app.route('/google', google);
 app.route('/hooks', hooks);
 app.route('/push', push);

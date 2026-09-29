@@ -34,6 +34,24 @@ export function describeActivity(row: AuditRow, names: Map<string, string>): str
       return detail.disabled === false ? 'App aktiviert' : 'App geändert';
     case 'remote.install':
       return 'Programm auf der NucBox installiert';
+    case 'app.whitelist_set':
+      return detail.whitelist === true ? 'App nur für die Whitelist' : 'App wieder freigegeben';
+    case 'app.category_set':
+      return detail.category ? 'Kategorie der App festgelegt' : 'Kategorie der App automatisch';
+    case 'app.link_saved':
+      return 'Link-Kachel gespeichert';
+    case 'app.link_deleted':
+      return 'Link-Kachel entfernt';
+    case 'app_set.saved':
+      return 'Paket gespeichert';
+    case 'app_set.deleted':
+      return 'Paket gelöscht';
+    case 'app_category.insert':
+      return 'Kategorie angelegt';
+    case 'app_category.update':
+      return 'Kategorie geändert';
+    case 'app_category.delete':
+      return 'Kategorie gelöscht';
     default:
       return row.action;
   }

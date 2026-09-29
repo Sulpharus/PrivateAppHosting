@@ -18,6 +18,13 @@ export interface AppRow {
   deployed_version: string | null;
   deployed_at: string | null;
   remote_runtime: string | null;
+  category_id: string | null;
+  category_manual: boolean;
+  created_at: string;
+  /** Link tiles (kind `link`) open this external website instead of a hosted app. */
+  link_url: string | null;
+  /** Only the admin and the people on the whitelist see the app. */
+  whitelist: boolean;
 }
 
 export interface RemoteStatus {
@@ -45,7 +52,7 @@ export async function listApps(): Promise<AppRow[]> {
   const { data, error } = await platform()
     .from('apps')
     .select(
-      'slug, name, description, kind, target, data_mode, status, is_default, deployed_version, deployed_at, remote_runtime:manifest->remote->>runtime',
+      'slug, name, description, kind, target, data_mode, status, is_default, deployed_version, deployed_at, remote_runtime:manifest->remote->>runtime, category_id, category_manual, created_at, link_url, whitelist',
     )
     .order('name');
   if (error) {
@@ -89,10 +96,19 @@ export function tintFor(slug: string): string {
 }
 
 export function monogram(name: string): string {
-  const words = name.trim().split(/\s+/);
+  // Words with a letter or digit only: "ATT - Werkzeugkasten" → "AW".
+  const words = name
+    .trim()
+    .split(/\s+/)
+    .filter((word) => /[\p{L}\p{N}]/u.test(word));
   const letters =
     words.length > 1 ? `${words[0]?.[0] ?? ''}${words[1]?.[0] ?? ''}` : name.slice(0, 2);
   return letters.toUpperCase();
+}
+
+/** Where a tile leads: the hosted app, or the website of a link tile. */
+export function tileUrl(app: Pick<AppRow, 'slug' | 'link_url'>): string {
+  return app.link_url ?? appUrl(app.slug);
 }
 
 export function appUrl(slug: string): string {

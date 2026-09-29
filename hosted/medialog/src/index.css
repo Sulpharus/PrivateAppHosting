@@ -1,0 +1,6 @@
+@import "tailwindcss";
+
+/* Button groups are fieldsets for their name; they keep the layout of the classes on them. */
+fieldset {
+  min-width: 0;
+}

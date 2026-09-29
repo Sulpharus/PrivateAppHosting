@@ -86,6 +86,7 @@ set search_path = ''
 as $$
 begin
   delete from platform.apps;
+  delete from platform.api_services;
   delete from auth.users;
 end;
 $$;

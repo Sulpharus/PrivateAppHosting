@@ -1,0 +1,105 @@
+{
+  "$schema": "../../packages/manifest/schema.json",
+  "specVersion": 1,
+  "slug": "medialog",
+  "name": "Medialog",
+  "description": "Bücher, Manga, Filme, Serien und Spiele sammeln, bewerten, Fortschritt festhalten und Listen teilen",
+  "kind": "spa",
+  "target": "cloudflare",
+  "access": {
+    "default": true
+  },
+  "data": {
+    "mode": "private"
+  },
+  "build": {
+    "command": "pnpm build",
+    "output": "dist"
+  },
+  "apis": [
+    {
+      "id": "tmdb",
+      "name": "The Movie Database (TMDB)",
+      "baseUrl": "https://api.themoviedb.org/3",
+      "auth": {
+        "type": "bearer"
+      },
+      "docs": "https://www.themoviedb.org/settings/api",
+      "reason": "Filme und Serien mit Postern, Besetzung und Episodendetails durchsuchen"
+    },
+    {
+      "id": "google-books",
+      "name": "Google Books",
+      "baseUrl": "https://www.googleapis.com/books/v1",
+      "auth": {
+        "type": "query",
+        "param": "key"
+      },
+      "docs": "https://developers.google.com/books/docs/v1/using#APIKey",
+      "reason": "Bücher, Manga und Manhwa mit Seitenzahlen und Bandinformationen suchen"
+    },
+    {
+      "id": "jikan",
+      "name": "Jikan (MyAnimeList)",
+      "baseUrl": "https://api.jikan.moe/v4",
+      "auth": {
+        "type": "none"
+      },
+      "reason": "Manga, Manhwa und Light Novels mit Bandzahlen und deutschen Titeln"
+    },
+    {
+      "id": "mangadex",
+      "name": "MangaDex",
+      "baseUrl": "https://api.mangadex.org",
+      "auth": {
+        "type": "none"
+      },
+      "reason": "Manga, Manhwa und Manhua mit Bänden und Covern"
+    },
+    {
+      "id": "openlibrary",
+      "name": "Open Library",
+      "baseUrl": "https://openlibrary.org",
+      "auth": {
+        "type": "none"
+      },
+      "reason": "Bücher mit Inhaltsverzeichnis und deutschen Ausgaben"
+    },
+    {
+      "id": "gutendex",
+      "name": "Gutendex (Project Gutenberg)",
+      "baseUrl": "https://gutendex.com",
+      "auth": {
+        "type": "none"
+      },
+      "reason": "Gemeinfreie Klassiker, auch auf Deutsch"
+    },
+    {
+      "id": "tvmaze",
+      "name": "TVMaze",
+      "baseUrl": "https://api.tvmaze.com",
+      "auth": {
+        "type": "none"
+      },
+      "reason": "Serien mit Staffeln und Episodenlisten"
+    },
+    {
+      "id": "itunes",
+      "name": "iTunes Search",
+      "baseUrl": "https://itunes.apple.com",
+      "auth": {
+        "type": "none"
+      },
+      "reason": "Filme, Hörbücher und Spiele aus dem deutschen Store"
+    },
+    {
+      "id": "steam",
+      "name": "Steam Store",
+      "baseUrl": "https://store.steampowered.com",
+      "auth": {
+        "type": "none"
+      },
+      "reason": "PC-Spiele mit deutschen Beschreibungen"
+    }
+  ]
+}

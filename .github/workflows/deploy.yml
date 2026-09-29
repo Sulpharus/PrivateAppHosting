@@ -139,6 +139,7 @@ jobs:
           GOOGLE_TOKEN_KEY: ${{ secrets.GOOGLE_TOKEN_KEY }}
           VAPID_PUBLIC_KEY: ${{ secrets.VAPID_PUBLIC_KEY }}
           VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+          VAULT_KEY: ${{ secrets.VAULT_KEY }}
         run: |
           upload() { # worker-dir NAME...
             local dir=$1 args=() name
@@ -155,7 +156,7 @@ jobs:
             fi
           }
           upload apps/api SUPABASE_SECRET_KEY GUACAMOLE_JSON_SECRET NUCBOX_CONTROL_TOKEN ACCESS_CLIENT_ID ACCESS_CLIENT_SECRET \
-            GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET GOOGLE_TOKEN_KEY VAPID_PUBLIC_KEY VAPID_PRIVATE_KEY
+            GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET GOOGLE_TOKEN_KEY VAPID_PUBLIC_KEY VAPID_PRIVATE_KEY VAULT_KEY
           upload apps/ai-proxy SUPABASE_SECRET_KEY ANTHROPIC_API_KEY GEMINI_API_KEY AI_GATEWAY_TOKEN
 
   apps:

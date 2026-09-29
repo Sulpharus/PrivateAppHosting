@@ -5,6 +5,7 @@
 //   POST /sessions/sync       platform API cron → apps with live sessions (idle tracking)
 //   POST /installers          platform API → start an install job
 //   GET  /installers/:id      platform API → job status
+//   GET  /resources           platform API → CPU, memory and disk of host, VMs and containers
 // Everything except /health and /auth requires `Authorization: Bearer <CONTROL_TOKEN>`; the
 // hostname control.mininode.app additionally sits behind Cloudflare Access.
 
@@ -13,6 +14,7 @@ import { Hono, type MiddlewareHandler } from 'hono';
 import { z } from 'zod';
 import { type ForwardAuthOptions, forwardAuth } from './auth.ts';
 import type { Installer } from './install.ts';
+import type { ResourceReport } from './resources.ts';
 import { RuntimeUnavailable, type Scheduler } from './runtimes.ts';
 
 const slug = z.string().regex(/^[a-z][a-z0-9-]{0,30}[a-z0-9]$/);
@@ -49,6 +51,7 @@ export interface ServerDeps {
   scheduler: Scheduler;
   installer: Installer;
   auth: ForwardAuthOptions;
+  resources: () => Promise<ResourceReport>;
 }
 
 function bearer(token: string): MiddlewareHandler {
@@ -108,6 +111,8 @@ export function createServer(deps: ServerDeps) {
     const job = deps.installer.get(c.req.param('id'));
     return job ? c.json(job) : c.json({ error: 'not_found' }, 404);
   });
+
+  app.get('/resources', guard, async (c) => c.json(await deps.resources()));
 
   app.onError((error, c) => {
     console.error(JSON.stringify({ event: 'error', path: c.req.path, error: String(error) }));

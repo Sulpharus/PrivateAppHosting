@@ -1,10 +1,12 @@
 import { serve } from '@hono/node-server';
 import { createVerifier, supabaseGrantChecker } from '@mininode/gate';
+import { Client } from 'undici';
 import { cachedGrants } from './auth.ts';
 import { loadConfig } from './config.ts';
 import { dockerEngine } from './docker.ts';
 import { createInstaller, r2Signer } from './install.ts';
 import { proxmoxClient } from './proxmox.ts';
+import { collect, dockerResources, proxmoxResources } from './resources.ts';
 import { createScheduler } from './runtimes.ts';
 import { createServer } from './server.ts';
 
@@ -17,6 +19,15 @@ const hypervisor = proxmoxClient({
 });
 const docker = dockerEngine(config.DOCKER_SOCKET);
 const scheduler = createScheduler({ config, hypervisor, docker });
+const hostResources = proxmoxResources({
+  url: config.PROXMOX_URL,
+  node: config.PROXMOX_NODE,
+  token: config.PROXMOX_TOKEN,
+  caFile: config.PROXMOX_CA_FILE,
+});
+const containerResources = dockerResources(
+  new Client('http://docker', { socketPath: config.DOCKER_SOCKET }),
+);
 
 const sign =
   config.R2_ENDPOINT && config.R2_ACCESS_KEY_ID && config.R2_SECRET_ACCESS_KEY
@@ -47,6 +58,7 @@ const app = createServer({
       supabaseGrantChecker(config.SUPABASE_URL, config.SUPABASE_PUBLISHABLE_KEY),
     ),
   },
+  resources: () => collect(hostResources, containerResources),
 });
 
 // Idle reaping also runs locally, so resources are freed even if the platform API is unreachable.

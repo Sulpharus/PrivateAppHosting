@@ -112,3 +112,87 @@ test('sportplaner stores activities with photos per user', async ({ browser }) =
   await expect(other.getByRole('button', { name: /Karte/ })).toBeVisible();
   expect(otherErrors).toEqual([]);
 });
+
+test('a course plans every session; cancelled sessions count nowhere', async ({ browser }) => {
+  const hana = `${run}-hana@example.com`;
+  await createUser(hana, 'user', 'Hana');
+  const page = await (await browser.newContext()).newPage();
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  await page.goto(APP);
+  await page.getByLabel('E-Mail').fill(hana);
+  await page.getByLabel('Passwort', { exact: true }).fill(PASSWORD);
+  await page.getByRole('button', { name: 'Anmelden', exact: true }).click();
+  await expect(page.getByText('Deine Bibliothek ist leer')).toBeVisible();
+
+  // The course started two days ago and runs one week, every day.
+  const day = (offset: number) => {
+    const d = new Date();
+    d.setDate(d.getDate() + offset);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  };
+  const start = day(-2);
+  await page.getByRole('button', { name: 'Aktivität hinzufügen' }).first().click();
+  const dialog = page.getByRole('dialog');
+  await dialog.getByLabel('Name').fill('Yoga-Kurs');
+  await dialog.getByRole('button', { name: 'Weiter', exact: true }).click();
+  await dialog.getByRole('button', { name: 'Kurs', exact: true }).click();
+  await expect(dialog.getByRole('button', { name: 'Kurs', exact: true })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  await dialog.getByLabel('Kursbeginn').fill(start);
+  await dialog.getByLabel('Kurslänge in Wochen').fill('2');
+  await expect(dialog.getByLabel('Kursende')).toHaveValue(day(11));
+  // Correcting the end afterwards wins over the length.
+  await dialog.getByLabel('Kursende').fill(day(4));
+  await expect(dialog.getByLabel('Kurslänge in Wochen')).toHaveValue('1');
+  const row = dialog.locator('#coursebox .trow').first();
+  for (const d of ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']) {
+    const button = row.getByRole('button', { name: d, exact: true });
+    if ((await button.getAttribute('aria-pressed')) !== 'true') await button.click();
+  }
+  await row.getByLabel('Beginn').fill('18:00');
+  await expect(dialog.getByText(/7 Termine vom .* Du bist für alle eingeplant\./)).toBeVisible();
+  await dialog.getByRole('button', { name: 'Weiter', exact: true }).click();
+  await expect(
+    dialog.getByText(/Kurs: Du bist automatisch für alle Termine eingeplant/),
+  ).toBeVisible();
+  await dialog.getByRole('button', { name: 'Anlegen', exact: true }).click();
+  await expect(page.getByRole('dialog').getByText('Kurs: alle 7 Termine')).toBeVisible();
+
+  // Editing and saving unchanged keeps the course as it was.
+  await page.getByRole('dialog').getByRole('button', { name: 'Bearbeiten' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Weiter', exact: true }).click();
+  await expect(page.getByRole('dialog').getByLabel('Kursende')).toHaveValue(day(4));
+  await page.getByRole('dialog').getByRole('button', { name: 'Speichern', exact: true }).click();
+  await expect(page.getByRole('dialog').getByText('Kurs: alle 7 Termine')).toBeVisible();
+  await page.keyboard.press('Escape');
+
+  // Today's session was cancelled: not attended, not missed.
+  await page
+    .getByRole('button', { name: /Yoga-Kurs/ })
+    .first()
+    .click();
+  const detail = page.getByRole('dialog');
+  await detail.getByRole('button', { name: 'Ausgefallen' }).click();
+  await expect(detail.getByRole('button', { name: 'Ausgefallen' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  await expect(detail.getByText(/Nicht stattgefunden/)).toBeVisible();
+  await expect(detail.getByText('Kurs: alle 7 Termine, 1 ausgefallen')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.tile-off')).toHaveText('Ausgefallen');
+
+  // Planned so far this year: the days before today (today is cancelled).
+  const yearStart = `${new Date().getFullYear()}-01-01`;
+  const past = [day(-2), day(-1)].filter((d) => d >= yearStart).length;
+  await page.getByRole('button', { name: 'Statistik' }).click();
+  await expect(
+    page.getByText(
+      past ? `Teilnahme: 0 von ${past} geplanten Terminen` : 'Teilnahme an geplanten Terminen',
+    ),
+  ).toBeVisible();
+  expect(errors).toEqual([]);
+});

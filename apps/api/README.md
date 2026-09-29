@@ -12,11 +12,15 @@ Hono Worker for everything that needs the service role or a secret:
 | `POST /google/token` | signed-in user with grant, from the app's own origin | Short-lived Google access token limited to the app's `google` scopes |
 | `GET /push/config` | anyone | VAPID public key for the portal's push subscription (ADR 0005) |
 | `POST /push/test` | signed-in user | Sends a test notification to all of the caller's devices |
+| `ALL /proxy/:service/*` | signed-in user with grant, from the app's own origin, API declared by the app | Calls the external API with the host-level key added server-side (ADR 0006) |
+| `PUT` / `DELETE /admin/api-keys/:service` | admin, recent sign-in | Stores (encrypted with `VAULT_KEY`) or removes the key of an API |
+| `DELETE /admin/api-services/:service` | admin, recent sign-in | Removes an API entry no app declares any more |
 | `POST /remote/sessions` | signed-in user with grant | Queue or start a remote session; returns a Guacamole link |
 | `POST /remote/sessions/:id/heartbeat` | session owner | Keeps the session alive |
 | `DELETE /remote/sessions/:id` | owner or admin | Ends the session, promotes the next in queue |
 | `POST /remote/installs` | admin, recent | Starts an install of a remote app on the NucBox (snapshot → verify → install) |
 | `GET /remote/installs/:id` | admin | Install job status |
+| `GET /admin/nucbox/resources` | admin | NucBox resource report from nucbox-control (Verwaltung → NucBox) |
 | `POST /admin/users/:id/recovery-link` | admin, recent | One-time password-reset link to share (no email needed) |
 | `DELETE /admin/users/:id` | admin, recent | Deletes a user |
 | cron `* * * * *` | — | Every minute: releases due reminders and pushes new notifications (ADR 0005). Every fifth minute also: expires idle sessions, releases stale AI reservations, syncs NucBox runtimes, keeps Supabase awake |

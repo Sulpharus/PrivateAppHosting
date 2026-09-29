@@ -112,19 +112,18 @@ export function Ai() {
           return (
             <form
               key={key}
-              className="row"
-              style={{ flexWrap: 'wrap' }}
+              className="budget-row"
               onSubmit={(event) => {
                 event.preventDefault();
                 const value = Number(new FormData(event.currentTarget).get('euros'));
                 if (Number.isFinite(value) && value >= 0) void save(budget, value);
               }}
             >
-              <span style={{ flex: 1, minWidth: 200 }}>
+              <span className="budget-name">
                 {SCOPE_LABEL[key] ?? `${budget.scope}: ${budget.scope_key}`}
               </span>
-              <label className="field row" style={{ width: 160, gap: 6 }}>
-                <span className="sr-only">Limit in Euro</span>
+              <label className="money-field">
+                <span className="sr-only">Monatliches Limit in Euro</span>
                 <input
                   name="euros"
                   type="number"
@@ -144,7 +143,7 @@ export function Ai() {
         })}
       </section>
 
-      <div className="home-grid" style={{ gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)' }}>
+      <div className="pair-grid">
         <section className="card" aria-labelledby="by-user">
           <h2 id="by-user" className="section-title">
             Pro Nutzer

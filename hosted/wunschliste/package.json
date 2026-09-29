@@ -1,0 +1,12 @@
+{
+  "name": "@mininode-hosted/wunschliste",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "vitest": "5.0.1",
+    "postgres": "3.4.9"
+  }
+}

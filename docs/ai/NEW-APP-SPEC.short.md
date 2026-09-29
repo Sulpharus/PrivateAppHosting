@@ -15,7 +15,8 @@ needs a backend. Do not build your own login, backend or API-key handling.**
    no `esm.sh`. Tailwind via `@tailwindcss/vite`, not the CDN.
 2. **No secrets in the app:** never put API keys in code, env files or `process.env.*`. For AI,
    call `mn.ai` (below). Never import `@google/genai`, `@anthropic-ai/sdk` or `openai` in the
-   browser.
+   browser. Other APIs that need a key (weather, maps, …) are declared under `apis` in
+   `mininode.json` and called with `mn.api(id)`; the admin enters the key on MiniNode.
 3. **No custom auth:** the page is only served to signed-in users. Call
    `await mn.auth.requireLogin()` once at start-up. There is no sign-up/login UI in the app.
 4. **Persistence:** never use `localStorage` or `IndexedDB` for user data (it does not sync
@@ -33,7 +34,7 @@ needs a backend. Do not build your own login, backend or API-key handling.**
 ### The SDK
 
 ```ts
-import { mininode } from '@mininode/sdk';        // Vite/React apps (npm package)
+import { ExternalApiError, mininode } from '@mininode/sdk'; // Vite/React apps (npm package)
 // Plain HTML: <script src="/_mininode/sdk.js"></script> then: const mn = await window.mininode.mininode();
 
 const mn = await mininode();
@@ -79,6 +80,14 @@ const res = await mn.google.fetch('https://www.googleapis.com/calendar/v3/calend
 const mails = await mn.google.fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=20');
 if (!(await mn.google.connected())) showLink(mn.google.connectUrl()); // "Google verbinden"
 
+// External APIs with a key (declare them under "apis" in mininode.json). The key stays on the
+// server; the path is relative to the declared baseUrl:
+try {
+  const weather = await mn.api('openweathermap').json('/weather?q=München&units=metric');
+} catch (err) {
+  if (err instanceof ExternalApiError && err.keyMissing) showSetupState(); // not an error screen
+}
+
 // Relational data (only if kv is not enough): tables in your own schema, see "Tables".
 const { data } = await mn.db.from('recipes').select('*').order('created_at');
 ```
@@ -119,6 +128,13 @@ select platform.secure_table('<slug>', 'recipes', 'private');
   "data": { "mode": "private" },            // none | private | shared-account | group | readonly
   "ai": { "models": ["gemini-flash"], "monthlyBudgetEur": 2, "maxOutputTokens": 1500 },
   "google": { "gmail": "write", "calendar": "read" },   // only if the app uses Gmail/Calendar
+  "apis": [{                                // only if the app calls an external API with a key
+    "id": "openweathermap", "name": "OpenWeatherMap",
+    "baseUrl": "https://api.openweathermap.org/data/2.5",
+    "auth": { "type": "query", "param": "appid" },   // or { "type": "bearer" } / { "type": "header", "name": "X-Api-Key" }
+    "docs": "https://home.openweathermap.org/api_keys",
+    "reason": "Wetter für den Wohnort"
+  }],
   "build": { "command": "pnpm build", "output": "dist" }   // omit for static apps
 }
 ```
@@ -130,3 +146,6 @@ owner's data (e.g. a shared household budget) · `group` = everyone with the app
 Google: `"read"` sees mails or events; `"write"` also sends mails, changes labels and creates or
 edits events. Ask for `write` only when the app needs it. Google API origins are allowed by the
 platform automatically; do not add Google scripts or a Google client ID.
+
+APIs: one entry per external API; `id` names the key, so apps using the same API with the same
+`id`, `baseUrl` and `auth` share one key. Never ship a key or a "enter your API key" field.

@@ -118,6 +118,24 @@ describe.skipIf(!enabled)('sdk against local Supabase', () => {
     );
   });
 
+  it('lists the other people with this app, not the caller', async () => {
+    const friend = await admin.auth.admin.createUser({
+      email: `${slug}-friend@example.com`,
+      password: 'correct horse battery staple',
+      email_confirm: true,
+      user_metadata: { display_name: 'Freundin' },
+    });
+    const friendId = friend.data.user?.id ?? '';
+    await admin.schema('platform').from('app_grants').insert({ user_id: friendId, app_slug: slug });
+    try {
+      const people = await mn.people();
+      expect(people.map((p) => p.id)).toContain(friendId);
+      expect(people.map((p) => p.id)).not.toContain(userId);
+    } finally {
+      await admin.auth.admin.deleteUser(friendId);
+    }
+  });
+
   it('creates notifications for the signed-in user', async () => {
     await mn.notify('Erinnerung', 'Einkaufen', '/liste');
     const { data } = await admin

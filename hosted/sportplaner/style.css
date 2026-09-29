@@ -785,6 +785,10 @@ main {
   padding: 5px 9px 5px 7px;
   border-radius: 999px;
 }
+.tile-done.tile-off {
+  background: var(--surface);
+  color: var(--muted);
+}
 .tile-done svg {
   width: 13px;
   height: 13px;
@@ -1072,6 +1076,12 @@ main {
   border-radius: 50%;
   background: var(--accent);
 }
+.dots i.x {
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--muted);
+  transform: rotate(45deg);
+  border-radius: 1px;
+}
 .dots i.o {
   background: transparent;
   box-shadow: inset 0 0 0 1.5px var(--accent);
@@ -1175,6 +1185,9 @@ main {
   display: flex;
   align-items: center;
   gap: 4px;
+}
+.ag-state.off {
+  color: var(--muted);
 }
 .ag-state svg {
   width: 14px;
@@ -1331,8 +1344,11 @@ main {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--s3);
 }
-.kpis div:last-child {
+.kpis div:last-child:nth-child(odd) {
   grid-column: 1 / -1;
+}
+.kpi-note {
+  margin-top: var(--s2);
 }
 .kpis div {
   background: var(--surface);
@@ -1357,9 +1373,9 @@ main {
 }
 @media (min-width: 640px) {
   .kpis {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
-  .kpis div:last-child {
+  .kpis div:last-child:nth-child(odd) {
     grid-column: auto;
   }
   .kpis div {
@@ -1758,6 +1774,19 @@ button.ubar:hover b {
 .done-btn.on {
   background: var(--accent);
   color: var(--accent-ink);
+}
+.tb-note {
+  flex-basis: 100%;
+  color: var(--muted);
+}
+.offer-seg {
+  margin-bottom: var(--s2);
+}
+.offer-seg button {
+  min-height: 44px;
+}
+.today-box.is-off {
+  background: var(--surface-2);
 }
 .done-btn svg {
   width: 16px;

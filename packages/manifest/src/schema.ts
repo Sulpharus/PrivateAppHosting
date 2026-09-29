@@ -113,6 +113,88 @@ export function googleConnectSrc(google: Manifest['google']): string[] {
   ];
 }
 
+/**
+ * External APIs the app calls with a key the admin keeps on the host (ADR 0006). The app never
+ * sees the key: it calls `mn.api(id).fetch(path)` and the platform adds the key. Apps that name
+ * the same `id` share one entry and one key.
+ */
+/** Headers the proxy sets or forwards itself, or that would change the request's meaning. */
+const RESERVED_HEADERS = [
+  'host',
+  'cookie',
+  'content-type',
+  'content-length',
+  'transfer-encoding',
+  'connection',
+  'accept',
+  'accept-language',
+  'accept-encoding',
+  'origin',
+];
+
+const apiAuthSchema = z.discriminatedUnion('type', [
+  z
+    .object({
+      type: z.literal('header'),
+      name: z
+        .string()
+        .regex(/^[A-Za-z][A-Za-z0-9-]{0,40}$/)
+        .refine((n) => !RESERVED_HEADERS.includes(n.toLowerCase()), 'reserved header name'),
+      /** e.g. "Token " for `Authorization: Token <key>` */
+      prefix: z
+        .string()
+        .regex(/^[ -~]{0,20}$/)
+        .optional(),
+    })
+    .strict(),
+  z.object({ type: z.literal('bearer') }).strict(),
+  /** Public APIs without a key that browsers cannot call directly (CSP, no CORS). */
+  z.object({ type: z.literal('none') }).strict(),
+  z
+    .object({ type: z.literal('query'), param: z.string().regex(/^[A-Za-z][A-Za-z0-9_-]{0,40}$/) })
+    .strict(),
+]);
+
+/** Public HTTPS hosts only: no IP literals, no localhost, nothing on the platform itself. */
+export function isAllowedApiBase(value: string): boolean {
+  try {
+    const url = new URL(value);
+    const host = url.hostname.toLowerCase();
+    return (
+      url.protocol === 'https:' &&
+      !url.username &&
+      !url.password &&
+      !url.search &&
+      !url.hash &&
+      host.includes('.') &&
+      !host.endsWith('.') &&
+      !/^[\d.]+$/.test(host) &&
+      !host.startsWith('[') &&
+      !['localhost', 'mininode.app', 'supabase.co', 'workers.dev', 'pages.dev'].some(
+        (d) => host === d || host.endsWith(`.${d}`),
+      )
+    );
+  } catch {
+    return false;
+  }
+}
+
+export const apiServiceSchema = z
+  .object({
+    /** Shared key name, e.g. "openweathermap"; the same id in two apps means the same key. */
+    id: z.string().regex(/^[a-z][a-z0-9-]{1,40}$/),
+    /** Shown to the admin, e.g. "OpenWeatherMap". */
+    name: z.string().min(1).max(60),
+    /** Every request goes below this URL, e.g. "https://api.openweathermap.org/data/2.5". */
+    baseUrl: z.string().refine(isAllowedApiBase, 'baseUrl must be a public https URL'),
+    auth: apiAuthSchema,
+    /** Where the admin gets a key. */
+    docs: z.url().optional(),
+    /** Why the app needs it (German, shown to the admin). */
+    reason: z.string().min(1).max(200),
+  })
+  .strict();
+
 const buildSchema = z
   .object({
     command: z.string().min(1).optional(),
@@ -169,6 +251,14 @@ export const manifestSchema = z
     data: dataSchema.default({ mode: 'none' }),
     ai: aiSchema.optional(),
     google: googleSchema.optional(),
+    apis: z
+      .array(apiServiceSchema)
+      .max(10)
+      .refine(
+        (apis) => new Set(apis.map((a) => a.id)).size === apis.length,
+        'api ids must be unique',
+      )
+      .optional(),
     build: buildSchema.optional(),
     container: containerSchema.optional(),
     remote: remoteSchema.optional(),
@@ -239,3 +329,4 @@ export type ManifestInput = z.input<typeof manifestSchema>;
 export type Role = z.infer<typeof roleSchema>;
 export type DataMode = z.infer<typeof dataModeSchema>;
 export type AiModel = z.infer<typeof aiModelSchema>;
+export type ApiService = z.infer<typeof apiServiceSchema>;

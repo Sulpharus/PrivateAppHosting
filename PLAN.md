@@ -276,10 +276,12 @@ staging and production.
 
 ## 12. UI
 
-- **Start page** (`mininode.app`): app tiles with pinned and shared filters, remote apps with live
-  status, notifications and profile. Light and dark mode, desktop and mobile.
-- **Host Manager** (`mininode.app/admin`, admin only, step-up): **Overview, Apps (incl. inbox),
-  Users & roles, Remote apps, AI proxy** are functional in v1.
+- **Start page** (`mininode.app`): app tiles with favourites, category filters and sorting (A–Z,
+  most used, new, old), curated app sets ("Pakete"), link tiles to external websites, remote apps
+  with live status, notifications and profile (ADR 0007). Light and dark mode, desktop and mobile.
+- **Host Manager** (`mininode.app/admin`, admin only, step-up): **Overview, Apps (incl. inbox,
+  categories, whitelist, link tiles), Kategorien & Pakete, Users & roles, Remote apps, NucBox
+  (resource usage of host, VMs, storage and containers), AI proxy, API keys** are functional.
   - Deployments, Domains, Logs and Hosts link out to the Cloudflare, Supabase and GitHub
     dashboards; they never show placeholder data.
 - **Fonts:** Bricolage Grotesque, Instrument Sans and JetBrains Mono, self-hosted WOFF2.
