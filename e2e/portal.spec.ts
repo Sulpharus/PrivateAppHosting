@@ -1,6 +1,6 @@
 import { createVerifier, readSession } from '@mininode/gate';
 import { expect, test } from '@playwright/test';
-import { cleanup, createApp, createUser, grant, PASSWORD, url } from './seed.ts';
+import { admin, cleanup, createApp, createUser, grant, PASSWORD, url } from './seed.ts';
 
 const run = `e2e${Date.now().toString(36)}`;
 const adminEmail = `${run}-admin@example.com`;
@@ -73,6 +73,43 @@ test('admins reach every Host Manager page', async ({ page }) => {
     .getByRole('link', { name: 'Nutzer & Rollen' })
     .click();
   await expect(page.getByRole('cell', { name: /Lena/ })).toBeVisible();
+});
+
+test('API keys requested by apps are listed once for the admin', async ({ page }) => {
+  const api = {
+    id: `${run}-wetter`,
+    name: 'Wetterdienst',
+    baseUrl: 'https://api.weather.example/v1',
+    auth: { type: 'query', param: 'appid' },
+  };
+  for (const [slug, reason] of [
+    [`${run}-rezepte`, 'Saisonale Rezepte nach Wetter'],
+    [`${run}-budget`, 'Heizkosten schätzen'],
+  ]) {
+    const { error } = await admin
+      .schema('platform')
+      .rpc('register_app_apis', { p_app_slug: slug, p_apis: [{ ...api, reason }] });
+    if (error) throw error;
+  }
+  try {
+    await signIn(page, adminEmail);
+    await page.goto('/admin');
+    const nav = page.getByRole('navigation', { name: 'Verwaltung' });
+    await expect(nav.getByRole('link', { name: /API-Schlüssel\s*\d+ fehlen/ })).toBeVisible();
+    await nav.getByRole('link', { name: /API-Schlüssel/ }).click();
+    await expect(page.getByRole('heading', { level: 1, name: 'API-Schlüssel' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Benötigt \(\d+\)/ })).toBeVisible();
+    const entry = page.getByRole('region', { name: 'Wetterdienst' });
+    await expect(entry).toHaveCount(1);
+    await expect(entry).toContainText('Saisonale Rezepte nach Wetter');
+    await expect(entry).toContainText('Heizkosten schätzen');
+    await expect(entry.getByLabel('API-Schlüssel für Wetterdienst')).toHaveAttribute(
+      'type',
+      'password',
+    );
+  } finally {
+    await admin.schema('platform').from('api_services').delete().eq('id', api.id);
+  }
 });
 
 test('the KI-Werkstatt composes a prompt for a new app', async ({ page }) => {

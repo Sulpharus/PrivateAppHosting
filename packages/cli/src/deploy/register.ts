@@ -62,6 +62,13 @@ export async function registerApp(
       throw new Error(`registering origins of ${manifest.slug} failed: ${originError.message}`);
   }
 
+  // External APIs with host-level keys (ADR 0006): one entry per API id, shared between apps.
+  const { error: apiError } = await platform.rpc('register_app_apis', {
+    p_app_slug: manifest.slug,
+    p_apis: manifest.apis ?? [],
+  });
+  if (apiError) throw new Error(`APIs of ${manifest.slug}: ${apiError.message}`);
+
   if (manifest.ai) {
     const { error: budgetError } = await platform.from('ai_budgets').upsert({
       scope: 'app',

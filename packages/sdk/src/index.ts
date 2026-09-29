@@ -4,6 +4,7 @@
 import { createBrowserClient } from '@supabase/ssr';
 import type { RealtimeChannel, SupabaseClient, User } from '@supabase/supabase-js';
 import { type AiChatOptions, type AiMessage, createAi } from './ai.ts';
+import { createApi } from './api.ts';
 import { appSchema, loadConfig, type MininodeConfig } from './config.ts';
 import { createGoogle } from './google.ts';
 import { createKv, type KvScope } from './kv.ts';
@@ -17,6 +18,7 @@ import {
 import { createPush } from './push.ts';
 import { cookieSessionUserId } from './session-cookie.ts';
 
+export { ExternalApiError } from './api.ts';
 export { appSchema, assertConfig } from './config.ts';
 export { GoogleError } from './google.ts';
 export type { PushOptions, PushStatus, ScheduledPush } from './push.ts';
@@ -57,6 +59,8 @@ export interface Mininode {
   readonly ai: ReturnType<typeof createAi>;
   /** Gmail and Calendar of the signed-in user, for apps with a `google` block (ADR 0004). */
   readonly google: ReturnType<typeof createGoogle>;
+  /** External APIs declared in mininode.json (`apis`); the key is added on the server (ADR 0006). */
+  readonly api: ReturnType<typeof createApi>;
   /** Bell notification now; also pushed to the user's devices with notifications on. */
   notify(title: string, body?: string, url?: string): Promise<void>;
   /** Reminders delivered later, also with the app closed (ADR 0005). */
@@ -234,6 +238,7 @@ export function createMininode(config: MininodeConfig): Mininode {
     realtime: (channel) => supabase.channel(`${config.appSlug}:${channel}`),
     ai: createAi(config, sessionToken),
     google: createGoogle(config, sessionToken),
+    api: createApi(config, sessionToken),
     push: createPush(config, supabase),
     async notify(title, body, url) {
       const { error } = await supabase.schema('platform').rpc('notify_self', {

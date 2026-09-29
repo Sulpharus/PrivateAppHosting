@@ -32,6 +32,7 @@ const Apps = lazy(() => import('./admin/Apps.tsx').then((m) => ({ default: m.App
 const Users = lazy(() => import('./admin/Users.tsx').then((m) => ({ default: m.Users })));
 const Remote = lazy(() => import('./admin/Remote.tsx').then((m) => ({ default: m.Remote })));
 const Ai = lazy(() => import('./admin/Ai.tsx').then((m) => ({ default: m.Ai })));
+const ApiKeys = lazy(() => import('./admin/ApiKeys.tsx').then((m) => ({ default: m.ApiKeys })));
 const Workshop = lazy(() => import('./admin/Workshop.tsx').then((m) => ({ default: m.Workshop })));
 
 function RequireSession() {
@@ -109,6 +110,7 @@ const router = createBrowserRouter([
           { path: 'users', element: <Users /> },
           { path: 'remote', element: <Remote /> },
           { path: 'ai', element: <Ai /> },
+          { path: 'api-keys', element: <ApiKeys /> },
           { path: 'workshop', element: <Workshop /> },
         ],
       },

@@ -15,6 +15,7 @@ const { data } = await mn.db.from('recipes').select(); // tables in app_<slug>, 
 await mn.files.upload('fotos/a.jpg', file);
 const answer = await mn.ai.chat('Fasse zusammen: …');  // via ai.mininode.app, no keys in the client
 const events = await mn.google.fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events'); // "google" in mininode.json (ADR 0004)
+const weather = await mn.api('openweather').json('/weather?q=München'); // "apis" in mininode.json, key stays on the server (ADR 0006)
 await mn.notify('Erinnerung', 'Müll rausbringen');   // bell + push to the user's devices
 await mn.push.schedule({ key: 'task:1', at: tomorrow8am, title: 'Müll rausbringen' }); // ADR 0005
 mn.offline.onSynced(render);                           // mn.kv works offline, changes sync later
@@ -28,6 +29,11 @@ Data calls (`kv`, `db`, `files`, `notify`) only work from the app's registered o
 RLS identifies the calling app by the browser's `Origin` header (ADR 0002). Deploys register
 `https://<slug>.<domain>`, and `mininode dev` registers its localhost port. Requests from any
 other page, e.g. a plain Vite dev server on another port, see no data.
+
+External APIs with keys (weather, maps, …) are declared in the manifest's `apis` block and called
+through `mn.api(id).fetch(path, init)` (the API's own response) or `.json(path)`. The admin enters
+each key once under Verwaltung → API-Schlüssel; until then calls throw an `ExternalApiError`
+with `keyMissing === true`.
 
 ## Development
 

@@ -1007,6 +1007,11 @@ code,
   font-variant-numeric: tabular-nums;
 }
 
+/* Count badge in the admin navigation (e.g. missing API keys) */
+.nav-count {
+  margin-left: 8px;
+}
+
 /* Action buttons at the end of a table row */
 .row-end {
   justify-content: flex-end;

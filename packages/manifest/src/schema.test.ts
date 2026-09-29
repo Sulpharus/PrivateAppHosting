@@ -4,6 +4,7 @@ import {
   appSchemaName,
   googleConnectSrc,
   googleScopes,
+  isAllowedApiBase,
   parseManifest,
 } from './index.ts';
 
@@ -111,5 +112,66 @@ describe('google', () => {
   it('apps without a google block get no scopes', () => {
     expect(googleScopes(undefined)).toEqual([]);
     expect(googleConnectSrc(undefined)).toEqual([]);
+  });
+});
+
+describe('apis', () => {
+  const weather = {
+    id: 'openweathermap',
+    name: 'OpenWeatherMap',
+    baseUrl: 'https://api.openweathermap.org/data/2.5',
+    auth: { type: 'query', param: 'appid' },
+    docs: 'https://openweathermap.org/api',
+    reason: 'Wetter für die Wochenansicht',
+  };
+
+  it('accepts declared APIs with header, bearer or query keys', () => {
+    const result = parseManifest({
+      ...spa,
+      apis: [
+        weather,
+        { ...weather, id: 'tmdb', auth: { type: 'bearer' } },
+        {
+          ...weather,
+          id: 'deepl',
+          auth: { type: 'header', name: 'Authorization', prefix: 'DeepL-Auth-Key ' },
+        },
+      ],
+    });
+    expect(result.ok).toBe(true);
+  });
+
+  it('rejects duplicate ids and unknown auth types', () => {
+    expect(parseManifest({ ...spa, apis: [weather, weather] }).ok).toBe(false);
+    expect(parseManifest({ ...spa, apis: [{ ...weather, auth: { type: 'cookie' } }] }).ok).toBe(
+      false,
+    );
+    for (const auth of [
+      { type: 'header', name: 'Cookie' },
+      { type: 'header', name: 'host' },
+      { type: 'header', name: 'X-Key', prefix: 'a\nb' },
+    ])
+      expect(parseManifest({ ...spa, apis: [{ ...weather, auth }] }).ok, JSON.stringify(auth)).toBe(
+        false,
+      );
+  });
+
+  it('allows only public https hosts as base', () => {
+    expect(isAllowedApiBase('https://api.example.com/v1')).toBe(true);
+    for (const bad of [
+      'http://api.example.com',
+      'https://127.0.0.1/x',
+      'https://localhost/x',
+      'https://[::1]/x',
+      'https://api.mininode.app/x',
+      'https://abc.supabase.co',
+      'https://api.mininode.app./x',
+      'https://abc.supabase.co.',
+      'https://evil.workers.dev',
+      'https://user:pw@api.example.com',
+      'https://api.example.com/?key=1',
+      'not a url',
+    ])
+      expect(isAllowedApiBase(bad), bad).toBe(false);
   });
 });
