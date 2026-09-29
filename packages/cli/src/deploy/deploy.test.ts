@@ -121,6 +121,13 @@ describe('checkDatabaseSettings', () => {
           SUPABASE_ACCESS_TOKEN: 'token',
         }),
       ).not.toThrow();
+      expect(() =>
+        checkDatabaseSettings(dir, 'wl', 'production', {
+          SUPABASE_DB_URL: 'postgresql://postgres:pw@db.abcdef.supabase.co:5432/postgres',
+          SUPABASE_PROJECT_REF: 'ref',
+          SUPABASE_ACCESS_TOKEN: 'token',
+        }),
+      ).toThrow(/Session pooler/);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
