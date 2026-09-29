@@ -53,6 +53,31 @@ export async function registerApp(
   });
   if (error) throw new Error(`registering ${manifest.slug} failed: ${error.message}`);
 
+  // `access.default` means every user gets the app: new users at sign-up (is_default), existing
+  // users once, on the first registration. Later changes are the admin's (Host Manager).
+  // If this step fails, the next deploy does not repeat it: grant the app by hand under
+  // Verwaltung → Nutzer & Rollen (the error says so).
+  if (!existing && manifest.access.default) {
+    const failed = (message: string) =>
+      new Error(
+        `granting ${manifest.slug} to existing users failed (${message}); grant it under Verwaltung → Nutzer & Rollen`,
+      );
+    // Same rule as sign-up: only roles the app allows. An invite-only platform stays far below
+    // PostgREST's 1000-row page.
+    const { data: users, error: usersError } = await platform
+      .from('profiles')
+      .select('user_id')
+      .in('role', manifest.access.roles);
+    if (usersError) throw failed(usersError.message);
+    if (users && users.length > 0) {
+      const { error: grantError } = await platform.from('app_grants').upsert(
+        users.map((u) => ({ user_id: u.user_id as string, app_slug: manifest.slug })),
+        { onConflict: 'user_id,app_slug', ignoreDuplicates: true },
+      );
+      if (grantError) throw failed(grantError.message);
+    }
+  }
+
   // The origins the app's pages are served from: RLS uses them to tell apps apart (ADR 0002).
   if (origins.length > 0) {
     const { error: originError } = await platform

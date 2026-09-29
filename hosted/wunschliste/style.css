@@ -1,0 +1,73 @@
+/* Wunschliste: only what the App Kit (/_mininode/ui.css) does not cover. Colours, type and
+   spacing come from the kit's --mn-* tokens; the accent is rose (data-accent on <html>). */
+
+/* One wish: picture, text, actions. On phones the actions move below the text. */
+.wish {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--mn-s2) var(--mn-s3);
+  align-items: center;
+  padding: var(--mn-s3) 0;
+  border-bottom: 1px solid var(--mn-line);
+}
+.wish:last-child {
+  border-bottom: 0;
+}
+.wish-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
+}
+.wish-text .mn-row-sub {
+  max-width: 100%;
+}
+.wish-note {
+  color: var(--mn-muted);
+  font-size: var(--mn-fs-sm);
+  overflow-wrap: anywhere;
+}
+.wish-chip {
+  margin-top: var(--mn-s1);
+}
+.wish-chip svg {
+  width: 14px;
+  height: 14px;
+}
+.wish-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--mn-s2);
+}
+@media (min-width: 640px) {
+  .wish {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+  .wish-actions {
+    grid-column: auto;
+  }
+}
+/* Given or bought: still readable, clearly not actionable (the chip says why). */
+.wish--given .mn-thumb,
+.wish--given .mn-row-title,
+.wish--done .mn-thumb,
+.wish--done .mn-row-title {
+  opacity: 0.6;
+}
+.wish--done .mn-row-title {
+  text-decoration: line-through;
+}
+.wish-sk {
+  display: block;
+  height: 64px;
+  margin: var(--mn-s3) 0;
+}
+.mn-main > .mn-note {
+  margin-bottom: var(--mn-s3);
+}
+.mn-main > .mn-list + .mn-sect {
+  margin-top: var(--mn-s8);
+}

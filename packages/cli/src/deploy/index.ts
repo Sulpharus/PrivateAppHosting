@@ -18,7 +18,7 @@ import { createClient } from '@supabase/supabase-js';
 import postgres from 'postgres';
 import { doctor } from '../doctor.ts';
 import { type DeployEnv, environmentSettings } from './environment.ts';
-import { exposeSchemas, migrateApp } from './migrate.ts';
+import { exposeSchemas, migrateApp, migrationFiles } from './migrate.ts';
 import { registerApp } from './register.ts';
 import { appWranglerConfig } from './wrangler-config.ts';
 
@@ -142,6 +142,8 @@ async function exposeLocally(databaseUrl: string, schema: string): Promise<void>
     if (!quoted) return;
     await sql.unsafe(`alter role authenticator set pgrst.db_schemas = ${quoted.q}`);
     await sql`notify pgrst, 'reload config'`;
+    // A new config alone does not rebuild the schema cache: the new schema's tables stay unknown.
+    await sql`notify pgrst, 'reload schema'`;
   } finally {
     await sql.end();
   }
@@ -168,6 +170,26 @@ async function waitForRest(supabaseUrl: string, key: string): Promise<void> {
   throw new Error(`local PostgREST at ${supabaseUrl} did not become ready within 60 s`);
 }
 
+/**
+ * An app with db/ migrations needs the database URL (and, outside local, the Management API to
+ * expose its schema). Checked before anything is deployed: otherwise it would go live without
+ * its tables.
+ */
+export function checkDatabaseSettings(
+  appDir: string,
+  slug: string,
+  envName: string,
+  vars: Record<string, string | undefined>,
+): void {
+  if (migrationFiles(appDir).length === 0) return;
+  if (!vars.SUPABASE_DB_URL)
+    throw new Error(`${slug} has db/ migrations: SUPABASE_DB_URL is required`);
+  if (envName !== 'local' && (!vars.SUPABASE_PROJECT_REF || !vars.SUPABASE_ACCESS_TOKEN))
+    throw new Error(
+      `${slug} has db/ migrations: SUPABASE_PROJECT_REF and SUPABASE_ACCESS_TOKEN are required to expose its schema`,
+    );
+}
+
 export async function deployApp(appDir: string, options: DeployOptions): Promise<void> {
   const log = options.log ?? console.log;
   const report = doctor(appDir);
@@ -180,6 +202,7 @@ export async function deployApp(appDir: string, options: DeployOptions): Promise
   const manifest = report.manifest;
   const env = environmentSettings(options.env);
   log(`→ ${manifest.slug} (${manifest.target}) to ${env.name}`);
+  if (!options.dryRun) checkDatabaseSettings(appDir, manifest.slug, env.name, process.env);
 
   if (manifest.target === 'cloudflare' && env.name !== 'local') {
     const stage = stageAssets(appDir, manifest);

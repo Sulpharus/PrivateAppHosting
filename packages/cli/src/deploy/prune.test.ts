@@ -114,4 +114,28 @@ describe('registerApp', () => {
       { origin: 'https://haushalt.mininode.app', app_slug: 'haushalt' },
     ]);
   });
+
+  it('grants a new default app to every existing user once', async () => {
+    const { fn, calls } = fakeFetch([]);
+    const db = createClient('https://db.example.com', 'secret', {
+      auth: { persistSession: false },
+      global: { fetch: fn },
+    });
+    const parsed = parseManifest({
+      specVersion: 1,
+      slug: 'wunschliste',
+      name: 'Wunschliste',
+      description: 'Wünsche',
+      kind: 'static',
+      target: 'cloudflare',
+      access: { default: true },
+    });
+    if (!parsed.ok) throw new Error(parsed.errors.join());
+    await registerApp(db, parsed.manifest, '1.0.0');
+    const profiles = calls.find((c) => decodeURIComponent(c.url).includes('role=in.'));
+    expect(decodeURIComponent(profiles?.url ?? '')).toContain('role=in.(user,trusted,admin)');
+    const grants = calls.find((c) => c.url.includes('/app_grants'));
+    expect(grants?.url).toContain('on_conflict=user_id%2Capp_slug');
+    expect(grants?.body).toEqual([{ user_id: 'admin-1', app_slug: 'wunschliste' }]);
+  });
 });

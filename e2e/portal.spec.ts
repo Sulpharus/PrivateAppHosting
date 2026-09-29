@@ -108,6 +108,8 @@ test('API keys requested by apps are listed once for the admin', async ({ page }
       'password',
     );
   } finally {
+    // Requests first: an entry in use cannot be deleted (on delete restrict).
+    await admin.schema('platform').from('app_api_services').delete().eq('service_id', api.id);
     await admin.schema('platform').from('api_services').delete().eq('id', api.id);
   }
 });
