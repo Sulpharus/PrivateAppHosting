@@ -66,7 +66,7 @@ export function Apps() {
       {apps.length === 0 && <p className="empty">Noch keine Apps veröffentlicht.</p>}
       {apps.length > 0 && (
         <div className="table-wrap">
-          <table className="table">
+          <table className="table table--cards">
             <thead>
               <tr>
                 <th>App</th>
@@ -104,18 +104,18 @@ export function Apps() {
                         </div>
                       </div>
                     </td>
-                    <td>
+                    <td data-label="Status">
                       <span className={`pill ${tone}`}>
                         <span className="dot" />
                         {label}
                       </span>
                     </td>
-                    <td>{TARGET[app.target] ?? app.target}</td>
-                    <td className="mono">
+                    <td data-label="Host">{TARGET[app.target] ?? app.target}</td>
+                    <td className="mono" data-label="Version">
                       {app.deployed_version ?? '–'}
                       <div className="muted">{dateTime(app.deployed_at)}</div>
                     </td>
-                    <td>
+                    <td data-label="Für alle neuen Nutzer">
                       <input
                         type="checkbox"
                         aria-label={`${app.name} automatisch für neue Nutzer freigeben`}
@@ -125,7 +125,7 @@ export function Apps() {
                         }
                       />
                     </td>
-                    <td>
+                    <td className="table-actions">
                       <button
                         type="button"
                         className="button small"

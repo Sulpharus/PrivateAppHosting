@@ -334,7 +334,7 @@ export function Users() {
       </div>
 
       <div className="table-wrap">
-        <table className="table">
+        <table className="table table--cards">
           <thead>
             <tr>
               <th>Name · E-Mail</th>
@@ -355,7 +355,7 @@ export function Users() {
                     <strong>{user.display_name}</strong>
                     <div className="muted">{user.email}</div>
                   </td>
-                  <td>
+                  <td data-label="Rolle">
                     {self ? (
                       <span className="pill accent">Admin</span>
                     ) : (
@@ -375,7 +375,7 @@ export function Users() {
                       </select>
                     )}
                   </td>
-                  <td>
+                  <td data-label="Apps">
                     <button
                       type="button"
                       className="button small"
@@ -385,12 +385,12 @@ export function Users() {
                       {self ? 'alle' : `${user.app_count} bearbeiten`}
                     </button>
                   </td>
-                  <td className="muted">
+                  <td className="muted" data-label="Zuletzt aktiv">
                     {user.last_sign_in_at ? dateTime(user.last_sign_in_at) : 'noch nie'}
                   </td>
-                  <td>
+                  <td className="table-actions">
                     {!self && (
-                      <div className="row" style={{ justifyContent: 'flex-end' }}>
+                      <div className="row row-end">
                         <button
                           type="button"
                           className="button small"
@@ -415,7 +415,7 @@ export function Users() {
         </table>
       </div>
 
-      <div className="home-grid" style={{ gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)' }}>
+      <div className="pair-grid">
         <InviteForm apps={apps} onCreated={() => void load()} />
         <section className="card" aria-labelledby="open-invites">
           <h2 id="open-invites" className="section-title">

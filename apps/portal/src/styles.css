@@ -970,3 +970,105 @@ code,
   font-size: 14px;
   text-align: center;
 }
+
+/* KI-Budgets: name, amount with € and the save button on one line; stacks on narrow screens */
+.budget-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 8px 0;
+}
+.budget-row + .budget-row {
+  border-top: 1px solid var(--line);
+}
+.budget-name {
+  flex: 1 1 200px;
+  min-width: 0;
+  color: var(--ink);
+}
+.money-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+}
+.money-field input {
+  width: 110px;
+  min-height: var(--tap);
+  padding: 0 12px;
+  border-radius: var(--radius-m);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 16px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Action buttons at the end of a table row */
+.row-end {
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+/* Two boxes side by side on wide screens, stacked on phones and tablets */
+.pair-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+@media (min-width: 900px) {
+  .pair-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+
+/* Admin tables become one card per row on narrow screens (labels from data-label) */
+@media (max-width: 700px) {
+  .table--cards thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  .table--cards,
+  .table--cards tbody,
+  .table--cards tr,
+  .table--cards td {
+    display: block;
+    width: 100%;
+  }
+  .table--cards tr {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--line);
+  }
+  .table--cards tr:last-child {
+    border-bottom: none;
+  }
+  .table--cards td {
+    padding: 6px 0;
+    border-bottom: none;
+    overflow-wrap: anywhere;
+  }
+  .table--cards td[data-label] {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .table--cards td[data-label]::before {
+    content: attr(data-label);
+    color: var(--muted);
+    font-size: 13px;
+  }
+  .table--cards .table-actions:empty {
+    display: none;
+  }
+  .table--cards .row-end {
+    justify-content: flex-start;
+  }
+}
