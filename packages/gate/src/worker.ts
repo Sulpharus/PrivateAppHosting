@@ -74,12 +74,22 @@ function escapeHtml(value: string): string {
   return value.replace(/[&<>"']/g, (char) => `&#${char.charCodeAt(0)};`);
 }
 
+/** Extra connect-src origins: the manifest's, plus the portal when running locally. */
+export function connectSources(env: Pick<AppEnv, 'PORTAL_URL' | 'CONNECT_SRC'>): string[] {
+  const portal = new URL(env.PORTAL_URL);
+  return [
+    ...(env.CONNECT_SRC ? env.CONNECT_SRC.split(',').filter(Boolean) : []),
+    // Locally the API and AI proxy live under the portal (see publicConfig).
+    ...(portal.hostname === 'localhost' ? [portal.origin] : []),
+  ];
+}
+
 export async function handleAppRequest(request: Request, env: AppEnv): Promise<Response> {
   const url = new URL(request.url);
   const headers = securityHeaders({
     supabaseUrl: env.SUPABASE_URL,
     platformDomain: new URL(env.PORTAL_URL).hostname,
-    connectSrc: env.CONNECT_SRC ? env.CONNECT_SRC.split(',').filter(Boolean) : [],
+    connectSrc: connectSources(env),
   });
 
   if (url.pathname === '/_mininode/config.json') {

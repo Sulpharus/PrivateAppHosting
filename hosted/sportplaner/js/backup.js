@@ -193,6 +193,20 @@ function sanitizeAct(raw, keepMedia = false) {
     equipment: arr(raw.equipment).map(text),
     done: arr(raw.done).filter(isDay),
     cancelled: arr(raw.cancelled).filter(isDay),
+    geo:
+      raw.geo &&
+      typeof raw.geo.q === 'string' &&
+      [raw.geo.lat, raw.geo.lon].every(
+        (v) => typeof v === 'number' || (typeof v === 'string' && v.trim() !== ''),
+      ) &&
+      validGeo({ lat: +raw.geo.lat, lon: +raw.geo.lon })
+        ? {
+            lat: +raw.geo.lat,
+            lon: +raw.geo.lon,
+            label: text(raw.geo.label).slice(0, 200),
+            q: raw.geo.q.slice(0, 300),
+          }
+        : undefined,
     course:
       raw.course &&
       isDay(raw.course.from) &&

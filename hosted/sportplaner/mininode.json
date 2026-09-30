@@ -6,6 +6,22 @@
   "description": "Sportangebote mit Zeiten und Fotos, geplante Teilnahmen, Besuche, Tarife und Jahresstatistik",
   "kind": "static",
   "target": "cloudflare",
-  "access": { "default": true },
-  "data": { "mode": "private" }
+  "access": {
+    "default": true
+  },
+  "data": {
+    "mode": "private"
+  },
+  "apis": [
+    {
+      "id": "nominatim",
+      "name": "OpenStreetMap Nominatim",
+      "baseUrl": "https://nominatim.openstreetmap.org",
+      "auth": {
+        "type": "none"
+      },
+      "docs": "https://operations.osmfoundation.org/policies/nominatim/",
+      "reason": "Adressen prüfen und für die Karte in Koordinaten umwandeln"
+    }
+  ]
 }

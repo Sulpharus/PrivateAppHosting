@@ -32,6 +32,21 @@ scheduling logic are unchanged. What changed:
   so a broken backup file cannot break the calendar or inject markup.
 - **Removed:** the one-time thumbnail backfill for old artifact photos and the unused slot editor.
 
+## Courses, cancelled sessions and the map
+
+- **Kurs** (step *Zeiten*): start and end (or its length in weeks), training days and times. Every
+  session is planned; single sessions can be dropped in the detail view.
+- **Ausgefallen** marks a session that did not take place. It counts neither as attended nor as
+  missed. *Statistik* shows attendance as attended out of planned sessions up to today.
+- **Karte:** every activity whose address was checked appears as a pin, with filters (all, on
+  offer today, planned). The map library is Leaflet 1.9.4 in `vendor/leaflet/`, because the gate
+  allows scripts only from the app itself. Tiles load from `tile.openstreetmap.org` (`img-src
+  https:`).
+- **Address check:** saving a new or changed address looks it up with OpenStreetMap Nominatim,
+  through the platform proxy (`apis` → `nominatim`, no key). An address that does not exist blocks
+  saving; with several hits you pick one. Offline, the entry is saved and checked later: *Karte →
+  Adressen prüfen* checks older entries one per second, as the Nominatim usage policy asks.
+
 ## Moving data over from the artifact
 
 In the artifact: *Bibliothek → Datensicherung → Exportieren*. Here: *Bibliothek →

@@ -1,0 +1,26 @@
+{
+  "$schema": "../../packages/manifest/schema.json",
+  "specVersion": 1,
+  "slug": "memory",
+  "name": "Memory",
+  "description": "Paare finden mit möglichst wenigen Zügen, mit Rekorden und Bestenliste im Gaming Hub",
+  "kind": "static",
+  "target": "cloudflare",
+  "access": { "default": true },
+  "data": { "mode": "none" },
+  "game": {
+    "genre": "puzzle",
+    "players": "solo",
+    "stats": [
+      { "id": "moves", "label": "Züge", "better": "lower", "min": 8, "max": 500 },
+      {
+        "id": "time",
+        "label": "Zeit",
+        "better": "lower",
+        "format": "seconds",
+        "min": 1,
+        "max": 7200
+      }
+    ]
+  }
+}

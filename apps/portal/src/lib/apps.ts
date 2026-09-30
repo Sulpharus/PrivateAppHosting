@@ -25,6 +25,8 @@ export interface AppRow {
   link_url: string | null;
   /** Only the admin and the people on the whitelist see the app. */
   whitelist: boolean;
+  /** Set for games (manifest `game` block): they also appear in the Gaming Hub. */
+  game_genre: string | null;
 }
 
 export interface RemoteStatus {
@@ -52,7 +54,7 @@ export async function listApps(): Promise<AppRow[]> {
   const { data, error } = await platform()
     .from('apps')
     .select(
-      'slug, name, description, kind, target, data_mode, status, is_default, deployed_version, deployed_at, remote_runtime:manifest->remote->>runtime, category_id, category_manual, created_at, link_url, whitelist',
+      'slug, name, description, kind, target, data_mode, status, is_default, deployed_version, deployed_at, remote_runtime:manifest->remote->>runtime, category_id, category_manual, created_at, link_url, whitelist, game_genre:manifest->game->>genre',
     )
     .order('name');
   if (error) {

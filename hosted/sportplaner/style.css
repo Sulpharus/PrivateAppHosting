@@ -276,7 +276,7 @@ main {
   max-width: 640px;
   margin: 0 auto;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
 }
 .tab {
   border: 0;
@@ -2367,4 +2367,161 @@ details.more > div {
   .tile:hover {
     transform: none;
   }
+}
+
+/* ---------- Karte ---------- */
+.map-layout {
+  display: grid;
+  gap: var(--s4);
+}
+@media (min-width: 900px) {
+  .map-layout {
+    grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+    align-items: start;
+  }
+  .map-card {
+    position: sticky;
+    top: var(--s4);
+  }
+}
+.map-card {
+  padding: 0;
+  overflow: hidden;
+}
+.map {
+  height: min(70dvh, 620px);
+  min-height: 340px;
+  background: var(--surface-2);
+}
+.map-fail {
+  padding: var(--s5);
+}
+.map-seg {
+  margin-bottom: var(--s3);
+}
+.map-seg button {
+  min-height: 44px;
+}
+.map-missing {
+  margin-top: var(--s3);
+  display: grid;
+  gap: var(--s2);
+  justify-items: start;
+}
+.map.leaflet-container {
+  background: var(--surface-2);
+  font: inherit;
+}
+.map.leaflet-container .leaflet-control-zoom a,
+.map.leaflet-container .leaflet-bar a {
+  width: 44px;
+  height: 44px;
+  line-height: 44px;
+  background: var(--surface);
+  color: var(--ink);
+  border-color: var(--line);
+}
+.map.leaflet-container .leaflet-bar a:focus-visible,
+.map.leaflet-container .leaflet-popup-close-button:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 1px;
+}
+.map.leaflet-container .leaflet-popup-close-button {
+  width: 44px;
+  height: 44px;
+  font-size: 22px;
+  line-height: 44px;
+  color: var(--muted);
+}
+.map.leaflet-container .leaflet-control-attribution {
+  background: var(--surface);
+  color: var(--muted);
+}
+.map.leaflet-container .leaflet-control-attribution a {
+  color: var(--accent-text);
+}
+.pin {
+  background: none;
+  border: 0;
+}
+.pin-shape {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  background: var(--accent);
+  color: var(--accent-ink);
+  box-shadow: var(--shadow-lg);
+  font: 700 var(--fs-xs) / 1 var(--text);
+}
+.pin-shape span {
+  transform: rotate(45deg);
+}
+.pin:focus-visible {
+  outline: none;
+}
+.pin:focus-visible .pin-shape {
+  outline: 3px solid var(--ink);
+  outline-offset: 2px;
+}
+.map-pop {
+  display: grid;
+  gap: 4px;
+  min-width: 180px;
+  font: var(--fs-sm) / 1.35 var(--text);
+}
+.map-pop span {
+  color: var(--muted);
+}
+.map-pop .btn {
+  margin-top: var(--s2);
+  justify-self: start;
+}
+.map.leaflet-container .leaflet-popup-content-wrapper,
+.map.leaflet-container .leaflet-popup-tip {
+  background: var(--surface);
+  color: var(--ink);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .map .leaflet-tile {
+    filter: invert(1) hue-rotate(180deg) brightness(0.85) contrast(0.9);
+  }
+}
+:root[data-theme="dark"] .map .leaflet-tile {
+  filter: invert(1) hue-rotate(180deg) brightness(0.85) contrast(0.9);
+}
+.geobox {
+  margin-top: calc(var(--s2) * -1);
+  display: grid;
+  gap: var(--s2);
+  justify-items: start;
+}
+.geo-ok {
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+  color: var(--accent-text);
+  font-size: var(--fs-sm);
+  margin: 0;
+}
+.geo-ok svg {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  margin-top: 2px;
+}
+.geo-picks {
+  display: grid;
+  gap: var(--s2);
+  width: 100%;
+}
+.geo-pick {
+  text-align: left;
+  justify-content: flex-start;
+  min-height: 44px;
+  height: auto;
+  padding-block: var(--s2);
+  white-space: normal;
 }

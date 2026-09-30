@@ -43,6 +43,7 @@ export default defineConfig({
       ['haushalt', 8795],
       ['wunschliste', 8796],
       ['medialog', 8797],
+      ['memory', 8798],
     ].map(([slug, port]) => ({
       command: `pnpm mininode dev hosted/${slug} --port ${port}`,
       url: `http://localhost:${port}/_mininode/config.json`,

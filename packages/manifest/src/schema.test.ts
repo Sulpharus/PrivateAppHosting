@@ -115,6 +115,30 @@ describe('google', () => {
   });
 });
 
+describe('game', () => {
+  it('accepts a game block and fills defaults', () => {
+    const result = parseManifest({
+      ...spa,
+      game: { genre: 'puzzle', stats: [{ id: 'moves', label: 'Züge', better: 'lower' }] },
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.manifest.game?.players).toBe('solo');
+      expect(result.manifest.game?.stats[0]?.format).toBe('number');
+      expect(result.manifest.game?.stats[0]?.min).toBe(0);
+    }
+  });
+
+  it('rejects unknown genres, bad stat ids and duplicates', () => {
+    expect(parseManifest({ ...spa, game: { genre: 'shooter' } }).ok).toBe(false);
+    expect(
+      parseManifest({ ...spa, game: { genre: 'quiz', stats: [{ id: 'Punkte', label: 'x' }] } }).ok,
+    ).toBe(false);
+    const stat = { id: 'score', label: 'Punkte' };
+    expect(parseManifest({ ...spa, game: { genre: 'quiz', stats: [stat, stat] } }).ok).toBe(false);
+  });
+});
+
 describe('apis', () => {
   const weather = {
     id: 'openweathermap',

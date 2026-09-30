@@ -116,3 +116,10 @@ export const GoogleMark = ({ size = 18 }: IconProps) => (
     <path d="M15.2 9H9.4M15.2 9a6.2 6.2 0 1 1-1.8-4.4" />
   </svg>
 );
+
+export const GamepadIcon = ({ size = 20 }: IconProps) => (
+  <svg {...base(size)} aria-hidden="true">
+    <path d="M5 5.5h8a3.5 3.5 0 0 1 3.4 4.3l-.8 3.3a1.8 1.8 0 0 1-3 .8L11 12.2H7l-1.6 1.7a1.8 1.8 0 0 1-3-.8l-.8-3.3A3.5 3.5 0 0 1 5 5.5z" />
+    <path d="M5.5 8v2.5M4.25 9.25h2.5M12.5 8.5h.01M11.5 10h.01" />
+  </svg>
+);

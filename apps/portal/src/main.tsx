@@ -35,6 +35,10 @@ const Ai = lazy(() => import('./admin/Ai.tsx').then((m) => ({ default: m.Ai })))
 const ApiKeys = lazy(() => import('./admin/ApiKeys.tsx').then((m) => ({ default: m.ApiKeys })));
 const Catalog = lazy(() => import('./admin/Catalog.tsx').then((m) => ({ default: m.Catalog })));
 const NucBox = lazy(() => import('./admin/NucBox.tsx').then((m) => ({ default: m.NucBox })));
+const Games = lazy(() => import('./routes/Games.tsx').then((m) => ({ default: m.Games })));
+const GameProfile = lazy(() =>
+  import('./routes/Games.tsx').then((m) => ({ default: m.GameProfile })),
+);
 const Workshop = lazy(() => import('./admin/Workshop.tsx').then((m) => ({ default: m.Workshop })));
 
 function RequireSession() {
@@ -103,6 +107,8 @@ const router = createBrowserRouter([
       { path: '/', element: <Home /> },
       { path: '/welcome', element: <Welcome /> },
       { path: '/account', element: <Account /> },
+      { path: '/games', element: <Games /> },
+      { path: '/games/:slug', element: <GameProfile /> },
       {
         path: '/admin',
         element: <AdminLayout />,

@@ -172,3 +172,16 @@ describe('helpers', () => {
     expect(csp).toContain("frame-ancestors 'none'");
   });
 });
+
+describe('connectSources', () => {
+  it('adds the portal only when running locally', async () => {
+    const { connectSources } = await import('./worker.ts');
+    expect(connectSources({ PORTAL_URL: 'https://mininode.app', CONNECT_SRC: '' })).toEqual([]);
+    expect(
+      connectSources({ PORTAL_URL: 'https://mininode.app', CONNECT_SRC: 'https://a.example' }),
+    ).toEqual(['https://a.example']);
+    expect(connectSources({ PORTAL_URL: 'http://localhost:5173', CONNECT_SRC: '' })).toEqual([
+      'http://localhost:5173',
+    ]);
+  });
+});

@@ -195,6 +195,46 @@ export const apiServiceSchema = z
   })
   .strict();
 
+export const GAME_GENRES = [
+  'puzzle',
+  'arcade',
+  'karten',
+  'brett',
+  'quiz',
+  'wort',
+  'strategie',
+  'sonstiges',
+] as const;
+
+/** One number a game reports per round, e.g. score, moves or time (shown in the Gaming Hub). */
+export const gameStatSchema = z
+  .object({
+    id: z.string().regex(/^[a-z][a-z0-9_]{0,30}$/),
+    /** German label, e.g. "Punkte". */
+    label: z.string().min(1).max(30),
+    /** Which way a record goes: more points or fewer moves. */
+    better: z.enum(['higher', 'lower']).default('higher'),
+    format: z.enum(['number', 'seconds']).default('number'),
+    /** Values outside min..max are dropped when a round is reported (no negative moves). */
+    min: z.number().default(0),
+    max: z.number().optional(),
+  })
+  .strict()
+  .refine((s) => s.max === undefined || s.max > s.min, 'max must be greater than min');
+
+/** Marks the app as a game: it appears in the Gaming Hub and may report playtime and results. */
+const gameSchema = z
+  .object({
+    genre: z.enum(GAME_GENRES),
+    players: z.enum(['solo', 'multi', 'both']).default('solo'),
+    stats: z
+      .array(gameStatSchema)
+      .max(6)
+      .refine((s) => new Set(s.map((x) => x.id)).size === s.length, 'stat ids must be unique')
+      .default([]),
+  })
+  .strict();
+
 const buildSchema = z
   .object({
     command: z.string().min(1).optional(),
@@ -259,6 +299,7 @@ export const manifestSchema = z
         'api ids must be unique',
       )
       .optional(),
+    game: gameSchema.optional(),
     build: buildSchema.optional(),
     container: containerSchema.optional(),
     remote: remoteSchema.optional(),
