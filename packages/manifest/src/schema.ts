@@ -333,6 +333,8 @@ export const manifestSchema = z
     build: buildSchema.optional(),
     container: containerSchema.optional(),
     remote: remoteSchema.optional(),
+    /** Set by the App-Bibliothek for installed library apps (ADR 0011); hosted apps leave it out. */
+    library: slugSchema.optional(),
   })
   .strict()
   .superRefine((m, ctx) => {

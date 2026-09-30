@@ -4,6 +4,7 @@ import { basename, join, resolve } from 'node:path';
 import { changedApps } from './changed.ts';
 import type { DeployEnv } from './deploy/environment.ts';
 import { deployApp, devApp, readVersion } from './deploy/index.ts';
+import { checkLibraryInstall, installLibraryApp, removeLibraryApp } from './deploy/library.ts';
 import { hostedTargets, pruneApps } from './deploy/prune.ts';
 import { type DoctorReport, doctor, hostedApps } from './doctor.ts';
 
@@ -17,6 +18,9 @@ const USAGE = `mininode <command>
   deploy --changed <base-ref>       Deploy every app changed since <base-ref>
   changed <base-ref>                List hosted apps changed since <base-ref>
   prune [--env staging] [--dry-run] Delete Workers of apps removed from hosted/, disable them
+  library check <entry> <slug>      App-Bibliothek: check an install before the rollout
+  library install <entry> <slug>    App-Bibliothek: register an installed program
+  library remove <slug>             App-Bibliothek: disable a removed program
 `;
 
 function print(report: DoctorReport): boolean {
@@ -72,6 +76,26 @@ async function main(args: string[]): Promise<number> {
       if (!target) break;
       await devApp(resolve(process.cwd(), target), Number(flag(args, '--port') ?? 8790));
       return 0;
+    }
+    case 'library': {
+      const [, , first, second] = args;
+      const env = envFlag(args);
+      if (target === 'check' && first && second) {
+        await checkLibraryInstall(env, first, second);
+        console.log(`ok ${first} → ${second}`);
+        return 0;
+      }
+      if (target === 'install' && first && second) {
+        await installLibraryApp(env, first, second, readVersion());
+        console.log(`registered ${second} (${first})`);
+        return 0;
+      }
+      if (target === 'remove' && first) {
+        await removeLibraryApp(env, first);
+        console.log(`disabled ${first}`);
+        return 0;
+      }
+      break;
     }
     case 'deploy': {
       if (!target) break;

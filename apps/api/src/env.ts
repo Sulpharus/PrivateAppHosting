@@ -24,6 +24,13 @@ export interface ApiEnv extends Env {
   VAPID_PRIVATE_KEY?: string;
   /** Base64 of 32 random bytes; encrypts the host-level API keys (ADR 0006). */
   VAULT_KEY?: string;
+  /**
+   * Fine-grained GitHub token (this repository, Actions: write) that starts the App-Bibliothek
+   * workflow (ADR 0011). Without it the library only shows links.
+   */
+  GITHUB_DISPATCH_TOKEN?: string;
+  /** owner/repo of the workflow; defaults to Sulpharus/PrivateAppHosting. */
+  GITHUB_REPO?: string;
   /** Push requests per cron run (default 40, for the Workers Free subrequest limit). */
   PUSH_SEND_BUDGET?: string;
 }

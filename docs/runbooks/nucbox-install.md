@@ -93,6 +93,8 @@ NVMe 1: Proxmox + VM disks      NVMe 2: /mnt/backup (restic, vzdump)
    packages yet, so create a classic token with only `read:packages`, then
    `echo "GH_TOKEN=ghp_…" > /etc/mininode/deploy.env && chmod 600 /etc/mininode/deploy.env` and
    `echo "$GH_TOKEN" | docker login ghcr.io -u <github-user> --password-stdin`.
+   For the App-Bibliothek also add `CATALOG_TOKEN` (fine-grained, this repository, Contents:
+   read) to the same file (`app-library.md`).
 5. Cloudflare resources: run `infra/cloudflare/bootstrap.sh` here (see `first-setup.md`).
 6. Secrets (SOPS + age):
 

@@ -385,7 +385,7 @@ Everyday apps and platform features that grew next to the phases, each with its 
 | Google Calendar two-way sync | done | ADR 0010, `docs/runbooks/kalender.md` |
 | Haushalt: PDF statements, fixed costs, Dein Monat, statistics | done | `hosted/haushalt` |
 | Sportplaner and Haushalt write their dates as suite records | done | planned sessions (`activity`), payments of fixed costs (`contract`) |
-| App library with one-click NucBox installs (Jellyfin, n8n …) | open | |
+| App library with one-click NucBox installs (Jellyfin, n8n …) | done, needs the NucBox | ADR 0011, `docs/runbooks/app-library.md` |
 
 ---
 
