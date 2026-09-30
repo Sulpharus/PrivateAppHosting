@@ -4,6 +4,20 @@ This is the catalog of shared record types (ADR 0002). It is deliberately broad,
 apps, CRM, self-organisation, archives, games and everyday tools can use one shared vocabulary
 from day one.
 
+## Implemented so far (lean phase, migration `suite_core`)
+
+The registry (`platform.record_types`) holds the stage 1 time types plus what the first apps
+need: `event`, `task`, `reminder`, `project`, `activity`, `contract` and `transaction`, each with
+its JSON schema, identity keys and calendar projection (`span` or `due`). Collection families:
+`kalender`, `aufgaben`, `sport`, `finanzen`. Differences from the catalog below:
+
+- Places are `lat`, `lon` and `place_name` columns (no `geo` type yet).
+- Tags, comments, attachments and `record_links` are not built yet.
+- A series (`data.recurrence`) is never the target of an identity merge, so a single moved
+  occurrence stays its own record.
+
+Further types come with the app that needs them: add them to the registry in a migration.
+
 ## How to read it
 
 **Common columns** are the indexed columns every type can use: `title`, `starts_at`, `ends_at`,
