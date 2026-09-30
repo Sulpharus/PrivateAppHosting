@@ -1,5 +1,5 @@
 begin;
-select plan(57);
+select plan(58);
 select tests.reset();
 
 select tests.create_user('admin@example.com', 'Wolfram') as admin_id \gset
@@ -149,6 +149,10 @@ select throws_ok(format($$select platform.collection_set_member(%L, %L, 'viewer'
 select is((platform.suite_upsert('event', '{"title": "Zahnarzt"}') ->> 'merged')::boolean, false,
   'no merge without all identity keys');
 select platform.suite_upsert('event', '{"title": "ZAHNARZT"}', null, null, :'ev');
+select (platform.suite_upsert('event', '{"title": "Chor", "starts_at": "2026-10-07T18:00:00Z",
+  "data": {"recurrence": {"rrule": "FREQ=WEEKLY"}}}') -> 'record' ->> 'id') as series \gset
+select is((platform.suite_upsert('event', '{"title": "Chor", "starts_at": "2026-10-07T18:00:00Z"}')
+  ->> 'merged')::boolean, false, 'a single record never merges into a series');
 select is((select title from platform.records where id = :'ev'), 'ZAHNARZT', 'case-only edits are kept');
 
 -- Source keys are per type; a stronger app with delete access deletes foreign records.

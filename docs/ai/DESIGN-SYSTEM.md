@@ -95,6 +95,18 @@ Light: `--mn-accent-ink` is `#ffffff` for every accent.
 
 Status colours are never used as the accent, and the accent never means "good" or "bad".
 
+### Category colours (`data-cat`)
+
+For things users colour themselves (calendars, labels, sources), put
+`data-cat="green|blue|violet|amber|rose|teal|gray"` on an element. It then has `--mn-cat`
+(solid: edges, dots, checkboxes), `--mn-cat-soft` (tinted background) and `--mn-cat-text`
+(text on the soft background), light and dark. Pair the colour with a name, never colour alone.
+
+```html
+<button class="chip" data-cat="rose" style="background:var(--mn-cat-soft);border-left:3px solid var(--mn-cat)">Oma besuchen</button>
+<span class="mn-dots"><i data-cat="blue"></i></span>
+```
+
 ### Type
 
 | Role | Token | Face |

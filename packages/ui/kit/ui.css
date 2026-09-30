@@ -127,6 +127,116 @@
   }
 }
 
+/* ---------- category colours (several at once, e.g. calendar sources) ----------
+   Use data-cat="green|blue|violet|amber|rose|teal|gray" on an element; it gets --mn-cat,
+   --mn-cat-soft (background) and --mn-cat-text (text on the soft background, AA). */
+:root {
+  --mn-cat-green: #1c6a4f;
+  --mn-cat-green-soft: #e0ede6;
+  --mn-cat-green-text: #175a43;
+  --mn-cat-blue: #1f5fbf;
+  --mn-cat-blue-soft: #e1eaf8;
+  --mn-cat-blue-text: #1a4f9e;
+  --mn-cat-violet: #6a45b8;
+  --mn-cat-violet-soft: #ece5f8;
+  --mn-cat-violet-text: #5a3a9c;
+  --mn-cat-amber: #8a5a00;
+  --mn-cat-amber-soft: #f6ead2;
+  --mn-cat-amber-text: #7a4f00;
+  --mn-cat-rose: #b3264f;
+  --mn-cat-rose-soft: #f8e1e8;
+  --mn-cat-rose-text: #9c2045;
+  --mn-cat-teal: #0f6e78;
+  --mn-cat-teal-soft: #dcefef;
+  --mn-cat-teal-text: #0c5d66;
+  --mn-cat-gray: #5b646c;
+  --mn-cat-gray-soft: #eceee9;
+  --mn-cat-gray-text: #3f474e;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --mn-cat-green: #5cc49a;
+    --mn-cat-green-soft: #173229;
+    --mn-cat-green-text: #7fd6b1;
+    --mn-cat-blue: #7fb0ff;
+    --mn-cat-blue-soft: #16263f;
+    --mn-cat-blue-text: #a3c6ff;
+    --mn-cat-violet: #b79cff;
+    --mn-cat-violet-soft: #261d3d;
+    --mn-cat-violet-text: #cbb8ff;
+    --mn-cat-amber: #f0b949;
+    --mn-cat-amber-soft: #352710;
+    --mn-cat-amber-text: #f5ca72;
+    --mn-cat-rose: #ff8fb0;
+    --mn-cat-rose-soft: #3a1824;
+    --mn-cat-rose-text: #ffadc5;
+    --mn-cat-teal: #5cc9d4;
+    --mn-cat-teal-soft: #12302f;
+    --mn-cat-teal-text: #86d9e1;
+    --mn-cat-gray: #9ba4ab;
+    --mn-cat-gray-soft: #1f2427;
+    --mn-cat-gray-text: #c3cad0;
+  }
+}
+:root[data-theme="dark"] {
+  --mn-cat-green: #5cc49a;
+  --mn-cat-green-soft: #173229;
+  --mn-cat-green-text: #7fd6b1;
+  --mn-cat-blue: #7fb0ff;
+  --mn-cat-blue-soft: #16263f;
+  --mn-cat-blue-text: #a3c6ff;
+  --mn-cat-violet: #b79cff;
+  --mn-cat-violet-soft: #261d3d;
+  --mn-cat-violet-text: #cbb8ff;
+  --mn-cat-amber: #f0b949;
+  --mn-cat-amber-soft: #352710;
+  --mn-cat-amber-text: #f5ca72;
+  --mn-cat-rose: #ff8fb0;
+  --mn-cat-rose-soft: #3a1824;
+  --mn-cat-rose-text: #ffadc5;
+  --mn-cat-teal: #5cc9d4;
+  --mn-cat-teal-soft: #12302f;
+  --mn-cat-teal-text: #86d9e1;
+  --mn-cat-gray: #9ba4ab;
+  --mn-cat-gray-soft: #1f2427;
+  --mn-cat-gray-text: #c3cad0;
+}
+[data-cat="green"] {
+  --mn-cat: var(--mn-cat-green);
+  --mn-cat-soft: var(--mn-cat-green-soft);
+  --mn-cat-text: var(--mn-cat-green-text);
+}
+[data-cat="blue"] {
+  --mn-cat: var(--mn-cat-blue);
+  --mn-cat-soft: var(--mn-cat-blue-soft);
+  --mn-cat-text: var(--mn-cat-blue-text);
+}
+[data-cat="violet"] {
+  --mn-cat: var(--mn-cat-violet);
+  --mn-cat-soft: var(--mn-cat-violet-soft);
+  --mn-cat-text: var(--mn-cat-violet-text);
+}
+[data-cat="amber"] {
+  --mn-cat: var(--mn-cat-amber);
+  --mn-cat-soft: var(--mn-cat-amber-soft);
+  --mn-cat-text: var(--mn-cat-amber-text);
+}
+[data-cat="rose"] {
+  --mn-cat: var(--mn-cat-rose);
+  --mn-cat-soft: var(--mn-cat-rose-soft);
+  --mn-cat-text: var(--mn-cat-rose-text);
+}
+[data-cat="teal"] {
+  --mn-cat: var(--mn-cat-teal);
+  --mn-cat-soft: var(--mn-cat-teal-soft);
+  --mn-cat-text: var(--mn-cat-teal-text);
+}
+[data-cat="gray"] {
+  --mn-cat: var(--mn-cat-gray);
+  --mn-cat-soft: var(--mn-cat-gray-soft);
+  --mn-cat-text: var(--mn-cat-gray-text);
+}
+
 /* ---------- tokens: dark (system preference, unless light is forced) ---------- */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
@@ -1415,6 +1525,9 @@ a.mn-row:hover .mn-row-title {
 .mn-dots i.o {
   background: transparent;
   box-shadow: inset 0 0 0 1.5px var(--mn-accent);
+}
+.mn-dots i[data-cat] {
+  background: var(--mn-cat);
 }
 .mn-cell[aria-pressed="true"] .mn-dots i {
   background: var(--mn-bg);

@@ -615,6 +615,8 @@ begin
       from platform.records r
       where r.collection_id = v_collection and r.type = p_type and r.deleted_at is null
         and r.identity_hash = v_key
+        -- a series is never the same thing as a single record (e.g. one moved occurrence)
+        and not (r.data ? 'recurrence')
       limit 1
       for update;
       v_merged := v_existing.id is not null;
