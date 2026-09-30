@@ -15,6 +15,7 @@ import {
   KINDS,
   matchRule,
 } from './data.js';
+import { parseStatement, readPdf } from './statement.js';
 import { buildReturn, euro, FIELDS, FORMS } from './tax.js';
 
 // ---------- helpers ----------
@@ -1256,7 +1257,7 @@ function closeDialog() {
 function formError(form, message) {
   const p = form.querySelector('.mn-error');
   p.textContent = message;
-  p.hidden = false;
+  p.hidden = !message;
 }
 const val = (form, name) => String(new FormData(form).get(name) ?? '').trim();
 
@@ -1893,15 +1894,15 @@ function openImport() {
       h(
         'p',
         {},
-        'Exportiere im Online-Banking die Umsätze als CSV und wähle die Datei hier aus. Bereits importierte Buchungen werden erkannt und übersprungen.',
+        'Wähle einen Kontoauszug als PDF oder die Umsätze als CSV aus dem Online-Banking. Bereits importierte Buchungen werden erkannt und übersprungen. Der Auszug bleibt auf deinem Gerät, nur die Buchungen werden gespeichert.',
       ),
       h(
         'label',
         { class: 'mn-btn filebtn' },
-        'CSV-Datei wählen',
+        'PDF- oder CSV-Datei wählen',
         h('input', {
           type: 'file',
-          accept: '.csv,text/csv,text/plain',
+          accept: '.csv,.pdf,text/csv,text/plain,application/pdf',
           onchange: async (e) => {
             const file = e.target.files[0];
             e.target.value = '';
@@ -1909,6 +1910,8 @@ function openImport() {
             if (file.size > 5 * 1024 * 1024)
               return formError(form, 'Die Datei ist größer als 5 MB.');
             const buf = await file.arrayBuffer();
+            if (/\.pdf$/i.test(file.name) || file.type === 'application/pdf')
+              return importPdf(form, buf);
             // Many banks still export Windows-1252; fall back when UTF-8 shows replacement chars.
             let text = new TextDecoder('utf-8').decode(buf);
             if (text.includes('�')) text = new TextDecoder('windows-1252').decode(buf);
@@ -1920,6 +1923,28 @@ function openImport() {
     [h('span', { class: 'mn-grow' })],
   );
 }
+/** A PDF statement: text via pdf.js, then the same preview as a CSV. */
+async function importPdf(form, buf) {
+  formError(form, '');
+  let parsed;
+  try {
+    parsed = parseStatement(await readPdf(buf));
+  } catch (err) {
+    return formError(
+      form,
+      err?.name === 'PasswordException'
+        ? 'Der Auszug ist mit einem Passwort geschützt. Speichere ihn ohne Passwort oder nutze den CSV-Export.'
+        : 'Die PDF-Datei konnte nicht gelesen werden.',
+    );
+  }
+  if (!parsed.rows.length)
+    return formError(
+      form,
+      'In diesem PDF wurden keine Buchungen erkannt (gescannte Auszüge enthalten keinen Text). Nutze sonst den CSV-Export deiner Bank.',
+    );
+  previewImport(parsed);
+}
+
 async function previewImport(parsed) {
   const pick = (name, label, index) =>
     h(
@@ -1983,6 +2008,13 @@ async function previewImport(parsed) {
           ? `${found.length} Buchungen erkannt, davon ${fresh.length} neu und ${fresh.filter((b) => b.cat).length} automatisch zugeordnet.`
           : 'Keine Buchungen erkannt. Prüfe die Spaltenzuordnung.',
       ),
+      parsed.guessed
+        ? h(
+            'p',
+            { class: 'mn-note' },
+            `Bei ${parsed.guessed} ${parsed.guessed === 1 ? 'Buchung' : 'Buchungen'} zeigt der Auszug nicht eindeutig, ob Aus- oder Eingang. Sie sind nach dem Text zugeordnet; prüfe sie nach dem Import.`,
+          )
+        : null,
       fresh.length
         ? h(
             'ul',

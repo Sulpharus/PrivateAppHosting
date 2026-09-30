@@ -85,3 +85,45 @@ test('haushalt books, imports a bank CSV and fills the tax forms', async ({ page
   await expect(page.getByLabel('Tage im Büro')).toHaveValue('100');
   expect(errors).toEqual([]);
 });
+
+test('haushalt imports a bank statement as PDF', async ({ page, browser }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  const paul = `${run}-paul@example.com`;
+  await createUser(paul, 'user', 'Paul');
+
+  // A statement as banks print it: dates without year, continuation lines, amounts with a
+  // trailing minus, balances above and below. Chromium renders it to a real text PDF.
+  const printer = await browser.newPage();
+  await printer.setContent(`<!doctype html><html lang="de"><body style="font:12px sans-serif">
+    <h1>Kontoauszug 9/${year}</h1>
+    <p>Zeitraum 01.${month}.${year} bis 28.${month}.${year}</p>
+    <table style="border-collapse:collapse;width:100%">
+      <tr><td>Alter Kontostand</td><td></td><td></td><td style="text-align:right">1.200,00</td></tr>
+      <tr style="vertical-align:top"><td>04.${month}.</td><td>04.${month}.</td>
+        <td>Lastschrift<br>Stadtwerke Musterstadt<br>Abschlag Strom Kd 4711</td>
+        <td style="text-align:right">89,00-</td></tr>
+      <tr style="vertical-align:top"><td>05.${month}.</td><td>05.${month}.</td>
+        <td>Gutschrift<br>Beispiel GmbH<br>Gehalt</td>
+        <td style="text-align:right">2.750,00+</td></tr>
+      <tr><td>Neuer Kontostand</td><td></td><td></td><td style="text-align:right">3.861,00</td></tr>
+    </table></body></html>`);
+  const pdf = await printer.pdf({ format: 'A4' });
+  await printer.close();
+
+  await signIn(page, paul);
+  await page.getByRole('button', { name: 'Buchungen', exact: true }).click();
+  await page.getByRole('button', { name: 'Kontoauszug importieren' }).click();
+  const dialog = page.getByRole('dialog');
+  await dialog
+    .locator('input[type=file]')
+    .setInputFiles({ name: 'auszug.pdf', mimeType: 'application/pdf', buffer: pdf });
+  await expect(dialog.getByText('2 Buchungen erkannt, davon 2 neu')).toBeVisible({
+    timeout: 20_000,
+  });
+  await dialog.getByRole('button', { name: '2 importieren' }).click();
+  await expect(dialog).toBeHidden();
+  await expect(page.getByText('Stadtwerke Musterstadt')).toBeVisible();
+  await expect(page.getByText('+2.750,00 €')).toBeVisible();
+  expect(errors).toEqual([]);
+});
