@@ -157,6 +157,8 @@ google.delete('/', requireUser(), async (c) => {
     .delete()
     .eq('user_id', userId);
   if (error) return problem(500, 'db_error', 'Zugriff konnte nicht entzogen werden.');
+  // without Google there is nothing to sync (ADR 0010)
+  await db.schema('platform').rpc('gcal_disable', { p_user: userId });
   log('google_disconnected', { user: userId });
   return c.body(null, 204);
 });

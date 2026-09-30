@@ -8,6 +8,7 @@ import {
   paletteColor,
   plainText,
   sourceId,
+  utcUntil,
   zoned,
 } from './gcal.ts';
 
@@ -100,7 +101,7 @@ describe('Google → record', () => {
       TZ,
       new Date('2026-10-01T00:00:00Z'),
     );
-    expect(old).toBeNull();
+    expect(old).toEqual({ event_id: 'x', skip: true });
   });
 
   it('keeps the MiniNode id of mirrored events', () => {
@@ -171,6 +172,29 @@ describe('record → Google', () => {
     expect(body.end).toEqual({ date: '2026-11-02' });
     expect(body.description).toContain('Aus Haushalt');
     expect(body.reminders).toEqual({ useDefault: false, overrides: [] });
+  });
+
+  it('writes UNTIL the way Google wants it', () => {
+    expect(utcUntil('FREQ=WEEKLY;UNTIL=20261018T235959', false, TZ)).toBe(
+      'FREQ=WEEKLY;UNTIL=20261018T215959Z',
+    );
+    expect(utcUntil('FREQ=DAILY;UNTIL=20261018T235959', true, TZ)).toBe(
+      'FREQ=DAILY;UNTIL=20261018',
+    );
+    expect(utcUntil('FREQ=DAILY;COUNT=3', false, TZ)).toBe('FREQ=DAILY;COUNT=3');
+  });
+
+  it('turns the cancelled prefix back into a status', () => {
+    const fields = eventFields(
+      {
+        id: 'c',
+        summary: 'Abgesagt: Chor',
+        start: { dateTime: '2030-01-01T10:00:00Z' },
+        end: { dateTime: '2030-01-01T11:00:00Z' },
+      },
+      TZ,
+    );
+    expect(fields).toMatchObject({ title: 'Chor', data: { status: 'cancelled' } });
   });
 
   it('knows sources and colours', () => {

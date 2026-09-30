@@ -6,17 +6,52 @@
   "description": "Ein Kalender für alles: eigene und geteilte Termine plus die Termine deiner anderen Apps, frei kombiniert",
   "kind": "static",
   "target": "cloudflare",
-  "access": { "default": true },
-  "data": { "mode": "private" },
+  "access": {
+    "default": true
+  },
+  "data": {
+    "mode": "private"
+  },
+  "google": {
+    "calendar": "write"
+  },
   "suite": {
     "uses": [
-      { "type": "event", "access": "delete", "why": "Termine anlegen, ändern und löschen" },
-      { "type": "task", "access": "read", "why": "Fällige Aufgaben im Kalender zeigen" },
-      { "type": "reminder", "access": "read", "why": "Erinnerungen im Kalender zeigen" },
-      { "type": "project", "access": "read", "why": "Projektzeiträume im Kalender zeigen" },
-      { "type": "activity", "access": "read", "why": "Sporteinheiten im Kalender zeigen" },
-      { "type": "contract", "access": "read", "why": "Fälligkeiten von Verträgen zeigen" },
-      { "type": "transaction", "access": "read", "why": "Buchungen auf Wunsch im Kalender zeigen" }
+      {
+        "type": "event",
+        "access": "delete",
+        "why": "Termine anlegen, ändern und löschen"
+      },
+      {
+        "type": "task",
+        "access": "read",
+        "why": "Fällige Aufgaben im Kalender zeigen"
+      },
+      {
+        "type": "reminder",
+        "access": "read",
+        "why": "Erinnerungen im Kalender zeigen"
+      },
+      {
+        "type": "project",
+        "access": "read",
+        "why": "Projektzeiträume im Kalender zeigen"
+      },
+      {
+        "type": "activity",
+        "access": "read",
+        "why": "Sporteinheiten im Kalender zeigen"
+      },
+      {
+        "type": "contract",
+        "access": "read",
+        "why": "Fälligkeiten von Verträgen zeigen"
+      },
+      {
+        "type": "transaction",
+        "access": "read",
+        "why": "Buchungen auf Wunsch im Kalender zeigen"
+      }
     ]
   }
 }

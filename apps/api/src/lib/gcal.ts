@@ -3,6 +3,8 @@
 // (Europe/Berlin unless Google says otherwise), matching the Kalender app.
 
 export const DEFAULT_TZ = 'Europe/Berlin';
+/** Google has no "cancelled but shown" state: the title carries it, and comes back as status. */
+const CANCELLED = 'Abgesagt: ';
 const DAY = 86_400_000;
 
 // ---------- time zones ----------
@@ -100,6 +102,8 @@ export interface ApplyItem {
   etag?: string;
   updated?: string;
   deleted?: boolean;
+  /** Old history: not stored, but still part of a full listing. */
+  skip?: boolean;
   record_id?: string;
   master_event_id?: string;
   exdate_key?: string;
@@ -126,7 +130,7 @@ export function plainText(html: string): string {
 export function keyOf(time: GoogleTime | undefined, tz: string): string | null {
   if (!time) return null;
   if (time.date) return `${time.date}T00:00`;
-  if (time.dateTime) return localKey(new Date(time.dateTime), time.timeZone ?? tz);
+  if (time.dateTime) return localKey(new Date(time.dateTime), tz);
   return null;
 }
 
@@ -172,9 +176,14 @@ export function eventFields(ev: GoogleEvent, tz: string): RecordFields | null {
   const description = ev.description ? plainText(ev.description).slice(0, 10_000) : '';
   if (description) data.description = description;
   if (ev.status === 'tentative') data.status = 'tentative';
+  let title = (ev.summary ?? '').trim();
+  if (title.startsWith(CANCELLED)) {
+    title = title.slice(CANCELLED.length).trim();
+    data.status = 'cancelled';
+  }
   const rrule = ev.recurrence?.find((l) => /^RRULE:/i.test(l));
   if (rrule) {
-    const exdates = exdatesOf(ev.recurrence ?? [], zone);
+    const exdates = exdatesOf(ev.recurrence ?? [], tz);
     data.recurrence = {
       rrule: rrule.replace(/^RRULE:/i, '').slice(0, 500),
       ...(exdates.length ? { exdates } : {}),
@@ -186,7 +195,7 @@ export function eventFields(ev: GoogleEvent, tz: string): RecordFields | null {
       .slice(0, 3)
       .map((o) => ({ offset: o.minutes === 0 ? 'PT0M' : `-PT${o.minutes}M`, channel: 'push' }));
   return {
-    title: (ev.summary ?? '').trim().slice(0, 500) || '(ohne Titel)',
+    title: title.slice(0, 500) || '(ohne Titel)',
     starts_at: start.toISOString(),
     ends_at: end.toISOString(),
     place_name: ev.location ? ev.location.slice(0, 300) : null,
@@ -196,7 +205,7 @@ export function eventFields(ev: GoogleEvent, tz: string): RecordFields | null {
 
 /**
  * The gcal_apply item of a Google event. Events that ended over a year ago (and are not a
- * series) are left out of full syncs, so old history does not fill the calendar.
+ * series) are marked `skip`, so old history does not fill the calendar.
  */
 export function applyItem(ev: GoogleEvent, tz: string, now = new Date()): ApplyItem | null {
   const base: ApplyItem = {
@@ -215,7 +224,7 @@ export function applyItem(ev: GoogleEvent, tz: string, now = new Date()): ApplyI
   const fields = eventFields(ev, tz);
   if (!fields) return null;
   if (!fields.data.recurrence && new Date(fields.ends_at).getTime() < now.getTime() - 365 * DAY)
-    return null;
+    return { event_id: ev.id, skip: true };
   return { ...base, fields };
 }
 
@@ -274,6 +283,26 @@ export function paletteColor(hex: string | undefined): string {
   return 'violet';
 }
 
+/**
+ * The Kalender writes UNTIL as local end of day (`UNTIL=20261018T235959`); Google wants UTC for
+ * timed series and a date for all-day ones.
+ */
+export function utcUntil(rrule: string, allDay: boolean, tz: string): string {
+  return rrule.replace(/UNTIL=(\d{8})(?:T(\d{6})(Z?))?/i, (whole, date, time, z) => {
+    if (allDay) return `UNTIL=${date}`;
+    if (z || !time) return whole;
+    const at = zoned(
+      `${date.slice(0, 4)}-${date.slice(4, 6)}-${date.slice(6, 8)}`,
+      `${time.slice(0, 2)}:${time.slice(2, 4)}:${time.slice(4, 6)}`,
+      tz,
+    );
+    return `UNTIL=${at
+      .toISOString()
+      .replace(/[-:]/g, '')
+      .replace(/\.\d{3}/, '')}`;
+  });
+}
+
 function parseOffset(text: unknown): number | null {
   const m = /^(-)?P(?:(\d+)W)?(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?)?$/.exec(String(text ?? ''));
   if (!m) return null;
@@ -315,7 +344,7 @@ export function eventBody(
     body.end = { dateTime: end.toISOString(), timeZone: tz };
   }
   const cancelled = data.status === 'cancelled' || data.plan_status === 'cancelled';
-  body.summary = `${cancelled ? 'Abgesagt: ' : ''}${r.title ?? '(ohne Titel)'}`;
+  body.summary = `${cancelled ? CANCELLED : ''}${r.title ?? '(ohne Titel)'}`;
   const description = typeof data.description === 'string' ? data.description : '';
   const note = options.own
     ? ''
@@ -325,7 +354,7 @@ export function eventBody(
   body.status = data.status === 'tentative' ? 'tentative' : 'confirmed';
   const recurrence = data.recurrence as { rrule?: string; exdates?: string[] } | undefined;
   if (recurrence?.rrule) {
-    const lines = [`RRULE:${recurrence.rrule}`];
+    const lines = [`RRULE:${utcUntil(recurrence.rrule, allDay, tz)}`];
     if (recurrence.exdates?.length)
       lines.push(
         allDay

@@ -5,8 +5,8 @@
 // The cron syncs one due user every five minutes. Every run has a subrequest budget (Workers
 // Free: 50 per invocation) and simply continues on the next run when it is used up.
 
-import type { SupabaseClient } from '@supabase/supabase-js';
-import { Hono } from 'hono';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { type Context, Hono } from 'hono';
 import { z } from 'zod';
 import type { ApiEnv } from '../env.ts';
 import { type AppContext, problem, requireUser } from '../lib/auth.ts';
@@ -20,7 +20,7 @@ import {
   sourceId,
   applyItem as toApplyItem,
 } from '../lib/gcal.ts';
-import { type GoogleSettings, refreshAccessToken, unseal } from '../lib/google.ts';
+import { GoogleError, type GoogleSettings, refreshAccessToken, unseal } from '../lib/google.ts';
 import { adminClient } from '../lib/supabase.ts';
 import { googleSettings } from './google.ts';
 
@@ -73,7 +73,11 @@ async function google(
   token: string,
   method: string,
   path: string,
-  options: { query?: Record<string, string>; body?: unknown } = {},
+  options: {
+    query?: Record<string, string>;
+    body?: unknown;
+    headers?: Record<string, string>;
+  } = {},
 ): Promise<Response> {
   budget.take();
   const url = new URL(`${CALENDAR_API}${path}`);
@@ -83,6 +87,7 @@ async function google(
     headers: {
       Authorization: `Bearer ${token}`,
       ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+      ...options.headers,
     },
     ...(options.body ? { body: JSON.stringify(options.body) } : {}),
   });
@@ -110,8 +115,11 @@ async function accessToken(oauth: GoogleSettings, db: Db, userId: string, budget
   budget.take();
   try {
     return (await refreshAccessToken(oauth, refresh, [CALENDAR_SCOPE])).accessToken;
-  } catch {
-    throw new SyncError('google_token_invalid');
+  } catch (err) {
+    // only a revoked or expired grant needs the user; anything else is retried later
+    if (err instanceof GoogleError && err.code === 'invalid_grant')
+      throw new SyncError('google_token_invalid');
+    throw new SyncError('google_error', String(err));
   }
 }
 
@@ -159,7 +167,10 @@ async function calendarList(budget: Budget, token: string, target: string) {
     }));
 }
 
-/** Brings Google's changes of one calendar in (a full list without a sync token). */
+/**
+ * Brings Google's changes of one calendar in, page by page: each page is applied as it arrives
+ * and the listing continues on the next run where the budget ends (`pageToken`).
+ */
 async function pull(
   budget: Budget,
   db: Db,
@@ -168,27 +179,30 @@ async function pull(
   calendarId: string,
   kind: 'pull' | 'push',
   syncToken: string | null,
+  pageToken: string | null,
 ): Promise<void> {
-  let items: ApplyItem[] = [];
   let current = syncToken;
-  let pageToken: string | undefined;
-  let next: string | undefined;
+  let page = pageToken;
+  // only a fresh listing within one run can tell which events Google no longer has
+  let fresh = !current && !page;
+  let seen: string[] = [];
   for (;;) {
     const query: Record<string, string> = {
       maxResults: '1000',
       singleEvents: 'false',
       showDeleted: 'true',
     };
-    if (current) query.syncToken = current;
-    if (pageToken) query.pageToken = pageToken;
+    if (page) query.pageToken = page;
+    else if (current) query.syncToken = current;
     const response = await google(budget, token, 'GET', `/calendars/${enc(calendarId)}/events`, {
       query,
     });
-    if (response.status === 410 && current) {
-      // the sync token expired: list everything again
+    if (response.status === 410 && (current || page)) {
+      // the sync token (or page) expired: list everything again
       current = null;
-      pageToken = undefined;
-      items = [];
+      page = null;
+      fresh = true;
+      seen = [];
       continue;
     }
     if (!response.ok) throw await googleFailure(response);
@@ -197,27 +211,38 @@ async function pull(
       nextPageToken?: string;
       nextSyncToken?: string;
     };
+    const items: ApplyItem[] = [];
     for (const ev of body.items ?? []) {
+      seen.push(ev.id);
       const item = toApplyItem(ev, DEFAULT_TZ);
       if (item) items.push(item);
     }
-    if (body.nextPageToken) {
-      pageToken = body.nextPageToken;
-      continue;
-    }
-    next = body.nextSyncToken;
-    break;
+    // series before their exceptions
+    items.sort((a, b) => Number(Boolean(a.master_event_id)) - Number(Boolean(b.master_event_id)));
+    const last = !body.nextPageToken;
+    const result = await rpc<{ failed?: { event_id: string; error: string }[] }>(
+      budget,
+      db,
+      'gcal_apply',
+      {
+        p_user: userId,
+        p_calendar: calendarId,
+        p_kind: kind,
+        p_items: items,
+        p_sync_token: last ? (body.nextSyncToken ?? null) : null,
+        p_page_token: last ? null : (body.nextPageToken ?? null),
+        p_seen: last && fresh && kind === 'pull' ? seen : null,
+      },
+    );
+    if (result?.failed?.length)
+      log('gcal_apply_failed', {
+        user: userId,
+        calendar: calendarId,
+        failed: result.failed.slice(0, 20),
+      });
+    if (last) return;
+    page = body.nextPageToken ?? null;
   }
-  // series before their exceptions
-  items.sort((a, b) => Number(Boolean(a.master_event_id)) - Number(Boolean(b.master_event_id)));
-  await rpc(budget, db, 'gcal_apply', {
-    p_user: userId,
-    p_calendar: calendarId,
-    p_kind: kind,
-    p_items: items,
-    p_sync_token: next ?? null,
-    p_full: current === null && kind === 'pull',
-  });
 }
 
 interface PlanOp {
@@ -225,6 +250,7 @@ interface PlanOp {
   record: PlanRecord;
   event_id: string | null;
   calendar_id: string | null;
+  etag: string | null;
 }
 interface Plan {
   target: string | null;
@@ -273,8 +299,21 @@ async function push(budget: Budget, db: Db, token: string, userId: string, targe
           token,
           'PATCH',
           `/calendars/${enc(calendar)}/events/${enc(op.event_id)}`,
-          { body },
+          // only over the version we know: a change in Google since is pulled first
+          { body, ...(op.etag ? { headers: { 'If-Match': op.etag } } : {}) },
         );
+      if (response?.status === 412) {
+        // changed in Google meanwhile: the next pull decides (newer wins), then this pushes again
+        links.push({
+          record_id: r.id,
+          calendar_id: calendar,
+          event_id: op.event_id,
+          etag: null,
+          version: -1,
+          kind: op.kind,
+        });
+        continue;
+      }
       if (!response || response.status === 404 || response.status === 410)
         response = await google(budget, token, 'POST', `/calendars/${enc(calendar)}/events`, {
           body,
@@ -313,15 +352,27 @@ async function push(budget: Budget, db: Db, token: string, userId: string, targe
   }
 }
 
+interface CalendarRow {
+  google_id: string;
+  enabled: boolean;
+  collection_id: string | null;
+  sync_token: string | null;
+  page_token: string | null;
+  pulled_at: string | null;
+}
+
 /**
- * One sync run for a user: calendars, Google's changes, then MiniNode's. `size` is the share of
- * the invocation's subrequests; two more are used to save links and finish.
+ * One sync run for a user: the calendar list, changes made in "MiniNode", MiniNode's changes,
+ * then the Google calendars, longest waiting first. `size` is the run's share of the
+ * invocation's subrequests (two more save links and finish); `minGap` refuses a run that
+ * follows the last one too closely.
  */
 export async function syncUser(
   env: ApiEnv,
   userId: string,
   size = 44,
-): Promise<{ ran: boolean; error?: string }> {
+  minGap: string | null = null,
+): Promise<{ ran: boolean; error?: string; paused?: boolean }> {
   const oauth = googleSettings(env);
   if (!oauth) return { ran: false, error: 'google_not_configured' };
   const db = adminClient(env);
@@ -329,24 +380,21 @@ export async function syncUser(
   const state = await rpc<{
     target_calendar_id: string | null;
     target_sync_token: string | null;
-  } | null>(budget, db, 'gcal_begin', { p_user: userId }).catch(() => null);
+    target_page_token: string | null;
+  } | null>(budget, db, 'gcal_begin', { p_user: userId, p_min_gap: minGap }).catch(() => null);
   if (!state) return { ran: false };
   let error: string | null = null;
+  let paused = false;
   try {
     const token = await accessToken(oauth, db, userId, budget);
     const target = await ensureTarget(budget, token, state.target_calendar_id);
     const list = await calendarList(budget, token, target);
-    const calendars = await rpc<
-      {
-        google_id: string;
-        enabled: boolean;
-        collection_id: string | null;
-        sync_token: string | null;
-      }[]
-    >(budget, db, 'gcal_calendars_sync', { p_user: userId, p_target: target, p_list: list });
-    for (const cal of calendars)
-      if (cal.enabled && cal.collection_id)
-        await pull(budget, db, token, userId, cal.google_id, 'pull', cal.sync_token);
+    const calendars = await rpc<CalendarRow[]>(budget, db, 'gcal_calendars_sync', {
+      p_user: userId,
+      p_target: target,
+      p_list: list,
+    });
+    const sameTarget = state.target_calendar_id === target;
     await pull(
       budget,
       db,
@@ -354,18 +402,29 @@ export async function syncUser(
       userId,
       target,
       'push',
-      state.target_calendar_id === target ? state.target_sync_token : null,
+      sameTarget ? state.target_sync_token : null,
+      sameTarget ? state.target_page_token : null,
     );
     await push(budget, db, token, userId, target);
+    const due = calendars
+      .filter((cal) => cal.enabled && cal.collection_id)
+      .sort((a, b) => (a.pulled_at ?? '').localeCompare(b.pulled_at ?? ''));
+    for (const cal of due)
+      await pull(budget, db, token, userId, cal.google_id, 'pull', cal.sync_token, cal.page_token);
   } catch (err) {
-    if (err instanceof OutOfBudget) log('gcal_sync_paused', { user: userId });
-    else {
+    if (err instanceof OutOfBudget) {
+      paused = true;
+      log('gcal_sync_paused', { user: userId });
+    } else {
       error = err instanceof SyncError ? err.code : 'sync_failed';
       log('gcal_sync_failed', { user: userId, error: String(err) });
     }
   }
-  await db.schema('platform').rpc('gcal_finish', { p_user: userId, p_error: error });
-  return { ran: true, ...(error ? { error } : {}) };
+  const { error: finishError } = await db
+    .schema('platform')
+    .rpc('gcal_finish', { p_user: userId, p_error: error, p_paused: paused });
+  if (finishError) log('gcal_finish_failed', { user: userId, error: finishError.message });
+  return { ran: true, ...(error ? { error } : {}), ...(paused ? { paused } : {}) };
 }
 
 /** Cron: the user whose sync is most overdue. */
@@ -379,20 +438,33 @@ export async function syncDue(env: ApiEnv): Promise<void> {
 // ---------- routes ----------
 export const gcal = new Hono<AppContext>();
 
-/** Only the Kalender's own pages may change the sync (browsers set Origin). */
-async function fromKalender(env: ApiEnv, origin: string | undefined): Promise<boolean> {
-  const { data } = await adminClient(env)
+/**
+ * Only the Kalender's own pages (browsers set Origin), for people who may use the Kalender and
+ * have passed the second factor: the same checks as /google/token (ADR 0004).
+ */
+async function kalenderOnly(c: Context<AppContext>): Promise<Response | null> {
+  const { data } = await adminClient(c.env)
     .schema('platform')
     .from('app_origins')
     .select('app_slug')
-    .eq('origin', (origin ?? '').toLowerCase())
+    .eq('origin', (c.req.header('Origin') ?? '').toLowerCase())
     .maybeSingle<{ app_slug: string }>();
-  return data?.app_slug === 'kalender';
+  if (data?.app_slug !== 'kalender') return problem(403, 'forbidden', 'Nur aus dem Kalender.');
+  const asUser = createClient(c.env.SUPABASE_URL, c.env.SUPABASE_PUBLISHABLE_KEY, {
+    global: { headers: { Authorization: `Bearer ${c.get('token')}` } },
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+  const { data: allowed } = await asUser
+    .schema('platform')
+    .rpc('has_grant', { p_slug: 'kalender' });
+  if (allowed !== true)
+    return problem(403, 'forbidden', 'Der Kalender ist für dich nicht freigegeben.');
+  return null;
 }
-const forbidden = () => problem(403, 'forbidden', 'Nur aus dem Kalender.');
 
 gcal.get('/', requireUser(), async (c) => {
-  if (!(await fromKalender(c.env, c.req.header('Origin')))) return forbidden();
+  const refused = await kalenderOnly(c);
+  if (refused) return refused;
   const userId = c.get('claims').sub;
   const db = adminClient(c.env).schema('platform');
   const [grant, state, calendars] = await Promise.all([
@@ -444,11 +516,15 @@ const settingsSchema = z.object({
   pushSources: z
     .array(z.string().regex(/^(col:[0-9a-f-]{36}|app:[a-z][a-z0-9-]{0,30}[a-z0-9]:[a-z_]{1,40})$/))
     .max(100),
-  calendars: z.record(z.string().min(1).max(300), z.boolean()).optional(),
+  calendars: z
+    .record(z.string().min(1).max(300), z.boolean())
+    .refine((o) => Object.keys(o).length <= 250, 'too many calendars')
+    .optional(),
 });
 
 gcal.put('/', requireUser(), async (c) => {
-  if (!(await fromKalender(c.env, c.req.header('Origin')))) return forbidden();
+  const refused = await kalenderOnly(c);
+  if (refused) return refused;
   if (!googleSettings(c.env))
     return problem(503, 'google_not_configured', 'Google ist auf MiniNode nicht eingerichtet.');
   const parsed = settingsSchema.safeParse(await c.req.json().catch(() => null));
@@ -468,20 +544,22 @@ gcal.put('/', requireUser(), async (c) => {
     log('gcal_disabled', { user: userId });
     return c.json({ ok: true });
   }
-  for (const [googleId, enabled] of Object.entries(parsed.data.calendars ?? {})) {
-    const { error: calError } = await db.rpc('gcal_set_calendar', {
+  if (parsed.data.calendars) {
+    const { error: calError } = await db.rpc('gcal_set_calendars', {
       p_user: userId,
-      p_google_id: googleId,
-      p_enabled: enabled,
+      p_switches: parsed.data.calendars,
     });
-    if (calError) return problem(500, 'db_error', 'Kalender konnte nicht umgestellt werden.');
+    if (calError) return problem(500, 'db_error', 'Kalender konnten nicht umgestellt werden.');
   }
-  c.executionCtx.waitUntil(syncUser(c.env, userId, 40).then(() => undefined));
+  // this request already used a few subrequests (JWKS, origin, grant, saving)
+  c.executionCtx.waitUntil(syncUser(c.env, userId, 38).then(() => undefined));
   return c.json({ ok: true });
 });
 
 gcal.post('/sync', requireUser(), async (c) => {
-  if (!(await fromKalender(c.env, c.req.header('Origin')))) return forbidden();
-  const result = await syncUser(c.env, c.get('claims').sub, 44);
+  const refused = await kalenderOnly(c);
+  if (refused) return refused;
+  // at most every 30 seconds unless something was requested; the cron does the rest
+  const result = await syncUser(c.env, c.get('claims').sub, 42, '30 seconds');
   return c.json(result);
 });

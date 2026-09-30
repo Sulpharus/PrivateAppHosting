@@ -129,6 +129,8 @@ describe.skipIf(!enabled)('google calendar sync', () => {
       ctx,
     );
   const sync = async () => {
+    // the route allows one run per 30 seconds; the test does not wait
+    await sql`update platform.gcal_sync set last_attempt_at = null where user_id = ${userId}`;
     const res = await call('/google/calendar/sync', { method: 'POST' });
     expect(res.status).toBe(200);
     return (await res.json()) as { ran: boolean; error?: string };
@@ -151,6 +153,10 @@ describe.skipIf(!enabled)('google calendar sync', () => {
       on conflict (slug) do nothing returning slug`;
     created.push(...madeApps.map((a) => String(a.slug)));
     await sql`insert into platform.app_origins (origin, app_slug) values (${origin}, 'kalender')`;
+    await sql`insert into platform.app_grants (user_id, app_slug) values (${userId}, 'kalender')
+      on conflict do nothing`;
+    // the first user of a fresh database is the admin, who may use every app
+    await sql`update platform.profiles set role = 'user' where user_id = ${userId}`;
     await sql`insert into platform.app_type_requests (app_slug, type, access, why)
       values ('kalender', 'event', 'delete', 'x'), ('kalender', 'activity', 'read', 'x')
       on conflict do nothing`;
@@ -187,8 +193,11 @@ describe.skipIf(!enabled)('google calendar sync', () => {
     vi.restoreAllMocks();
   });
 
-  it('is only for the Kalender', async () => {
+  it('is only for the Kalender and the people who may use it', async () => {
     expect((await call('/google/calendar', { origin: 'https://other.test' })).status).toBe(403);
+    await sql`delete from platform.app_grants where user_id = ${userId} and app_slug = 'kalender'`;
+    expect((await call('/google/calendar')).status).toBe(403);
+    await sql`insert into platform.app_grants (user_id, app_slug) values (${userId}, 'kalender')`;
     const state = (await (await call('/google/calendar')).json()) as Record<string, unknown>;
     expect(state).toMatchObject({
       available: true,

@@ -9,6 +9,8 @@ import {
   moveToDay,
   nextReminder,
   parseOffset,
+  ruleFrom,
+  shiftKeys,
   shiftSeries,
   timeInput,
   withExdate,
@@ -524,7 +526,7 @@ function monthFull() {
             'aria-label': `${F.dayLong.format(day)}${its.length ? `, ${its.length} ${its.length === 1 ? 'Termin' : 'Termine'}` : ''}`,
             onclick: () => openDay(day),
           },
-          String(day.getDate()),
+          h('span', {}, String(day.getDate())),
         ),
         list,
       );
@@ -1184,9 +1186,29 @@ async function applyEdit(item, fields, scope, collection) {
   const ev = await events();
   if (!item) return ev.upsert(fields, { collection });
   const r = item.record;
+  const recurrence = r.data?.recurrence;
   if (item.recurring && (scope === 'one' || (scope === 'following' && !isFirst(item)))) {
-    const recurrence = r.data.recurrence;
-    await ev.upsert(
+    // the new part first: if it fails, the series is still whole
+    const data = { ...r.data, ...(fields.data ?? {}) };
+    if (scope === 'one') data.recurrence = null;
+    else {
+      const delta = fields.starts_at ? new Date(fields.starts_at) - item.start : 0;
+      const sameRule =
+        !fields.data?.recurrence || fields.data.recurrence.rrule === recurrence.rrule;
+      const rrule = sameRule
+        ? ruleFrom(recurrence.rrule, new Date(r.starts_at), item.start)
+        : fields.data.recurrence.rrule;
+      const kept = (recurrence.exdates ?? []).filter((k) => k >= item.occurrence);
+      data.recurrence = {
+        rrule,
+        ...(sameRule && kept.length ? { exdates: shiftKeys(kept, delta) } : {}),
+      };
+    }
+    const created = await ev.upsert(
+      { ...baseFields(r), ...fields, data },
+      { collection: collection ?? r.collection_id },
+    );
+    const master = await ev.upsert(
       {
         data: {
           recurrence:
@@ -1197,13 +1219,8 @@ async function applyEdit(item, fields, scope, collection) {
       },
       { id: r.id },
     );
-    const data = { ...r.data, ...(fields.data ?? {}) };
-    if (scope === 'one') data.recurrence = null;
-    else if (data.recurrence) data.recurrence = { rrule: data.recurrence.rrule };
-    return ev.upsert(
-      { ...baseFields(r), ...fields, data },
-      { collection: collection ?? r.collection_id },
-    );
+    void scheduleReminders(master.record);
+    return created;
   }
   let next = fields;
   if (item.recurring && fields.starts_at) {
@@ -1214,6 +1231,17 @@ async function applyEdit(item, fields, scope, collection) {
       new Date(fields.ends_at),
     );
     next = { ...fields, starts_at: moved.start.toISOString(), ends_at: moved.end.toISOString() };
+    // exclusions move with the series (unless the editor set a new rule)
+    const delta = moved.start - new Date(r.starts_at);
+    const rule = next.data?.recurrence ?? recurrence;
+    if (delta && rule?.exdates?.length && rule.rrule === recurrence?.rrule)
+      next = {
+        ...next,
+        data: {
+          ...(next.data ?? {}),
+          recurrence: { ...rule, exdates: shiftKeys(rule.exdates, delta) },
+        },
+      };
   }
   if (collection && collection !== r.collection_id) {
     // another calendar: a new record there, the old one into the bin
@@ -1237,7 +1265,7 @@ async function deleteItem(item, scope) {
     return;
   }
   const recurrence = r.data.recurrence;
-  await ev.upsert(
+  const master = await ev.upsert(
     {
       data: {
         recurrence:
@@ -1248,6 +1276,8 @@ async function deleteItem(item, scope) {
     },
     { id: r.id },
   );
+  // the next reminder may have been for the removed occurrence
+  void scheduleReminders(master.record);
 }
 
 async function moveItem(item, start, end) {
@@ -1901,6 +1931,7 @@ function confirmButton(label, confirmLabel, action) {
 
 function manageContent(redraw) {
   const calendars = S.sources.filter((s) => s.group === 'Kalender');
+  const fromGoogle = S.sources.filter((s) => s.group === 'Google');
   const apps = S.sources.filter((s) => s.group === 'Apps');
   const withToggle = (source, sub, extra = []) => {
     const wrap = h('div', { class: 'cal-src' }, sourceToggle(source, sub));
@@ -2002,6 +2033,22 @@ function manageContent(redraw) {
       ),
       calendars.map(calendarRow),
     ),
+    fromGoogle.length
+      ? h(
+          'section',
+          { class: 'cal-manage-sect' },
+          h('div', { class: 'mn-sect' }, h('h2', {}, 'Google Kalender')),
+          fromGoogle.map((s) =>
+            withToggle(s, null, [
+              h(
+                'p',
+                { class: 'mn-note' },
+                'Aus Google. Welche Google-Kalender hier erscheinen, stellst du unter „Google Kalender“ oben ein.',
+              ),
+            ]),
+          ),
+        )
+      : null,
     h(
       'section',
       { class: 'cal-manage-sect' },
@@ -2496,7 +2543,7 @@ function googleButton() {
     {
       type: 'button',
       class: `mn-btn cal-google${on ? ' is-on' : ''}`,
-      'aria-pressed': on ? 'true' : 'false',
+      'aria-haspopup': 'dialog',
       'aria-label': `Google Kalender: ${failing ? 'Fehler beim Abgleich' : on ? 'Abgleich an' : 'aus'}`,
       onclick: openGoogle,
     },

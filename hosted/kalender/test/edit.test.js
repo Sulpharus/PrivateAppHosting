@@ -66,3 +66,15 @@ describe('edit helpers', () => {
     expect(fromInputs('05.10.2026', '18:30')).toBeNull();
   });
 });
+
+describe('series splits', () => {
+  it('keeps counting and moves exclusions', async () => {
+    const { ruleFrom, shiftKeys } = await import('../edit.js');
+    const start = new Date(2026, 9, 5, 18, 0);
+    expect(ruleFrom('FREQ=WEEKLY;COUNT=10', start, new Date(2026, 10, 2, 18, 0))).toBe(
+      'FREQ=WEEKLY;COUNT=6',
+    );
+    expect(ruleFrom('FREQ=WEEKLY', start, new Date(2026, 10, 2, 18, 0))).toBe('FREQ=WEEKLY');
+    expect(shiftKeys(['2026-10-12T18:00'], 90 * 60_000)).toEqual(['2026-10-12T19:30']);
+  });
+});

@@ -11,10 +11,13 @@ create table platform.gcal_sync (
   -- Google id of the calendar "MiniNode" and the sync token for changes made there.
   target_calendar_id text,
   target_sync_token text,
-  status text not null default 'idle' check (status in ('idle', 'running', 'error')),
+  target_page_token text,
+  status text not null default 'idle' check (status in ('idle', 'running', 'paused', 'error')),
   error text,
   locked_until timestamptz,
   last_sync_at timestamptz,
+  -- every run, successful or not (the cron orders by it and backs off after errors)
+  last_attempt_at timestamptz,
   requested_at timestamptz,
   updated_at timestamptz not null default now()
 );
@@ -29,6 +32,9 @@ create table platform.gcal_calendars (
   enabled boolean not null default true,
   collection_id uuid references platform.collections (id) on delete set null,
   sync_token text,
+  -- a listing interrupted by the run's budget continues here; pulled_at rotates the calendars
+  page_token text,
+  pulled_at timestamptz,
   primary key (user_id, google_id)
 );
 
@@ -111,8 +117,24 @@ begin
 end;
 $$;
 
--- Starts a sync: locks the user's row for five minutes. Null when disabled or already running.
-create function platform.gcal_begin(p_user uuid) returns jsonb
+-- Whether the user may use the Kalender (has_grant without a session: role, grant, app on).
+create function platform.gcal_allowed(p_user uuid) returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select exists (
+    select 1 from platform.apps a
+    join platform.profiles p on p.user_id = p_user
+    where a.slug = 'kalender' and a.status <> 'disabled' and p.role = any (a.allowed_roles)
+      and (p.role = 'admin' or exists (select 1 from platform.app_grants g
+        where g.app_slug = a.slug and g.user_id = p_user)));
+$$;
+
+-- Starts a sync: locks the user's row for five minutes. Null when disabled, already running,
+-- not allowed, or (with p_min_gap) run too recently.
+create function platform.gcal_begin(p_user uuid, p_min_gap interval default null) returns jsonb
 language plpgsql
 security definer
 set search_path = ''
@@ -120,8 +142,12 @@ as $$
 declare
   v platform.gcal_sync;
 begin
-  update platform.gcal_sync set status = 'running', locked_until = now() + interval '5 minutes'
+  if not platform.gcal_allowed(p_user) then return null; end if;
+  update platform.gcal_sync set status = 'running', locked_until = now() + interval '5 minutes',
+    last_attempt_at = now()
   where user_id = p_user and enabled and (locked_until is null or locked_until < now())
+    and (p_min_gap is null or last_attempt_at is null or last_attempt_at < now() - p_min_gap
+      or requested_at > last_attempt_at)
   returning * into v;
   if not found then return null; end if;
   return to_jsonb(v) || jsonb_build_object('calendars', (
@@ -130,16 +156,18 @@ begin
 end;
 $$;
 
-create function platform.gcal_finish(p_user uuid, p_error text) returns void
+-- Ends a run. `p_paused`: the budget ran out; the next cron run continues.
+create function platform.gcal_finish(p_user uuid, p_error text, p_paused boolean default false)
+returns void
 language sql
 security definer
 set search_path = ''
 as $$
   update platform.gcal_sync set
-    status = case when p_error is null then 'idle' else 'error' end,
+    status = case when p_error is not null then 'error' when p_paused then 'paused' else 'idle' end,
     error = p_error,
     locked_until = null,
-    last_sync_at = case when p_error is null then now() else last_sync_at end
+    last_sync_at = case when p_error is null and not p_paused then now() else last_sync_at end
   where user_id = p_user;
 $$;
 
@@ -167,6 +195,21 @@ begin
     collection_id = case when p_enabled then collection_id else null end,
     sync_token = case when p_enabled then sync_token else null end
   where user_id = p_user and google_id = p_google_id;
+end;
+$$;
+
+-- Several calendar switches at once ({google_id: enabled}).
+create function platform.gcal_set_calendars(p_user uuid, p_switches jsonb) returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_key text;
+begin
+  for v_key in select jsonb_object_keys(coalesce(p_switches, '{}')) loop
+    perform platform.gcal_set_calendar(p_user, v_key, (p_switches ->> v_key)::boolean);
+  end loop;
 end;
 $$;
 
@@ -216,6 +259,11 @@ begin
   where c ->> 'google_id' is not null
   on conflict (user_id, google_id) do update
     set name = excluded.name, color = excluded.color, writable = excluded.writable;
+  -- at most 50 calendars come in (the rest stay switched off)
+  update platform.gcal_calendars set enabled = false
+  where user_id = p_user and collection_id is null and google_id not in (
+    select google_id from platform.gcal_calendars where user_id = p_user
+    order by enabled desc, name limit 50);
   -- calendars no longer in the Google list leave MiniNode
   for v_cal in select * from platform.gcal_calendars g
     where g.user_id = p_user
@@ -223,6 +271,18 @@ begin
   loop
     perform platform.gcal_set_calendar(p_user, v_cal.google_id, false);
     delete from platform.gcal_calendars where user_id = p_user and google_id = v_cal.google_id;
+  end loop;
+  -- deleted or left in MiniNode: switched off here, Google stays as it is
+  for v_cal in select g.* from platform.gcal_calendars g
+    where g.user_id = p_user and g.enabled and g.collection_id is not null
+      and not exists (select 1 from platform.collections c
+        join platform.collection_members m on m.collection_id = c.id and m.user_id = p_user
+        where c.id = g.collection_id and c.deleted_at is null)
+  loop
+    delete from platform.gcal_links where user_id = p_user and google_calendar_id = v_cal.google_id;
+    update platform.gcal_calendars set enabled = false, collection_id = null, sync_token = null,
+      page_token = null
+    where user_id = p_user and google_id = v_cal.google_id;
   end loop;
   -- enabled calendars without a (live) collection get one
   for v_cal in select g.* from platform.gcal_calendars g
@@ -289,12 +349,16 @@ begin
 end;
 $$;
 
--- Applies changed Google events of one calendar (kind `pull`: a Google calendar; `push`: the
--- calendar "MiniNode") and stores the next sync token. Items: {event_id, etag, updated,
--- deleted, record_id?, master_event_id?, exdate_key?, fields?}. With p_full, events of a pulled
--- calendar that Google no longer lists go to the bin. Returns {applied, skipped}.
+-- Applies one page of changed Google events of a calendar (kind `pull`: a Google calendar;
+-- `push`: the calendar "MiniNode"). Items: {event_id, etag, updated, deleted, skip, record_id?,
+-- master_event_id?, exdate_key?, fields?}. `skip` items (old history) only count as seen.
+-- Then stores where the listing continues: p_page_token for the next page, or the new
+-- p_sync_token after the last one. With p_seen (every event id of a complete fresh listing),
+-- events of a pulled calendar that Google no longer has go to the bin.
+-- Returns {applied, skipped, failed: [{event_id, error}]}.
 create function platform.gcal_apply(
-  p_user uuid, p_calendar text, p_kind text, p_items jsonb, p_sync_token text, p_full boolean
+  p_user uuid, p_calendar text, p_kind text, p_items jsonb, p_sync_token text,
+  p_page_token text default null, p_seen text[] default null
 ) returns jsonb
 language plpgsql
 security definer
@@ -306,15 +370,16 @@ declare
   v_link platform.gcal_links;
   v_rec platform.records;
   v_row platform.records;
-  v_seen text[] := '{}';
   v_applied integer := 0;
   v_skipped integer := 0;
+  v_failed jsonb := '[]';
 begin
   if p_kind = 'pull' then
     select collection_id into v_col from platform.gcal_calendars
     where user_id = p_user and google_id = p_calendar and enabled;
+    -- switched off while this run was busy: nothing to do
     if v_col is null then
-      raise exception 'unknown_calendar' using errcode = 'P0002';
+      return jsonb_build_object('applied', 0, 'skipped', 0, 'failed', '[]'::jsonb);
     end if;
   elsif p_kind = 'push' then
     v_col := platform.gcal_personal(p_user);
@@ -324,16 +389,26 @@ begin
 
   for v_item in select * from jsonb_array_elements(coalesce(p_items, '[]')) loop
     begin
-      v_seen := v_seen || (v_item ->> 'event_id');
+      if coalesce((v_item ->> 'skip')::boolean, false) then
+        continue;
+      end if;
       v_link := null;
       v_rec := null;
 
-      -- one occurrence changed or cancelled: exclude it from its series
+      -- one occurrence changed or cancelled: exclude it from its series (only where the user
+      -- may edit the series; otherwise MiniNode's version goes back to Google)
       if v_item ->> 'master_event_id' is not null and v_item ->> 'exdate_key' is not null then
         select * into v_link from platform.gcal_links
         where user_id = p_user and google_calendar_id = p_calendar
           and google_event_id = v_item ->> 'master_event_id';
         if found then
+          select * into v_rec from platform.records where id = v_link.record_id;
+          if p_kind = 'push' and not platform.gcal_editable(p_user, v_rec) then
+            update platform.gcal_links set synced_version = -1
+            where user_id = p_user and record_id = v_link.record_id;
+            v_skipped := v_skipped + 1;
+            continue;
+          end if;
           update platform.records set
             data = jsonb_set(data, '{recurrence,exdates}',
               coalesce(data #> '{recurrence,exdates}', '[]') || to_jsonb(v_item ->> 'exdate_key')),
@@ -347,10 +422,7 @@ begin
           end if;
         end if;
         v_link := null;
-        if coalesce((v_item ->> 'deleted')::boolean, false) then
-          v_applied := v_applied + 1;
-          continue;
-        end if;
+        v_rec := null;
       end if;
 
       select * into v_link from platform.gcal_links
@@ -358,7 +430,9 @@ begin
         and google_event_id = v_item ->> 'event_id';
       if found then
         select * into v_rec from platform.records where id = v_link.record_id;
-      elsif p_kind = 'push' and v_item ->> 'record_id' is not null then
+      elsif p_kind = 'push' and v_item ->> 'record_id' is not null
+        and v_item ->> 'master_event_id' is null
+        and not coalesce((v_item ->> 'deleted')::boolean, false) then
         -- a MiniNode record whose link was lost (sync switched off and on): link it again
         insert into platform.gcal_links (user_id, record_id, google_calendar_id, google_event_id,
           etag, synced_version, kind)
@@ -391,7 +465,7 @@ begin
           continue;
         end if;
         if p_kind = 'push' and not platform.gcal_editable(p_user, v_rec) then
-          -- another app's record changed in Google: MiniNode's version wins
+          -- a record the user may not change here (another app's, a viewer's): MiniNode wins
           update platform.gcal_links set synced_version = -1
           where user_id = p_user and record_id = v_rec.id;
           v_skipped := v_skipped + 1;
@@ -421,30 +495,38 @@ begin
       end if;
       v_applied := v_applied + 1;
     exception when others then
-      v_skipped := v_skipped + 1;
+      v_failed := v_failed || jsonb_build_object('event_id', v_item ->> 'event_id',
+        'error', sqlstate || ' ' || left(sqlerrm, 200));
     end;
   end loop;
 
-  if p_full and p_kind = 'pull' then
-    -- a full list: what Google no longer has is gone
+  if p_seen is not null and p_kind = 'pull' then
+    -- a complete fresh listing: what Google no longer has is gone
     with gone as (
       update platform.records r set deleted_at = now(), version = version + 1, updated_at = now()
       from platform.gcal_links l
       where l.user_id = p_user and l.google_calendar_id = p_calendar and l.kind = 'pull'
         and l.record_id = r.id and r.deleted_at is null
-        and not (l.google_event_id = any (v_seen))
+        and not (l.google_event_id = any (p_seen))
       returning r.id
     )
     delete from platform.gcal_links where user_id = p_user and record_id in (select id from gone);
   end if;
 
   if p_kind = 'pull' then
-    update platform.gcal_calendars set sync_token = p_sync_token
+    update platform.gcal_calendars set
+      sync_token = case when p_page_token is null then coalesce(p_sync_token, sync_token) else sync_token end,
+      page_token = p_page_token,
+      pulled_at = case when p_page_token is null then now() else pulled_at end
     where user_id = p_user and google_id = p_calendar;
   else
-    update platform.gcal_sync set target_sync_token = p_sync_token where user_id = p_user;
+    update platform.gcal_sync set
+      target_sync_token = case when p_page_token is null then coalesce(p_sync_token, target_sync_token)
+        else target_sync_token end,
+      target_page_token = p_page_token
+    where user_id = p_user;
   end if;
-  return jsonb_build_object('applied', v_applied, 'skipped', v_skipped);
+  return jsonb_build_object('applied', v_applied, 'skipped', v_skipped, 'failed', v_failed);
 end;
 $$;
 
@@ -495,7 +577,7 @@ as $$
   ),
   push_up as (
     select jsonb_build_object('kind', 'push', 'record', to_jsonb(w), 'event_id', l.google_event_id,
-      'calendar_id', l.google_calendar_id) as op
+      'calendar_id', l.google_calendar_id, 'etag', l.etag) as op
     from wanted w
     cross join me
     left join platform.gcal_links l on l.user_id = p_user and l.record_id = w.id
@@ -504,7 +586,7 @@ as $$
   ),
   pull_up as (
     select jsonb_build_object('kind', 'pull', 'record', to_jsonb(r) || jsonb_build_object('projection', 'span'),
-      'event_id', l.google_event_id, 'calendar_id', g.google_id) as op
+      'event_id', l.google_event_id, 'calendar_id', g.google_id, 'etag', l.etag) as op
     from platform.records r
     join gcols g on g.collection_id = r.collection_id and g.writable
     left join platform.gcal_links l on l.user_id = p_user and l.record_id = r.id
@@ -517,7 +599,10 @@ as $$
       'event_id', l.google_event_id, 'kind', l.kind) as op
     from platform.gcal_links l
     left join platform.records r on r.id = l.record_id
+    left join platform.collections c on c.id = r.collection_id
     where l.user_id = p_user
+      -- a Google calendar removed in MiniNode is switched off, not emptied in Google
+      and not (l.kind = 'pull' and c.deleted_at is not null)
       and (r.deleted_at is not null
         or (l.kind = 'push' and l.record_id not in (select id from wanted)))
   )
@@ -552,7 +637,8 @@ as $$
     synced_version = excluded.synced_version, kind = excluded.kind;
 $$;
 
--- Users whose sync is due: asked for, or not run for five minutes (oldest first).
+-- Users whose sync is due, longest waiting first: asked for, paused by the budget, five
+-- minutes after the last run, or an hour after a failed one.
 create function platform.gcal_due(p_limit integer) returns setof uuid
 language sql
 stable
@@ -561,28 +647,32 @@ set search_path = ''
 as $$
   select user_id from platform.gcal_sync
   where enabled and (locked_until is null or locked_until < now())
-    and (last_sync_at is null or last_sync_at < now() - interval '5 minutes'
-      or requested_at > last_sync_at)
-  order by coalesce(last_sync_at, '-infinity') limit p_limit;
+    and (last_attempt_at is null or requested_at > last_attempt_at or status = 'paused'
+      or last_attempt_at < now() - case when status = 'error' then interval '1 hour'
+        else interval '5 minutes' end)
+    and platform.gcal_allowed(user_id)
+  order by coalesce(last_attempt_at, '-infinity') limit p_limit;
 $$;
 
 revoke execute on function platform.gcal_managed_data(jsonb),
   platform.gcal_editable(uuid, platform.records), platform.gcal_personal(uuid),
-  platform.gcal_begin(uuid), platform.gcal_finish(uuid, text),
-  platform.gcal_set_calendar(uuid, text, boolean), platform.gcal_disable(uuid),
-  platform.gcal_calendars_sync(uuid, text, jsonb),
+  platform.gcal_allowed(uuid), platform.gcal_begin(uuid, interval),
+  platform.gcal_finish(uuid, text, boolean),
+  platform.gcal_set_calendar(uuid, text, boolean), platform.gcal_set_calendars(uuid, jsonb),
+  platform.gcal_disable(uuid), platform.gcal_calendars_sync(uuid, text, jsonb),
   platform.gcal_write(uuid, uuid, uuid, jsonb, text),
-  platform.gcal_apply(uuid, text, text, jsonb, text, boolean),
+  platform.gcal_apply(uuid, text, text, jsonb, text, text, text[]),
   platform.gcal_push_plan(uuid, integer), platform.gcal_save_links(uuid, jsonb, jsonb),
   platform.gcal_due(integer)
   from public, anon, authenticated;
 grant execute on function platform.gcal_managed_data(jsonb),
   platform.gcal_editable(uuid, platform.records), platform.gcal_personal(uuid),
-  platform.gcal_begin(uuid), platform.gcal_finish(uuid, text),
-  platform.gcal_set_calendar(uuid, text, boolean), platform.gcal_disable(uuid),
-  platform.gcal_calendars_sync(uuid, text, jsonb),
+  platform.gcal_allowed(uuid), platform.gcal_begin(uuid, interval),
+  platform.gcal_finish(uuid, text, boolean),
+  platform.gcal_set_calendar(uuid, text, boolean), platform.gcal_set_calendars(uuid, jsonb),
+  platform.gcal_disable(uuid), platform.gcal_calendars_sync(uuid, text, jsonb),
   platform.gcal_write(uuid, uuid, uuid, jsonb, text),
-  platform.gcal_apply(uuid, text, text, jsonb, text, boolean),
+  platform.gcal_apply(uuid, text, text, jsonb, text, text, text[]),
   platform.gcal_push_plan(uuid, integer), platform.gcal_save_links(uuid, jsonb, jsonb),
   platform.gcal_due(integer)
   to service_role;

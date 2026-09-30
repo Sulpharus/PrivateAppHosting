@@ -32,11 +32,20 @@ send (`/google/calendar`, `mn.google.calendarSync`). Only the Kalender's origin 
   becomes an exclusion of its series plus a single event, as in the Kalender. Local occurrence
   keys use the event's time zone (Europe/Berlin by default).
 - **Budget**: Workers Free allows 50 subrequests per invocation. Every run counts Google and
-  database calls and stops cleanly when its share is used; the next run continues (sync tokens
-  and links are saved as it goes). Runs: a second cron trigger (`2-59/5 * * * *`, one due user
-  per run), and the Kalender asks for a sync when opened and a few seconds after each change.
+  database calls and stops cleanly when its share is used: status `paused`, and the next cron
+  run continues. Each page of events is applied as it arrives and its page token saved, so long
+  listings finish over several runs. Order per run: changes made in "MiniNode", MiniNode's
+  changes, then the Google calendars, longest waiting first. Runs: a second cron trigger
+  (`2-59/5 * * * *`, the most overdue user, an hour's pause after a failed run), and the
+  Kalender asks for a sync when opened and a few seconds after each change (at most every 30
+  seconds). PATCHes carry `If-Match`, so a change made in Google meanwhile is pulled first.
 - **Security**: tables `gcal_*` have RLS on and no grants to users; the SQL functions are
-  service-role only. The refresh token never leaves the API.
+  service-role only. The routes check the Kalender's origin and `has_grant('kalender')` (app
+  grant plus second factor), as `/google/token` does; the cron skips users who lost the grant.
+  Google edits change only records the user may edit (own events, editor or owner); records of
+  other apps or of calendars they only view are restored. Deleting or leaving a Google calendar
+  in MiniNode switches it off and never deletes anything in Google. Disconnecting Google
+  (`DELETE /google`) switches the sync off. The refresh token never leaves the API.
 
 ## Consequences
 
@@ -44,5 +53,10 @@ send (`/google/calendar`, `mn.google.calendarSync`). Only the Kalender's origin 
   and removes the Google calendars from MiniNode.
 - Initial pulls list whole calendars; events that ended over a year ago (and are not series)
   are skipped. A very full calendar may take several runs to arrive.
+- Only records that end within the last 30 days or later (and all series) are mirrored into
+  "MiniNode"; older ones are removed there.
 - Attendees, conference links and Google colours per event are not synced; MiniNode colours
-  map to Google event colours.
+  map to Google event colours. "Abgesagt" travels as a title prefix, since Google has no
+  cancelled-but-visible state.
+- Reminders of events changed by the sync while the Kalender is closed follow on its next start.
+- At most 50 Google calendars come in; the rest stay switched off.

@@ -381,6 +381,8 @@ mnui.sheet.open(sheet, { onClose: () => render() });
   ring: 2 px `--mn-accent` with a 2 px offset, at least 3:1 on every surface. Inputs show focus
   with an accent border and ring instead, plus a transparent outline for forced-colors mode.
   Never remove these in app CSS.
+- Dense calendar grids (month cells, the all-day row) may show items as 24 px chips when every
+  item is also reachable with 44 px targets elsewhere (the day list or agenda on the same data).
 - Icon-only buttons have `aria-label`; decorative SVGs have `aria-hidden="true"`.
 - Toggles use `aria-pressed`, the current tab `aria-current="page"`, the current step
   `aria-current="step"`.

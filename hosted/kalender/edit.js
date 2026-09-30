@@ -79,3 +79,34 @@ export function fromInputs(date, time = '00:00') {
 const pad = (n) => String(n).padStart(2, '0');
 export const dateInput = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 export const timeInput = (d) => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+
+/** Shifts occurrence keys (`2026-10-05T18:00`) by a number of milliseconds (local time). */
+export function shiftKeys(keys, delta) {
+  if (!delta) return [...keys];
+  return keys.map((k) => {
+    const d = fromInputs(k.slice(0, 10), k.slice(11, 16));
+    return d ? occurrenceKey(new Date(d.getTime() + delta)) : k;
+  });
+}
+
+/**
+ * The rule of the part of a series from `occurrence` on ("Dieser und alle folgenden"): a COUNT
+ * keeps counting where the first part stopped.
+ */
+export function ruleFrom(rrule, seriesStart, occurrence) {
+  const rule = parseRule(rrule);
+  if (!rule?.count) return rrule;
+  const before = occurrences(
+    seriesStart,
+    { ...rule, count: null, until: null },
+    {
+      from: seriesStart,
+      to: occurrence,
+      max: 100_000,
+    },
+  ).length;
+  const left = Math.max(1, rule.count - before);
+  return String(rrule)
+    .replace(/^RRULE:/i, '')
+    .replace(/COUNT=\d+/i, `COUNT=${left}`);
+}

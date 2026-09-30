@@ -195,25 +195,29 @@
   background: var(--mn-bg);
 }
 .cal-mday.out .cal-mnum {
-  color: var(--mn-muted);
-}
-.cal-mday.is-drop {
-  background: var(--mn-accent-soft);
-}
-.cal-mnum {
+  /* 44 px to tap, a 32 px circle to see */
   align-self: flex-start;
-  min-width: 32px;
-  min-height: 32px;
+  display: grid;
+  place-items: center;
+  min-width: var(--mn-tap);
+  min-height: var(--mn-tap);
+  margin: -6px 0 -8px -8px;
   border: 0;
-  border-radius: 50%;
   background: transparent;
   color: var(--mn-ink);
   font: 600 var(--mn-fs-sm) / 1 var(--mn-font-display);
 }
-.cal-mnum:hover {
+.cal-mnum span {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+}
+.cal-mnum:hover span {
   background: var(--mn-surface-2);
 }
-.cal-mday.today .cal-mnum {
+.cal-mday.today .cal-mnum span {
   background: var(--mn-accent);
   color: var(--mn-accent-ink);
 }
@@ -418,7 +422,7 @@
   z-index: 4;
   cursor: grabbing;
   opacity: 0.85;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+  box-shadow: var(--mn-shadow);
 }
 .cal-ev-title {
   font-weight: 600;

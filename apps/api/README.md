@@ -10,6 +10,8 @@ Hono Worker for everything that needs the service role or a secret:
 | `POST /google/connect` | signed-in user | Stores the Google refresh token from a Google sign-in, encrypted (ADR 0004) |
 | `GET /google` / `DELETE /google` | signed-in user | Status of the Google grant / revoke it at Google and forget it |
 | `POST /google/token` | signed-in user with grant, from the app's own origin | Short-lived Google access token limited to the app's `google` scopes |
+| `GET` / `PUT /google/calendar` | Kalender user (grant + MFA), from the Kalender's origin | Google Calendar sync state / switch it on or off, choose sources and Google calendars (ADR 0010) |
+| `POST /google/calendar/sync` | same | Sync now (at most every 30 seconds unless something was requested) |
 | `GET /push/config` | anyone | VAPID public key for the portal's push subscription (ADR 0005) |
 | `POST /push/test` | signed-in user | Sends a test notification to all of the caller's devices |
 | `ALL /proxy/:service/*` | signed-in user with grant, from the app's own origin, API declared by the app | Calls the external API with the host-level key added server-side (ADR 0006) |
@@ -24,6 +26,7 @@ Hono Worker for everything that needs the service role or a secret:
 | `POST /admin/users/:id/recovery-link` | admin, recent | One-time password-reset link to share (no email needed) |
 | `DELETE /admin/users/:id` | admin, recent | Deletes a user |
 | cron `* * * * *` | — | Every minute: releases due reminders and pushes new notifications (ADR 0005). Every fifth minute also: expires idle sessions, releases stale AI reservations, syncs NucBox runtimes, keeps Supabase awake |
+| cron `2-59/5 * * * *` | — | Google Calendar sync of the most overdue user, with its own subrequest budget (ADR 0010) |
 
 Email is optional: without the `EMAIL` binding (Workers Paid) invites return only the link and
 `POST /admin/users/:id/recovery-link` (admin, recent) creates password-reset links to share.
