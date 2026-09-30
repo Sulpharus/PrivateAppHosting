@@ -18,6 +18,7 @@ import {
   matchRule,
 } from './data.js';
 import {
+  calendarPayments,
   deviations,
   dueIn,
   status as fixedStatus,
@@ -205,6 +206,51 @@ async function runRecurring() {
   if (added) toast(`${added} ${added === 1 ? 'Fixkosten-Zahlung' : 'Fixkosten-Zahlungen'} gebucht`);
 }
 
+// ---------- Kalender (ADR 0002) ----------
+// The coming payments of fixed costs are shared `contract` records, so they show in the
+// Kalender. Without the admin's approval the database refuses and the app goes on without it.
+let calendarTimer = null;
+let calendarOff = false;
+const sameValue = (a, b) => (a ?? null) === (b ?? null);
+async function syncCalendar() {
+  if (calendarOff) return;
+  try {
+    const mn = await ready;
+    const contract = mn.suite.type('contract');
+    const mine = (await contract.list({ limit: 5000 })).filter((r) => r.source_app === 'haushalt');
+    const wanted = calendarPayments(recList(), today(), (id) => (id ? catName(id) : ''));
+    const byKey = new Map(mine.map((r) => [r.source_key, r]));
+    const jobs = [];
+    for (const [key, f] of wanted) {
+      const r = byKey.get(key);
+      const unchanged =
+        r &&
+        sameValue(r.title, f.title) &&
+        new Date(r.due_at).getTime() === new Date(f.due_at).getTime() &&
+        sameValue(r.amount_cents, f.amount_cents) &&
+        Object.entries(f.data).every(([k, v]) => sameValue(r.data?.[k], v));
+      if (!unchanged) jobs.push(() => contract.upsert(f, { sourceKey: key }));
+    }
+    // ended or deleted fixed costs leave the Kalender from this month on; paid months stay
+    const month = today().slice(0, 7);
+    for (const r of mine)
+      if (!wanted.has(r.source_key) && (r.source_key ?? '').split('#')[1] >= month)
+        jobs.push(() => contract.delete(r.id));
+    const queue = [...jobs];
+    const worker = async () => {
+      for (let job = queue.shift(); job; job = queue.shift()) await job();
+    };
+    await Promise.all([worker(), worker(), worker(), worker()]);
+  } catch (err) {
+    if (err?.code === '42501') calendarOff = true;
+  }
+}
+/** After a change to the fixed costs: sync a few seconds later (changes in a row count once). */
+function calendarSoon(delay = 3000) {
+  clearTimeout(calendarTimer);
+  calendarTimer = setTimeout(() => void syncCalendar(), delay);
+}
+
 const paidByBank = (recId, month) =>
   bookings().some((b) => b.rec === recId && b.source !== 'rec' && b.date.startsWith(month));
 
@@ -227,6 +273,7 @@ async function load() {
     // Standing orders may reach back into last year; the tax view usually wants it too.
     await Promise.all([ensureYear(year), ensureYear(year - 1), ensureProfile(S.year)]);
     await runRecurring();
+    calendarSoon(5000);
   } catch {
     toast('Deine Daten konnten nicht geladen werden. Lade die Seite neu.');
   } finally {
@@ -549,6 +596,7 @@ async function adoptAmount(rec, booking) {
   const mn = await ready;
   await mn.kv.set(`rec:${next.id}`, next);
   S.recs.set(next.id, next);
+  calendarSoon();
   toast(`${next.text || 'Fixkosten'}: ${euro(booking.cents)} ab ${monthName(from)}`);
   render();
 }
@@ -2439,6 +2487,7 @@ function editRecurring(id) {
                   const mn = await ready;
                   await mn.kv.delete(`rec:${id}`);
                   S.recs.delete(id);
+                  calendarSoon();
                   closeDialog();
                   toast('Fixkosten gelöscht, bisherige Buchungen bleiben');
                   render();
@@ -2507,6 +2556,7 @@ function editRecurring(id) {
               ];
               await Promise.all(years.map(ensureYear));
               await runRecurring();
+              calendarSoon();
               closeDialog();
               render();
             } catch {

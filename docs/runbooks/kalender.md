@@ -8,8 +8,10 @@ other apps (ADR 0002). Its Google sync runs in the API Worker (ADR 0010).
 1. The deploy registers what the Kalender asks for (`suite.uses` in its `mininode.json`).
    Approve it under **Verwaltung → Gemeinsame Daten**: events with "Löschen", the other types
    with "Lesen". Without approval the Kalender shows nothing and cannot save.
-2. Other apps appear as sources once they write suite records and their own requests are
-   approved there.
+2. Approve the Sportplaner (`activity`, "Bearbeiten") and the Haushalt (`contract`,
+   "Bearbeiten") on the same page. They then write planned sessions and the payments of fixed
+   costs, which appear in the Kalender as sources "Sportplaner · Sporteinheit" and
+   "Haushalt · Vertrag". Each app writes when it is opened next.
 
 ## Google Calendar
 

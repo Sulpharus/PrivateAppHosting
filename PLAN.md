@@ -384,7 +384,7 @@ Everyday apps and platform features that grew next to the phases, each with its 
 | Kalender (own, shared and other apps' dates) | done | `hosted/kalender` |
 | Google Calendar two-way sync | done | ADR 0010, `docs/runbooks/kalender.md` |
 | Haushalt: PDF statements, fixed costs, Dein Monat, statistics | done | `hosted/haushalt` |
-| Sportplaner and Haushalt write their dates as suite records | open | so they appear in the Kalender |
+| Sportplaner and Haushalt write their dates as suite records | done | planned sessions (`activity`), payments of fixed costs (`contract`) |
 | App library with one-click NucBox installs (Jellyfin, n8n …) | open | |
 
 ---
