@@ -23,6 +23,9 @@ Nothing app-specific: the calendar works only on suite records (ADR 0002, `mn.su
 - Drag to move or resize (mouse and pen) in week and day views, drag between days in the month.
 - Reminders via `mn.push`: the next occurrence is scheduled on save and on every start.
 - Search by title, ICS import (4 at a time, source key `ics:<UID>` so re-imports update) and export.
+- Google Kalender (button in the header, ADR 0010): chosen calendars and app sources appear in
+  a Google calendar "MiniNode"; your Google calendars appear here. Changes go both ways; the API
+  syncs every five minutes, when the app opens and after each change.
 - Shortcuts: T today, J/N next, K/P back, M/W/D/L views, C new event, / search.
 
 ## Files

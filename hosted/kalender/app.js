@@ -162,6 +162,8 @@ const S = {
   loading: true,
   error: null,
   openEvent: params.get('event'),
+  /** Google Calendar sync state (ADR 0010), null until loaded or when unavailable. */
+  google: null,
   me: null,
 };
 const wide = matchMedia('(min-width: 960px)');
@@ -245,6 +247,9 @@ async function load({ meta = false } = {}) {
 /** Sources and visible items from the loaded records. */
 function refresh() {
   S.sources = sourcesFrom(S.records, S.collections, S.types, S.prefs.sources ?? {});
+  // calendars that come from Google get their own group
+  const fromGoogle = new Set((S.google?.calendars ?? []).map((c) => `col:${c.collectionId}`));
+  for (const source of S.sources) if (fromGoogle.has(source.id)) source.group = 'Google';
   const hidden = new Set(S.sources.filter((s) => !s.visible).map((s) => s.id));
   S.items = S.range
     ? itemsFor(
@@ -392,6 +397,7 @@ function renderTools() {
         icon('right'),
       ),
     ),
+    googleButton(),
     h(
       'button',
       { type: 'button', class: 'mn-icon-btn', 'aria-label': 'Suchen', onclick: openSearch },
@@ -971,6 +977,7 @@ function sourceToggle(source, sub) {
 function sourceToggles() {
   const groups = [
     ['Meine Kalender', S.sources.filter((s) => s.group === 'Kalender')],
+    ['Google Kalender', S.sources.filter((s) => s.group === 'Google')],
     ['Aus anderen Apps', S.sources.filter((s) => s.group === 'Apps')],
   ];
   return h(
@@ -1263,6 +1270,7 @@ async function run(action, done) {
   try {
     await action();
     toast(done);
+    googleSoon();
   } catch (err) {
     toast(errorText(err));
   }
@@ -1546,7 +1554,16 @@ async function openEditor(item, opts = {}) {
   const calendar = h(
     'select',
     { name: 'calendar' },
-    calendars.map((c) => option(c.id, c.personal ? c.name : `${c.name} (geteilt)`)),
+    calendars.map((c) =>
+      option(
+        c.id,
+        c.personal
+          ? c.name
+          : googleCollections().has(c.id)
+            ? `${c.name} (Google)`
+            : `${c.name} (geteilt)`,
+      ),
+    ),
   );
   calendar.value =
     src && calendars.some((c) => c.id === src.collection_id)
@@ -1751,6 +1768,7 @@ async function openEditor(item, opts = {}) {
             : 'Termin angelegt',
       );
       void scheduleReminders(result.record);
+      googleSoon();
       const { from, to } = rangeOf(S.view, S.anchor);
       if (s >= to || e <= from) S.anchor = dayStart(s);
       await load();
@@ -2424,6 +2442,237 @@ function openSearch() {
   input.focus();
 }
 
+// ---------- Google Calendar (ADR 0010) ----------
+const GOOGLE_ERRORS = {
+  google_not_connected: 'Verbinde zuerst dein Google-Konto unter „Dein Konto“.',
+  google_scope_missing: 'Gib MiniNode unter „Dein Konto“ Zugriff auf deinen Google Kalender.',
+  google_token_invalid: 'Google hat den Zugang beendet. Verbinde Google unter „Dein Konto“ neu.',
+  google_not_configured: 'Google ist auf MiniNode noch nicht eingerichtet.',
+};
+const googleErrorText = (code) =>
+  GOOGLE_ERRORS[code] ??
+  'Der letzte Abgleich hat nicht geklappt. Er wird in ein paar Minuten wiederholt.';
+const googleCollections = () =>
+  new Set((S.google?.calendars ?? []).map((c) => c.collectionId).filter(Boolean));
+
+/** Loads the sync state; with `sync`, syncs first when it is on (the Kalender was opened). */
+async function loadGoogle({ sync = false } = {}) {
+  try {
+    const mn = await ready;
+    S.google = await mn.google.calendarSync.get();
+    if (sync && S.google.enabled) {
+      const result = await mn.google.calendarSync.sync();
+      S.google = await mn.google.calendarSync.get();
+      if (result.ran) await load({ meta: true });
+    }
+  } catch {
+    S.google = S.google ?? null;
+  }
+  refresh();
+  render();
+}
+
+let googleTimer;
+/** After a change: sync with Google a few seconds later (changes in a row count once). */
+function googleSoon() {
+  if (!S.google?.enabled) return;
+  clearTimeout(googleTimer);
+  googleTimer = setTimeout(async () => {
+    try {
+      const mn = await ready;
+      const result = await mn.google.calendarSync.sync();
+      if (result.ran && !document.querySelector('.mn-sheet')) await loadGoogle();
+    } catch {
+      // the cron catches up
+    }
+  }, 3000);
+}
+
+function googleButton() {
+  const on = Boolean(S.google?.enabled);
+  const failing = on && S.google?.status === 'error';
+  return h(
+    'button',
+    {
+      type: 'button',
+      class: `mn-btn cal-google${on ? ' is-on' : ''}`,
+      'aria-pressed': on ? 'true' : 'false',
+      'aria-label': `Google Kalender: ${failing ? 'Fehler beim Abgleich' : on ? 'Abgleich an' : 'aus'}`,
+      onclick: openGoogle,
+    },
+    h('span', { class: `cal-google-dot${failing ? ' is-error' : ''}`, 'aria-hidden': 'true' }),
+    h(
+      'span',
+      { class: 'cal-google-label' },
+      'Google',
+      h('span', { class: 'cal-google-word' }, ' Kalender'),
+    ),
+  );
+}
+
+function openGoogle() {
+  const body = h('div', { class: 'mn-sheet-body cal-manage' });
+  const foot = h('div', { class: 'mn-sheet-foot' });
+  const state = S.google;
+  const pushed = new Set(state?.pushSources ?? []);
+  const calendarsOn = Object.fromEntries((state?.calendars ?? []).map((c) => [c.id, c.enabled]));
+  // whoever opens this wants the sync: switched on, with the personal calendar preselected
+  let enabled = true;
+  if (!state?.enabled && pushed.size === 0) {
+    const personal = S.collections.find((c) => c.personal && c.family === 'kalender');
+    if (personal) pushed.add(`col:${personal.id}`);
+  }
+  const check = (label, sub, checked, onchange) => {
+    const input = h('input', { type: 'checkbox', checked });
+    input.addEventListener('change', () => onchange(input.checked));
+    return h('label', {}, input, h('span', {}, label, sub ? h('small', {}, sub) : null));
+  };
+
+  if (!state || !state.available) {
+    body.append(h('p', { class: 'mn-note' }, googleErrorText('google_not_configured')));
+  } else if (!state.connected || !state.scopeOk) {
+    body.append(
+      h(
+        'p',
+        {},
+        googleErrorText(state.connected ? 'google_scope_missing' : 'google_not_connected'),
+      ),
+      h('a', { class: 'mn-btn mn-btn--primary', href: state.connectUrl }, 'Google verbinden'),
+    );
+  } else {
+    const own = S.sources.filter((s) => s.group === 'Kalender' || s.group === 'Apps');
+    const master = h(
+      'div',
+      { class: 'mn-checks' },
+      check(
+        'Mit Google Kalender abgleichen',
+        state.email ? `Konto ${state.email}` : null,
+        enabled,
+        (v) => {
+          enabled = v;
+          choices.hidden = !v;
+        },
+      ),
+    );
+    const choices = h(
+      'div',
+      { class: 'cal-manage' },
+      h(
+        'section',
+        { class: 'cal-manage-sect' },
+        h('div', { class: 'mn-sect' }, h('h2', {}, 'In Google zeigen')),
+        h(
+          'p',
+          { class: 'mn-note' },
+          'Diese Quellen erscheinen in Google im Kalender „MiniNode“. Deine eigenen Termine kannst du dort auch ändern; Termine anderer Apps änderst du in der App.',
+        ),
+        own.length
+          ? h(
+              'div',
+              { class: 'mn-checks' },
+              own.map((source) =>
+                check(
+                  source.name,
+                  source.group === 'Apps' ? 'aus einer App' : null,
+                  pushed.has(source.id),
+                  (v) => {
+                    if (v) pushed.add(source.id);
+                    else pushed.delete(source.id);
+                  },
+                ),
+              ),
+            )
+          : h('p', { class: 'mn-note' }, 'Noch keine Quellen.'),
+      ),
+      h(
+        'section',
+        { class: 'cal-manage-sect' },
+        h('div', { class: 'mn-sect' }, h('h2', {}, 'Aus Google zeigen')),
+        state.calendars.length
+          ? h(
+              'div',
+              { class: 'mn-checks' },
+              state.calendars.map((c) =>
+                check(c.name, c.writable ? null : 'nur ansehen', c.enabled, (v) => {
+                  calendarsOn[c.id] = v;
+                }),
+              ),
+            )
+          : h(
+              'p',
+              { class: 'mn-note' },
+              'Nach dem ersten Abgleich stehen hier deine Google-Kalender. Sie erscheinen in MiniNode, Änderungen gehen in beide Richtungen.',
+            ),
+      ),
+    );
+    choices.hidden = !enabled;
+    const status = state.enabled
+      ? state.status === 'error'
+        ? h(
+            'div',
+            { class: 'mn-banner mn-banner--bad', role: 'alert' },
+            googleErrorText(state.error),
+          )
+        : h(
+            'p',
+            { class: 'mn-note' },
+            state.lastSyncAt
+              ? `Zuletzt abgeglichen ${F.day.format(new Date(state.lastSyncAt))} um ${F.time.format(new Date(state.lastSyncAt))}. Danach alle fünf Minuten und nach jeder Änderung.`
+              : 'Der erste Abgleich läuft.',
+          )
+      : null;
+    body.append(master, status, choices);
+    let saving = false;
+    const save = async () => {
+      if (saving) return;
+      saving = true;
+      try {
+        const mn = await ready;
+        await mn.google.calendarSync.set({
+          enabled,
+          pushSources: [...pushed],
+          calendars: calendarsOn,
+        });
+        window.mnui.sheet.close();
+        toast(enabled ? 'Google-Abgleich eingeschaltet' : 'Google-Abgleich ausgeschaltet');
+        await loadGoogle();
+        if (enabled) setTimeout(() => void loadGoogle({ sync: true }), 1500);
+        else await load({ meta: true });
+      } catch (err) {
+        toast(err?.message || 'Speichern hat nicht geklappt.');
+      } finally {
+        saving = false;
+      }
+    };
+    foot.append(
+      h('span', { class: 'mn-grow' }),
+      h(
+        'button',
+        { type: 'button', class: 'mn-btn mn-btn--primary', onclick: () => void save() },
+        'Speichern',
+      ),
+    );
+  }
+  window.mnui.sheet.open(
+    frag(
+      h(
+        'div',
+        { class: 'mn-sheet-bar' },
+        h(
+          'button',
+          { type: 'button', class: 'mn-btn mn-btn--ghost', 'data-mn-close': true },
+          'Schließen',
+        ),
+        h('h2', {}, 'Google Kalender'),
+        h('span', {}),
+      ),
+      body,
+      foot.children.length ? foot : null,
+    ),
+    { tall: true, modal: true, label: 'Google Kalender' },
+  );
+}
+
 // ---------- keyboard ----------
 const SHORTCUTS = [
   ['T', 'Heute'],
@@ -2482,3 +2731,4 @@ document.addEventListener('visibilitychange', () => {
 render();
 const firstLoad = load({ meta: true });
 void firstLoad.then(() => syncReminders());
+void firstLoad.then(() => loadGoogle({ sync: true }));

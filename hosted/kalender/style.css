@@ -571,3 +571,31 @@
     padding: 0 var(--mn-s2);
   }
 }
+
+/* Google Kalender button in the header: a dot shows whether the sync is on */
+.cal-google {
+  gap: var(--mn-s2);
+  min-height: var(--mn-tap);
+}
+.cal-google-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 2px var(--mn-line-strong);
+}
+.cal-google.is-on .cal-google-dot {
+  background: var(--mn-ok);
+  box-shadow: none;
+}
+.cal-google .cal-google-dot.is-error {
+  background: var(--mn-bad);
+  box-shadow: none;
+}
+.cal-google-label {
+  white-space: nowrap;
+}
+@media (max-width: 639px) {
+  .cal-google-word {
+    display: none;
+  }
+}
