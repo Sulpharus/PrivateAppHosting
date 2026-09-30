@@ -13,6 +13,7 @@ const LINKS: [string, string][] = [
   ['/admin/nucbox', 'NucBox'],
   ['/admin/ai', 'KI-Proxy'],
   ['/admin/api-keys', 'API-Schlüssel'],
+  ['/admin/suite', 'Gemeinsame Daten'],
   ['/admin/workshop', 'KI-Werkstatt'],
 ];
 

@@ -1,6 +1,6 @@
 # ADR 0002: Suite data, shared collections and app permissions
 
-- Status: accepted (phase 1 implemented)
+- Status: accepted (phase 1 and a lean phase 4 implemented)
 - Date: 2026-09-28
 
 ## Context
@@ -147,3 +147,35 @@ Every write returns `{ record, merged, rejectedFields }`, so apps can show confl
 - PostGIS and pg_jsonschema must be enabled on both Supabase projects. Both are available
   on the free plan [?] verify before phase 2.
 - The type catalog is in `docs/suite/data-types.md`. The build order is in ADR 0003.
+
+## Implementation notes (lean phase 4, 2026-09-30)
+
+The suite core exists in migration `20260930082805_suite_core`, built for the calendar.
+- **Registry:** `platform.record_types` holds `event`, `task`, `reminder` and `project`
+  (stage 1), plus `activity`, `contract` and `transaction` for Sportplaner and Haushalt. Each
+  type has a JSON Schema checked with `pg_jsonschema`, identity keys, and a calendar
+  projection (`span` or `due`).
+- **Places:** stored as `lat`/`lon` plus `place_name` instead of PostGIS, until a map needs
+  spatial queries.
+- **Collections:** personal ones per family (`kalender`, `aufgaben`, `sport`, `finanzen`) are
+  created on first use, plus shared ones with the roles owner, editor and viewer.
+- **Permissions:**
+  - deploys register `suite.uses` (`register_app_suite`);
+  - the admin approves under *Verwaltung → Gemeinsame Daten* (`admin_suite_grant`, never more
+    than requested) and orders the writers per type (`admin_suite_priority`);
+  - lowering a request lowers the grant.
+- **Reading and writing:**
+  - reading goes through RLS on `platform.records`;
+  - writing goes only through `suite_upsert` and `suite_delete`, which merge by source key or
+    identity keys and keep `field_sources`;
+  - an app with only `create` on a type fills empty fields of other apps' records but does not
+    overwrite them;
+  - a field another app with higher priority wrote last stays, and is reported in
+    `rejectedFields`.
+- **Deleting:** deleted records stay 30 days in the bin; the API cron removes them for good.
+- **Not built yet:**
+  - `record_links`;
+  - files per record;
+  - realtime subscriptions;
+  - the conflict log;
+  - collection management in *Dein Konto*. Apps manage collections through `mn.suite` for now.

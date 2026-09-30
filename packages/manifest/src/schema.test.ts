@@ -115,6 +115,20 @@ describe('google', () => {
   });
 });
 
+describe('suite', () => {
+  it('accepts requests for known types, once each', () => {
+    const uses = [{ type: 'event', access: 'write', why: 'Termine' }];
+    expect(parseManifest({ ...spa, suite: { uses } }).ok).toBe(true);
+    expect(parseManifest({ ...spa, suite: { uses: [...uses, ...uses] } }).ok).toBe(false);
+    expect(
+      parseManifest({ ...spa, suite: { uses: [{ type: 'secret', access: 'read', why: 'x' }] } }).ok,
+    ).toBe(false);
+    expect(
+      parseManifest({ ...spa, suite: { uses: [{ type: 'event', access: 'admin', why: 'x' }] } }).ok,
+    ).toBe(false);
+  });
+});
+
 describe('game', () => {
   it('accepts a game block and fills defaults', () => {
     const result = parseManifest({

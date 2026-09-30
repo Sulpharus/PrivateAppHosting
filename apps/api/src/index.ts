@@ -162,7 +162,16 @@ export default {
         console.error(JSON.stringify({ event: 'push_delivery_failed', error: String(error) })),
       ),
     );
-    if (new Date(controller.scheduledTime).getUTCMinutes() % 5 === 0)
-      ctx.waitUntil(maintenance(env));
+    const at = new Date(controller.scheduledTime);
+    if (at.getUTCMinutes() % 5 === 0) ctx.waitUntil(maintenance(env));
+    // Once a day: suite records deleted more than 30 days ago are removed for good.
+    if (at.getUTCHours() === 3 && at.getUTCMinutes() === 30)
+      ctx.waitUntil(
+        (async () => {
+          const { error } = await adminClient(env).schema('platform').rpc('suite_purge_bin');
+          if (error)
+            console.error(JSON.stringify({ event: 'suite_purge_failed', error: error.message }));
+        })(),
+      );
   },
 } satisfies ExportedHandler<ApiEnv>;
