@@ -121,29 +121,34 @@ export function stageAssets(appDir: string, manifest: Manifest): string {
 async function exposeLocally(databaseUrl: string, schema: string): Promise<void> {
   const sql = postgres(databaseUrl, { max: 1, onnotice: () => {} });
   try {
-    const [row] = await sql<{ schemas: string | null }[]>`
-      select coalesce(
-        (select split_part(c, '=', 2) from pg_db_role_setting s
-           join pg_roles r on r.oid = s.setrole, unnest(s.setconfig) c
-          where r.rolname = 'authenticator' and c like 'pgrst.db_schemas=%'),
-        'public,graphql_public,platform') as schemas`;
-    const current = row?.schemas ?? '';
-    const candidates = schemaList(current, schema, null);
-    const existing = new Set(
-      (
-        await sql<{ nspname: string }[]>`
-          select nspname from pg_namespace where nspname = any(${candidates})`
-      ).map((r) => r.nspname),
-    );
-    const next = schemaList(current, schema, existing);
-    if (next.join(',') === schemaList(current, '', null).join(',')) return;
-    // ALTER ROLE takes no bind parameters; let Postgres quote the value.
-    const [quoted] = await sql<{ q: string }[]>`select quote_literal(${next.join(',')}) as q`;
-    if (!quoted) return;
-    await sql.unsafe(`alter role authenticator set pgrst.db_schemas = ${quoted.q}`);
-    await sql`notify pgrst, 'reload config'`;
-    // A new config alone does not rebuild the schema cache: the new schema's tables stay unknown.
-    await sql`notify pgrst, 'reload schema'`;
+    // Several local apps start at once (e2e): without the lock, two read-modify-writes of the
+    // setting race and one app's schema is lost. Notifications go out on commit.
+    await sql.begin(async (tx) => {
+      await tx`select pg_advisory_xact_lock(hashtext('mininode:pgrst.db_schemas'))`;
+      const [row] = await tx<{ schemas: string | null }[]>`
+        select coalesce(
+          (select split_part(c, '=', 2) from pg_db_role_setting s
+             join pg_roles r on r.oid = s.setrole, unnest(s.setconfig) c
+            where r.rolname = 'authenticator' and c like 'pgrst.db_schemas=%'),
+          'public,graphql_public,platform') as schemas`;
+      const current = row?.schemas ?? '';
+      const candidates = schemaList(current, schema, null);
+      const existing = new Set(
+        (
+          await tx<{ nspname: string }[]>`
+            select nspname from pg_namespace where nspname = any(${candidates})`
+        ).map((r) => r.nspname),
+      );
+      const next = schemaList(current, schema, existing);
+      if (next.join(',') === schemaList(current, '', null).join(',')) return;
+      // ALTER ROLE takes no bind parameters; let Postgres quote the value.
+      const [quoted] = await tx<{ q: string }[]>`select quote_literal(${next.join(',')}) as q`;
+      if (!quoted) return;
+      await tx.unsafe(`alter role authenticator set pgrst.db_schemas = ${quoted.q}`);
+      await tx`notify pgrst, 'reload config'`;
+      // A new config alone does not rebuild the schema cache: the new schema's tables stay unknown.
+      await tx`notify pgrst, 'reload schema'`;
+    });
   } finally {
     await sql.end();
   }
