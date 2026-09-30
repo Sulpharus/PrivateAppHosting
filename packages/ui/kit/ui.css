@@ -152,6 +152,10 @@
   --mn-cat-gray: #5b646c;
   --mn-cat-gray-soft: #eceee9;
   --mn-cat-gray-text: #3f474e;
+  /* chart series (validated for colour-vision deficiency on the surfaces; slot order is fixed) */
+  --mn-chart-1: #2a78d6;
+  --mn-chart-2: #eb6834;
+  --mn-chart-3: #1baf7a;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
@@ -176,6 +180,9 @@
     --mn-cat-gray: #9ba4ab;
     --mn-cat-gray-soft: #1f2427;
     --mn-cat-gray-text: #c3cad0;
+    --mn-chart-1: #3987e5;
+    --mn-chart-2: #d95926;
+    --mn-chart-3: #199e70;
   }
 }
 :root[data-theme="dark"] {
@@ -200,6 +207,9 @@
   --mn-cat-gray: #9ba4ab;
   --mn-cat-gray-soft: #1f2427;
   --mn-cat-gray-text: #c3cad0;
+  --mn-chart-1: #3987e5;
+  --mn-chart-2: #d95926;
+  --mn-chart-3: #199e70;
 }
 [data-cat="green"] {
   --mn-cat: var(--mn-cat-green);

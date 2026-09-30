@@ -78,6 +78,8 @@ export function cleanBooking(raw, fields) {
   )
     b.receipt = raw.receipt.slice(0, 200);
   if (raw.source === 'import' || raw.source === 'rec') b.source = raw.source;
+  // the fixed cost (standing order) this booking pays, found on import or booked by it
+  if (typeof raw.rec === 'string' && /^[\w-]{1,60}$/.test(raw.rec)) b.rec = raw.rec;
   return b;
 }
 
@@ -97,6 +99,19 @@ export function cleanSettings(raw, fields) {
     .map((r) => ({ match: str(r.match, 200), cat: str(r.cat, 60) }));
   return { categories, rules };
 }
+
+/** Kinds of fixed costs, for grouping and statistics. */
+export const FIXED_TYPES = {
+  wohnen: 'Wohnen',
+  abo: 'Abos und Verträge',
+  versicherung: 'Versicherungen',
+  mobilitaet: 'Mobilität',
+  kredit: 'Kredite',
+  ruecklage: 'Rücklagen und Sparen',
+  spende: 'Spenden und Beiträge',
+  einnahme: 'Regelmäßige Einnahmen',
+  sonstiges: 'Sonstiges',
+};
 
 export function cleanRecurring(raw) {
   if (
@@ -119,7 +134,24 @@ export function cleanRecurring(raw) {
     start: raw.start,
     end: isMonth(raw.end) ? raw.end : '',
     until: isMonth(raw.until) ? raw.until : '',
+    type: raw.type in FIXED_TYPES ? raw.type : raw.kind === 'income' ? 'einnahme' : 'sonstiges',
+    // words that identify its payments in a bank import ("NETFLIX|NETFLIX.COM")
+    match: str(raw.match, 200),
+    // price changes: from this month on, this amount
+    changes: (Array.isArray(raw.changes) ? raw.changes : [])
+      .filter((c) => c && isMonth(c.from) && cents(c.cents) !== null)
+      .map((c) => ({ from: c.from, cents: c.cents }))
+      .sort((a, b) => a.from.localeCompare(b.from))
+      .slice(-24),
+    note: str(raw.note, 300),
   };
+}
+
+/** The amount a fixed cost has in a month (its latest price change up to then). */
+export function amountFor(rec, month) {
+  let amount = rec.cents;
+  for (const c of rec.changes ?? []) if (c.from <= month) amount = c.cents;
+  return amount;
 }
 
 export function cleanProfile(raw) {
@@ -182,12 +214,13 @@ export function dueRecurring(rec, today) {
       booking: {
         id: `r-${rec.id}-${month}`,
         date,
-        cents: rec.cents,
+        cents: amountFor(rec, month),
         kind: rec.kind,
         cat: rec.cat,
         text: rec.text,
         party: '',
         source: 'rec',
+        rec: rec.id,
       },
     });
   });

@@ -95,6 +95,13 @@ Light: `--mn-accent-ink` is `#ffffff` for every accent.
 
 Status colours are never used as the accent, and the accent never means "good" or "bad".
 
+### Chart series (`--mn-chart-1` to `--mn-chart-3`)
+
+Series colours for charts, in this fixed order (blue, orange, green), validated for
+colour-vision deficiency on both surfaces. Never cycle them or use a status colour for a
+series; past three series, fold the rest into "Sonstige". The light green is below 3:1 on
+white, so every chart with it shows its values in the legend or offers a table view.
+
 ### Category colours (`data-cat`)
 
 For things users colour themselves (calendars, labels, sources), put

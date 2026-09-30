@@ -13,14 +13,27 @@ tax form tables, budget inputs, print).
 - **Buchungen:** expenses, income and transfers (savings, not counted as spending), with
   category, payee, an optional receipt (image or PDF in `mn.files`, `belege/<year>/…`) and an
   optional tax override per booking.
-- **Kontoauszug importieren:** CSV exports of German banks (semicolon, `1.234,56`,
-  `24.09.2026`, account info above the header, UTF-8 or Windows-1252). Columns are detected and
-  can be corrected. Rules ("contains REWE|EDEKA → Lebensmittel") assign categories. Re-importing
-  the same file skips what is already there: every imported booking has a key derived from its
-  content.
-- **Daueraufträge:** rent, insurance or salary are booked automatically when the app opens,
-  back to the first month if needed. Ids are deterministic, so two devices never book twice.
-- **Budget:** monthly budget per category with spent, remaining and overspending.
+- **Kontoauszug importieren:** as PDF (the statement from the online bank; pdf.js in
+  `vendor/pdfjs` reads it in the browser, `statement.js` finds the bookings: dates without a
+  year, continuation lines, trailing signs, S/H marks, Soll/Haben columns) or as CSV (semicolon,
+  `1.234,56`, `24.09.2026`, account info above the header, UTF-8 or Windows-1252). Columns are
+  detected and can be corrected. Rules ("contains REWE|EDEKA → Lebensmittel") assign
+  categories. Re-importing the same file skips what is already there: every imported booking has
+  a key derived from its content. Scanned PDFs have no text; use the CSV export then.
+- **Planung → Fixkosten:** rent, subscriptions, insurance, savings, donations, loans and regular
+  income, grouped, with the monthly equivalent of quarterly or yearly amounts. Each has a first
+  and a last payment (cancelled or limited), price changes that apply from a month on, and words
+  that recognise its payments in a bank import. A recognised payment replaces the automatic
+  booking of that month; a different amount is flagged (Übersicht and Planung) and can be
+  adopted as the new price. Due payments are booked when the app opens, back to the first month
+  if needed; ids are deterministic, so two devices never book twice.
+- **Planung → Budgets:** monthly budget per category with spent, remaining and overspending.
+- **Dein Monat (Übersicht):** income (booked, or at least the regular income) minus fixed costs
+  and savings is what is free this month; a bar shows what is spent against where it should be
+  by today, and what is still free per day. Without income it uses the budgets.
+- **Statistik:** per year: average income and spending, fixed-cost and savings rate, income next
+  to fixed and other spending per month (with a table), categories against the year before,
+  fixed costs by kind, largest payees. Colours are the kit's `--mn-chart-*` series.
 - **Übersicht:** income, expenses, surplus, savings rate, spending by category, year chart.
 - **Steuer:** every booking whose category (or override) has a tax field lands in a filled
   form view, one card per form: Anlage N (Werbungskosten, plus Entfernungspauschale and
@@ -44,7 +57,7 @@ in the yearly details).
 ## Data
 
 `mn.kv`, private: `settings` (categories, budgets, rules), `tx:<date>:<id>` per booking,
-`rec:<id>` per standing order, `profile:<year>` for the tax details. *Einstellungen → Daten*
+`rec:<id>` per fixed cost, `profile:<year>` for the tax details. *Einstellungen → Daten*
 exports and imports a JSON backup (receipts are not included) and a CSV per year.
 
 ## Check
