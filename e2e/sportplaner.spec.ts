@@ -109,7 +109,7 @@ test('sportplaner stores activities with photos per user', async ({ browser }) =
   await other.getByRole('button', { name: 'Bibliothek' }).click();
   await expect(other.getByRole('heading', { name: '42', exact: true })).toBeVisible();
   await other.getByRole('button', { name: 'Statistik' }).click();
-  await expect(other.getByRole('button', { name: /Karte/ })).toBeVisible();
+  await expect(other.locator('.prow', { hasText: 'Karte' })).toBeVisible();
   expect(otherErrors).toEqual([]);
 });
 
@@ -194,5 +194,69 @@ test('a course plans every session; cancelled sessions count nowhere', async ({ 
       past ? `Teilnahme: 0 von ${past} geplanten Terminen` : 'Teilnahme an geplanten Terminen',
     ),
   ).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
+test('addresses are checked and shown on the map', async ({ browser }) => {
+  const nora = `${run}-nora@example.com`;
+  await createUser(nora, 'user', 'Nora');
+  const page = await (await browser.newContext()).newPage();
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  // Address search and map tiles are faked: the test needs no internet.
+  await page.route('**/proxy/nominatim/**', (route) => {
+    const cors = {
+      'access-control-allow-origin': APP,
+      'access-control-allow-credentials': 'true',
+      'access-control-allow-headers': 'authorization, content-type',
+      'access-control-allow-methods': 'GET, OPTIONS',
+    };
+    if (route.request().method() === 'OPTIONS')
+      return route.fulfill({ status: 204, headers: cors });
+    const q = new URL(route.request().url()).searchParams.get('q') ?? '';
+    const hits = q.startsWith('Nirgendwo')
+      ? []
+      : [
+          {
+            lat: '48.1731',
+            lon: '11.5465',
+            display_name: 'Olympiapark, 80809 München, Deutschland',
+          },
+        ];
+    return route.fulfill({ json: hits, headers: cors });
+  });
+  await page.route('https://tile.openstreetmap.org/**', (route) =>
+    route.fulfill({ contentType: 'image/png', body: PNG }),
+  );
+  await page.goto(APP);
+  await page.getByLabel('E-Mail').fill(nora);
+  await page.getByLabel('Passwort', { exact: true }).fill(PASSWORD);
+  await page.getByRole('button', { name: 'Anmelden', exact: true }).click();
+  await expect(page.getByText('Deine Bibliothek ist leer')).toBeVisible();
+
+  await page.getByRole('button', { name: 'Aktivität hinzufügen' }).first().click();
+  const dialog = page.getByRole('dialog');
+  await dialog.getByLabel('Name').fill('Beachvolleyball');
+  await dialog.getByRole('button', { name: '4 Details' }).click();
+  // An address that does not exist blocks saving.
+  await dialog.getByLabel('Adresse').fill('Nirgendwo 999');
+  await dialog.getByRole('button', { name: 'Anlegen', exact: true }).click();
+  await expect(
+    dialog.getByText('Diese Adresse wurde nicht gefunden.', { exact: false }),
+  ).toBeVisible();
+  await dialog.getByLabel('Adresse').fill('Spiridon-Louis-Ring 21, München');
+  await dialog.getByRole('button', { name: 'Adresse jetzt prüfen' }).click();
+  await expect(dialog.getByText('Gefunden: Olympiapark, 80809 München')).toBeVisible();
+  await dialog.getByRole('button', { name: 'Anlegen', exact: true }).click();
+  await expect(
+    page.getByRole('dialog').getByRole('heading', { name: 'Beachvolleyball' }),
+  ).toBeVisible();
+
+  // From the detail view straight to its pin on the map.
+  await page.getByRole('dialog').getByRole('button', { name: 'Auf der Karte zeigen' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Karte' })).toBeVisible();
+  await expect(page.getByText('1 Angebot mit Adresse')).toBeVisible();
+  await expect(page.locator('.pin')).toHaveCount(1);
+  await expect(page.locator('.map-pop').getByText('Beachvolleyball')).toBeVisible();
   expect(errors).toEqual([]);
 });

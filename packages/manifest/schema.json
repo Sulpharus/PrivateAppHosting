@@ -260,6 +260,84 @@
         "additionalProperties": false
       }
     },
+    "game": {
+      "type": "object",
+      "properties": {
+        "genre": {
+          "type": "string",
+          "enum": [
+            "puzzle",
+            "arcade",
+            "karten",
+            "brett",
+            "quiz",
+            "wort",
+            "strategie",
+            "sonstiges"
+          ]
+        },
+        "players": {
+          "default": "solo",
+          "type": "string",
+          "enum": [
+            "solo",
+            "multi",
+            "both"
+          ]
+        },
+        "stats": {
+          "default": [],
+          "maxItems": 6,
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]{0,30}$"
+              },
+              "label": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 30
+              },
+              "better": {
+                "default": "higher",
+                "type": "string",
+                "enum": [
+                  "higher",
+                  "lower"
+                ]
+              },
+              "format": {
+                "default": "number",
+                "type": "string",
+                "enum": [
+                  "number",
+                  "seconds"
+                ]
+              },
+              "min": {
+                "default": 0,
+                "type": "number"
+              },
+              "max": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "id",
+              "label"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "genre"
+      ],
+      "additionalProperties": false
+    },
     "build": {
       "type": "object",
       "properties": {

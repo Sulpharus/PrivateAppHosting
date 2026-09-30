@@ -14,7 +14,8 @@
       "!supabase/.temp",
       "!packages/manifest/schema.json",
       "!fixtures/*/input",
-      "!graphify-out"
+      "!graphify-out",
+      "!hosted/*/vendor"
     ]
   },
   "formatter": {

@@ -4,6 +4,7 @@ import { useAuth } from '../auth/AuthProvider.tsx';
 import {
   AppsIcon,
   ExternalIcon,
+  GamepadIcon,
   ScreenIcon,
   ServerIcon,
   SharedIcon,
@@ -111,6 +112,7 @@ export function Home() {
     [apps],
   );
   const bySlug = useMemo(() => new Map(webApps.map((app) => [app.slug, app])), [webApps]);
+  const gameCount = webApps.filter((app) => app.game_genre).length;
 
   const matchesQuery = (app: AppRow) => {
     const q = query.trim().toLowerCase();
@@ -203,6 +205,13 @@ export function Home() {
               {greeting()}, {profile?.displayName ?? ''}.
             </h1>
           </div>
+          {gameCount > 0 && (
+            <Link to="/games" className="button hub-link">
+              <GamepadIcon />
+              Gaming Hub
+              <span className="count">{gameCount}</span>
+            </Link>
+          )}
           {apps && (
             <div className="status-pill" role="status">
               <span className="dot" style={{ color: down.length ? 'var(--warn)' : 'var(--ok)' }} />
@@ -394,6 +403,12 @@ export function Home() {
             <ScreenIcon />
             Remote
           </a>
+        )}
+        {gameCount > 0 && (
+          <Link to="/games">
+            <GamepadIcon />
+            Spiele
+          </Link>
         )}
         {profile?.role === 'admin' && (
           <Link to="/admin">

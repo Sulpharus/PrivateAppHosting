@@ -44,6 +44,7 @@ function openEditor(a) {
   if (draft.planned.mode !== 'none' && !draft.planned.season)
     draft.planned.season = planSeason(draft.planned) || { type: 'all' };
   draft.thumbs = draft.thumbs || {};
+  draft._addrAtOpen = (draft.address || '').trim();
   draft.courseRows = draft.course
     ? draft.slots
         .filter((s) => s.kind === 'weekly')
@@ -148,7 +149,8 @@ function openEditor(a) {
     <div class="step" data-step="3" hidden>
       <fieldset><legend>Ort</legend>
         <label class="f">Ort<input name="location" value="${v('location')}" placeholder="z. B. Olympiapark, Platz 3"></label>
-        <label class="f">Adresse<input name="address" value="${v('address')}" placeholder="Straße, Ort"></label>
+        <label class="f">Adresse<input name="address" value="${v('address')}" placeholder="Straße Hausnummer, PLZ Ort" autocomplete="street-address"></label>
+        <div id="geobox" class="geobox" aria-live="polite"></div>
       </fieldset>
       <fieldset><legend>Kosten und Vorbereitung</legend>
         <div class="two"><label class="f">Preis pro Besuch in €<input name="visitPrice" inputmode="decimal" value="${+draft.visitPrice > 0 ? esc(numF.format(draft.visitPrice)) : ''}" placeholder="0,00" autocomplete="off"></label>
@@ -172,6 +174,7 @@ function openEditor(a) {
   );
   renderSlots();
   renderCourse();
+  renderGeo();
   renderPhotos();
   renderPlanned();
   renderAvail();
@@ -822,7 +825,28 @@ const normUrl = (u) => (u && !/^https?:\/\//i.test(u) ? 'https://' + u : u);
 const dropAsset = (r) => {
   if (r && !r.startsWith('data:')) ready.then((mn) => mn.files.remove(r)).catch(() => {});
 };
+let saving = false;
+/* one save at a time: the address check can take a few seconds */
 async function saveDraft() {
+  if (saving) return;
+  saving = true;
+  const btn = $('[data-action=save]'),
+    label = btn ? btn.textContent : '';
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Wird gespeichert …';
+  }
+  try {
+    await saveDraftNow();
+  } finally {
+    saving = false;
+    if (btn && btn.isConnected) {
+      btn.disabled = false;
+      btn.textContent = label;
+    }
+  }
+}
+async function saveDraftNow() {
   collectForm();
   const err = $('#err');
   const fail = (m, step) => {
@@ -909,6 +933,17 @@ async function saveDraft() {
   draft.website = normUrl(draft.website);
   for (const k of Object.keys(draft.thumbs)) if (!draft.photos.includes(k)) delete draft.thumbs[k];
   draft.updatedAt = Date.now();
+  // The address must exist (it puts the activity on the map); offline it is checked later.
+  // An address entered before the check existed does not block other edits.
+  const geoProblem = await checkDraftAddress();
+  const addrUnchanged = (draft.address || '').trim() === draft._addrAtOpen;
+  if (geoProblem === 'offline' || (geoProblem && addrUnchanged)) {
+    if (draft.geo && draft.geo.q !== (draft.address || '').trim()) draft.geo = null;
+    if (geoProblem === 'offline')
+      toast(
+        'Die Adresse konnte nicht geprüft werden. Prüfe sie später unter Karte → Adressen prüfen.',
+      );
+  } else if (geoProblem) return fail(geoProblem, 3);
   const memberOf = draft._memberOf || [];
   delete draft._memberOf;
   const act = { ...draft },
@@ -916,6 +951,8 @@ async function saveDraft() {
   delete act.blocks;
   delete act.singles;
   delete act.courseRows;
+  delete act._addrAtOpen;
+  if (!act.geo) delete act.geo;
   delete act._course;
   if (!act.course) delete act.course;
   try {

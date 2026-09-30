@@ -90,7 +90,7 @@ function detailBodyHTML(a, ds) {
     const q = encodeURIComponent([a.location, a.address].filter(Boolean).join(', '));
     facts.push([
       'Wo',
-      `${a.location ? `<p>${esc(a.location)}</p>` : ''}${a.address ? `<p class="muted">${esc(a.address)}</p>` : ''}<p><a href="https://www.google.com/maps/search/?api=1&query=${q}" target="_blank" rel="noopener">In Karten öffnen</a></p>`,
+      `${a.location ? `<p>${esc(a.location)}</p>` : ''}${a.address ? `<p class="muted">${esc(a.address)}</p>` : ''}<p>${geoFits(a) ? `<button type="button" class="link" data-action="map-show" data-id="${esc(a.id)}">Auf der Karte zeigen</button> · ` : ''}<a href="https://www.google.com/maps/search/?api=1&query=${q}" target="_blank" rel="noopener">In Google Maps öffnen</a></p>`,
     ]);
   }
   if (a.equipment && a.equipment.length)

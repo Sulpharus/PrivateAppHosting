@@ -6,6 +6,7 @@ import type { RealtimeChannel, SupabaseClient, User } from '@supabase/supabase-j
 import { type AiChatOptions, type AiMessage, createAi } from './ai.ts';
 import { createApi } from './api.ts';
 import { appSchema, loadConfig, type MininodeConfig } from './config.ts';
+import { createGame } from './game.ts';
 import { createGoogle } from './google.ts';
 import { createKv, type KvScope } from './kv.ts';
 import {
@@ -20,6 +21,7 @@ import { cookieSessionUserId } from './session-cookie.ts';
 
 export { ExternalApiError } from './api.ts';
 export { appSchema, assertConfig } from './config.ts';
+export type { GameOutcome, GameStats, LeaderboardRow } from './game.ts';
 export { GoogleError } from './google.ts';
 export type { PushOptions, PushStatus, ScheduledPush } from './push.ts';
 export type { AiChatOptions, AiMessage, KvScope, MininodeConfig };
@@ -70,6 +72,8 @@ export interface Mininode {
   notify(title: string, body?: string, url?: string): Promise<void>;
   /** Reminders delivered later, also with the app closed (ADR 0005). */
   readonly push: ReturnType<typeof createPush>;
+  /** Playtime, results, username and leaderboards for apps with a `game` block (ADR 0009). */
+  readonly game: ReturnType<typeof createGame>;
 }
 
 const FILE_BUCKET = 'app-files';
@@ -245,6 +249,7 @@ export function createMininode(config: MininodeConfig): Mininode {
     google: createGoogle(config, sessionToken),
     api: createApi(config, sessionToken),
     push: createPush(config, supabase),
+    game: createGame(config, supabase),
     async people() {
       const { data, error } = await supabase
         .schema('platform')
