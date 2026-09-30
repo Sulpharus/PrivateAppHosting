@@ -1,5 +1,5 @@
 begin;
-select plan(35);
+select plan(57);
 select tests.reset();
 
 select tests.create_user('admin@example.com', 'Wolfram') as admin_id \gset
@@ -123,6 +123,74 @@ select tests.as_app('kalender');
 select lives_ok(format($$select platform.suite_upsert('event', '{"title": "Kino", "starts_at": "2026-10-05T19:00:00Z"}', null, %L)$$, :'fam'),
   'editors write');
 
+-- Apps without access to a family see none of its collections.
+select tests.as_app('notes');
+select throws_ok($$select platform.personal_collection('kalender')$$, '42501', null,
+  'an app without access gets no collection');
+select is((select count(*)::int from platform.suite_collections()), 0, 'nor lists any');
+select is((select count(*)::int from platform.collections), 0, 'nor reads them');
+select throws_ok(format('select platform.collection_leave(%L)', :'fam'), '42501', null,
+  'nor leaves them');
+
+-- Members: never the owner, never a personal collection, only people on the platform.
+select tests.login(:'lena_id');
+select tests.as_app('kalender');
+select throws_ok(format($$select platform.collection_set_member(%L, %L, 'viewer')$$, :'fam', :'lena_id'),
+  '22023', 'owner_cannot_change', 'the owner stays owner');
+select throws_ok(format($$select platform.collection_set_member(%L, %L, 'owner')$$, :'fam', :'tom_id'),
+  '22023', 'invalid_role', 'there is one owner');
+select throws_ok(format($$select platform.collection_set_member(%L, gen_random_uuid(), 'viewer')$$, :'fam'),
+  '22023', 'unknown_user', 'members are people on the platform');
+select throws_ok(format($$select platform.collection_set_member(%L, %L, 'viewer')$$,
+  platform.personal_collection('kalender'), :'tom_id'), '42501', 'personal_collection',
+  'personal collections are not shared');
+
+-- Identity: all keys are needed to merge; the own app may still change a title's case.
+select is((platform.suite_upsert('event', '{"title": "Zahnarzt"}') ->> 'merged')::boolean, false,
+  'no merge without all identity keys');
+select platform.suite_upsert('event', '{"title": "ZAHNARZT"}', null, null, :'ev');
+select is((select title from platform.records where id = :'ev'), 'ZAHNARZT', 'case-only edits are kept');
+
+-- Source keys are per type; a stronger app with delete access deletes foreign records.
+select tests.as_app('sport');
+select (platform.suite_upsert('event', '{"title": "Kurs", "starts_at": "2026-10-06T18:00:00Z"}',
+  'act-1#2026-10-02') -> 'record' ->> 'id') as sev \gset
+select is((select count(*)::int from platform.records where source_key = 'act-1#2026-10-02'), 2,
+  'a source key is per type');
+select tests.as_app('kalender');
+select lives_ok(format('select platform.suite_delete(%L)', :'sev'),
+  'the stronger app deletes foreign records');
+
+-- A deleted source key comes back when the app writes it again.
+select tests.as_app('sport');
+select platform.suite_delete(:'act');
+select is(platform.suite_upsert('activity', '{"title": "Bouldern", "starts_at": "2026-10-02T18:00:00Z"}',
+  'act-1#2026-10-02') -> 'record' ->> 'id', :'act'::text, 'a deleted source key comes back');
+
+-- Two writing apps: the order the admin sets decides per field.
+select tests.logout();
+select platform.register_app_suite('notes', '[{"type": "activity", "access": "write", "why": "Notizen"}]');
+select tests.login(:'admin_id');
+select platform.admin_suite_grant('notes', 'activity', 'write');
+select platform.admin_suite_priority('activity', array['sport', 'notes']);
+select tests.login(:'lena_id');
+select tests.as_app('notes');
+select is(platform.suite_upsert('activity', '{"title": "Klettern", "data": {"notes": "Halle"}}', null, null,
+  :'act') -> 'rejectedFields', '["title"]'::jsonb, 'fields of a stronger app stay');
+select tests.login(:'admin_id');
+select platform.admin_suite_priority('activity', array['notes', 'sport']);
+select tests.login(:'lena_id');
+select tests.as_app('notes');
+select is(platform.suite_upsert('activity', '{"title": "Klettern"}', null, null, :'act')
+  -> 'rejectedFields', '[]'::jsonb, 'the stronger app overwrites');
+
+-- The matrix is for admins, and changes need a recent sign-in.
+select tests.as_app(null);
+select is((select count(*)::int from platform.admin_suite_matrix()), 0, 'others see an empty matrix');
+select tests.login(:'admin_id', 3600);
+select throws_ok($$select platform.admin_suite_grant('notes', 'activity', null)$$, '42501', null,
+  'granting needs a recent sign-in');
+
 -- Deleting: the bin.
 select tests.login(:'lena_id');
 select tests.as_app('kalender');
@@ -133,10 +201,28 @@ select isnt((select deleted_at from platform.records where id = :'famev'), null,
 update platform.records set deleted_at = now() - interval '31 days' where id = :'famev';
 select is(platform.suite_purge_bin(), 1, 'the bin is emptied after 30 days');
 
+-- Leaving: members go; the owner's shared collection goes to the bin with its records.
+select tests.login(:'tom_id');
+select tests.as_app('kalender');
+select platform.collection_leave(:'fam');
+select is((select count(*)::int from platform.records), 0, 'a member who leaves sees nothing');
+select tests.login(:'lena_id');
+select tests.as_app('kalender');
+select throws_ok(format('select platform.collection_leave(%L)', platform.personal_collection('kalender')),
+  '42501', 'personal_collection', 'the personal collection stays');
+select platform.collection_leave(:'fam');
+select is((select count(*)::int from platform.suite_collections('kalender') where id = :'fam'), 0,
+  'the owner deletes a shared collection');
+select tests.logout();
+select is((select count(*)::int from platform.records where collection_id = :'fam' and deleted_at is null),
+  0, 'its records go to the bin');
+
 -- Registering fewer rights lowers the grant.
 select platform.register_app_suite('sport', '[{"type": "activity", "access": "read", "why": "nur lesen"}]');
 select is((select array_agg(type || ':' || access order by type) from platform.app_type_grants where app_slug = 'sport'),
   array['activity:read'], 'grants follow the requests down');
+select is((select count(*)::int from platform.audit_log where action = 'suite.grant_lowered'
+  and app_slug = 'sport'), 2, 'lowered and dropped grants are audited');
 
 set local role anon;
 select throws_ok($$select * from platform.records$$, '42501', null, 'not for anonymous callers');

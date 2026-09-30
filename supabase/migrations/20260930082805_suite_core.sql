@@ -76,12 +76,15 @@ insert into platform.record_types (type, label, family, identity, calendar, sche
       "notes": {"type": "string", "maxLength": 10000},
       "priority": {"type": "integer", "minimum": 1, "maximum": 4},
       "all_day": {"type": "boolean"},
-      "recurrence": {"type": "object", "required": ["rrule"], "properties": {"rrule": {"type": "string"}}},
+      "recurrence": {"type": "object", "additionalProperties": false, "required": ["rrule"],
+        "properties": {"rrule": {"type": "string", "maxLength": 500}}},
       "checklist": {"type": "array", "maxItems": 200, "items": {"type": "object",
-        "properties": {"title": {"type": "string"}, "done": {"type": "boolean"}}}},
+        "additionalProperties": false,
+        "properties": {"title": {"type": "string", "maxLength": 500}, "done": {"type": "boolean"}}}},
       "project": {"type": "string", "format": "uuid"},
       "reminders": {"type": "array", "maxItems": 10, "items": {"type": "object",
-        "required": ["offset"], "properties": {"offset": {"type": "string"}}}}
+        "additionalProperties": false, "required": ["offset"],
+        "properties": {"offset": {"type": "string", "pattern": "^-?P"}}}}
     }}'),
   ('reminder', 'Erinnerung', 'aufgaben', '{}', 'due', '{
     "type": "object", "additionalProperties": false,
@@ -120,7 +123,9 @@ create table platform.collections (
   owner_id uuid not null references auth.users (id) on delete cascade,
   personal boolean not null default false,
   color text check (color ~ '^(blue|green|violet|amber|rose|teal|gray)$'),
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  -- a deleted shared collection keeps its records in the bin for 30 days
+  deleted_at timestamptz
 );
 create unique index collections_personal_key on platform.collections (owner_id, family) where personal;
 
@@ -149,7 +154,7 @@ create table platform.app_type_grants (
   type text not null references platform.record_types (type) on delete cascade,
   access text not null check (access in ('read', 'create', 'write', 'delete')),
   -- lower wins when two apps write the same field; set per type by the admin
-  priority integer not null default 100 check (priority between 1 and 1000),
+  priority integer not null default 1000 check (priority between 1 and 1000),
   granted_by uuid references auth.users (id) on delete set null,
   granted_at timestamptz not null default now(),
   primary key (app_slug, type)
@@ -183,10 +188,14 @@ create table platform.records (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   deleted_at timestamptz,
+  -- md5 of the normalised identity values (see identity_hash), for de-duplication
+  identity_hash text,
   check (ends_at is null or starts_at is null or ends_at >= starts_at)
 );
-create unique index records_source_key on platform.records (collection_id, source_app, source_key)
-  where source_key is not null;
+create unique index records_source_key
+  on platform.records (collection_id, source_app, type, source_key) where source_key is not null;
+create index records_identity_idx on platform.records (collection_id, type, identity_hash)
+  where deleted_at is null and identity_hash is not null;
 create index records_collection_type_idx on platform.records (collection_id, type);
 create index records_starts_idx on platform.records (collection_id, starts_at) where deleted_at is null;
 create index records_due_idx on platform.records (collection_id, due_at) where deleted_at is null;
@@ -219,6 +228,55 @@ as $$
   ), 0);
 $$;
 
+-- The calling app's best access level to any type of a family (collections are per family).
+create function platform.suite_family_access(p_family text) returns integer
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select coalesce(max(platform.access_level(g.access)), 0)
+  from platform.app_type_grants g
+  join platform.record_types t on t.type = g.type
+  where g.app_slug = (select platform.calling_app()) and t.family = p_family
+    and (select platform.has_grant(g.app_slug));
+$$;
+
+-- Collections the caller belongs to (not deleted), and the types the calling app may read:
+-- set-returning, so RLS evaluates each once per query instead of once per row.
+create function platform.my_collections() returns setof uuid
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select m.collection_id from platform.collection_members m
+  join platform.collections c on c.id = m.collection_id and c.deleted_at is null
+  where m.user_id = (select auth.uid());
+$$;
+
+create function platform.readable_types() returns setof text
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select g.type from platform.app_type_grants g
+  where g.app_slug = (select platform.calling_app()) and (select platform.has_grant(g.app_slug));
+$$;
+
+-- Collection APIs work from the portal (no app) or from an app with access to that family.
+create function platform.collection_gate(p_family text, p_level integer) returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select (select auth.uid()) is not null
+    and ((select platform.calling_app()) is null
+      or (select platform.suite_family_access(p_family)) >= p_level);
+$$;
+
 create function platform.collection_role(p_collection uuid) returns integer
 language sql
 stable
@@ -228,6 +286,7 @@ as $$
   select coalesce((
     select case m.role when 'viewer' then 1 when 'editor' then 2 when 'owner' then 3 end
     from platform.collection_members m
+    join platform.collections c on c.id = m.collection_id and c.deleted_at is null
     where m.collection_id = p_collection and m.user_id = (select auth.uid())
   ), 0);
 $$;
@@ -259,15 +318,17 @@ grant all on platform.collections, platform.collection_members, platform.app_typ
   platform.app_type_grants, platform.records to service_role;
 
 create policy collections_members on platform.collections for select to authenticated
-  using ((select platform.collection_role(id)) > 0);
+  using (id in (select platform.my_collections()) and platform.collection_gate(family, 1));
 create policy collection_members_members on platform.collection_members for select to authenticated
-  using ((select platform.collection_role(collection_id)) > 0);
+  using (collection_id in (select platform.my_collections())
+    and exists (select 1 from platform.collections c where c.id = collection_id
+      and platform.collection_gate(c.family, 1)));
 -- A record is readable by members of its collection, from an app with read access to its type.
 create policy records_read on platform.records for select to authenticated
   using (
     deleted_at is null
-    and (select platform.suite_access(type)) >= 1
-    and (select platform.collection_role(collection_id)) >= 1
+    and type in (select platform.readable_types())
+    and collection_id in (select platform.my_collections())
   );
 
 -- ---------- collections API ----------
@@ -282,8 +343,8 @@ declare
   v_id uuid;
   v_name text;
 begin
-  if (select auth.uid()) is null then
-    raise exception 'not signed in' using errcode = '42501';
+  if not (select platform.collection_gate(p_family, 1)) then
+    raise exception 'not allowed' using errcode = '42501';
   end if;
   select id into v_id from platform.collections
   where owner_id = (select auth.uid()) and family = p_family and personal;
@@ -329,7 +390,9 @@ as $$
   from platform.collections c
   join platform.collection_members m on m.collection_id = c.id and m.user_id = (select auth.uid())
   join platform.profiles p on p.user_id = c.owner_id
-  where p_family is null or c.family = p_family
+  where (p_family is null or c.family = p_family)
+    and c.deleted_at is null
+    and (select platform.collection_gate(c.family, 1))
   order by c.personal desc, c.name;
 $$;
 
@@ -342,11 +405,11 @@ as $$
 declare
   v_id uuid;
 begin
-  if (select auth.uid()) is null then
-    raise exception 'not signed in' using errcode = '42501';
-  end if;
   if not exists (select 1 from platform.collection_families where family = p_family) then
     raise exception 'unknown_family' using errcode = '22023';
+  end if;
+  if not (select platform.collection_gate(p_family, 2)) then
+    raise exception 'not allowed' using errcode = '42501';
   end if;
   if (select count(*) from platform.collections where owner_id = (select auth.uid())) >= 100 then
     raise exception 'too_many_collections' using errcode = '54000';
@@ -369,7 +432,9 @@ security definer
 set search_path = ''
 as $$
 begin
-  if (select platform.collection_role(p_collection)) < 3 then
+  if (select platform.collection_role(p_collection)) < 3
+     or not (select platform.collection_gate(
+       (select family from platform.collections where id = p_collection), 2)) then
     raise exception 'not allowed' using errcode = '42501';
   end if;
   if exists (select 1 from platform.collections where id = p_collection and personal) then
@@ -403,14 +468,18 @@ as $$
 declare
   v_role integer := (select platform.collection_role(p_collection));
 begin
-  if v_role = 0 then
+  if v_role = 0 or not (select platform.collection_gate(
+       (select family from platform.collections where id = p_collection), 2)) then
     raise exception 'not allowed' using errcode = '42501';
   end if;
   if v_role = 3 then
     if exists (select 1 from platform.collections where id = p_collection and personal) then
       raise exception 'personal_collection' using errcode = '42501';
     end if;
-    delete from platform.collections where id = p_collection;
+    -- into the bin: the collection and its records disappear now and are removed after 30 days
+    update platform.records set deleted_at = now()
+    where collection_id = p_collection and deleted_at is null;
+    update platform.collections set deleted_at = now() where id = p_collection;
   else
     delete from platform.collection_members
     where collection_id = p_collection and user_id = (select auth.uid());
@@ -431,6 +500,34 @@ as $$
     -- times compare as instants, whatever format the app sent
     when p_key in ('starts_at', 'ends_at', 'due_at') then to_jsonb((p_record ->> p_key)::timestamptz)
     else p_record -> p_key end;
+$$;
+
+-- A field's value for "did it change?": raw, with times compared as instants.
+create function platform.field_value(p_record jsonb, p_key text) returns jsonb
+language sql
+stable
+set search_path = ''
+as $$
+  select case when p_key like 'data.%' then p_record -> 'data' -> substr(p_key, 6)
+    when p_key in ('starts_at', 'ends_at', 'due_at') and p_record ->> p_key is not null
+      then to_jsonb((p_record ->> p_key)::timestamptz)
+    else p_record -> p_key end;
+$$;
+
+-- md5 of a record's identity values, or null when the type has none or one is missing.
+create function platform.identity_hash(p_type text, p_record jsonb) returns text
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select case when cardinality(t.identity) = 0 then null
+    when exists (select 1 from unnest(t.identity) k
+      where platform.identity_value(p_record, k) is null
+        or jsonb_typeof(platform.identity_value(p_record, k)) = 'null') then null
+    else md5((select jsonb_agg(platform.identity_value(p_record, k) order by k)
+      from unnest(t.identity) k)::text) end
+  from platform.record_types t where t.type = p_type;
 $$;
 
 -- Creates or updates a record. `p_fields` holds the common columns (title, starts_at, ends_at,
@@ -483,38 +580,45 @@ begin
     raise exception 'invalid_data' using errcode = '22023';
   end if;
 
-  -- find the record
+  -- find the record; ids of records the caller may not edit look like missing ones
   if p_id is not null then
     select * into v_existing from platform.records
-    where id = p_id and type = p_type and deleted_at is null for update;
+    where id = p_id and type = p_type and deleted_at is null
+      and collection_id in (select platform.my_collections())
+      and (select platform.collection_role(collection_id)) >= 2
+    for update;
     if not found then
       raise exception 'not_found' using errcode = 'P0002';
     end if;
     v_collection := v_existing.collection_id;
   else
     v_collection := coalesce(p_collection, (select platform.personal_collection(v_type.family)));
+    if (select platform.collection_role(v_collection)) < 2 then
+      raise exception 'not allowed' using errcode = '42501';
+    end if;
+    if (select family from platform.collections where id = v_collection)
+       is distinct from v_type.family then
+      raise exception 'wrong_collection' using errcode = '22023';
+    end if;
+    -- one writer at a time per collection and type, so duplicates cannot slip in
+    perform pg_advisory_xact_lock(hashtext(v_collection::text || ':' || p_type));
     if p_source_key is not null then
       select * into v_existing from platform.records
-      where collection_id = v_collection and source_app = v_app and source_key = p_source_key
+      where collection_id = v_collection and source_app = v_app and type = p_type
+        and source_key = p_source_key
       for update;
       -- a source key that was deleted comes back to life
     end if;
-    if v_existing.id is null and cardinality(v_type.identity) > 0 then
+    v_key := platform.identity_hash(p_type, p_fields);
+    if v_existing.id is null and v_key is not null then
       select r.* into v_existing
       from platform.records r
       where r.collection_id = v_collection and r.type = p_type and r.deleted_at is null
-        and not exists (
-          select 1 from unnest(v_type.identity) k
-          where platform.identity_value(to_jsonb(r), k)
-            is distinct from platform.identity_value(p_fields, k)
-        )
+        and r.identity_hash = v_key
       limit 1
       for update;
       v_merged := v_existing.id is not null;
     end if;
-  end if;
-  if (select platform.collection_role(v_collection)) < 2 then
-    raise exception 'not allowed' using errcode = '42501';
   end if;
 
   if v_existing.id is null then
@@ -539,12 +643,16 @@ begin
     loop
       v_owner := v_sources ->> v_key;
       -- an unchanged value (e.g. the identity keys of a merge) is neither written nor refused
-      if platform.identity_value(v_new, v_key) is not distinct from platform.identity_value(p_fields, v_key) then
+      if platform.field_value(v_new, v_key) is not distinct from platform.field_value(p_fields, v_key) then
+        continue;
+      end if;
+      -- a merge keeps the existing spelling of the identity keys it matched on
+      if v_merged and v_key = any (v_type.identity) and platform.identity_value(v_new, v_key)
+          is not distinct from platform.identity_value(p_fields, v_key) then
         continue;
       end if;
       if (v_foreign and v_level < 3 and platform.identity_value(v_new, v_key) is not null
-            and jsonb_typeof(platform.identity_value(v_new, v_key)) <> 'null'
-            and not (v_key = 'title' and v_merged))
+            and jsonb_typeof(platform.identity_value(v_new, v_key)) <> 'null')
          or (v_owner is not null and v_owner <> v_app
             and (select platform.suite_priority(v_owner, p_type)) < v_prio)
       then
@@ -571,13 +679,14 @@ begin
     insert into platform.records (
       type, collection_id, title, starts_at, ends_at, due_at, status, amount_cents, currency,
       place_name, lat, lon, data, source_app, source_key, created_by, created_by_app,
-      updated_by_app, field_sources
+      updated_by_app, field_sources, identity_hash
     ) values (
       p_type, v_collection, v_new ->> 'title', (v_new ->> 'starts_at')::timestamptz,
       (v_new ->> 'ends_at')::timestamptz, (v_new ->> 'due_at')::timestamptz, v_new ->> 'status',
       (v_new ->> 'amount_cents')::bigint, v_new ->> 'currency', v_new ->> 'place_name',
       (v_new ->> 'lat')::double precision, (v_new ->> 'lon')::double precision, v_new -> 'data',
-      v_app, p_source_key, (select auth.uid()), v_app, v_app, v_sources
+      v_app, p_source_key, (select auth.uid()), v_app, v_app, v_sources,
+      platform.identity_hash(p_type, v_new)
     ) returning * into v_row;
   else
     update platform.records set
@@ -587,11 +696,12 @@ begin
       currency = v_new ->> 'currency', place_name = v_new ->> 'place_name',
       lat = (v_new ->> 'lat')::double precision, lon = (v_new ->> 'lon')::double precision,
       data = v_new -> 'data', field_sources = v_sources, updated_by_app = v_app,
+      identity_hash = platform.identity_hash(p_type, v_new),
       version = version + 1, updated_at = now(), deleted_at = null
     where id = v_existing.id
     returning * into v_row;
   end if;
-  return jsonb_build_object('record', to_jsonb(v_row) - 'field_sources', 'merged', v_merged,
+  return jsonb_build_object('record', to_jsonb(v_row) - 'field_sources' - 'identity_hash', 'merged', v_merged,
     'rejectedFields', to_jsonb(v_rejected));
 end;
 $$;
@@ -607,7 +717,9 @@ declare
   v_app text := (select platform.calling_app());
   v_rec platform.records;
 begin
-  select * into v_rec from platform.records where id = p_id and deleted_at is null for update;
+  select * into v_rec from platform.records
+  where id = p_id and deleted_at is null and collection_id in (select platform.my_collections())
+  for update;
   if not found then
     raise exception 'not_found' using errcode = 'P0002';
   end if;
@@ -641,10 +753,19 @@ security definer
 set search_path = ''
 as $$
 begin
-  if coalesce(nullif(current_setting('request.jwt.claims', true), '')::json ->> 'role', '') <> 'service_role'
-     and current_user not in ('postgres', 'service_role') then
-    raise exception 'only deploys register suite requests' using errcode = '42501';
+  -- only the deploy (service role) may call this: see the grants at the end
+  if jsonb_typeof(p_uses) <> 'array' then
+    raise exception 'invalid_uses' using errcode = '22023';
   end if;
+  insert into platform.audit_log (app_slug, action, detail)
+  select p_slug, 'suite.grant_lowered', jsonb_build_object('type', g.type, 'from', g.access,
+    'to', r.access)
+  from platform.app_type_grants g
+  left join lateral (
+    select u ->> 'access' as access from jsonb_array_elements(p_uses) u where u ->> 'type' = g.type
+  ) r on true
+  where g.app_slug = p_slug
+    and (r.access is null or platform.access_level(r.access) < platform.access_level(g.access));
   delete from platform.app_type_requests r
   where r.app_slug = p_slug
     and not exists (select 1 from jsonb_array_elements(p_uses) u where u ->> 'type' = r.type);
@@ -737,10 +858,20 @@ set search_path = ''
 as $$
   with gone as (
     delete from platform.records where deleted_at < now() - interval '30 days' returning 1
+  ), cols as (
+    delete from platform.collections where deleted_at < now() - interval '30 days' returning 1
   )
-  select count(*)::integer from gone;
+  select (select count(*)::integer from gone) + (select count(*)::integer from cols);
 $$;
 
+revoke execute on function platform.suite_family_access(text), platform.my_collections(),
+  platform.readable_types(), platform.collection_gate(text, integer),
+  platform.field_value(jsonb, text), platform.identity_hash(text, jsonb)
+  from public, anon;
+grant execute on function platform.suite_family_access(text), platform.my_collections(),
+  platform.readable_types(), platform.collection_gate(text, integer),
+  platform.field_value(jsonb, text), platform.identity_hash(text, jsonb)
+  to authenticated;
 revoke execute on function platform.access_level(text), platform.suite_access(text),
   platform.collection_role(uuid), platform.suite_priority(text, text),
   platform.personal_collection(text), platform.suite_collections(text),

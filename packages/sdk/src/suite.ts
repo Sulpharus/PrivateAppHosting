@@ -83,12 +83,19 @@ export interface RangeQuery {
 const COLUMNS =
   'id, type, collection_id, title, starts_at, ends_at, due_at, status, amount_cents, currency, place_name, lat, lon, data, source_app, source_key, created_by, created_by_app, updated_by_app, version, created_at, updated_at';
 
+function instant(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) throw new RangeError(`range: invalid date ${value}`);
+  return date.toISOString();
+}
+
 /** PostgREST `or` filter for records in a time range (spans, due dates, recurring events). */
 export function rangeFilter(from: string, to: string): string {
-  const f = new Date(from).toISOString();
-  const t = new Date(to).toISOString();
+  const f = instant(from);
+  const t = instant(to);
+  if (f >= t) throw new RangeError('range: from must be before to');
   return [
-    `and(starts_at.lt.${t},ends_at.gte.${f})`,
+    `and(starts_at.lt.${t},ends_at.gt.${f})`,
     `and(starts_at.gte.${f},starts_at.lt.${t})`,
     `and(due_at.gte.${f},due_at.lt.${t})`,
     'data->recurrence.not.is.null',
@@ -141,7 +148,9 @@ export function createSuite(supabase: SupabaseClient) {
       let q = platform().from('records').select(COLUMNS).or(rangeFilter(query.from, query.to));
       if (query.types?.length) q = q.in('type', query.types);
       if (query.collections?.length) q = q.in('collection_id', query.collections);
-      const { data, error } = await q.order('starts_at', { ascending: true }).limit(5000);
+      const { data, error } = await q
+        .order('starts_at', { ascending: true, nullsFirst: true })
+        .limit(5000);
       if (error) throw error;
       return (data ?? []) as unknown as SuiteRecord[];
     },
