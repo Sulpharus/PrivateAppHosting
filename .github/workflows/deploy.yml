@@ -197,9 +197,13 @@ jobs:
           fi
           if [ "${{ inputs.all_apps }}" = "true" ] || [ -z "$before" ] || [ -n "$shared" ] \
              || [ "$before" = "0000000000000000000000000000000000000000" ]; then
+            # one broken app must not keep the others from shipping: deploy all, then fail
+            failed=""
             for dir in hosted/*/; do
-              [ -f "$dir/mininode.json" ] && pnpm mininode deploy "$dir" --env "$DEPLOY_ENV"
+              [ -f "$dir/mininode.json" ] || continue
+              pnpm mininode deploy "$dir" --env "$DEPLOY_ENV" || failed="$failed $(basename "$dir")"
             done
+            if [ -n "$failed" ]; then echo "::error::Deploy failed for:$failed"; exit 1; fi
           else
             pnpm mininode deploy --changed "$before" --env "$DEPLOY_ENV"
           fi

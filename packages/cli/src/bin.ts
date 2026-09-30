@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { existsSync, readdirSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { basename, join, resolve } from 'node:path';
 import { changedApps } from './changed.ts';
 import type { DeployEnv } from './deploy/environment.ts';
 import { deployApp, devApp, readVersion } from './deploy/index.ts';
@@ -84,8 +84,21 @@ async function main(args: string[]): Promise<number> {
             .filter((dir) => existsSync(join(dir, 'mininode.json')))
         : [resolve(process.cwd(), target)];
       const version = readVersion();
-      for (const dir of dirs) await deployApp(dir, { env, version, dryRun });
+      // One broken app must not keep the others from shipping: deploy them all, then fail.
+      const failed: string[] = [];
+      for (const dir of dirs) {
+        try {
+          await deployApp(dir, { env, version, dryRun });
+        } catch (error) {
+          console.error(error instanceof Error ? error.message : error);
+          failed.push(basename(dir));
+        }
+      }
       if (dirs.length === 0) console.log('nothing to deploy');
+      if (failed.length > 0) {
+        console.error(`failed: ${failed.join(', ')}`);
+        return 1;
+      }
       return 0;
     }
   }
