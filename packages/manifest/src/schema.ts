@@ -222,6 +222,35 @@ export const gameStatSchema = z
   .strict()
   .refine((s) => s.max === undefined || s.max > s.min, 'max must be greater than min');
 
+/** Shared record types (ADR 0002); the admin approves each request before the app gets it. */
+export const SUITE_TYPES = [
+  'event',
+  'task',
+  'reminder',
+  'project',
+  'activity',
+  'contract',
+  'transaction',
+] as const;
+const suiteSchema = z
+  .object({
+    uses: z
+      .array(
+        z
+          .object({
+            type: z.enum(SUITE_TYPES),
+            access: z.enum(['read', 'create', 'write', 'delete']),
+            /** Why the app needs it (German, shown to the admin). */
+            why: z.string().min(1).max(200),
+          })
+          .strict(),
+      )
+      .min(1)
+      .max(30)
+      .refine((u) => new Set(u.map((x) => x.type)).size === u.length, 'types must be unique'),
+  })
+  .strict();
+
 /** Marks the app as a game: it appears in the Gaming Hub and may report playtime and results. */
 const gameSchema = z
   .object({
@@ -300,6 +329,7 @@ export const manifestSchema = z
       )
       .optional(),
     game: gameSchema.optional(),
+    suite: suiteSchema.optional(),
     build: buildSchema.optional(),
     container: containerSchema.optional(),
     remote: remoteSchema.optional(),

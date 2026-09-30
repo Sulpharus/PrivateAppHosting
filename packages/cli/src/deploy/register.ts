@@ -100,6 +100,13 @@ export async function registerApp(
   });
   if (apiError) throw new Error(`APIs of ${manifest.slug}: ${apiError.message}`);
 
+  // Shared record types (ADR 0002): requests only; the admin approves them.
+  const { error: suiteError } = await platform.rpc('register_app_suite', {
+    p_slug: manifest.slug,
+    p_uses: manifest.suite?.uses ?? [],
+  });
+  if (suiteError) throw new Error(`suite requests of ${manifest.slug}: ${suiteError.message}`);
+
   if (manifest.ai) {
     const { error: budgetError } = await platform.from('ai_budgets').upsert({
       scope: 'app',

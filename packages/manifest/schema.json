@@ -338,6 +338,57 @@
       ],
       "additionalProperties": false
     },
+    "suite": {
+      "type": "object",
+      "properties": {
+        "uses": {
+          "minItems": 1,
+          "maxItems": 30,
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "event",
+                  "task",
+                  "reminder",
+                  "project",
+                  "activity",
+                  "contract",
+                  "transaction"
+                ]
+              },
+              "access": {
+                "type": "string",
+                "enum": [
+                  "read",
+                  "create",
+                  "write",
+                  "delete"
+                ]
+              },
+              "why": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              }
+            },
+            "required": [
+              "type",
+              "access",
+              "why"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "uses"
+      ],
+      "additionalProperties": false
+    },
     "build": {
       "type": "object",
       "properties": {

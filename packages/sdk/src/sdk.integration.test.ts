@@ -136,6 +136,62 @@ describe.skipIf(!enabled)('sdk against local Supabase', () => {
     }
   });
 
+  it('writes suite records and finds them by time range', async () => {
+    const uses = [{ type: 'event', access: 'delete', why: 'Test' }];
+    const reg = await admin
+      .schema('platform')
+      .rpc('register_app_suite', { p_slug: slug, p_uses: uses });
+    if (reg.error) throw reg.error;
+    const grant = await admin
+      .schema('platform')
+      .from('app_type_grants')
+      .insert({ app_slug: slug, type: 'event', access: 'delete' });
+    if (grant.error) throw grant.error;
+
+    const events = mn.suite.type('event');
+    const inside = await events.upsert(
+      { title: 'Zahnarzt', starts_at: '2026-10-01T10:00:00Z', ends_at: '2026-10-01T11:00:00Z' },
+      { sourceKey: 'a' },
+    );
+    expect(inside.merged).toBe(false);
+    await events.upsert({ title: 'Später', starts_at: '2026-12-01T10:00:00Z' }, { sourceKey: 'b' });
+    await events.upsert(
+      {
+        title: 'Yoga',
+        starts_at: '2026-01-05T18:00:00Z',
+        data: { recurrence: { rrule: 'FREQ=WEEKLY' } },
+      },
+      { sourceKey: 'c' },
+    );
+    // Spans that began before the range but still run into it count too.
+    await events.upsert(
+      { title: 'Urlaub', starts_at: '2026-09-28T00:00:00Z', ends_at: '2026-10-03T00:00:00Z' },
+      { sourceKey: 'd' },
+    );
+    const found = await mn.suite.range({
+      from: '2026-10-01T00:00:00Z',
+      to: '2026-10-08T00:00:00Z',
+    });
+    expect(found.map((r) => r.title).sort()).toEqual(['Urlaub', 'Yoga', 'Zahnarzt']);
+    expect(found[0]?.created_by_app).toBe(slug);
+
+    const again = await events.upsert(
+      { title: 'zahnarzt', starts_at: '2026-10-01T12:00:00+02:00', data: { busy: true } },
+      {},
+    );
+    expect(again.merged).toBe(true);
+    expect(again.record.id).toBe(inside.record.id);
+
+    const mine = await mn.suite.collections('kalender');
+    expect(mine.map((c) => c.name)).toContain('Meine Termine');
+    await events.delete(inside.record.id);
+    const after = await mn.suite.range({
+      from: '2026-10-01T00:00:00Z',
+      to: '2026-10-02T00:00:00Z',
+    });
+    expect(after.map((r) => r.title)).not.toContain('Zahnarzt');
+  });
+
   it('creates notifications for the signed-in user', async () => {
     await mn.notify('Erinnerung', 'Einkaufen', '/liste');
     const { data } = await admin

@@ -29,7 +29,7 @@ interface GrantRow {
   updated_at: string;
 }
 
-function settings(env: ApiEnv): GoogleSettings | null {
+export function googleSettings(env: ApiEnv): GoogleSettings | null {
   if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET || !env.GOOGLE_TOKEN_KEY) return null;
   return {
     clientId: env.GOOGLE_CLIENT_ID,
@@ -75,7 +75,7 @@ export const google = new Hono<AppContext>();
 const connectSchema = z.object({ refreshToken: z.string().min(10).max(2048) });
 
 google.post('/connect', requireUser(), async (c) => {
-  const oauth = settings(c.env);
+  const oauth = googleSettings(c.env);
   if (!oauth) return notConfigured();
   const parsed = connectSchema.safeParse(await c.req.json().catch(() => null));
   if (!parsed.success) return problem(400, 'invalid_request', 'Ungültige Anfrage.');
@@ -121,7 +121,7 @@ google.post('/connect', requireUser(), async (c) => {
 });
 
 google.get('/', requireUser(), async (c) => {
-  if (!settings(c.env)) return c.json({ available: false, connected: false });
+  if (!googleSettings(c.env)) return c.json({ available: false, connected: false });
   const { data } = await adminClient(c.env)
     .schema('platform')
     .from('google_grants')
@@ -138,7 +138,7 @@ google.get('/', requireUser(), async (c) => {
 });
 
 google.delete('/', requireUser(), async (c) => {
-  const oauth = settings(c.env);
+  const oauth = googleSettings(c.env);
   const userId = c.get('claims').sub;
   const db = adminClient(c.env);
   const { data } = await db
@@ -157,6 +157,8 @@ google.delete('/', requireUser(), async (c) => {
     .delete()
     .eq('user_id', userId);
   if (error) return problem(500, 'db_error', 'Zugriff konnte nicht entzogen werden.');
+  // without Google there is nothing to sync (ADR 0010)
+  await db.schema('platform').rpc('gcal_disable', { p_user: userId });
   log('google_disconnected', { user: userId });
   return c.body(null, 204);
 });
@@ -164,7 +166,7 @@ google.delete('/', requireUser(), async (c) => {
 const tokenSchema = z.object({ app: z.string().regex(/^[a-z][a-z0-9-]{0,30}[a-z0-9]$/) });
 
 google.post('/token', requireUser(), async (c) => {
-  const oauth = settings(c.env);
+  const oauth = googleSettings(c.env);
   if (!oauth) return notConfigured();
   const parsed = tokenSchema.safeParse(await c.req.json().catch(() => null));
   if (!parsed.success) return problem(400, 'invalid_request', 'Unbekannte App.');

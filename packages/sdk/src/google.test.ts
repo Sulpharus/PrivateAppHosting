@@ -77,3 +77,37 @@ describe('mn.google', () => {
     expect(calls).toHaveLength(0);
   });
 });
+
+describe('mn.google.calendarSync', () => {
+  it('reads, changes and runs the Kalender sync with the session', async () => {
+    const calls = stubApi([
+      Response.json({ enabled: false, pushSources: [] }),
+      Response.json({ ok: true }),
+      Response.json({ ran: true }),
+    ]);
+    const google = createGoogle(config, async () => 'session');
+    expect(await google.calendarSync.get()).toMatchObject({ enabled: false });
+    await google.calendarSync.set({ enabled: true, pushSources: ['app:sportplaner:activity'] });
+    expect(await google.calendarSync.sync()).toEqual({ ran: true });
+    expect(calls.map((c) => [c.init?.method, c.url])).toEqual([
+      ['GET', 'https://api.mininode.app/google/calendar'],
+      ['PUT', 'https://api.mininode.app/google/calendar'],
+      ['POST', 'https://api.mininode.app/google/calendar/sync'],
+    ]);
+    expect(new Headers(calls[1]?.init?.headers).get('Authorization')).toBe('Bearer session');
+  });
+
+  it('turns refusals into GoogleError with the code', async () => {
+    stubApi([
+      Response.json({ error: 'forbidden', message: 'Nur aus dem Kalender.' }, { status: 403 }),
+    ]);
+    const google = createGoogle(config, async () => 'session');
+    await expect(google.calendarSync.get()).rejects.toMatchObject({
+      code: 'forbidden',
+      status: 403,
+    });
+    stubApi([]);
+    const signedOut = createGoogle(config, async () => null);
+    await expect(signedOut.calendarSync.sync()).rejects.toBeInstanceOf(GoogleError);
+  });
+});

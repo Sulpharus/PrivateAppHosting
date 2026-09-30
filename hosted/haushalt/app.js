@@ -4,6 +4,7 @@
 // (rec:<id>) and per tax year (profile:<year>). Receipts are files in mn.files (belege/...).
 import { analyse, toCsv as csv, hash, parseAmount, toBookings } from './csv.js';
 import {
+  amountFor,
   cleanBooking,
   cleanProfile,
   cleanRecurring,
@@ -11,10 +12,21 @@ import {
   DEFAULT_CATEGORIES,
   DEFAULT_RULES,
   dueRecurring,
+  FIXED_TYPES,
   isDay,
   KINDS,
   matchRule,
 } from './data.js';
+import {
+  deviations,
+  dueIn,
+  status as fixedStatus,
+  matchFixed,
+  monthly,
+  monthMoney,
+  nextDue,
+} from './plan.js';
+import { parseStatement, readPdf } from './statement.js';
 import { buildReturn, euro, FIELDS, FORMS } from './tax.js';
 
 // ---------- helpers ----------
@@ -67,6 +79,10 @@ const ICON_PATHS = {
   right: 'M9 5l7 7-7 7',
   plus: 'M12 5v14M5 12h14',
   clip: 'M8 12.5l5.5-5.5a2.5 2.5 0 013.5 3.5l-7 7a4 4 0 01-5.7-5.7L11 5',
+  check: 'M5 12.5l4.5 4.5L19 7.5',
+  alert:
+    'M12 8v5M12 16.5v.5M10.3 4.2L3.2 17a2 2 0 001.7 3h14.2a2 2 0 001.7-3L13.7 4.2a2 2 0 00-3.4 0z',
+  gear: 'M4 7h10M18 7h2M4 17h2M10 17h10M16 5v4M8 15v4',
 };
 function icon(name) {
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -96,6 +112,7 @@ const S = {
   profiles: new Map(),
   q: '',
   cat: '',
+  plan: 'fixed', // Planung: 'fixed' (Fixkosten) or 'budget'
   loading: true,
 };
 // Handlers work right away; the SDK and the login check run in the background.
@@ -171,8 +188,10 @@ async function runRecurring() {
   for (const rec of S.recs.values()) {
     const due = dueRecurring(rec, t);
     if (!due.length) continue;
-    for (const { booking } of due) {
+    for (const { month, booking } of due) {
       const key = keyOf(booking);
+      // paid through the bank (imported and recognised): not booked a second time
+      if (paidByBank(rec.id, month)) continue;
       if (!S.tx.has(key)) {
         await mn.kv.set(key, booking);
         S.tx.set(key, booking);
@@ -183,8 +202,11 @@ async function runRecurring() {
     await mn.kv.set(`rec:${rec.id}`, next);
     S.recs.set(rec.id, next);
   }
-  if (added) toast(`${added} ${added === 1 ? 'Dauerauftrag' : 'Daueraufträge'} gebucht`);
+  if (added) toast(`${added} ${added === 1 ? 'Fixkosten-Zahlung' : 'Fixkosten-Zahlungen'} gebucht`);
 }
+
+const paidByBank = (recId, month) =>
+  bookings().some((b) => b.rec === recId && b.source !== 'rec' && b.date.startsWith(month));
 
 async function load() {
   try {
@@ -305,8 +327,39 @@ function viewOverview() {
     0,
   );
 
+  const devs = recList()
+    .flatMap((r) => deviations(r, list).map((d) => ({ ...d, rec: r })))
+    .filter((d) => d.booking.date.startsWith(S.month));
+  const devBanner = devs.length
+    ? h(
+        'div',
+        { class: 'mn-banner mn-banner--warn', role: 'note' },
+        `${devs.length === 1 ? 'Eine Fixkosten-Zahlung weicht' : `${devs.length} Fixkosten-Zahlungen weichen`} diesen Monat vom Plan ab: `,
+        devs
+          .map(
+            (d) =>
+              `${d.rec.text || catName(d.rec.cat)} ${euro(d.booking.cents)} statt ${euro(d.expected)}`,
+          )
+          .join(', '),
+        '. ',
+        h(
+          'button',
+          {
+            type: 'button',
+            class: 'mn-link',
+            onclick: () => {
+              S.plan = 'fixed';
+              go('plan');
+            },
+          },
+          'Ansehen',
+        ),
+      )
+    : null;
+
   if (list.length === 0)
     return [
+      moneyCard(),
       empty(
         'Noch keine Buchungen in diesem Monat',
         'Trage Ausgaben und Einnahmen ein oder importiere den Kontoauszug deiner Bank als CSV.',
@@ -367,6 +420,8 @@ function viewOverview() {
   );
 
   return [
+    moneyCard(),
+    devBanner,
     h(
       'div',
       { class: 'mn-kpis' },
@@ -389,7 +444,17 @@ function viewOverview() {
           ? [
               sect(
                 'Budget',
-                h('button', { class: 'mn-link', onclick: () => go('budget') }, 'Details'),
+                h(
+                  'button',
+                  {
+                    class: 'mn-link',
+                    onclick: () => {
+                      S.plan = 'budget';
+                      go('plan');
+                    },
+                  },
+                  'Details',
+                ),
               ),
               h(
                 'div',
@@ -464,6 +529,514 @@ function viewOverview() {
                 { class: 'mn-note' },
                 `Noch keine steuerlich relevanten Buchungen in ${year}. Kategorien wie Handwerker, Spenden oder Arbeitsmittel werden automatisch übernommen.`,
               ),
+        ),
+      ),
+    ),
+  ];
+}
+
+// ---------- Planung: Fixkosten und Budgets ----------
+const EVERY = { 1: 'monatlich', 3: 'vierteljährlich', 6: 'halbjährlich', 12: 'jährlich' };
+const recList = () => [...S.recs.values()];
+
+/** Adopts a different payment as the new amount from its month on. */
+async function adoptAmount(rec, booking) {
+  const from = booking.date.slice(0, 7);
+  const next = cleanRecurring({
+    ...rec,
+    changes: [...rec.changes.filter((c) => c.from < from), { from, cents: booking.cents }],
+  });
+  const mn = await ready;
+  await mn.kv.set(`rec:${next.id}`, next);
+  S.recs.set(next.id, next);
+  toast(`${next.text || 'Fixkosten'}: ${euro(booking.cents)} ab ${monthName(from)}`);
+  render();
+}
+
+function fixedRow(rec) {
+  const t = today();
+  const month = S.month;
+  const st = fixedStatus(rec, month);
+  const due = nextDue(rec, t);
+  const amount = amountFor(rec, month);
+  const dev = deviations(rec, bookings())[0];
+  const parts = [`${euro(amount)} ${EVERY[rec.every]}`];
+  if (st === 'ended') parts.push(`beendet ${monthName(rec.end)}`);
+  else if (rec.end) parts.push(`letzte Zahlung ${monthName(rec.end)}`);
+  else if (due) parts.push(`nächste am ${dayLabel(due)}`);
+  if (st === 'upcoming') parts.push(`ab ${monthName(rec.start)}`);
+  return h(
+    'div',
+    { class: 'fixed-row' },
+    h(
+      'button',
+      { type: 'button', class: 'mn-row', onclick: () => editRecurring(rec.id) },
+      h(
+        'span',
+        {},
+        h('span', { class: 'mn-row-title' }, rec.text || catName(rec.cat)),
+        h('span', { class: 'mn-row-sub' }, parts.join(' · ')),
+      ),
+      h(
+        'span',
+        { class: 'mn-row-side' },
+        h('b', {}, `${rec.kind === 'income' ? '+' : ''}${euro(monthly(rec, month))}`),
+        'pro Monat',
+      ),
+    ),
+    st === 'ending'
+      ? h('span', { class: 'mn-chip mn-chip--warn fixed-chip' }, 'Endet diesen Monat')
+      : null,
+    dev
+      ? h(
+          'div',
+          { class: 'fixed-dev', role: 'note' },
+          h(
+            'span',
+            {
+              class: `mn-chip ${dev.booking.cents > dev.expected ? 'mn-chip--bad' : 'mn-chip--ok'}`,
+            },
+            `${dayLabel(dev.booking.date)}: ${euro(dev.booking.cents)} statt ${euro(dev.expected)} (${dev.booking.cents > dev.expected ? '+' : '−'}${euro(Math.abs(dev.booking.cents - dev.expected))})`,
+          ),
+          h(
+            'button',
+            { type: 'button', class: 'mn-link', onclick: () => void adoptAmount(rec, dev.booking) },
+            'Als neuen Betrag übernehmen',
+          ),
+        )
+      : null,
+  );
+}
+
+function viewFixed() {
+  const month = S.month;
+  const all = recList();
+  const live = all.filter((r) => fixedStatus(r, month) !== 'ended');
+  const ended = all.filter((r) => fixedStatus(r, month) === 'ended');
+  const out = live.filter((r) => r.kind !== 'income');
+  const inc = live.filter((r) => r.kind === 'income');
+  const costs = out.reduce((s, r) => s + monthly(r, month), 0);
+  const income = inc.reduce((s, r) => s + monthly(r, month), 0);
+  if (!all.length)
+    return [
+      empty(
+        'Noch keine Fixkosten',
+        'Miete, Abos, Versicherungen, Rücklagen oder Spenden: trag ein, was regelmäßig abgeht (und dein Gehalt). Sie werden automatisch gebucht oder beim Kontoimport erkannt.',
+        h(
+          'button',
+          { class: 'mn-btn mn-btn--primary', onclick: () => editRecurring(null) },
+          'Fixkosten hinzufügen',
+        ),
+      ),
+    ];
+  const groups = Object.entries(FIXED_TYPES)
+    .map(([type, label]) => [label, live.filter((r) => r.type === type)])
+    .filter(([, list]) => list.length);
+  return [
+    h(
+      'div',
+      { class: 'mn-kpis' },
+      kpi('Fixkosten pro Monat', euro(costs)),
+      kpi('Regelmäßige Einnahmen', euro(income), 'pos'),
+      kpi(
+        income - costs >= 0 ? 'Bleibt pro Monat' : 'Fehlt pro Monat',
+        euro(Math.abs(income - costs)),
+        income - costs >= 0 ? 'pos' : 'neg',
+      ),
+      kpi('Pro Jahr', euro(costs * 12)),
+    ),
+    h(
+      'p',
+      { class: 'mn-note' },
+      'Jährliche und vierteljährliche Beträge zählen anteilig pro Monat. Gebucht wird am Fälligkeitstag, beim Kontoimport erkannte Zahlungen ersetzen die automatische Buchung.',
+    ),
+    groups.map(([label, list]) => [
+      sect(
+        label,
+        h('small', { class: 'mn-muted' }, euro(list.reduce((s, r) => s + monthly(r, month), 0))),
+      ),
+      h('div', { class: 'mn-list' }, list.map(fixedRow)),
+    ]),
+    ended.length
+      ? h(
+          'details',
+          { class: 'mn-more fixed-ended' },
+          h('summary', {}, `Beendet (${ended.length})`),
+          h('div', { class: 'mn-list' }, ended.map(fixedRow)),
+        )
+      : null,
+    h(
+      'button',
+      { type: 'button', class: 'mn-btn fixed-add', onclick: () => editRecurring(null) },
+      icon('plus'),
+      'Fixkosten hinzufügen',
+    ),
+  ];
+}
+
+function viewPlan() {
+  const seg = h(
+    'div',
+    { class: 'mn-seg plan-seg', role: 'group', 'aria-label': 'Planung' },
+    [
+      ['fixed', 'Fixkosten'],
+      ['budget', 'Budgets'],
+    ].map(([id, label]) =>
+      h(
+        'button',
+        {
+          type: 'button',
+          'aria-pressed': S.plan === id ? 'true' : 'false',
+          onclick: () => {
+            S.plan = id;
+            render();
+          },
+        },
+        label,
+      ),
+    ),
+  );
+  return [seg, S.plan === 'budget' ? viewBudget() : viewFixed()];
+}
+
+// ---------- Übersicht: der Monatsbalken ----------
+function moneyCard() {
+  const month = S.month;
+  const now = today();
+  const days = new Date(Number(month.slice(0, 4)), Number(month.slice(5, 7)), 0).getDate();
+  const current = now.startsWith(month);
+  const day = current ? Number(now.slice(8, 10)) : month < now.slice(0, 7) ? days : 0;
+  const budgets = cats()
+    .filter((c) => c.kind === 'expense' && c.budget > 0)
+    .reduce((s, c) => s + c.budget, 0);
+  const m = monthMoney({ month, bookings: bookings(), recs: recList(), day, days, budgets });
+  if (m.basis === 'none')
+    return h(
+      'div',
+      { class: 'mn-card money' },
+      h('h2', { class: 'money-title' }, 'Dein Monat'),
+      h(
+        'p',
+        { class: 'mn-note' },
+        'Trag unter Planung dein Gehalt und deine Fixkosten ein (oder Budgets), dann zeigt dir dieser Balken jeden Tag, ob du mit dem Geld auskommst.',
+      ),
+      h(
+        'button',
+        {
+          type: 'button',
+          class: 'mn-btn',
+          onclick: () => {
+            S.plan = 'fixed';
+            go('plan');
+          },
+        },
+        'Zur Planung',
+      ),
+    );
+  const over = m.spent > m.available;
+  const behind = m.ahead < 0;
+  const state = over ? 'bad' : behind ? 'warn' : 'ok';
+  const chip = over
+    ? `${euro(m.spent - m.available)} über dem Monat`
+    : !current
+      ? day === days
+        ? `${euro(m.left)} übrig`
+        : 'Geplant'
+      : behind
+        ? `${euro(-m.ahead)} über Plan`
+        : `${euro(m.ahead)} unter Plan`;
+  const bar = h('span', { class: `money-fill money-${state}` });
+  bar.style.transform = `scaleX(${m.available > 0 ? Math.min(1, m.spent / m.available) : 1})`;
+  const mark = h('span', { class: 'money-mark', 'aria-hidden': 'true' });
+  mark.style.left = `${m.available > 0 ? Math.min(100, (m.pace / m.available) * 100) : 0}%`;
+  const headline = current
+    ? over
+      ? 'Das Geld für diesen Monat ist ausgegeben'
+      : `Heute noch ${euro(m.perDay ?? 0)} frei`
+    : day === days
+      ? over
+        ? 'Mehr ausgegeben als verfügbar'
+        : 'Mit dem Geld ausgekommen'
+      : `${euro(m.available)} verfügbar`;
+  return h(
+    'section',
+    { class: 'mn-card money', 'aria-label': 'Dein Monat' },
+    h(
+      'div',
+      { class: 'money-head' },
+      h('h2', { class: 'money-title' }, 'Dein Monat'),
+      h(
+        'span',
+        { class: `mn-chip mn-chip--${state}` },
+        icon(state === 'ok' ? 'check' : 'alert'),
+        chip,
+      ),
+    ),
+    h('p', { class: 'money-big' }, headline),
+    current && !over
+      ? h(
+          'p',
+          { class: 'mn-note' },
+          `${euro(Math.max(0, m.left))} ${days - day === 0 ? 'für heute, den letzten Tag' : `für heute und die ${days - day} Tage danach`}. Bis heute wären ${euro(m.pace)} im Plan, ausgegeben hast du ${euro(m.spent)}.`,
+        )
+      : null,
+    h(
+      'div',
+      {
+        class: 'money-track',
+        role: 'meter',
+        'aria-label': 'Ausgegeben vom frei verfügbaren Geld',
+        'aria-valuemin': '0',
+        'aria-valuemax': String(Math.max(0, m.available) / 100),
+        'aria-valuenow': String(m.spent / 100),
+        'aria-valuetext': `${euro(m.spent)} von ${euro(m.available)}${current ? `, Plan bis heute ${euro(m.pace)}` : ''}`,
+      },
+      bar,
+      current ? mark : null,
+    ),
+    h(
+      'div',
+      { class: 'money-scale' },
+      h('span', {}, `Ausgegeben ${euro(m.spent)}`),
+      h('span', {}, `Frei im Monat ${euro(m.available)}`),
+    ),
+    h(
+      'dl',
+      { class: 'mn-facts money-facts' },
+      h(
+        'div',
+        {},
+        h('dt', {}, m.basis === 'income' ? 'Einnahmen' : 'Budgets'),
+        h('dd', {}, euro(m.basis === 'income' ? m.income : budgets)),
+      ),
+      m.basis === 'income'
+        ? h('div', {}, h('dt', {}, 'Fixkosten und Rücklagen'), h('dd', {}, `−${euro(m.fixed)}`))
+        : null,
+    ),
+  );
+}
+
+// ---------- Statistik ----------
+function viewStats() {
+  const year = String(S.year);
+  const prevYear = String(S.year - 1);
+  const inYear = (y) => bookings().filter((b) => b.date.startsWith(`${y}-`));
+  const list = inYear(year);
+  if (!list.length)
+    return [
+      empty(
+        `Noch keine Buchungen in ${year}`,
+        'Sobald Buchungen da sind, zeigt die Statistik Einnahmen, Ausgaben, Fixkosten und Kategorien im Jahresverlauf.',
+      ),
+    ];
+  const months = [...Array(12)].map((_, m) => {
+    const ym = `${year}-${pad(m + 1)}`;
+    const l = list.filter((b) => b.date.startsWith(ym));
+    const exp = l.filter((b) => b.kind === 'expense');
+    const fixed = exp.filter((b) => b.rec).reduce((s, b) => s + b.cents, 0);
+    return {
+      m,
+      ym,
+      income: sum(l, 'income'),
+      fixed,
+      variable: exp.reduce((s, b) => s + b.cents, 0) - fixed,
+      saved: sum(l, 'transfer'),
+      any: l.length > 0,
+    };
+  });
+  const active = months.filter((x) => x.any);
+  const n = Math.max(1, active.length);
+  const income = months.reduce((s, x) => s + x.income, 0);
+  const expense = months.reduce((s, x) => s + x.fixed + x.variable, 0);
+  const fixedSum = months.reduce((s, x) => s + x.fixed, 0);
+  const max = Math.max(1, ...months.flatMap((x) => [x.income, x.fixed + x.variable]));
+
+  // Einnahmen und Ausgaben (fix und variabel) je Monat: one axis, a stacked expense bar
+  const chart = h(
+    'div',
+    { class: 'mn-card' },
+    h(
+      'div',
+      {
+        class: 'chart stats-chart',
+        role: 'group',
+        'aria-label': `Einnahmen und Ausgaben je Monat ${year}`,
+      },
+      months.map((x) => {
+        const seg = (v, cls) => {
+          const el = h('i', { class: cls });
+          el.style.height = `${(v / max) * 100}%`;
+          return el;
+        };
+        const label = `${monthName(x.ym)}: Einnahmen ${euro(x.income)}, Fixkosten ${euro(x.fixed)}, sonstige Ausgaben ${euro(x.variable)}`;
+        return h(
+          'button',
+          {
+            type: 'button',
+            class: `col${x.ym === S.month ? ' sel' : ''}`,
+            'aria-label': label,
+            title: label,
+            onclick: () => {
+              S.month = x.ym;
+              go('overview');
+            },
+          },
+          h(
+            'span',
+            { class: 'pair' },
+            seg(x.income, 's1'),
+            h('span', { class: 'stack' }, seg(x.variable, 's3'), seg(x.fixed, 's2')),
+          ),
+          h('small', {}, shortMonth(x.m)),
+        );
+      }),
+    ),
+    h(
+      'p',
+      { class: 'legend' },
+      h('span', {}, h('i', { class: 's1' }), `Einnahmen ${euro(income)}`),
+      h('span', {}, h('i', { class: 's2' }), `Fixkosten ${euro(fixedSum)}`),
+      h('span', {}, h('i', { class: 's3' }), `Sonstige Ausgaben ${euro(expense - fixedSum)}`),
+    ),
+    h(
+      'details',
+      { class: 'mn-more' },
+      h('summary', {}, 'Als Tabelle'),
+      h(
+        'div',
+        { class: 'table-wrap' },
+        h(
+          'table',
+          { class: 'stats-table' },
+          h(
+            'thead',
+            {},
+            h(
+              'tr',
+              {},
+              ['Monat', 'Einnahmen', 'Fixkosten', 'Sonstige', 'Gespart', 'Saldo'].map((t) =>
+                h('th', { scope: 'col' }, t),
+              ),
+            ),
+          ),
+          h(
+            'tbody',
+            {},
+            months.map((x) =>
+              h(
+                'tr',
+                {},
+                h('th', { scope: 'row' }, monthName(x.ym)),
+                [x.income, x.fixed, x.variable, x.saved, x.income - x.fixed - x.variable].map((v) =>
+                  h('td', { class: 'mn-num' }, euro(v)),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+
+  // Kategorien im Jahr, mit Vorjahr
+  const byCat = (l) => {
+    const map = new Map();
+    for (const b of l.filter((x) => x.kind === 'expense'))
+      map.set(b.cat, (map.get(b.cat) ?? 0) + b.cents);
+    return map;
+  };
+  const now = byCat(list);
+  const before = byCat(inYear(prevYear));
+  const hasBefore = before.size > 0;
+  const topCats = [...now].sort((a, b) => b[1] - a[1]).slice(0, 10);
+
+  // Fixkosten nach Art (monatlich, wie heute geplant)
+  const month = S.month.startsWith(year) ? S.month : `${year}-12`;
+  const byType = new Map();
+  for (const r of recList().filter((x) => x.kind !== 'income' && dueIn(x, month) !== undefined))
+    if (fixedStatus(r, month) !== 'ended' && fixedStatus(r, month) !== 'upcoming')
+      byType.set(r.type, (byType.get(r.type) ?? 0) + monthly(r, month));
+  const types = [...byType].sort((a, b) => b[1] - a[1]);
+
+  // Empfänger
+  const byParty = new Map();
+  for (const b of list.filter((x) => x.kind === 'expense')) {
+    const who = (b.party || b.text || catName(b.cat)).trim();
+    byParty.set(who, (byParty.get(who) ?? 0) + b.cents);
+  }
+  const parties = [...byParty].sort((a, b) => b[1] - a[1]).slice(0, 8);
+
+  const change = (cat, cents) => {
+    const old = before.get(cat);
+    if (!hasBefore || !old) return null;
+    const pct = Math.round(((cents - old) / old) * 100);
+    return h(
+      'span',
+      { class: `mn-chip ${pct > 5 ? 'mn-chip--warn' : 'mn-chip--plain'} stats-delta` },
+      `${pct > 0 ? '+' : ''}${pct} % ggü. ${prevYear}`,
+    );
+  };
+
+  return [
+    h(
+      'div',
+      { class: 'mn-kpis' },
+      kpi('Ø Einnahmen pro Monat', euro(Math.round(income / n)), 'pos'),
+      kpi('Ø Ausgaben pro Monat', euro(Math.round(expense / n))),
+      kpi('Fixkostenquote', income > 0 ? `${Math.round((fixedSum / income) * 100)} %` : '–'),
+      kpi(
+        'Sparquote',
+        income > 0 ? `${Math.round(((income - expense) / income) * 100)} %` : '–',
+        income - expense >= 0 ? 'pos' : 'neg',
+      ),
+    ),
+    h(
+      'div',
+      { class: 'mn-cols' },
+      h('div', {}, sect(`Monate ${year}`), chart),
+      h(
+        'div',
+        {},
+        sect('Ausgaben nach Kategorie'),
+        h(
+          'div',
+          { class: 'mn-list' },
+          topCats.map(([cat, cents]) =>
+            barRow(
+              catName(cat),
+              `${euro(cents)} · Ø ${euro(Math.round(cents / n))} im Monat`,
+              meter(cents, topCats[0][1]),
+              change(cat, cents),
+            ),
+          ),
+        ),
+      ),
+    ),
+    h(
+      'div',
+      { class: 'mn-cols' },
+      h(
+        'div',
+        {},
+        sect('Fixkosten nach Art'),
+        types.length
+          ? h(
+              'div',
+              { class: 'mn-list' },
+              types.map(([type, cents]) =>
+                barRow(FIXED_TYPES[type], `${euro(cents)} im Monat`, meter(cents, types[0][1])),
+              ),
+            )
+          : h('p', { class: 'mn-note' }, 'Noch keine Fixkosten angelegt (Planung).'),
+      ),
+      h(
+        'div',
+        {},
+        sect('Größte Empfänger'),
+        h(
+          'div',
+          { class: 'mn-list' },
+          parties.map(([who, cents]) => barRow(who, euro(cents), meter(cents, parties[0][1]))),
         ),
       ),
     ),
@@ -1008,7 +1581,8 @@ function viewTax() {
 async function changeYear(n) {
   S.year += n;
   try {
-    await Promise.all([ensureYear(S.year), ensureProfile(S.year)]);
+    // the statistics compare with the year before
+    await Promise.all([ensureYear(S.year), ensureYear(S.year - 1), ensureProfile(S.year)]);
   } catch {
     toast('Laden fehlgeschlagen.');
   }
@@ -1096,27 +1670,25 @@ function viewSettings() {
       h(
         'div',
         {},
-        sect(
-          'Daueraufträge',
-          add(() => editRecurring(null)),
+        sect('Fixkosten und Daueraufträge'),
+        h(
+          'p',
+          { class: 'mn-note' },
+          `${recs.length ? `${recs.length} angelegt. ` : ''}Miete, Abos, Versicherungen, Rücklagen und Gehalt verwaltest du unter Planung.`,
+          ' ',
+          h(
+            'button',
+            {
+              type: 'button',
+              class: 'mn-link',
+              onclick: () => {
+                S.plan = 'fixed';
+                go('plan');
+              },
+            },
+            'Zur Planung',
+          ),
         ),
-        recs.length
-          ? h(
-              'div',
-              { class: 'mn-list' },
-              recs.map((r) =>
-                row(
-                  r.text || catName(r.cat),
-                  `${r.kind === 'income' ? '+' : '−'}${euro(r.cents)} ${{ 1: 'monatlich', 3: 'vierteljährlich', 6: 'halbjährlich', 12: 'jährlich' }[r.every]} am ${r.day}.${r.end ? `, bis ${monthName(r.end)}` : ''}`,
-                  () => editRecurring(r.id),
-                ),
-              ),
-            )
-          : h(
-              'p',
-              { class: 'mn-note' },
-              'Miete, Versicherungen oder Gehalt werden jeden Monat automatisch gebucht.',
-            ),
         sect(
           'Regeln für den Import',
           add(() => editRule(null)),
@@ -1256,7 +1828,7 @@ function closeDialog() {
 function formError(form, message) {
   const p = form.querySelector('.mn-error');
   p.textContent = message;
-  p.hidden = false;
+  p.hidden = !message;
 }
 const val = (form, name) => String(new FormData(form).get(name) ?? '').trim();
 
@@ -1653,7 +2225,38 @@ function editRule(index) {
           placeholder: 'z. B. REWE|EDEKA',
         }),
       ),
+      id
+        ? h(
+            'label',
+            { class: 'mn-field' },
+            'Neuer Betrag gilt ab',
+            h('input', { name: 'from', type: 'month', value: thisMonth }),
+            h(
+              'small',
+              {},
+              r.changes.length
+                ? `Bisher: ${[{ from: r.start, cents: r.cents }, ...r.changes].map((c) => `${euro(c.cents)} ab ${monthName(c.from)}`).join(', ')}`
+                : 'Frühere Monate behalten ihren Betrag.',
+            ),
+          )
+        : null,
       h('label', { class: 'mn-field' }, 'Kategorie', catSelect('cat', r.cat)),
+      h(
+        'label',
+        { class: 'mn-field' },
+        'Auf dem Kontoauszug erkennen an',
+        h('input', {
+          name: 'match',
+          maxlength: 200,
+          value: r.match,
+          placeholder: 'z. B. NETFLIX oder Vermieter GmbH',
+        }),
+        h(
+          'small',
+          {},
+          'Beim Import wird die Zahlung dann zugeordnet statt doppelt gebucht, und ein anderer Betrag fällt auf. Mehrere Wörter mit | trennen. Leer: die Beschreibung.',
+        ),
+      ),
     ],
     [
       index !== null
@@ -1719,9 +2322,14 @@ function editRecurring(id) {
         start: today().slice(0, 7),
         end: '',
         until: '',
+        type: 'wohnen',
+        match: '',
+        changes: [],
+        note: '',
       };
+  const thisMonth = today().slice(0, 7);
   const form = openDialog(
-    id ? 'Dauerauftrag bearbeiten' : 'Neuer Dauerauftrag',
+    id ? 'Fixkosten bearbeiten' : 'Neue Fixkosten',
     [
       h(
         'label',
@@ -1732,8 +2340,18 @@ function editRecurring(id) {
           required: true,
           maxlength: 200,
           value: r.text,
-          placeholder: 'z. B. Miete',
+          placeholder: 'z. B. Miete, Netflix, Haftpflicht',
         }),
+      ),
+      h(
+        'label',
+        { class: 'mn-field' },
+        'Gruppe',
+        h(
+          'select',
+          { name: 'type', value: r.type },
+          Object.entries(FIXED_TYPES).map(([k, l]) => h('option', { value: k }, l)),
+        ),
       ),
       h(
         'div',
@@ -1745,7 +2363,7 @@ function editRecurring(id) {
           h('input', {
             name: 'amount',
             inputmode: 'decimal',
-            value: r.cents ? plain(r.cents) : '',
+            value: r.cents ? plain(amountFor(r, thisMonth)) : '',
             placeholder: '0,00',
           }),
         ),
@@ -1798,15 +2416,15 @@ function editRecurring(id) {
         h(
           'label',
           { class: 'mn-field' },
-          'Letzte Buchung',
+          'Letzte Zahlung',
           h('input', { name: 'end', type: 'month', value: r.end }),
-          h('small', {}, 'Leer lassen, solange er läuft'),
+          h('small', {}, 'Gekündigt oder befristet? Der letzte Monat. Leer, solange es läuft.'),
         ),
       ),
       h(
         'p',
         { class: 'mn-note' },
-        'Fällige Buchungen entstehen beim Öffnen der App, auch rückwirkend ab der ersten Buchung.',
+        'Fällige Zahlungen werden beim Öffnen der App gebucht, auch rückwirkend ab der ersten.',
       ),
     ],
     [
@@ -1822,7 +2440,7 @@ function editRecurring(id) {
                   await mn.kv.delete(`rec:${id}`);
                   S.recs.delete(id);
                   closeDialog();
-                  toast('Dauerauftrag gelöscht, bisherige Buchungen bleiben');
+                  toast('Fixkosten gelöscht, bisherige Buchungen bleiben');
                   render();
                 } catch {
                   formError(form, 'Löschen fehlgeschlagen.');
@@ -1850,10 +2468,27 @@ function editRecurring(id) {
               return formError(form, 'Die letzte Buchung liegt vor der ersten.');
             // Months already generated stay done (\`until\`), so an edit never re-books a month the
             // user deleted or moved; new settings apply from the next due month on.
+            // an existing one keeps its history: a new amount applies from the chosen month on
+            const from = id ? val(form, 'from') || thisMonth : '';
+            let base = Math.abs(cents);
+            let changes = r.changes;
+            if (id && Math.abs(cents) !== amountFor(r, from)) {
+              if (from <= r.start) changes = [];
+              else {
+                base = r.cents;
+                changes = [
+                  ...r.changes.filter((c) => c.from < from),
+                  { from, cents: Math.abs(cents) },
+                ];
+              }
+            } else if (id) base = r.cents;
             const next = cleanRecurring({
               ...r,
               text: val(form, 'text'),
-              cents: Math.abs(cents),
+              type: val(form, 'type'),
+              match: val(form, 'match'),
+              changes,
+              cents: base,
               kind: val(form, 'kind'),
               cat: val(form, 'cat'),
               every: Number(val(form, 'every')),
@@ -1893,15 +2528,15 @@ function openImport() {
       h(
         'p',
         {},
-        'Exportiere im Online-Banking die Umsätze als CSV und wähle die Datei hier aus. Bereits importierte Buchungen werden erkannt und übersprungen.',
+        'Wähle einen Kontoauszug als PDF oder die Umsätze als CSV aus dem Online-Banking. Bereits importierte Buchungen werden erkannt und übersprungen. Der Auszug bleibt auf deinem Gerät, nur die Buchungen werden gespeichert.',
       ),
       h(
         'label',
         { class: 'mn-btn filebtn' },
-        'CSV-Datei wählen',
+        'PDF- oder CSV-Datei wählen',
         h('input', {
           type: 'file',
-          accept: '.csv,text/csv,text/plain',
+          accept: '.csv,.pdf,text/csv,text/plain,application/pdf',
           onchange: async (e) => {
             const file = e.target.files[0];
             e.target.value = '';
@@ -1909,6 +2544,8 @@ function openImport() {
             if (file.size > 5 * 1024 * 1024)
               return formError(form, 'Die Datei ist größer als 5 MB.');
             const buf = await file.arrayBuffer();
+            if (/\.pdf$/i.test(file.name) || file.type === 'application/pdf')
+              return importPdf(form, buf);
             // Many banks still export Windows-1252; fall back when UTF-8 shows replacement chars.
             let text = new TextDecoder('utf-8').decode(buf);
             if (text.includes('�')) text = new TextDecoder('windows-1252').decode(buf);
@@ -1920,6 +2557,28 @@ function openImport() {
     [h('span', { class: 'mn-grow' })],
   );
 }
+/** A PDF statement: text via pdf.js, then the same preview as a CSV. */
+async function importPdf(form, buf) {
+  formError(form, '');
+  let parsed;
+  try {
+    parsed = parseStatement(await readPdf(buf));
+  } catch (err) {
+    return formError(
+      form,
+      err?.name === 'PasswordException'
+        ? 'Der Auszug ist mit einem Passwort geschützt. Speichere ihn ohne Passwort oder nutze den CSV-Export.'
+        : 'Die PDF-Datei konnte nicht gelesen werden.',
+    );
+  }
+  if (!parsed.rows.length)
+    return formError(
+      form,
+      'In diesem PDF wurden keine Buchungen erkannt (gescannte Auszüge enthalten keinen Text). Nutze sonst den CSV-Export deiner Bank.',
+    );
+  previewImport(parsed);
+}
+
 async function previewImport(parsed) {
   const pick = (name, label, index) =>
     h(
@@ -1972,6 +2631,12 @@ async function previewImport(parsed) {
         catById(booking.cat).kind !== 'transfer'
       )
         booking.cat = '';
+      // a payment of a fixed cost: linked to it (and its category unless a rule decided)
+      const rec = matchFixed(recList(), booking);
+      if (rec) {
+        booking.rec = rec;
+        if (!booking.cat) booking.cat = S.recs.get(rec)?.cat ?? '';
+      }
       return booking;
     });
     const fresh = prepared.filter((b) => !S.tx.has(keyOf(b)));
@@ -1980,9 +2645,16 @@ async function previewImport(parsed) {
         'p',
         {},
         found.length
-          ? `${found.length} Buchungen erkannt, davon ${fresh.length} neu und ${fresh.filter((b) => b.cat).length} automatisch zugeordnet.`
+          ? `${found.length} Buchungen erkannt, davon ${fresh.length} neu und ${fresh.filter((b) => b.cat).length} automatisch zugeordnet${fresh.some((b) => b.rec) ? `, ${fresh.filter((b) => b.rec).length} als Fixkosten` : ''}.`
           : 'Keine Buchungen erkannt. Prüfe die Spaltenzuordnung.',
       ),
+      parsed.guessed
+        ? h(
+            'p',
+            { class: 'mn-note' },
+            `Bei ${parsed.guessed} ${parsed.guessed === 1 ? 'Buchung' : 'Buchungen'} zeigt der Auszug nicht eindeutig, ob Aus- oder Eingang. Sie sind nach dem Text zugeordnet; prüfe sie nach dem Import.`,
+          )
+        : null,
       fresh.length
         ? h(
             'ul',
@@ -2023,6 +2695,12 @@ async function previewImport(parsed) {
             if (clean) {
               await saveBooking(clean);
               done++;
+              // the bank shows the real payment: the automatic booking of that month goes
+              if (clean.rec) {
+                const auto = `r-${clean.rec}-${clean.date.slice(0, 7)}`;
+                const key = [...S.tx].find(([, x]) => x.id === auto)?.[0];
+                if (key) await deleteBooking(key);
+              }
             }
             if (done % 20 === 0) importBtn.textContent = `${done} von ${fresh.length} …`;
           }
@@ -2162,14 +2840,16 @@ async function importBackup(file) {
 const VIEWS = {
   overview: viewOverview,
   bookings: viewBookings,
-  budget: viewBudget,
+  plan: viewPlan,
+  stats: viewStats,
   tax: viewTax,
   settings: viewSettings,
 };
 const TITLES = {
   overview: 'Übersicht',
   bookings: 'Buchungen',
-  budget: 'Budget',
+  plan: 'Planung',
+  stats: 'Statistik',
   tax: 'Steuer',
   settings: 'Einstellungen',
 };
@@ -2179,9 +2859,11 @@ function subtitle() {
     const open = list.filter((b) => !b.cat).length;
     return `${list.length} ${list.length === 1 ? 'Buchung' : 'Buchungen'}${open ? `, ${open} ohne Kategorie` : ''}`;
   }
-  if (S.tab === 'budget') return 'Monatsbudget je Kategorie';
+  if (S.tab === 'plan')
+    return S.plan === 'budget' ? 'Monatsbudget je Kategorie' : 'Was regelmäßig kommt und geht';
+  if (S.tab === 'stats') return `Einnahmen, Ausgaben und Fixkosten ${S.year}`;
   if (S.tab === 'tax') return 'Automatisch aus deinen Buchungen';
-  return 'Kategorien, Daueraufträge, Regeln und Daten';
+  return 'Kategorien, Regeln und Daten';
 }
 function render() {
   for (const tab of document.querySelectorAll('.mn-tab')) {
@@ -2206,12 +2888,31 @@ function render() {
     return;
   }
   $('#subtitle').textContent = subtitle();
+  const settingsBtn = h(
+    'button',
+    {
+      type: 'button',
+      class: 'mn-icon-btn settings-btn',
+      'aria-label': 'Einstellungen',
+      onclick: () => go('settings'),
+    },
+    icon('gear'),
+  );
   tools.replaceChildren(
     ...(S.tab === 'settings'
       ? []
-      : S.tab === 'tax'
-        ? [stepper('Steuerjahr', String(S.year), 'Vorheriges Jahr', 'Nächstes Jahr', changeYear)]
+      : S.tab === 'tax' || S.tab === 'stats'
+        ? [
+            stepper(
+              S.tab === 'tax' ? 'Steuerjahr' : 'Jahr',
+              String(S.year),
+              'Vorheriges Jahr',
+              'Nächstes Jahr',
+              changeYear,
+            ),
+          ]
         : [monthStepper()]),
+    S.tab === 'settings' ? null : settingsBtn,
   );
   view.replaceChildren(...VIEWS[S.tab]().flat(Number.POSITIVE_INFINITY).filter(Boolean));
 }
@@ -2222,7 +2923,12 @@ function go(tab) {
 }
 for (const tab of document.querySelectorAll('.mn-tab'))
   tab.addEventListener('click', () => {
-    if (tab.dataset.tab === 'tax')
+    if (tab.dataset.tab === 'stats')
+      Promise.all([ensureYear(S.year), ensureYear(S.year - 1)]).then(
+        () => go('stats'),
+        () => go('stats'),
+      );
+    else if (tab.dataset.tab === 'tax')
       ensureProfile(S.year).then(
         () => go('tax'),
         () => go('tax'),

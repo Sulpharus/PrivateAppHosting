@@ -20,6 +20,36 @@ export class GoogleError extends Error {
 
 type TokenSource = () => Promise<string | null>;
 
+export interface CalendarSyncState {
+  available: boolean;
+  connected: boolean;
+  email: string | null;
+  /** The Google grant includes full Calendar access. */
+  scopeOk: boolean;
+  connectUrl: string;
+  enabled: boolean;
+  /** Kalender source ids mirrored into the Google calendar "MiniNode". */
+  pushSources: string[];
+  status: 'idle' | 'running' | 'error';
+  error: string | null;
+  lastSyncAt: string | null;
+  calendars: {
+    id: string;
+    name: string;
+    color: string | null;
+    enabled: boolean;
+    writable: boolean;
+    collectionId: string | null;
+  }[];
+}
+
+export interface CalendarSyncSettings {
+  enabled: boolean;
+  pushSources: string[];
+  /** Google calendar id → shown in MiniNode. */
+  calendars?: Record<string, boolean>;
+}
+
 export function createGoogle(config: MininodeConfig, session: TokenSource) {
   const connectUrl = new URL('/account#google', config.portalUrl).toString();
   let cached: { token: string; expiresAt: number } | undefined;
@@ -48,6 +78,31 @@ export function createGoogle(config: MininodeConfig, session: TokenSource) {
       );
     cached = { token: body.accessToken, expiresAt: body.expiresAt ?? Date.now() + 30 * 60_000 };
     return body.accessToken;
+  };
+
+  const calendarCall = async <T>(method: string, path: string, body?: unknown): Promise<T> => {
+    const token = await session();
+    if (!token) throw new GoogleError('Not signed in', 'unauthenticated', 401, connectUrl);
+    const response = await fetch(new URL(`/google/calendar${path}`, config.apiUrl), {
+      method,
+      headers: {
+        Authorization: `Bearer ${token}`,
+        ...(body ? { 'Content-Type': 'application/json' } : {}),
+      },
+      ...(body ? { body: JSON.stringify(body) } : {}),
+    });
+    const result = (await response.json().catch(() => ({}))) as T & {
+      error?: string;
+      message?: string;
+    };
+    if (!response.ok)
+      throw new GoogleError(
+        result.message ?? response.statusText,
+        result.error ?? 'error',
+        response.status,
+        connectUrl,
+      );
+    return result;
   };
 
   const accessToken = async (): Promise<string> => {
@@ -103,5 +158,13 @@ export function createGoogle(config: MininodeConfig, session: TokenSource) {
 
     /** Portal page where the user connects Google (or grants the missing scopes). */
     connectUrl: () => connectUrl,
+
+    /** Google Calendar sync of the Kalender app (ADR 0010); other apps get 403. */
+    calendarSync: {
+      get: () => calendarCall<CalendarSyncState>('GET', ''),
+      set: (settings: CalendarSyncSettings) => calendarCall<{ ok: true }>('PUT', '', settings),
+      /** Syncs now; `ran` is false when a sync is already running or the sync is off. */
+      sync: () => calendarCall<{ ran: boolean; error?: string }>('POST', '/sync'),
+    },
   };
 }

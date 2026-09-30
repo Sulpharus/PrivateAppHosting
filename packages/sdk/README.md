@@ -15,8 +15,12 @@ const { data } = await mn.db.from('recipes').select(); // tables in app_<slug>, 
 await mn.files.upload('fotos/a.jpg', file);
 const answer = await mn.ai.chat('Fasse zusammen: …');  // via ai.mininode.app, no keys in the client
 const events = await mn.google.fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events'); // "google" in mininode.json (ADR 0004)
+await mn.google.calendarSync.get(); // Kalender only: Google Calendar sync state, set() and sync() (ADR 0010)
 const weather = await mn.api('openweather').json('/weather?q=München'); // "apis" in mininode.json, key stays on the server (ADR 0006)
 const people = await mn.people();                    // others with this app: [{ id, name }] (for sharing)
+await mn.suite.type('event').upsert({ title, starts_at }, { sourceKey }); // shared records (ADR 0002)
+await mn.suite.range({ from, to });                // every readable record in a time range
+await mn.suite.collections('kalender');            // personal and shared collections
 const stop = mn.game.track();                      // games: count playtime while visible (ADR 0009)
 await mn.game.result('win', { moves: 24 }, 95);    // a finished round with its declared stats
 await mn.game.username();                          // the player's Gaming Hub name, or null

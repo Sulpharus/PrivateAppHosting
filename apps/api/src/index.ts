@@ -5,6 +5,7 @@ import type { ApiEnv } from './env.ts';
 import { type AppContext, problem, requireUser } from './lib/auth.ts';
 import { adminClient } from './lib/supabase.ts';
 import { apis } from './routes/apis.ts';
+import { GCAL_CRON, gcal, syncDue } from './routes/gcal.ts';
 import { google } from './routes/google.ts';
 import { hooks } from './routes/hooks.ts';
 import { confirmUrl, invites } from './routes/invites.ts';
@@ -41,6 +42,7 @@ app.use(
 app.get('/health', (c) => c.json({ ok: true }));
 app.route('/', apis);
 app.route('/', nucbox);
+app.route('/google/calendar', gcal);
 app.route('/google', google);
 app.route('/hooks', hooks);
 app.route('/push', push);
@@ -156,13 +158,31 @@ export async function maintenance(env: ApiEnv): Promise<void> {
 export default {
   fetch: app.fetch,
   async scheduled(controller, env, ctx) {
+    // Its own trigger (and so its own subrequest limit): one Google Calendar sync (ADR 0010).
+    if (controller.cron === GCAL_CRON) {
+      ctx.waitUntil(
+        syncDue(env).catch((error: unknown) =>
+          console.error(JSON.stringify({ event: 'gcal_cron_failed', error: String(error) })),
+        ),
+      );
+      return;
+    }
     // Every minute: push notifications. Every fifth minute: the maintenance below.
     ctx.waitUntil(
       deliverPushes(env).catch((error: unknown) =>
         console.error(JSON.stringify({ event: 'push_delivery_failed', error: String(error) })),
       ),
     );
-    if (new Date(controller.scheduledTime).getUTCMinutes() % 5 === 0)
-      ctx.waitUntil(maintenance(env));
+    const at = new Date(controller.scheduledTime);
+    if (at.getUTCMinutes() % 5 === 0) ctx.waitUntil(maintenance(env));
+    // Once a day: suite records deleted more than 30 days ago are removed for good.
+    if (at.getUTCHours() === 3 && at.getUTCMinutes() === 30)
+      ctx.waitUntil(
+        (async () => {
+          const { error } = await adminClient(env).schema('platform').rpc('suite_purge_bin');
+          if (error)
+            console.error(JSON.stringify({ event: 'suite_purge_failed', error: error.message }));
+        })(),
+      );
   },
 } satisfies ExportedHandler<ApiEnv>;

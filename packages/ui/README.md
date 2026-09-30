@@ -18,7 +18,7 @@ every app next to the SDK:
 
 | File | Served as | Content |
 |---|---|---|
-| `kit/ui.css` | `/_mininode/ui.css` | `--mn-*` tokens (light, dark, six accents), fonts, all `mn-*` components |
+| `kit/ui.css` | `/_mininode/ui.css` | `--mn-*` tokens (light, dark, six accents, seven `data-cat` category colours), fonts, all `mn-*` components |
 | `kit/ui.js` | `/_mininode/ui.js` | `window.mnui`: dialogs with focus trap, toasts, theme switch, selection |
 | fonts from `@fontsource-variable/*` | `/_mininode/fonts/*.woff2` | Bricolage Grotesque, Instrument Sans, JetBrains Mono |
 | `kit/preview.html` | not served | every component in an example app; open it from a static server in `kit/` with the fonts copied to `kit/fonts/` |

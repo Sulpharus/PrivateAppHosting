@@ -95,6 +95,25 @@ Light: `--mn-accent-ink` is `#ffffff` for every accent.
 
 Status colours are never used as the accent, and the accent never means "good" or "bad".
 
+### Chart series (`--mn-chart-1` to `--mn-chart-3`)
+
+Series colours for charts, in this fixed order (blue, orange, green), validated for
+colour-vision deficiency on both surfaces. Never cycle them or use a status colour for a
+series; past three series, fold the rest into "Sonstige". The light green is below 3:1 on
+white, so every chart with it shows its values in the legend or offers a table view.
+
+### Category colours (`data-cat`)
+
+For things users colour themselves (calendars, labels, sources), put
+`data-cat="green|blue|violet|amber|rose|teal|gray"` on an element. It then has `--mn-cat`
+(solid: edges, dots, checkboxes), `--mn-cat-soft` (tinted background) and `--mn-cat-text`
+(text on the soft background), light and dark. Pair the colour with a name, never colour alone.
+
+```html
+<button class="chip" data-cat="rose" style="background:var(--mn-cat-soft);border-left:3px solid var(--mn-cat)">Oma besuchen</button>
+<span class="mn-dots"><i data-cat="blue"></i></span>
+```
+
 ### Type
 
 | Role | Token | Face |
@@ -369,6 +388,8 @@ mnui.sheet.open(sheet, { onClose: () => render() });
   ring: 2 px `--mn-accent` with a 2 px offset, at least 3:1 on every surface. Inputs show focus
   with an accent border and ring instead, plus a transparent outline for forced-colors mode.
   Never remove these in app CSS.
+- Dense calendar grids (month cells, the all-day row) may show items as 24 px chips when every
+  item is also reachable with 44 px targets elsewhere (the day list or agenda on the same data).
 - Icon-only buttons have `aria-label`; decorative SVGs have `aria-hidden="true"`.
 - Toggles use `aria-pressed`, the current tab `aria-current="page"`, the current step
   `aria-current="step"`.

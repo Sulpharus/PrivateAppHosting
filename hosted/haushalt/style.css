@@ -447,3 +447,164 @@
     display: none;
   }
 }
+
+/* Einstellungen: a tab in the side navigation, the gear in the header on phones */
+@media (max-width: 959px) {
+  .mn-tab[data-tab="settings"] {
+    display: none;
+  }
+}
+@media (min-width: 960px) {
+  .settings-btn {
+    display: none;
+  }
+}
+
+/* Planung */
+.plan-seg {
+  margin-bottom: var(--mn-s6);
+  max-width: 360px;
+}
+.fixed-row {
+  border-bottom: 1px solid var(--mn-line);
+}
+.fixed-row:last-child {
+  border-bottom: 0;
+}
+.fixed-row .mn-row {
+  border-bottom: 0;
+}
+.fixed-chip,
+.fixed-dev {
+  margin: 0 0 var(--mn-s3) var(--mn-s4);
+}
+.fixed-dev {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--mn-s1) var(--mn-s3);
+}
+.fixed-ended {
+  margin-top: var(--mn-s8);
+}
+.fixed-add {
+  margin-top: var(--mn-s6);
+}
+
+/* Übersicht: der Monatsbalken */
+.money {
+  display: grid;
+  gap: var(--mn-s2);
+  margin-bottom: var(--mn-s6);
+}
+.money-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--mn-s2);
+}
+.money-head .mn-chip svg {
+  width: 14px;
+  height: 14px;
+}
+.money-title {
+  font-size: var(--mn-fs-lg);
+  margin: 0;
+}
+.money-big {
+  margin: 0;
+  font: 650 var(--mn-fs-2xl) / 1.15 var(--mn-font-display);
+  font-variant-numeric: tabular-nums;
+}
+.money-track {
+  position: relative;
+  height: 14px;
+  border-radius: 7px;
+  background: var(--mn-surface-2);
+  overflow: hidden;
+  margin-top: var(--mn-s2);
+}
+.money-fill {
+  position: absolute;
+  inset: 0;
+  transform-origin: left center;
+  border-radius: 7px;
+}
+.money-ok {
+  background: var(--mn-ok);
+}
+.money-warn {
+  background: var(--mn-warn);
+}
+.money-bad {
+  background: var(--mn-bad);
+}
+/* where spending should be by today */
+.money-mark {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  width: 3px;
+  margin-left: -1px;
+  background: var(--mn-ink);
+  box-shadow: 0 0 0 2px var(--mn-surface);
+}
+.money-scale {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--mn-s2);
+  font-size: var(--mn-fs-sm);
+  color: var(--mn-muted);
+  font-variant-numeric: tabular-nums;
+}
+.money-facts {
+  margin-top: var(--mn-s2);
+}
+
+/* Statistik: income next to stacked expenses (fixed, other), one axis */
+.s1 {
+  background: var(--mn-chart-1);
+}
+.s2 {
+  background: var(--mn-chart-2);
+}
+.s3 {
+  background: var(--mn-chart-3);
+}
+.stats-chart .stack {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 2px;
+  width: min(10px, 35%);
+  height: 100%;
+}
+.stats-chart .stack i {
+  width: 100%;
+  border-radius: 0;
+}
+.stats-chart .stack i:first-child {
+  border-radius: 3px 3px 0 0;
+}
+.stats-delta {
+  margin-top: var(--mn-s1);
+}
+.table-wrap {
+  overflow-x: auto;
+}
+.stats-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--mn-fs-sm);
+}
+.stats-table th,
+.stats-table td {
+  padding: var(--mn-s1) var(--mn-s2);
+  text-align: right;
+  border-bottom: 1px solid var(--mn-line);
+  white-space: nowrap;
+}
+.stats-table th:first-child {
+  text-align: left;
+}

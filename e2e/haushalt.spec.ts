@@ -5,6 +5,7 @@ import { cleanup, createUser, PASSWORD } from './seed.ts';
 const run = `e2eb${Date.now().toString(36)}`;
 const APP = 'http://localhost:8795';
 const year = new Date().getFullYear();
+const shots = process.env.SCREENSHOT_DIR;
 const month = String(new Date().getMonth() + 1).padStart(2, '0');
 
 test.afterAll(async () => {
@@ -83,5 +84,114 @@ test('haushalt books, imports a bank CSV and fills the tax forms', async ({ page
   await page.reload();
   await page.getByRole('button', { name: 'Steuer', exact: true }).click();
   await expect(page.getByLabel('Tage im Büro')).toHaveValue('100');
+  expect(errors).toEqual([]);
+});
+
+test('haushalt imports a bank statement as PDF', async ({ page, browser }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  const paul = `${run}-paul@example.com`;
+  await createUser(paul, 'user', 'Paul');
+
+  // A statement as banks print it: dates without year, continuation lines, amounts with a
+  // trailing minus, balances above and below. Chromium renders it to a real text PDF.
+  const printer = await browser.newPage();
+  await printer.setContent(`<!doctype html><html lang="de"><body style="font:12px sans-serif">
+    <h1>Kontoauszug 9/${year}</h1>
+    <p>Zeitraum 01.${month}.${year} bis 28.${month}.${year}</p>
+    <table style="border-collapse:collapse;width:100%">
+      <tr><td>Alter Kontostand</td><td></td><td></td><td style="text-align:right">1.200,00</td></tr>
+      <tr style="vertical-align:top"><td>04.${month}.</td><td>04.${month}.</td>
+        <td>Lastschrift<br>Stadtwerke Musterstadt<br>Abschlag Strom Kd 4711</td>
+        <td style="text-align:right">89,00-</td></tr>
+      <tr style="vertical-align:top"><td>05.${month}.</td><td>05.${month}.</td>
+        <td>Gutschrift<br>Beispiel GmbH<br>Gehalt</td>
+        <td style="text-align:right">2.750,00+</td></tr>
+      <tr><td>Neuer Kontostand</td><td></td><td></td><td style="text-align:right">3.861,00</td></tr>
+    </table></body></html>`);
+  const pdf = await printer.pdf({ format: 'A4' });
+  await printer.close();
+
+  await signIn(page, paul);
+  await page.getByRole('button', { name: 'Buchungen', exact: true }).click();
+  await page.getByRole('button', { name: 'Kontoauszug importieren' }).click();
+  const dialog = page.getByRole('dialog');
+  await dialog
+    .locator('input[type=file]')
+    .setInputFiles({ name: 'auszug.pdf', mimeType: 'application/pdf', buffer: pdf });
+  await expect(dialog.getByText('2 Buchungen erkannt, davon 2 neu')).toBeVisible({
+    timeout: 20_000,
+  });
+  await dialog.getByRole('button', { name: '2 importieren' }).click();
+  await expect(dialog).toBeHidden();
+  await expect(page.getByText('Stadtwerke Musterstadt')).toBeVisible();
+  await expect(page.getByText('+2.750,00 €')).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
+test('haushalt plans fixed costs, spots a changed price and shows the month', async ({
+  page,
+  browser,
+}) => {
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  const clara = `${run}-clara@example.com`;
+  await createUser(clara, 'user', 'Clara');
+  await signIn(page, clara);
+
+  await page.getByRole('button', { name: 'Planung' }).first().click();
+  await expect(page.getByText('Noch keine Fixkosten')).toBeVisible();
+  const dialog = page.getByRole('dialog');
+  const addFixed = async (text: string, amount: string, art: string, kind?: string) => {
+    await page.getByRole('button', { name: 'Fixkosten hinzufügen' }).first().click();
+    await dialog.getByLabel('Beschreibung').fill(text);
+    await dialog.getByRole('combobox', { name: 'Gruppe' }).selectOption({ label: art });
+    await dialog.getByLabel('Betrag in €').fill(amount);
+    if (kind)
+      await dialog
+        .getByRole('combobox', { name: 'Art', exact: true })
+        .selectOption({ label: kind });
+    await dialog.getByLabel('Erste Buchung').fill(`${year}-${month}`);
+    await dialog.getByLabel('Am Tag').fill('1');
+    await dialog.getByRole('button', { name: 'Speichern' }).click();
+    await expect(dialog).toBeHidden();
+  };
+  await addFixed('Gehalt', '3000', 'Regelmäßige Einnahmen', 'Einnahme');
+  await addFixed('Miete', '1000', 'Wohnen');
+  await addFixed('Netflix', '12,99', 'Abos und Verträge');
+  await expect(page.getByText('Fixkosten pro Monat')).toBeVisible();
+  await expect(page.getByRole('button', { name: /^Netflix/ })).toContainText('12,99 €');
+
+  // The bank shows a higher Netflix price: recognised, not booked twice, flagged.
+  const printer = await browser.newPage();
+  await printer.setContent(`<!doctype html><html lang="de"><body style="font:12px sans-serif">
+    <p>Kontoauszug vom 01.${month}.${year} bis 28.${month}.${year}</p>
+    <table style="width:100%"><tr><td>02.${month}.</td><td>NETFLIX.COM</td>
+    <td style="text-align:right">15,99-</td></tr></table></body></html>`);
+  const pdf = await printer.pdf({ format: 'A4' });
+  await printer.close();
+  await page.getByRole('button', { name: 'Buchungen', exact: true }).click();
+  await page.getByRole('button', { name: 'Kontoauszug importieren' }).click();
+  await dialog
+    .locator('input[type=file]')
+    .setInputFiles({ name: 'auszug.pdf', mimeType: 'application/pdf', buffer: pdf });
+  await expect(dialog.getByText('1 als Fixkosten')).toBeVisible({ timeout: 15_000 });
+  await dialog.getByRole('button', { name: '1 importieren' }).click();
+  await expect(dialog).toBeHidden();
+  await expect(page.getByText('−12,99 €')).toHaveCount(0);
+
+  await page.getByRole('button', { name: 'Übersicht' }).first().click();
+  await expect(page.getByRole('region', { name: 'Dein Monat' })).toBeVisible();
+  await expect(page.getByText(/Netflix 15,99\s€ statt 12,99\s€/)).toBeVisible();
+  await page.getByRole('button', { name: 'Ansehen' }).click();
+  await page.getByRole('button', { name: 'Als neuen Betrag übernehmen' }).click();
+  await expect(page.getByRole('button', { name: /^Netflix/ })).toContainText('15,99 €');
+
+  await page.getByRole('button', { name: 'Statistik' }).first().click();
+  await expect(page.getByText('Fixkostenquote')).toBeVisible();
+  await expect(page.getByText('Fixkosten nach Art')).toBeVisible();
+  if (shots) await page.screenshot({ path: `${shots}/haushalt-stats.png`, fullPage: true });
+  await page.getByRole('button', { name: 'Übersicht' }).first().click();
+  if (shots) await page.screenshot({ path: `${shots}/haushalt-overview.png`, fullPage: true });
   expect(errors).toEqual([]);
 });

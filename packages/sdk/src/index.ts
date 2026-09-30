@@ -18,12 +18,21 @@ import {
 } from './offline.ts';
 import { createPush } from './push.ts';
 import { cookieSessionUserId } from './session-cookie.ts';
+import { createSuite } from './suite.ts';
 
 export { ExternalApiError } from './api.ts';
 export { appSchema, assertConfig } from './config.ts';
 export type { GameOutcome, GameStats, LeaderboardRow } from './game.ts';
 export { GoogleError } from './google.ts';
 export type { PushOptions, PushStatus, ScheduledPush } from './push.ts';
+export type {
+  RangeQuery,
+  SuiteCollection,
+  SuiteFields,
+  SuiteRecord,
+  SuiteType,
+  SuiteWrite,
+} from './suite.ts';
 export type { AiChatOptions, AiMessage, KvScope, MininodeConfig };
 
 export type Role = 'admin' | 'trusted' | 'user';
@@ -74,6 +83,8 @@ export interface Mininode {
   readonly push: ReturnType<typeof createPush>;
   /** Playtime, results, username and leaderboards for apps with a `game` block (ADR 0009). */
   readonly game: ReturnType<typeof createGame>;
+  /** Shared records (events, tasks, …) other apps can read too, in shareable collections (ADR 0002). */
+  readonly suite: ReturnType<typeof createSuite>;
 }
 
 const FILE_BUCKET = 'app-files';
@@ -250,6 +261,7 @@ export function createMininode(config: MininodeConfig): Mininode {
     api: createApi(config, sessionToken),
     push: createPush(config, supabase),
     game: createGame(config, supabase),
+    suite: createSuite(supabase),
     async people() {
       const { data, error } = await supabase
         .schema('platform')
