@@ -184,6 +184,11 @@ export function checkDatabaseSettings(
   if (migrationFiles(appDir).length === 0) return;
   if (!vars.SUPABASE_DB_URL)
     throw new Error(`${slug} has db/ migrations: SUPABASE_DB_URL is required`);
+  // The direct connection (db.<ref>.supabase.co) is IPv6 only; CI runners cannot reach it.
+  if (envName !== 'local' && /@db\.[a-z0-9]+\.supabase\.co\b/.test(vars.SUPABASE_DB_URL))
+    throw new Error(
+      `${slug} has db/ migrations: SUPABASE_DB_URL points at the IPv6-only direct connection; use the Session pooler string (…pooler.supabase.com:5432) from Connect in the Supabase dashboard`,
+    );
   if (envName !== 'local' && (!vars.SUPABASE_PROJECT_REF || !vars.SUPABASE_ACCESS_TOKEN))
     throw new Error(
       `${slug} has db/ migrations: SUPABASE_PROJECT_REF and SUPABASE_ACCESS_TOKEN are required to expose its schema`,
@@ -204,6 +209,25 @@ export async function deployApp(appDir: string, options: DeployOptions): Promise
   log(`→ ${manifest.slug} (${manifest.target}) to ${env.name}`);
   if (!options.dryRun) checkDatabaseSettings(appDir, manifest.slug, env.name, process.env);
 
+  // Tables first: a failing migration must stop the deploy before the new version goes live.
+  const databaseUrl = process.env.SUPABASE_DB_URL;
+  if (!options.dryRun && databaseUrl) {
+    const applied = await migrateApp(databaseUrl, manifest.slug, appDir);
+    if (applied.length > 0) log(`  migrations: ${applied.join(', ')}`);
+    if (env.name === 'local') await exposeLocally(databaseUrl, appSchemaName(manifest.slug));
+  }
+  const projectRef = process.env.SUPABASE_PROJECT_REF;
+  const accessToken = process.env.SUPABASE_ACCESS_TOKEN;
+  if (
+    !options.dryRun &&
+    env.name !== 'local' &&
+    projectRef &&
+    accessToken &&
+    existsSync(join(appDir, 'db'))
+  ) {
+    await exposeSchemas({ projectRef, accessToken, schemas: [appSchemaName(manifest.slug)] });
+  }
+
   if (manifest.target === 'cloudflare' && env.name !== 'local') {
     const stage = stageAssets(appDir, manifest);
     const config = appWranglerConfig({ manifest, env, assetsDir: join(stage, 'assets-root') });
@@ -222,18 +246,6 @@ export async function deployApp(appDir: string, options: DeployOptions): Promise
   }
 
   if (options.dryRun) return;
-
-  const databaseUrl = process.env.SUPABASE_DB_URL;
-  if (databaseUrl) {
-    const applied = await migrateApp(databaseUrl, manifest.slug, appDir);
-    if (applied.length > 0) log(`  migrations: ${applied.join(', ')}`);
-    if (env.name === 'local') await exposeLocally(databaseUrl, appSchemaName(manifest.slug));
-  }
-  const projectRef = process.env.SUPABASE_PROJECT_REF;
-  const accessToken = process.env.SUPABASE_ACCESS_TOKEN;
-  if (env.name !== 'local' && projectRef && accessToken && existsSync(join(appDir, 'db'))) {
-    await exposeSchemas({ projectRef, accessToken, schemas: [appSchemaName(manifest.slug)] });
-  }
 
   const secret = process.env.SUPABASE_SECRET_KEY;
   if (!secret) throw new Error('SUPABASE_SECRET_KEY is required to register the app');
