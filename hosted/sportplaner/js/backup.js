@@ -10,7 +10,7 @@ function updBackup() {
     ? 'Du hast noch nicht exportiert.'
     : age === 0
       ? 'Zuletzt heute exportiert.'
-      : `Zuletzt exportiert am ${fmt(new Date(+last), { day: 'numeric', month: 'short', year: 'numeric' })}.`;
+      : `Zuletzt exportiert am ${fmt(new Date(+last), { day: '2-digit', month: 'short', year: 'numeric' })}.`;
   const off = BK.busy || (!S.acts.length && !S.plans.length);
   setHTML(
     el,
@@ -211,8 +211,20 @@ function sanitizeAct(raw, keepMedia = false) {
       raw.course &&
       isDay(raw.course.from) &&
       isDay(raw.course.until) &&
-      raw.course.from <= raw.course.until
-        ? { from: raw.course.from, until: raw.course.until }
+      raw.course.from <= raw.course.until &&
+      (new Date(raw.course.until) - new Date(raw.course.from)) / 864e5 < 104 * 7
+        ? {
+            from: raw.course.from,
+            until: raw.course.until,
+            ...(Number.isFinite(+raw.course.price) &&
+            +raw.course.price > 0 &&
+            +raw.course.price <= 100000
+              ? {
+                  price: Math.round(+raw.course.price * 100) / 100,
+                  priceType: raw.course.priceType === 'month' ? 'month' : 'total',
+                }
+              : {}),
+          }
         : undefined,
     photos,
     thumbs,

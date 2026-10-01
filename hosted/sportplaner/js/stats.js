@@ -9,11 +9,7 @@ function plansChanged() {
 const eurF = new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' });
 const eur = (n) => eurF.format(n || 0);
 const numF = new Intl.NumberFormat('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const parseMoney = (v) => {
-  const s = String(v ?? '').replace(/[\s€]/g, '');
-  if (!s) return NaN;
-  return parseFloat(s.includes(',') ? s.replace(/\./g, '').replace(',', '.') : s);
-};
+const parseMoney = (v) => parseEuro(v);
 const UNITS = {
   day: ['Tag', 'Tage'],
   week: ['Woche', 'Wochen'],
@@ -63,12 +59,12 @@ function paymentsCount(p, from, to) {
 function planSummary(p) {
   const a = eur(p.amount);
   if (p.type === 'once')
-    return `${a} einmalig${p.start ? ' am ' + fmt(parse(p.start), { day: 'numeric', month: 'short', year: 'numeric' }) : ''}`;
+    return `${a} einmalig${p.start ? ' am ' + fmt(parse(p.start), { day: '2-digit', month: 'short', year: 'numeric' }) : ''}`;
   if (p.type === 'visit') return `${a} pro Besuch`;
   if (p.type === 'card') return `${p.visits || 10}er-Karte für ${a}`;
   const n = +p.every || 1,
     u = p.unit || 'month';
-  return `${a} ${n === 1 ? EVERY1[u] : `alle ${n} ${UNITS[u][1]}`}${p.end ? ', gekündigt zum ' + fmt(parse(p.end), { day: 'numeric', month: 'short', year: 'numeric' }) : ''}`;
+  return `${a} ${n === 1 ? EVERY1[u] : `alle ${n} ${UNITS[u][1]}`}${p.end ? ', gekündigt zum ' + fmt(parse(p.end), { day: '2-digit', month: 'short', year: 'numeric' }) : ''}`;
 }
 const visitsIn = (a, from, to) =>
   (a.done || []).reduce((c, d) => c + (d >= from && d <= to ? 1 : 0), 0);
@@ -130,6 +126,23 @@ function computeStats(Y) {
     }
     forecast += fc;
     planStats.push({ p, total, visits: lv, perVisit: lv && total ? total / lv : null });
+  }
+  // Course prices: each session that takes place carries its share, booked on its date. A
+  // course linked to a tariff is paid through the tariff and is not counted twice.
+  const tariffed = new Set(S.plans.flatMap((p) => p.activities || []));
+  for (const a of S.acts) {
+    const cp = tariffed.has(a.id) ? null : coursePrices(a);
+    if (!cp) continue;
+    covered.add(a.id);
+    let spent = 0,
+      planned = 0;
+    for (const [d, share] of cp.per) {
+      if (d < from || d > yEnd) continue;
+      planned += share;
+      if (d <= to) spent += share;
+    }
+    push(spent, a, null, 'Kurse');
+    forecast += planned;
   }
   for (const a of S.acts) {
     const pr = +a.visitPrice || 0;

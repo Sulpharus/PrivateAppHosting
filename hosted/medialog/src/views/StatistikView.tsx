@@ -36,7 +36,9 @@ export const StatistikView: React.FC<StatistikViewProps> = ({ items, onSaveItem 
   const ratedItems = items.filter((i) => i.rating && i.rating > 0);
   const avgRating =
     ratedItems.length > 0
-      ? (ratedItems.reduce((acc, it) => acc + (it.rating || 0), 0) / ratedItems.length).toFixed(1)
+      ? (
+          ratedItems.reduce((acc, it) => acc + (it.rating || 0), 0) / ratedItems.length
+        ).toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
       : '-';
 
   // Aggregate all consumption logs across all media items
@@ -66,8 +68,8 @@ export const StatistikView: React.FC<StatistikViewProps> = ({ items, onSaveItem 
 
     const dayName = d.toLocaleDateString('de-DE', { weekday: 'long' });
     const formattedDate = d.toLocaleDateString('de-DE', {
-      day: 'numeric',
-      month: 'long',
+      day: '2-digit',
+      month: 'short',
       year: 'numeric',
     });
 

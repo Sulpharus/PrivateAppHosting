@@ -79,8 +79,10 @@ test('gaming hub: username, a round of Memory, stats and leaderboard', async ({ 
   await page.getByLabel('E-Mail').fill(email);
   await page.getByLabel('Passwort', { exact: true }).fill(PASSWORD);
   await page.getByRole('button', { name: 'Anmelden', exact: true }).click();
-  await expect(page.locator('.hub-link')).toBeVisible();
-  await page.locator('.hub-link').click();
+  // Games are not among the apps on the start page; the Gaming Hub button leads to them.
+  await expect(page.getByRole('link', { name: /^Gaming Hub/ })).toBeVisible();
+  await expect(page.locator('.tile').filter({ hasText: 'Memory' })).toHaveCount(0);
+  await page.getByRole('link', { name: /^Gaming Hub/ }).click();
   await expect(page.getByRole('heading', { level: 1, name: 'Gaming Hub' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Rätsel & Puzzle' })).toBeVisible();
 

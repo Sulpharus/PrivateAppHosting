@@ -16,6 +16,9 @@ order: 12
   numbers, not strings. Money is stored in cents (integer). Show with `Intl.NumberFormat('de-DE')`.
 - Dates use `<input type="date">`/`type="time"`; store `YYYY-MM-DD` and `HH:MM`. Offer quick
   choices ("Heute", "Morgen", "Nächste Woche") as chips next to the field.
+  - The App Kit shows these fields as German parts (Tag · Monat · Jahr, Stunde : Minute) in
+    every browser. Do not build your own date pickers.
+  - Show dates as "01. Okt. 2026" (`mnui.date.format`) and amounts as "1.234,50 €".
 - Use the right keyboard: `inputmode="decimal"` for amounts, `inputmode="numeric"` for
   counts, `type="email"`, `type="tel"`, `autocomplete` where it applies.
 - Long forms save a draft in kv (`draft:<form>`) every few seconds and restore it with a

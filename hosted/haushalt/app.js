@@ -48,6 +48,8 @@ const dayLabel = (ds) =>
   new Intl.DateTimeFormat('de-DE', { weekday: 'short', day: 'numeric', month: 'long' }).format(
     new Date(Number(ds.slice(0, 4)), Number(ds.slice(5, 7)) - 1, Number(ds.slice(8, 10))),
   );
+/** '2026-10-01' → '01. Okt. 2026' (App Kit, the same in every app). */
+const dateText = (ds) => window.mnui?.date.format(ds) || ds;
 const shiftMonth = (ym, n) => {
   const d = new Date(Number(ym.slice(0, 4)), Number(ym.slice(5, 7)) - 1 + n, 1);
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}`;
@@ -1509,11 +1511,7 @@ function formsView(year) {
                               h(
                                 'li',
                                 {},
-                                h(
-                                  'span',
-                                  {},
-                                  `${b.date.split('-').reverse().join('.')} ${b.text || b.party}`,
-                                ),
+                                h('span', {}, `${dateText(b.date)} ${b.text || b.party}`),
                                 h(
                                   'span',
                                   {},
@@ -2715,7 +2713,7 @@ async function previewImport(parsed) {
                 h(
                   'li',
                   {},
-                  h('span', {}, `${b.date.split('-').reverse().join('.')} ${b.party || b.text}`),
+                  h('span', {}, `${dateText(b.date)} ${b.party || b.text}`),
                   h(
                     'span',
                     {},

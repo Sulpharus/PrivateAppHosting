@@ -20,7 +20,8 @@ document.addEventListener('keydown', (e) => {
   const sheet = e.key === 'Tab' && S.sheet && $('.sheet');
   if (!sheet) return;
   const f = [...sheet.querySelectorAll('button,input,select,textarea,a[href]')].filter(
-    (x) => !x.disabled && x.getClientRects().length,
+    // tabindex=-1: the hidden inputs behind the kit's date fields are not Tab stops
+    (x) => !x.disabled && x.tabIndex !== -1 && x.getClientRects().length,
   );
   if (!f.length) return;
   const first = f[0],
@@ -44,13 +45,15 @@ function galleryHTML(a) {
 }
 function detailBodyHTML(a, ds) {
   let today = '';
+  const cp = coursePrices(a),
+    tariffed = S.plans.some((p) => (p.activities || []).includes(a.id));
   if (ds) {
     const s = slotsOn(a, ds),
       planned = isPlanned(a, ds);
     if (s.length || planned) {
       const on = (a.done || []).includes(ds),
         off = isCancelled(a, ds);
-      today = `<div class="today-box${off ? ' is-off' : ''}"><span><small>${fmt(parse(ds), { weekday: 'long', day: 'numeric', month: 'long' })}</small><b>${esc(off ? 'Ausgefallen' : s.length ? s.map(timeLabel).join(', ') : 'Geplant')}</b></span><span class="tb-actions">${off ? '' : `<button class="done-btn ${planned ? 'on' : ''}" data-action="plan-toggle" aria-pressed="${planned}">${planned ? ICON.check : ''}Eingeplant</button><button class="done-btn ${on ? 'on' : ''}" data-action="toggle-done" aria-pressed="${on}">${on ? ICON.check + 'Erledigt' : 'Erledigt'}</button>`}<button class="done-btn ${off ? 'on' : ''}" data-action="toggle-cancel" aria-pressed="${off}">${off ? ICON.check + 'Ausgefallen' : 'Ausgefallen'}</button></span>${off ? '<small class="tb-note">Nicht stattgefunden. Zählt weder als Teilnahme noch als verpasst.</small>' : ''}</div>`;
+      today = `<div class="today-box${off ? ' is-off' : ''}"><span><small>${fmt(parse(ds), { weekday: 'long', day: 'numeric', month: 'long' })}</small><b>${esc(off ? 'Ausgefallen' : s.length ? s.map(timeLabel).join(', ') : 'Geplant')}</b>${!off && cp && cp.per.has(ds) ? `<small>${eur(cp.per.get(ds))} für diesen Termin</small>` : ''}</span><span class="tb-actions">${off ? '' : `<button class="done-btn ${planned ? 'on' : ''}" data-action="plan-toggle" aria-pressed="${planned}">${planned ? ICON.check : ''}Eingeplant</button><button class="done-btn ${on ? 'on' : ''}" data-action="toggle-done" aria-pressed="${on}">${on ? ICON.check + 'Erledigt' : 'Erledigt'}</button>`}<button class="done-btn ${off ? 'on' : ''}" data-action="toggle-cancel" aria-pressed="${off}">${off ? ICON.check + 'Ausgefallen' : 'Ausgefallen'}</button></span>${off ? '<small class="tb-note">Nicht stattgefunden. Zählt weder als Teilnahme noch als verpasst.</small>' : ''}</div>`;
     }
   }
   const facts = [];
@@ -105,8 +108,11 @@ function detailBodyHTML(a, ds) {
     ]);
   } else facts.push(['Anmeldung', '<p>Nicht nötig</p>']);
   const costLines = [
+    cp &&
+      `<p>Kurs: ${eur(cp.price)} ${cp.type === 'month' ? 'pro Monat' : 'für den ganzen Kurs'}${cp.avg !== null ? `, im Schnitt <b>${eur(cp.avg)} pro Termin</b>` : ''}</p><p class="muted">${cp.sessions} ${cp.sessions === 1 ? 'Termin' : 'Termine'}${cp.type === 'month' ? `, ${eur(cp.total)} für ${cp.months} ${cp.months === 1 ? 'Monat' : 'Monate'}` : ''}${cp.cancelled ? `; ${cp.cancelled} ausgefallene nicht mitgerechnet` : ''}${tariffed ? '. Ein Tarif ist verknüpft: die Statistik zählt nur den Tarif.' : ''}</p>`,
     a.cost && `<p>${esc(a.cost)}</p>`,
-    +a.visitPrice > 0 && `<p>${eur(+a.visitPrice)} pro Besuch</p>`,
+    +a.visitPrice > 0 &&
+      `<p>${eur(+a.visitPrice)} pro Besuch${cp ? ' <span class="muted">(zählt neben dem Kurspreis nicht)</span>' : ''}</p>`,
     ...S.plans
       .filter((p) => (p.activities || []).includes(a.id))
       .map((p) => `<p>${esc(p.name)} <span class="muted">${esc(planSummary(p))}</span></p>`),
@@ -133,7 +139,7 @@ function detailBodyHTML(a, ds) {
           .reverse()
           .map(
             (d) =>
-              `<span class="tag">${fmt(parse(d), { day: 'numeric', month: 'short', year: '2-digit' })}<button class="vx" data-action="del-visit" data-d="${esc(d)}" aria-label="Besuch am ${fmt(parse(d), { day: 'numeric', month: 'long' })} entfernen">×</button></span>`,
+              `<span class="tag">${fmt(parse(d), { day: '2-digit', month: 'short', year: 'numeric' })}<button class="vx" data-action="del-visit" data-d="${esc(d)}" aria-label="Besuch am ${fmt(parse(d), { day: 'numeric', month: 'long' })} entfernen">×</button></span>`,
           )
           .join('')}</div>`
       : '<p class="muted">Noch keine Besuche eingetragen</p>') +

@@ -379,7 +379,7 @@ Everyday apps and platform features that grew next to the phases, each with its 
 | Host API keys | done | ADR 0006 |
 | App catalog (favourites, categories, sets) | done | ADR 0007 |
 | People for in-app sharing | done | ADR 0008 |
-| Gaming Hub | done | ADR 0009, `hosted/memory` |
+| Gaming Hub (games only there, not on the start page) | done | ADR 0009, `hosted/memory` |
 | Suite core (shared records, collections, app grants) | done, lean phase | ADR 0002, `docs/suite/data-types.md` |
 | Kalender (own, shared and other apps' dates) | done | `hosted/kalender` |
 | Google Calendar two-way sync | done | ADR 0010, `docs/runbooks/kalender.md` |
@@ -387,6 +387,8 @@ Everyday apps and platform features that grew next to the phases, each with its 
 | Sportplaner and Haushalt write their dates as suite records | done | planned sessions (`activity`), payments of fixed costs (`contract`) |
 | App library with one-click NucBox installs (Jellyfin, n8n …) | done, needs the NucBox | ADR 0011, `docs/runbooks/app-library.md` |
 | Apps as GitHub projects (no data, no keys) | done | ADR 0012, `docs/runbooks/app-export.md` |
+| Sportplaner course price split per session | done | `hosted/sportplaner/js/price.js` |
+| German date, time and number formats in every app (kit date fields) | done | `packages/ui/kit/ui.js`, `docs/ai/DESIGN-SYSTEM.md` §8 |
 
 ### 15.2 Sharing the platform (proposed, not started)
 

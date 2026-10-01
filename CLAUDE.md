@@ -3,6 +3,8 @@
 A private, invite-only hosting platform. It serves web apps, services and remote native
 programs under `*.mininode.app` with one Supabase login. `PLAN.md` is the source of truth for
 architecture and scope, and `docs/adr/` records decisions. Read both before any structural change.
+`docs/STATUS.md` says where things stand, what the owner still has to do, and how to work in a
+cloud session. Read it at the start of a session, and update it before the session ends.
 
 ## Layout
 

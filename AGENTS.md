@@ -3,7 +3,8 @@
 The canonical instructions for every coding agent (Claude Code, Codex, Gemini CLI, Cursor,
 Copilot) are in [CLAUDE.md](CLAUDE.md): layout, commands, security rules (RLS is the
 boundary), UI rules and the knowledge graph (`graphify`, see `graphify-out/`). Architecture
-and scope: [PLAN.md](PLAN.md) and [docs/adr/](docs/adr/).
+and scope: [PLAN.md](PLAN.md) and [docs/adr/](docs/adr/). Current state, open items and
+working notes: [docs/STATUS.md](docs/STATUS.md).
 
 Verification gate before every commit:
 

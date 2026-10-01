@@ -154,6 +154,9 @@ test('a course plans every session; cancelled sessions count nowhere', async ({ 
   }
   await row.getByLabel('Beginn').fill('18:00');
   await expect(dialog.getByText(/7 Termine vom .* Du bist für alle eingeplant\./)).toBeVisible();
+  // 70 € for the whole course: 10 € per session.
+  await dialog.getByLabel('Preis in €').fill('70');
+  await expect(dialog.getByText(/im Schnitt 10,00\s€ pro Termin/)).toBeVisible();
   await dialog.getByRole('button', { name: 'Weiter', exact: true }).click();
   await expect(
     dialog.getByText(/Kurs: Du bist automatisch für alle Termine eingeplant/),
@@ -182,6 +185,9 @@ test('a course plans every session; cancelled sessions count nowhere', async ({ 
   );
   await expect(detail.getByText(/Nicht stattgefunden/)).toBeVisible();
   await expect(detail.getByText('Kurs: alle 7 Termine, 1 ausgefallen')).toBeVisible();
+  // The cancelled session no longer carries a share: 70 € over 6 sessions.
+  await expect(detail.getByText(/im Schnitt 11,67\s€ pro Termin/)).toBeVisible();
+  await expect(detail.getByText(/1 ausgefallene nicht mitgerechnet/)).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(page.locator('.tile-off')).toHaveText('Ausgefallen');
 
@@ -189,6 +195,16 @@ test('a course plans every session; cancelled sessions count nowhere', async ({ 
   const yearStart = `${new Date().getFullYear()}-01-01`;
   const past = [day(-2), day(-1)].filter((d) => d >= yearStart).length;
   await page.getByRole('button', { name: 'Statistik' }).click();
+  // The course costs so far: the shares of the sessions before today (70 € over 6 sessions).
+  if (past)
+    await expect(
+      page
+        .locator('#st-cost')
+        .getByText((past * (70 / 6)).toFixed(2).replace('.', ','), {
+          exact: false,
+        })
+        .first(),
+    ).toBeVisible();
   await expect(
     page.getByText(
       past ? `Teilnahme: 0 von ${past} geplanten Terminen` : 'Teilnahme an geplanten Terminen',

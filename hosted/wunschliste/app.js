@@ -63,7 +63,9 @@ const shop = (url) => {
 };
 const PRIORITY = { 1: 'Sehr gern', 2: 'Gern', 3: 'Nur eine Idee' };
 const dateLabel = (iso) =>
-  new Intl.DateTimeFormat('de-DE', { day: 'numeric', month: 'short' }).format(new Date(iso));
+  new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: 'short', year: 'numeric' }).format(
+    new Date(iso),
+  );
 
 // ---------- state ----------
 const params = new URLSearchParams(location.search);

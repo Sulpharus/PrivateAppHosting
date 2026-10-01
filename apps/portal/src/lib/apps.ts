@@ -25,7 +25,7 @@ export interface AppRow {
   link_url: string | null;
   /** Only the admin and the people on the whitelist see the app. */
   whitelist: boolean;
-  /** Set for games (manifest `game` block): they also appear in the Gaming Hub. */
+  /** Set for games (manifest `game` block): they appear only in the Gaming Hub (ADR 0009). */
   game_genre: string | null;
   /** Set for programs from the App-Bibliothek (ADR 0011). */
   library: string | null;

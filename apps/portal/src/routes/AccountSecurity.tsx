@@ -34,7 +34,7 @@ interface Feedback {
 
 function formatDate(value: string): string {
   return new Date(value).toLocaleDateString('de-DE', {
-    day: 'numeric',
+    day: '2-digit',
     month: 'short',
     year: 'numeric',
   });
