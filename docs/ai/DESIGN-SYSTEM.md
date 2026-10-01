@@ -25,7 +25,7 @@ On MiniNode every app gets the kit from its own gate, next to the SDK:
 ```
 
 - `ui.css` holds the tokens (light and dark), the fonts and every component. `ui.js` adds
-  `window.mnui` (dialogs, toasts, theme). Both work with plain HTML and with React
+  `window.mnui` (dialogs, toasts, theme, German date and time fields, `mnui.date.format`). Both work with plain HTML and with React
   (`className="mn-btn mn-btn--primary"`).
 - Put `class="mn-app"` on `<body>`. The base styles (font, colours, form fields) only apply
   inside it.
@@ -379,7 +379,20 @@ mnui.sheet.open(sheet, { onClose: () => render() });
 - Toasts in the past tense: "Buch gespeichert", "Besuch eingetragen".
 - Errors say what is wrong and how to fix it: "Gib ein gültiges Erscheinungsjahr an, z. B.
   1924." No apologies, no "Fehler!".
-- Dates and numbers in German format: "Mo., 28. Sept.", "17:00–22:00", "1.234,50 €", "61 %".
+- Dates and numbers always in German format:
+  - A full date is day, abbreviated month and year: "01. Okt. 2026". Use
+    `mnui.date.format('2026-10-01')` (or `Intl.DateTimeFormat('de-DE', { day: '2-digit',
+    month: 'short', year: 'numeric' })`). Never "01.10.2026", "2026-10-01" or "October 1".
+  - Short contexts may leave out the year, never the format: "Mo., 28. Sept.", "Okt. 2026".
+  - Times use 24 hours: "17:00–22:00".
+  - Numbers and amounts: "1.234,50 €", "61 %"; read typed amounts the German way ("1.200,50").
+- Date and time **inputs**: use plain `<input type="date">`, `type="month"` and `type="time"`.
+  `ui.js` shows each one as German parts (Tag · Monat · Jahr, Stunde : Minute), the same in
+  every browser and language setting.
+  - The input itself stays hidden in the form with its ISO value (`2026-10-01`, `2026-10`,
+    `18:30`) and fires `input`/`change` as before, so app code needs no change.
+  - Setting `input.value` updates the visible parts.
+  - `data-mn-native` on the input or a parent keeps the browser's own field.
 - Empty states name what belongs there and how to add it.
 
 ## 9. Accessibility and motion

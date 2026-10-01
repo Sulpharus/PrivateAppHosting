@@ -24,7 +24,7 @@ const ROLE_LABEL = { admin: 'Admin', trusted: 'Vertrauenswürdig', user: 'Nutzer
 function formatDate(value: string | null): string {
   if (!value) return 'noch nie';
   return new Date(value).toLocaleDateString('de-DE', {
-    day: 'numeric',
+    day: '2-digit',
     month: 'short',
     year: 'numeric',
   });

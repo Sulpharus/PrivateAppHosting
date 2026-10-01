@@ -1,4 +1,4 @@
-// Behaviour of the kit helpers (ui.js) in a DOM: dialogs, selection and theme.
+// Behaviour of the kit helpers (ui.js) in a DOM: dialogs, selection, theme and date fields.
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -14,6 +14,7 @@ interface Mnui {
   toast(message: string): void;
   theme: { get(): string; set(value: string): void };
   select(button: HTMLElement): void;
+  date: { format(value: string | Date): string; months: string[] };
 }
 
 const source = readFileSync(join(import.meta.dirname, 'ui.js'), 'utf8');
@@ -126,5 +127,88 @@ describe('mnui.select and mnui.theme', () => {
     mnui.theme.set('system');
     expect(document.documentElement.dataset.theme).toBeUndefined();
     expect(mnui.theme.get()).toBe('system');
+  });
+});
+
+describe('German dates', () => {
+  const tick = () => new Promise((r) => setTimeout(r, 0));
+  const field = async (html: string) => {
+    const form = document.createElement('form');
+    form.innerHTML = html;
+    document.body.append(form);
+    await tick();
+    return form;
+  };
+
+  it('formats full dates and months as day, abbreviated month and year', () => {
+    expect(mnui.date.format('2026-10-01')).toBe('01. Okt. 2026');
+    expect(mnui.date.format('2026-05-09')).toBe('09. Mai 2026');
+    expect(mnui.date.format('2026-09')).toBe('Sept. 2026');
+    expect(mnui.date.format(new Date(2026, 2, 3))).toBe('03. März 2026');
+    expect(mnui.date.format('kein Datum')).toBe('');
+  });
+
+  it('shows a date input as Tag · Monat · Jahr and keeps its ISO value and events', async () => {
+    const form = await field(
+      '<label>Beginn<input type="date" name="d" value="2026-10-01"></label>',
+    );
+    const input = form.querySelector('input[name=d]') as HTMLInputElement;
+    const [day, month] = [...form.querySelectorAll('select')] as HTMLSelectElement[];
+    const year = form.querySelector('.mn-date-jahr') as HTMLInputElement;
+    expect([day.value, month.options[month.selectedIndex]?.textContent, year.value]).toEqual([
+      '01',
+      'Okt.',
+      '2026',
+    ]);
+    expect(input.getAttribute('aria-label')).toBe('Beginn');
+    expect(input.tabIndex).toBe(-1);
+
+    const changes: string[] = [];
+    input.addEventListener('change', () => changes.push(input.value));
+    month.value = '02';
+    day.value = '31';
+    month.dispatchEvent(new Event('change', { bubbles: true }));
+    // 31 February becomes the last day of February.
+    expect(input.value).toBe('2026-02-28');
+    expect(day.value).toBe('28');
+    expect(changes).toEqual(['2026-02-28']);
+    expect(new FormData(form).get('d')).toBe('2026-02-28');
+
+    // Code that sets the value updates the visible parts.
+    input.value = '2030-12-24';
+    expect([day.value, month.value, year.value]).toEqual(['24', '12', '2030']);
+  });
+
+  it('shows a month input as Monat · Jahr', async () => {
+    const form = await field('<label>Erste Buchung<input type="month" name="m"></label>');
+    const input = form.querySelector('input[name=m]') as HTMLInputElement;
+    expect(form.querySelectorAll('select')).toHaveLength(1);
+    const month = form.querySelector('select') as HTMLSelectElement;
+    month.value = '10';
+    month.dispatchEvent(new Event('change', { bubbles: true }));
+    // A month without a year takes the current year.
+    expect((form.querySelector('.mn-date-jahr') as HTMLInputElement).value).toBe(
+      String(new Date().getFullYear()),
+    );
+    expect(input.value).toBe(`${new Date().getFullYear()}-10`);
+  });
+
+  it('shows a time input as Stunde : Minute in 24 hours, following its step', async () => {
+    const form = await field(
+      '<label>Uhrzeit<input type="time" name="t" step="300" value="18:30"></label>',
+    );
+    const input = form.querySelector('input[name=t]') as HTMLInputElement;
+    const [hour, minute] = [...form.querySelectorAll('select')] as HTMLSelectElement[];
+    expect([hour.value, minute.value]).toEqual(['18', '30']);
+    expect([...minute.options].map((o) => o.value)).toContain('55');
+    expect([...minute.options].map((o) => o.value)).not.toContain('31');
+    hour.value = '07';
+    hour.dispatchEvent(new Event('change', { bubbles: true }));
+    expect(input.value).toBe('07:30');
+  });
+
+  it('leaves inputs marked data-mn-native alone', async () => {
+    const form = await field('<div data-mn-native><input type="date" name="n"></div>');
+    expect(form.querySelector('.mn-date')).toBeNull();
   });
 });

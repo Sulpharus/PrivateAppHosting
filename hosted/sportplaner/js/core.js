@@ -347,7 +347,7 @@ const mdLabel = (v) => {
   const [m, d] = v.split('-').map(Number);
   return fmt(new Date(2000, m - 1, d), { day: 'numeric', month: 'short' });
 };
-const dLabel = (v) => fmt(parse(v), { day: 'numeric', month: 'short', year: 'numeric' });
+const dLabel = (v) => fmt(parse(v), { day: '2-digit', month: 'short', year: 'numeric' });
 function periodLabel(p) {
   if (!p || !p.type || p.type === 'all') return '';
   const r =
@@ -401,7 +401,7 @@ function groupedWhen(slots) {
         singles
           .map(
             (x) =>
-              `<p><b>${esc(fmt(parse(x.date), { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }))}</b>&ensp;<span class="muted">${esc(timeLabel(x))}</span></p>`,
+              `<p><b>${esc(fmt(parse(x.date), { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' }))}</b>&ensp;<span class="muted">${esc(timeLabel(x))}</span></p>`,
           )
           .join('')
       : '')

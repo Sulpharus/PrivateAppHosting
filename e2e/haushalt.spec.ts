@@ -151,7 +151,29 @@ test('haushalt plans fixed costs, spots a changed price and shows the month', as
       await dialog
         .getByRole('combobox', { name: 'Art', exact: true })
         .selectOption({ label: kind });
-    await dialog.getByLabel('Erste Buchung').fill(`${year}-${month}`);
+    if (text === 'Netflix') {
+      // Picked the way a person does: month abbreviation and year, the same in every browser.
+      const first = dialog.locator('.mn-date').first();
+      const names = [
+        'Jan.',
+        'Feb.',
+        'März',
+        'Apr.',
+        'Mai',
+        'Juni',
+        'Juli',
+        'Aug.',
+        'Sept.',
+        'Okt.',
+        'Nov.',
+        'Dez.',
+      ];
+      await first
+        .getByRole('combobox', { name: 'Monat' })
+        .selectOption({ label: names[Number(month) - 1] });
+      await first.getByRole('textbox', { name: 'Jahr' }).fill(String(year));
+      await expect(dialog.getByLabel('Erste Buchung')).toHaveValue(`${year}-${month}`);
+    } else await dialog.getByLabel('Erste Buchung').fill(`${year}-${month}`);
     await dialog.getByLabel('Am Tag').fill('1');
     await dialog.getByRole('button', { name: 'Speichern' }).click();
     await expect(dialog).toBeHidden();

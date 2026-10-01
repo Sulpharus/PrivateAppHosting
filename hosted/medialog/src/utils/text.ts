@@ -114,7 +114,7 @@ export function formatDateDe(isoString?: string): string {
     const d = new Date(isoString);
     if (Number.isNaN(d.getTime())) return isoString;
     return d.toLocaleDateString('de-DE', {
-      day: 'numeric',
+      day: '2-digit',
       month: 'short',
       year: 'numeric',
     });

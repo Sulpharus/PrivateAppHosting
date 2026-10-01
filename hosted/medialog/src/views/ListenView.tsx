@@ -5,7 +5,7 @@ import { Overlay } from '../components/Overlay';
 import { showToast } from '../components/Toast';
 import type { SharedEntry } from '../services/sharing';
 import type { ListCustomItem, MediaItem, MediaList } from '../types';
-import { getKindLabel, getProgressSummary } from '../utils/text';
+import { formatDateDe, getKindLabel, getProgressSummary } from '../utils/text';
 
 interface ListenViewProps {
   lists: MediaList[];
@@ -437,7 +437,7 @@ export const ListenView: React.FC<ListenViewProps> = ({
           {shared.map((entry) => (
             <div key={entry.key} className="mn-card">
               <p className="text-xs text-[var(--mn-muted)] mb-2">
-                Von {entry.from.name} · {new Date(entry.updatedAt).toLocaleDateString('de-DE')}
+                Von {entry.from.name} · {formatDateDe(entry.updatedAt)}
               </p>
               {entry.work && (
                 <SharedWorkRow

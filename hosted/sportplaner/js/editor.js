@@ -300,7 +300,7 @@ function renderPlanned() {
       <p class="hint flat">Eingeplant werden nur Tage, an denen das Angebot laut deinen Zeiten stattfindet. „Bis“ leer lassen, wenn es offen ist.</p></div>`
       : '') +
     (dat
-      ? `<div class="slot"><span class="f">Einzelne Termine</span>${(p.dates || []).length ? `<div class="pdates">${p.dates.map((d) => `<span class="tag">${fmt(parse(d), { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}<button type="button" class="vx" data-action="pdate-del" data-d="${esc(d)}" aria-label="Termin entfernen">×</button></span>`).join('')}</div>` : ''}
+      ? `<div class="slot"><span class="f">Einzelne Termine</span>${(p.dates || []).length ? `<div class="pdates">${p.dates.map((d) => `<span class="tag">${fmt(parse(d), { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })}<button type="button" class="vx" data-action="pdate-del" data-d="${esc(d)}" aria-label="Termin entfernen">×</button></span>`).join('')}</div>` : ''}
       <div class="padd-row"><input type="date" id="pdate" value="${esc(S.date >= todayStr() ? S.date : todayStr())}" aria-label="Termin"><button type="button" class="btn" data-action="pdate-add">Hinzufügen</button></div></div>`
       : '');
 }

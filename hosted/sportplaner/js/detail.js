@@ -138,7 +138,7 @@ function detailBodyHTML(a, ds) {
           .reverse()
           .map(
             (d) =>
-              `<span class="tag">${fmt(parse(d), { day: 'numeric', month: 'short', year: '2-digit' })}<button class="vx" data-action="del-visit" data-d="${esc(d)}" aria-label="Besuch am ${fmt(parse(d), { day: 'numeric', month: 'long' })} entfernen">×</button></span>`,
+              `<span class="tag">${fmt(parse(d), { day: '2-digit', month: 'short', year: 'numeric' })}<button class="vx" data-action="del-visit" data-d="${esc(d)}" aria-label="Besuch am ${fmt(parse(d), { day: 'numeric', month: 'long' })} entfernen">×</button></span>`,
           )
           .join('')}</div>`
       : '<p class="muted">Noch keine Besuche eingetragen</p>') +

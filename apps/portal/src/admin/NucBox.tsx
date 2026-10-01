@@ -115,7 +115,14 @@ export function NucBox() {
           <div className="card kpi">
             <span className="muted">Prozessor ({host.cores} Kerne)</span>
             <strong>{pct(host.cpu)}</strong>
-            <span className="muted">Last {host.load.map((l) => l.toFixed(2)).join(' · ')}</span>
+            <span className="muted">
+              Last{' '}
+              {host.load
+                .map((l) =>
+                  l.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+                )
+                .join(' · ')}
+            </span>
           </div>
           <div className="card kpi">
             <span className="muted">Arbeitsspeicher frei</span>

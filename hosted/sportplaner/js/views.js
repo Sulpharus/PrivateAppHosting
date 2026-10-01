@@ -43,7 +43,7 @@ function updDay() {
     isToday = S.date === todayStr();
   setHeader(
     fmt(sel, { weekday: 'long' }),
-    (isToday ? 'Heute, ' : '') + fmt(sel, { day: 'numeric', month: 'long', year: 'numeric' }),
+    (isToday ? 'Heute, ' : '') + fmt(sel, { day: '2-digit', month: 'short', year: 'numeric' }),
   );
   const mon = addDays(sel, -wIdx(sel)),
     td = todayStr();

@@ -204,6 +204,6 @@ export function describeRule(rule) {
   }
   if (rule.count) text += `, ${rule.count}-mal`;
   else if (rule.until)
-    text += `, bis ${rule.until.toLocaleDateString('de-DE', { day: 'numeric', month: 'long', year: 'numeric' })}`;
+    text += `, bis ${rule.until.toLocaleDateString('de-DE', { day: '2-digit', month: 'short', year: 'numeric' })}`;
   return text;
 }

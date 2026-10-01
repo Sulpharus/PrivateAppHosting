@@ -10,7 +10,7 @@ function updBackup() {
     ? 'Du hast noch nicht exportiert.'
     : age === 0
       ? 'Zuletzt heute exportiert.'
-      : `Zuletzt exportiert am ${fmt(new Date(+last), { day: 'numeric', month: 'short', year: 'numeric' })}.`;
+      : `Zuletzt exportiert am ${fmt(new Date(+last), { day: '2-digit', month: 'short', year: 'numeric' })}.`;
   const off = BK.busy || (!S.acts.length && !S.plans.length);
   setHTML(
     el,
