@@ -32,6 +32,7 @@ export function ReorderGrid<T extends { slug: string }>(props: {
   return (
     <div className={props.className ?? 'tiles'}>
       {items.map((item, index) => (
+        // biome-ignore lint/a11y/noStaticElementInteractions: dragging is a mouse shortcut; the buttons are the accessible way to move
         <div
           key={item.slug}
           className={`reorder-item${editing ? ' editing' : ''}${dragging === item.slug ? ' dragging' : ''}`}
@@ -97,9 +98,11 @@ export function ReorderGrid<T extends { slug: string }>(props: {
           )}
         </div>
       ))}
-      <p className="sr-only" role="status" aria-live="polite">
-        {message}
-      </p>
+      {editing && (
+        <p className="sr-only" aria-live="polite" aria-atomic="true">
+          {message}
+        </p>
+      )}
     </div>
   );
 }

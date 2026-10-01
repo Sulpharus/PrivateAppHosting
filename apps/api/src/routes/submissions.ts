@@ -272,11 +272,12 @@ async function uploadProgram(
   const { data: existing, error: lookup } = await db
     .schema('platform')
     .from('apps')
-    .select('slug, kind')
+    .select('slug, kind, deployed_version')
     .eq('slug', slug)
-    .maybeSingle<{ slug: string; kind: string }>();
+    .maybeSingle<{ slug: string; kind: string; deployed_version: string | null }>();
   if (lookup) return problem(500, 'db_error', 'Die Adresse konnte nicht geprüft werden.');
-  if (existing && existing.kind !== 'remote')
+  // A new version of an earlier upload may replace it; apps from hosted/ or the library may not.
+  if (existing && !(existing.kind === 'remote' && existing.deployed_version === 'upload'))
     return problem(409, 'slug_taken', `${slug} ist schon vergeben. Wähle eine andere Adresse.`);
 
   const r2Key = `installers/${slug}/${filename}`;

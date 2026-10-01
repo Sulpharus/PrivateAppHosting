@@ -389,6 +389,11 @@ Everyday apps and platform features that grew next to the phases, each with its 
 | Apps as GitHub projects (no data, no keys) | done | ADR 0012, `docs/runbooks/app-export.md` |
 | Sportplaner course price split per session | done | `hosted/sportplaner/js/price.js` |
 | German date, time and number formats in every app (kit date fields) | done | `packages/ui/kit/ui.js`, `docs/ai/DESIGN-SYSTEM.md` §8 |
+| Uploads in Verwaltung, script-first integration (`mininode integrate`), AI review queue | done, needs `INTEGRATE_TOKEN` | ADR 0013, `docs/runbooks/uploads.md` |
+| Programs for the PC/server from Verwaltung (R2 upload, install, path detection) | done, needs R2 secrets and the NucBox | ADR 0013, `docs/runbooks/programs.md` |
+| Own drawers and own order (start page, Gaming Hub) | done | ADR 0015 |
+| API keys site-wide or personal, popup and instruction page | done | ADR 0014 |
+| Release editions: cloud, PC/server, complete per version | done | ADR 0016, `docs/runbooks/releases.md` |
 
 ### 15.2 Sharing the platform (proposed, not started)
 

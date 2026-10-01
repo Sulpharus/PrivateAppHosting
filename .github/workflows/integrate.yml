@@ -1,13 +1,18 @@
 name: Web-App einbauen
 
 # Integrates an uploaded ZIP (Verwaltung → Hochladen, ADR 0013). Started by the API.
-# 1. `mininode integrate` rewrites the export by script, checks it with doctor and builds it.
-# 2. Success: the app goes to a branch `auto/<slug>-<id>` and a pull request. With the repository
-#    variable INTEGRATE_AUTOMERGE=true it is pushed to main instead (the deploy then starts).
-# 3. The script could not finish: the ZIP and the report go to a branch `review/<id>` and an issue
-#    labelled `ai-review`; a Claude Code session works that queue (integrate-app skill).
+#
+#   fetch    (secrets)     downloads the ZIP from the private bucket
+#   build    (NO secrets)  `mininode integrate` rewrites the export, checks it with doctor and
+#                          builds it. The export's own build code (PostCSS and Tailwind configs,
+#                          dependencies) runs only here, with no token and no key in reach.
+#   publish  (secrets)     success: branch auto/<slug>-<id> and a pull request, or a push to main
+#                          with the repository variable INTEGRATE_AUTOMERGE=true (the deploy then
+#                          starts). The script could not finish: branch review/<id> with the ZIP
+#                          and the report, and an issue labelled `ai-review` (integrate-app skill).
+#
 # Pushes made with the default token do not start other workflows. Set the secret INTEGRATE_TOKEN
-# (a token with contents and pull-request write) so CI and the deploy run on what this creates.
+# (contents and pull requests: write) so CI and the deploy run on what this creates.
 
 on:
   workflow_dispatch:
@@ -23,9 +28,7 @@ on:
         default: production
 
 permissions:
-  contents: write
-  pull-requests: write
-  issues: write
+  contents: read
 
 concurrency:
   group: integrate-${{ inputs.submission }}
@@ -35,19 +38,97 @@ env:
   DEPLOY_ENV: ${{ inputs.environment }}
   SUPABASE_URL: ${{ inputs.environment == 'production' && 'https://ojicmpgqvoyakigvubek.supabase.co' || 'https://ttgrtecdqouiogiwcjag.supabase.co' }}
   SUPABASE_PUBLISHABLE_KEY: ${{ inputs.environment == 'production' && 'sb_publishable_jv1tZqYWg51sNxJ5-GjMMw_tZqa1s1C' || 'sb_publishable_zQfFz-ruNPkIQauwa253iw_4zOZmiOB' }}
+  SUBMISSION: ${{ inputs.submission }}
+  RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
 jobs:
-  integrate:
-    name: integrate ${{ inputs.submission }}
+  fetch:
+    name: Fetch ${{ inputs.submission }}
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
     env:
       SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
       STAGING_DOMAIN: ${{ vars.STAGING_DOMAIN }}
-      SUBMISSION: ${{ inputs.submission }}
-      RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Mark as running
+        run: pnpm mininode submission status "$SUBMISSION" integrating --run "$RUN_URL" --env "$DEPLOY_ENV"
+      - name: Download the ZIP
+        run: |
+          mkdir -p upload
+          pnpm mininode submission fetch "$SUBMISSION" --out upload/upload.zip --env "$DEPLOY_ENV" | tail -n1 > upload/filename.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: upload
+          path: upload
+          retention-days: 3
+
+  build:
+    name: Integrate by script
+    needs: fetch
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.integrate.outputs.code }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/download-artifact@v5
+        with:
+          name: upload
+          path: upload
+      - name: Integrate
+        id: integrate
+        run: |
+          set +e
+          pnpm mininode integrate upload/upload.zip --build --tidy --json result.json --report report.md
+          echo "code=$?" >> "$GITHUB_OUTPUT"
+      - name: Collect the result
+        run: |
+          mkdir -p out
+          cp result.json report.md out/
+          slug=$(jq -r '.slug // empty' result.json)
+          if [ "${{ steps.integrate.outputs.code }}" = "0" ] && [[ "$slug" =~ ^[a-z][a-z0-9-]{0,30}[a-z0-9]$ ]]; then
+            mkdir -p "out/hosted"
+            cp -r "hosted/$slug" "out/hosted/$slug"
+            cp pnpm-lock.yaml biome.json out/
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: result
+          path: out
+          retention-days: 3
+
+  publish:
+    name: Publish or hand over
+    needs: [fetch, build]
+    if: always() && needs.fetch.result != 'skipped'
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    env:
+      SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+      STAGING_DOMAIN: ${{ vars.STAGING_DOMAIN }}
       GH_TOKEN: ${{ secrets.INTEGRATE_TOKEN || github.token }}
+      CODE: ${{ needs.build.outputs.code }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -59,22 +140,19 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - name: Mark as running
-        run: pnpm mininode submission status "$SUBMISSION" integrating --run "$RUN_URL" --env "$DEPLOY_ENV"
-      - name: Download the ZIP
-        run: pnpm mininode submission fetch "$SUBMISSION" --out "$RUNNER_TEMP/upload.zip" --env "$DEPLOY_ENV" | tee "$RUNNER_TEMP/filename.txt"
-      - name: Integrate by script
-        id: integrate
-        run: |
-          set +e
-          pnpm mininode integrate "$RUNNER_TEMP/upload.zip" --build --tidy \
-            --json "$RUNNER_TEMP/result.json" --report "$RUNNER_TEMP/report.md"
-          echo "code=$?" >> "$GITHUB_OUTPUT"
+      - uses: actions/download-artifact@v5
+        if: needs.build.result == 'success'
+        with:
+          pattern: "*"
+          path: artifacts
       - name: Publish the app
-        if: steps.integrate.outputs.code == '0'
+        if: env.CODE == '0'
         run: |
-          slug=$(jq -r .slug "$RUNNER_TEMP/result.json")
+          slug=$(jq -r .slug artifacts/result/result.json)
+          [[ "$slug" =~ ^[a-z][a-z0-9-]{0,30}[a-z0-9]$ ]] || { echo "bad slug" >&2; exit 1; }
           short=${SUBMISSION:0:8}
+          cp -r "artifacts/result/hosted/$slug" "hosted/$slug"
+          cp artifacts/result/pnpm-lock.yaml artifacts/result/biome.json .
           git config user.name "mininode-integrate"
           git config user.email "integrate@users.noreply.github.com"
           git checkout -b "auto/$slug-$short"
@@ -88,23 +166,23 @@ jobs:
             git push origin "auto/$slug-$short"
             pr=$(gh pr create --base main --head "auto/$slug-$short" \
               --title "feat($slug): automatisch integriert" \
-              --body-file "$RUNNER_TEMP/report.md")
+              --body-file artifacts/result/report.md)
           fi
           pnpm mininode submission status "$SUBMISSION" integrated \
-            --result "$RUNNER_TEMP/result.json" --report "$RUNNER_TEMP/report.md" \
+            --result artifacts/result/result.json --report artifacts/result/report.md \
             ${pr:+--pr "$pr"} --run "$RUN_URL" --env "$DEPLOY_ENV"
       - name: Hand over to the AI review
-        if: steps.integrate.outputs.code == '2'
+        if: env.CODE == '2'
         run: |
           short=${SUBMISSION:0:8}
-          filename=$(tail -n1 "$RUNNER_TEMP/filename.txt")
+          filename=$(cat artifacts/upload/filename.txt)
           branch="review/$short"
           git config user.name "mininode-integrate"
           git config user.email "integrate@users.noreply.github.com"
           git checkout -b "$branch"
           mkdir -p "review-inbox/$short"
-          cp "$RUNNER_TEMP/upload.zip" "review-inbox/$short/$filename"
-          cp "$RUNNER_TEMP/report.md" "review-inbox/$short/REPORT.md"
+          cp artifacts/upload/upload.zip "review-inbox/$short/$filename"
+          cp artifacts/result/report.md "review-inbox/$short/REPORT.md"
           git add -f "review-inbox/$short"
           git commit -m "chore: upload $short waits for AI review"
           git push origin "$branch"
@@ -113,17 +191,17 @@ jobs:
             echo "<!-- mininode-submission id=$SUBMISSION env=$DEPLOY_ENV -->"
             echo "Ein Upload braucht eine KI-Prüfung. Das ZIP liegt im Branch \`$branch\` unter \`review-inbox/$short/\`."
             echo
-            cat "$RUNNER_TEMP/report.md"
+            cat artifacts/result/report.md
             echo
             echo "**So geht's weiter:** Claude Code mit dem Skill \`integrate-app\` starten (\"arbeite die ai-review-Issues ab\"). Der Lauf baut die App nach \`hosted/<slug>\`, eröffnet einen PR mit \`Closes #<diese Issue>\` und räumt den Branch \`$branch\` ab. Beim Schließen der Issue erscheint die App in Verwaltung → Hochladen als eingebaut."
-          } > "$RUNNER_TEMP/issue.md"
-          issue=$(gh issue create --title "KI-Prüfung: $filename" --label ai-review --body-file "$RUNNER_TEMP/issue.md")
+          } > issue.md
+          issue=$(gh issue create --title "KI-Prüfung: $filename" --label ai-review --body-file issue.md)
           pnpm mininode submission status "$SUBMISSION" needs_review \
-            --result "$RUNNER_TEMP/result.json" --report "$RUNNER_TEMP/report.md" \
+            --result artifacts/result/result.json --report artifacts/result/report.md \
             --review "$issue" --run "$RUN_URL" --env "$DEPLOY_ENV"
       - name: Report a crash
-        if: failure() || (steps.integrate.outputs.code != '0' && steps.integrate.outputs.code != '2')
+        if: env.CODE != '0' && env.CODE != '2'
         run: |
-          printf 'Der Einbau ist abgestürzt. Protokoll: %s\n' "$RUN_URL" > "$RUNNER_TEMP/crash.md"
-          pnpm mininode submission status "$SUBMISSION" failed --report "$RUNNER_TEMP/crash.md" \
+          printf 'Der Einbau ist abgestürzt. Protokoll: %s\n' "$RUN_URL" > crash.md
+          pnpm mininode submission status "$SUBMISSION" failed --report crash.md \
             --run "$RUN_URL" --env "$DEPLOY_ENV"

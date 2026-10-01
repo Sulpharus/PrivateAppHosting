@@ -15,6 +15,8 @@ export function NameDialog(props: {
   useEffect(() => {
     if (props.open) setName(props.initial ?? '');
   }, [props.open, props.initial]);
+  // Closed dialogs leave nothing in the page (their fields would otherwise match every label query).
+  if (!props.open) return null;
   return (
     <Dialog open={props.open} title={props.title} onClose={props.onClose}>
       <form
@@ -68,6 +70,7 @@ export function DrawerContentDialog(props: {
       else next.add(slug);
       return next;
     });
+  if (!props.open) return null;
   return (
     <Dialog
       open={props.open}
@@ -120,6 +123,7 @@ export function AppDrawersDialog(props: {
   useEffect(() => {
     if (props.open) setName('');
   }, [props.open]);
+  if (!props.open) return null;
   return (
     <Dialog open={props.open} title={`${props.appName} in Schubladen`} onClose={props.onClose}>
       <fieldset className="check-list">

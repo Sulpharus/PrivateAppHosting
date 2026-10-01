@@ -10,6 +10,27 @@ with **zero errors**, works locally behind the gate, and is committed on a branc
 
 Never use production credentials. Work only against the local Supabase stack.
 
+## 0. Script first, then the work queue
+
+`pnpm mininode integrate <zip|folder> [--build] [--tidy]` rewrites the shapes it knows (Vite and AI
+Studio apps, including `window.MiniNode` and `localStorage` through the SDK compat layer, plain
+HTML, exports that already have a `mininode.json`) and runs doctor. Exit code 0 means
+`hosted/<slug>` is done: read `hosted/<slug>/README.md`, run step 4 (verify) and open the PR.
+Exit code 2 means `needs_review`: its report lists exactly what stopped it (`reasons` with codes
+such as `own_backend`, `indexeddb`, `cdn_scripts`); continue with step 1 and fix those points,
+leave the rest as the script made it. Never integrate by hand what the script can do.
+
+**The review queue.** Uploads from Verwaltung → Hochladen that the script could not finish become
+GitHub issues labelled `ai-review` (body: report, branch `review/<id>` holds the ZIP under
+`review-inbox/<id>/`). When the user says "arbeite die ai-review-Issues ab":
+
+1. List the open issues with the label (GitHub MCP), read each report.
+2. `git fetch origin review/<id>`, take the ZIP from `review-inbox/<id>/`, and work it as below
+   (`inbox/` is the usual unpack place; do not commit the ZIP into `main`).
+3. Open the PR with `Closes #<issue>`. Closing the issue marks the upload as built in Verwaltung
+   (workflow `review-closed.yml`) and deletes the review branch. An issue the user decides against
+   is closed as "not planned".
+
 ## 1. Prepare
 
 1. Read `docs/ai/NEW-APP-SPEC.md` (the contract) and `docs/ai/playbooks/README.md`.
