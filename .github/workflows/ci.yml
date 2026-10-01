@@ -62,6 +62,15 @@ jobs:
           infra/nucbox/deploy/test.sh
           cd infra/nucbox/deploy/testdata && touch app.env
           for f in *.compose.yml; do docker compose -f "$f" config --quiet --no-interpolate; done
+      - name: Release packages hold what they should
+        run: |
+          scripts/package-release.sh ci /tmp/release
+          unzip -Z1 /tmp/release/mininode-pc-server-ci.zip | grep -q 'apps/nucbox-control/Dockerfile'
+          unzip -Z1 /tmp/release/mininode-pc-server-ci.zip | grep -q 'README-EDITION.md'
+          if unzip -Z1 /tmp/release/mininode-cloud-ci.zip | grep -q 'infra/nucbox/'; then
+            echo "the cloud edition must not contain infra/nucbox" >&2; exit 1
+          fi
+          unzip -Z1 /tmp/release/mininode-complete-ci.zip | grep -q 'infra/nucbox/compose.yml'
       - name: Compose file is valid
         working-directory: infra/nucbox
         run: |

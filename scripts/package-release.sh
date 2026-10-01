@@ -15,8 +15,7 @@ cd "$(dirname "$0")/.."
 
 version=${1:?usage: package-release.sh <version> [outdir] [edition...]}
 out=${2:-release-out}
-shift 2 2>/dev/null || shift $#
-editions=("$@")
+editions=("${@:3}")
 [ ${#editions[@]} -gt 0 ] || editions=(cloud pc-server complete)
 [[ "$version" =~ ^[0-9A-Za-z][0-9A-Za-z._-]*$ ]] || { echo "invalid version: $version" >&2; exit 1; }
 
