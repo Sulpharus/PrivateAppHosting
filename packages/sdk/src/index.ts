@@ -21,6 +21,7 @@ import { cookieSessionUserId } from './session-cookie.ts';
 import { createSuite } from './suite.ts';
 
 export { ExternalApiError } from './api.ts';
+export { installLocalStorageSync, installMiniNodeCompat } from './compat.ts';
 export { appSchema, assertConfig } from './config.ts';
 export type { GameOutcome, GameStats, LeaderboardRow } from './game.ts';
 export { GoogleError } from './google.ts';
