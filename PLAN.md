@@ -386,6 +386,36 @@ Everyday apps and platform features that grew next to the phases, each with its 
 | Haushalt: PDF statements, fixed costs, Dein Monat, statistics | done | `hosted/haushalt` |
 | Sportplaner and Haushalt write their dates as suite records | done | planned sessions (`activity`), payments of fixed costs (`contract`) |
 | App library with one-click NucBox installs (Jellyfin, n8n …) | done, needs the NucBox | ADR 0011, `docs/runbooks/app-library.md` |
+| Apps as GitHub projects (no data, no keys) | done | ADR 0012, `docs/runbooks/app-export.md` |
+
+### 15.2 Sharing the platform (proposed, not started)
+
+Goal: others can download MiniNode, run it on their own Cloudflare + Supabase (and optionally a
+PC as NucBox) and remix it, without anything private from this installation.
+
+- **Already in place:**
+  - no secrets in the repository (rule + gitleaks in CI);
+  - user data only in Supabase;
+  - setup runbooks;
+  - single apps exportable (ADR 0012).
+- **Instance settings out of the code:** about 130 files name `mininode.app`. A few also name
+  the Supabase project refs, publishable keys, the Cloudflare account id or the GitHub owner.
+  They move into one `mininode.config.json` (domain, Cloudflare account, Supabase refs and
+  keys, repository). The Workers, the deploy workflow, the portal and the apps read it, and the
+  apps take the portal URL from the SDK.
+- **A clean start:** a public template repository generated from `main` (core code, docs,
+  sample app) with one fresh commit, not this repository's history. The personal apps and
+  their tests stay here. The export check of ADR 0012 runs over the whole template.
+- **First-run setup:**
+  - a `pnpm mininode init` wizard writes the config;
+  - `infra/cloudflare/bootstrap.sh` and `supabase link` already do the provider side;
+  - the first account becomes admin, as today.
+- **Hosts:**
+  - Cloudflare Workers is the default.
+  - The manifest already knows `vercel`.
+  - A plain Node/Docker host (the NucBox alone, any VPS) would need the gate and the API as a
+    Node server. That is the largest piece.
+- **License:** chosen by the owner (e.g. AGPL-3.0 to keep remixes open, or MIT).
 
 ---
 

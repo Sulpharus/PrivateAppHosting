@@ -12,6 +12,7 @@ compromised. Each row can be rotated on its own.
 | `GUACAMOLE_JSON_SECRET` | API Worker + `platform.env` | `openssl rand -hex 16`; same order as above |
 | Deploy SSH key | GitHub `NUCBOX_DEPLOY_SSH_KEY` + `/home/deploy/.ssh/authorized_keys` | new key pair (see `nucbox-install.md` §2.3), replace both |
 | App-Bibliothek dispatch token | GitHub `LIBRARY_DISPATCH_TOKEN` → API Worker `GITHUB_DISPATCH_TOKEN` | new fine-grained token (Actions: write), update the secret, run Deploy |
+| App export token | GitHub `EXPORT_REPO_TOKEN` | new fine-grained token (Administration + Contents: write), update the secret |
 | App-Bibliothek catalog token | `CATALOG_TOKEN` in `/etc/mininode/deploy.env` | new fine-grained token (Contents: read), replace the line |
 | Supabase secret key | GitHub `SUPABASE_SECRET_KEY`, API + AI proxy Worker secrets | Dashboard → API Keys → create new secret key, update all three, then delete the old key |
 | `SEND_EMAIL_HOOK_SECRET` (only with email) | Supabase hook + API Worker | Auth → Hooks → regenerate; update the Worker |

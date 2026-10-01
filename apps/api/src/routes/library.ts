@@ -8,11 +8,10 @@ import { libraryEntry } from '@mininode/manifest/library';
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { type AppContext, problem, requireUser } from '../lib/auth.ts';
+import { dispatchWorkflow } from '../lib/github.ts';
 import { adminClient } from '../lib/supabase.ts';
 
 export const library = new Hono<AppContext>();
-
-const DEFAULT_REPO = 'Sulpharus/PrivateAppHosting';
 
 const requestSchema = z
   .object({
@@ -45,8 +44,7 @@ library.post('/admin/library', requireUser({ role: 'admin', recentAuth: 600 }), 
   if (invalid) return problem(400, 'invalid_slug', invalid);
   const entry = libraryEntry(entryId);
   if (!entry) return problem(404, 'not_found', 'Diesen Eintrag gibt es nicht in der Bibliothek.');
-  const token = c.env.GITHUB_DISPATCH_TOKEN;
-  if (!token)
+  if (!c.env.GITHUB_DISPATCH_TOKEN)
     return problem(
       503,
       'not_configured',
@@ -67,26 +65,15 @@ library.post('/admin/library', requireUser({ role: 'admin', recentAuth: 600 }), 
   if (action === 'remove' && installedAs !== entryId)
     return problem(404, 'not_installed', `${entry.name} ist unter ${slug} nicht installiert.`);
 
-  const repo = c.env.GITHUB_REPO ?? DEFAULT_REPO;
   const environment =
     new URL(c.env.PORTAL_URL).hostname === 'mininode.app' ? 'production' : 'staging';
-  const response = await fetch(
-    `https://api.github.com/repos/${repo}/actions/workflows/library.yml/dispatches`,
-    {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: 'application/vnd.github+json',
-        'X-GitHub-Api-Version': '2022-11-28',
-        'User-Agent': 'mininode-api',
-      },
-      body: JSON.stringify({ ref: 'main', inputs: { action, entry: entryId, slug, environment } }),
-      signal: AbortSignal.timeout(15_000),
-    },
-  ).catch(() => null);
-  if (!response) return problem(502, 'github_unavailable', 'GitHub ist gerade nicht erreichbar.');
-  if (!response.ok)
-    return problem(502, 'github_error', `GitHub hat den Start abgelehnt (${response.status}).`);
+  const started = await dispatchWorkflow(c.env, 'library.yml', {
+    action,
+    entry: entryId,
+    slug,
+    environment,
+  });
+  if (started instanceof Response) return started;
 
   const { error: auditError } = await db
     .schema('platform')
@@ -99,8 +86,5 @@ library.post('/admin/library', requireUser({ role: 'admin', recentAuth: 600 }), 
     });
   // The workflow already runs; a missing audit row must not turn that into an error.
   if (auditError) console.error(`audit of library.${action} ${slug} failed: ${auditError.message}`);
-  return c.json(
-    { started: true, runs: `https://github.com/${repo}/actions/workflows/library.yml` },
-    202,
-  );
+  return c.json({ started: true, runs: started.runs }, 202);
 });

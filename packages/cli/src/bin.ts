@@ -7,6 +7,7 @@ import { deployApp, devApp, readVersion } from './deploy/index.ts';
 import { checkLibraryInstall, installLibraryApp, removeLibraryApp } from './deploy/library.ts';
 import { hostedTargets, pruneApps } from './deploy/prune.ts';
 import { type DoctorReport, doctor, hostedApps } from './doctor.ts';
+import { exportApp } from './export.ts';
 
 const ROOT = resolve(import.meta.dirname, '../../..');
 
@@ -18,6 +19,7 @@ const USAGE = `mininode <command>
   deploy --changed <base-ref>       Deploy every app changed since <base-ref>
   changed <base-ref>                List hosted apps changed since <base-ref>
   prune [--env staging] [--dry-run] Delete Workers of apps removed from hosted/, disable them
+  export <app-dir> --out <dir>      Copy one app as a shareable project (no data, no keys)
   library check <entry> <slug>      App-Bibliothek: check an install before the rollout
   library install <entry> <slug>    App-Bibliothek: register an installed program
   library remove <slug> <entry>     App-Bibliothek: disable a removed program
@@ -75,6 +77,18 @@ async function main(args: string[]): Promise<number> {
     case 'dev': {
       if (!target) break;
       await devApp(resolve(process.cwd(), target), Number(flag(args, '--port') ?? 8790));
+      return 0;
+    }
+    case 'export': {
+      const out = flag(args, '--out');
+      if (!target || !out) break;
+      const result = exportApp(ROOT, resolve(process.cwd(), target), resolve(process.cwd(), out));
+      if (result.findings.length > 0) {
+        console.error(`not exported: ${result.findings.length} finding(s) in ${result.slug}`);
+        for (const f of result.findings) console.error(`  ${f.file}:${f.line} ${f.rule}`);
+        return 1;
+      }
+      console.log(`exported ${result.slug} (${result.files.length} files) to ${out}`);
       return 0;
     }
     case 'library': {

@@ -27,6 +27,8 @@ export interface AppRow {
   whitelist: boolean;
   /** Set for games (manifest `game` block): they also appear in the Gaming Hub. */
   game_genre: string | null;
+  /** Set for programs from the App-Bibliothek (ADR 0011). */
+  library: string | null;
 }
 
 export interface RemoteStatus {
@@ -54,7 +56,7 @@ export async function listApps(): Promise<AppRow[]> {
   const { data, error } = await platform()
     .from('apps')
     .select(
-      'slug, name, description, kind, target, data_mode, status, is_default, deployed_version, deployed_at, remote_runtime:manifest->remote->>runtime, category_id, category_manual, created_at, link_url, whitelist, game_genre:manifest->game->>genre',
+      'slug, name, description, kind, target, data_mode, status, is_default, deployed_version, deployed_at, remote_runtime:manifest->remote->>runtime, category_id, category_manual, created_at, link_url, whitelist, game_genre:manifest->game->>genre, library:manifest->>library',
     )
     .order('name');
   if (error) {
