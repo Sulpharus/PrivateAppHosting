@@ -20,7 +20,8 @@ document.addEventListener('keydown', (e) => {
   const sheet = e.key === 'Tab' && S.sheet && $('.sheet');
   if (!sheet) return;
   const f = [...sheet.querySelectorAll('button,input,select,textarea,a[href]')].filter(
-    (x) => !x.disabled && x.getClientRects().length,
+    // tabindex=-1: the hidden inputs behind the kit's date fields are not Tab stops
+    (x) => !x.disabled && x.tabIndex !== -1 && x.getClientRects().length,
   );
   if (!f.length) return;
   const first = f[0],

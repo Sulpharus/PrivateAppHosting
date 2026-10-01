@@ -12,9 +12,10 @@
 //   mnui.date.format('2026-10-01') → '01. Okt. 2026'; mnui.date.format('2026-10') → 'Okt. 2026'
 //   Every <input type="date"> and <input type="month"> is shown as Tag · Monat · Jahr with German
 //   month abbreviations, every <input type="time"> as Stunde : Minute (24 h), the same in every
-//   browser. The input itself stays (hidden) and keeps
-//   its ISO value and its events, so app code and forms work unchanged; `data-mn-native` on the
-//   input or a parent keeps the browser's own field.
+//   browser. The input itself stays (hidden) and keeps its ISO value, its events, required,
+//   min/max, disabled and form reset; setting .value, .valueAsDate or .valueAsNumber updates the
+//   parts, and focusing it focuses the first part. Invalid fields say why below the parts.
+//   `data-mn-native` on the input or a parent keeps the browser's own field.
 (() => {
   const THEME_KEY = 'mn-theme';
   const root = document.documentElement;
@@ -157,8 +158,11 @@
     }
     return toastEl;
   }
-  if (document.body) toastRegion();
-  else document.addEventListener('DOMContentLoaded', toastRegion, { once: true });
+  // Apps with their own toast set data-mn-toast="off" on <html> and get no second live region.
+  if (root.dataset.mnToast !== 'off') {
+    if (document.body) toastRegion();
+    else document.addEventListener('DOMContentLoaded', toastRegion, { once: true });
+  }
 
   function toast(message) {
     const el = toastRegion();
@@ -223,217 +227,314 @@
     return m[3] ? `${m[3]}. ${month} ${m[1]}` : `${month} ${m[1]}`;
   }
 
-  const NATIVE_VALUE = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
-  let dateIds = 0;
+  const proto = HTMLInputElement.prototype;
+  const NATIVE = {
+    value: Object.getOwnPropertyDescriptor(proto, 'value'),
+    valueAsDate: Object.getOwnPropertyDescriptor(proto, 'valueAsDate'),
+    valueAsNumber: Object.getOwnPropertyDescriptor(proto, 'valueAsNumber'),
+  };
+  /** Wraps of fields this copy of ui.js enhanced (a cloned wrap is not in here). */
+  const fields = new WeakMap();
+  let fieldIds = 0;
 
+  const shown = (el) =>
+    !el.hidden &&
+    (typeof getComputedStyle !== 'function' || getComputedStyle(el).display !== 'none');
+
+  /** The field's visible label text: its own aria-label, the rendered label text, or aria-labelledby. */
   function labelText(input) {
-    if (input.getAttribute('aria-label')) return input.getAttribute('aria-label');
+    const own = input.dataset.mnLabel === undefined ? input.getAttribute('aria-label') : null;
+    if (own) return own;
     const label = input.labels?.[0];
-    if (!label) return '';
-    let text = '';
-    for (const node of label.childNodes) if (node.nodeType === 3) text += node.textContent;
-    return text.trim() || label.textContent.trim();
+    if (label) {
+      let text = '';
+      const walk = (node) => {
+        for (const child of node.childNodes) {
+          if (child.nodeType === 3) text += child.textContent;
+          else if (
+            child.nodeType === 1 &&
+            child !== input &&
+            !child.classList.contains('mn-date') &&
+            !['INPUT', 'SELECT', 'TEXTAREA', 'BUTTON'].includes(child.tagName) &&
+            shown(child)
+          )
+            walk(child);
+        }
+      };
+      walk(label);
+      if (text.trim()) return text.replace(/\s+/g, ' ').trim();
+    }
+    const ids = input.getAttribute('aria-labelledby');
+    if (ids)
+      return ids
+        .split(/\s+/)
+        .map((id) => document.getElementById(id)?.textContent ?? '')
+        .join(' ')
+        .trim();
+    return '';
   }
 
-  function enhanceDate(input) {
-    if (input.dataset.mnDate || input.closest('[data-mn-native]')) return;
-    const monthOnly = input.type === 'month';
-    input.dataset.mnDate = monthOnly ? 'month' : 'date';
+  const PARTS = {
+    date: [
+      ['Tag', 'select'],
+      ['Monat', 'select'],
+      ['Jahr', 'input'],
+    ],
+    month: [
+      ['Monat', 'select'],
+      ['Jahr', 'input'],
+    ],
+    time: [
+      ['Stunde', 'select'],
+      ['Minute', 'select'],
+    ],
+  };
+
+  /**
+   * Shows <input type="date|month|time"> as German parts. The input stays the source of truth:
+   * it keeps the ISO value, its name in the form and its events; the parts follow it.
+   */
+  function enhanceField(input) {
+    if (input.closest('[data-mn-native]')) return;
+    const kind = input.type === 'time' ? 'time' : input.type === 'month' ? 'month' : 'date';
+    // A cloned field brings a dead copy of the parts: drop it and enhance afresh.
+    const next = input.nextElementSibling;
+    if (next?.classList.contains('mn-date')) {
+      if (fields.has(next)) return;
+      next.remove();
+    }
+    const id = ++fieldIds;
     const wrap = document.createElement('span');
-    wrap.className = 'mn-date';
-    const describe = document.createElement('span');
-    describe.hidden = true;
-    describe.id = `mn-date-${++dateIds}`;
-    describe.textContent = labelText(input);
-    // The visible parts sit inside the label; without this the input's name would include them.
-    if (!input.getAttribute('aria-label') && describe.textContent)
-      input.setAttribute('aria-label', describe.textContent);
-    const control = (tag, name, options) => {
+    wrap.className = `mn-date${kind === 'time' ? ' mn-time' : ''}`;
+    // No labelled group: it would be a second element named like the field. Each part carries
+    // the field name as its description instead ("Tag", described by "Beginn").
+    const name = document.createElement('span');
+    name.hidden = true;
+    name.id = `mn-field-${id}`;
+    const message = document.createElement('span');
+    message.className = 'mn-date-msg';
+    message.id = `mn-field-${id}-msg`;
+    message.hidden = true;
+    message.setAttribute('role', 'alert');
+
+    const parts = PARTS[kind].map(([label, tag]) => {
       const el = document.createElement(tag);
-      el.className = `mn-date-${name.toLowerCase()}`;
-      el.setAttribute('aria-label', name);
-      el.setAttribute('aria-describedby', describe.id);
-      if (options) el.append(...options.map(([v, t]) => option(t, v)));
+      el.className = `mn-date-${label.toLowerCase()}`;
+      el.setAttribute('aria-label', label);
+      el.setAttribute('aria-describedby', `${name.id} ${message.id}`);
       return el;
-    };
-    const day = monthOnly
-      ? null
-      : control('select', 'Tag', [
-          ['', '–'],
-          ...Array.from({ length: 31 }, (_, i) => [pad(i + 1), pad(i + 1)]),
-        ]);
-    const month = control('select', 'Monat', [
-      ['', '–'],
-      ...MONTHS.map((name, i) => [pad(i + 1), name]),
-    ]);
-    const year = control('input', 'Jahr');
-    year.inputMode = 'numeric';
-    year.maxLength = 4;
-    year.placeholder = 'Jahr';
-    year.autocomplete = 'off';
-    const parts = [day, month, year].filter(Boolean);
-    wrap.append(...parts, describe);
+    });
+    const part = (label) => parts[PARTS[kind].findIndex(([l]) => l === label)] ?? null;
+    const day = part('Tag');
+    const month = part('Monat');
+    const year = part('Jahr');
+    const hour = part('Stunde');
+    const minute = part('Minute');
+    if (day)
+      day.append(
+        option('–', ''),
+        ...Array.from({ length: 31 }, (_, i) => option(pad(i + 1), pad(i + 1))),
+      );
+    if (month) month.append(option('–', ''), ...MONTHS.map((m, i) => option(m, pad(i + 1))));
+    if (year) {
+      year.inputMode = 'numeric';
+      year.maxLength = 4;
+      year.placeholder = 'Jahr';
+      year.autocomplete = 'off';
+    }
+    if (hour)
+      hour.append(option('–', ''), ...Array.from({ length: 24 }, (_, i) => option(pad(i), pad(i))));
+    if (minute) {
+      const every = Math.max(1, Math.round((Number(input.step) || 60) / 60));
+      minute.append(
+        option('–', ''),
+        ...Array.from({ length: Math.ceil(60 / every) }, (_, i) =>
+          option(pad(i * every), pad(i * every)),
+        ),
+      );
+    }
+    const colon = kind === 'time' ? document.createElement('span') : null;
+    if (colon) {
+      colon.className = 'mn-time-colon';
+      colon.textContent = ':';
+      colon.setAttribute('aria-hidden', 'true');
+      wrap.append(parts[0], colon, parts[1]);
+    } else wrap.append(...parts);
+    wrap.append(name, message);
     input.after(wrap);
+    fields.set(wrap, input);
     input.classList.add('mn-date-native');
     input.tabIndex = -1;
     input.setAttribute('aria-hidden', 'true');
 
-    const show = () => {
-      const m = /^(\d{4})-(\d{2})(?:-(\d{2}))?$/.exec(NATIVE_VALUE.get.call(input));
-      year.value = m ? m[1] : '';
-      month.value = m ? m[2] : '';
-      if (day) day.value = m?.[3] ?? '';
-      for (const el of parts) {
-        el.disabled = input.disabled;
-        el.removeAttribute('aria-invalid');
-        if (el.setCustomValidity) el.setCustomValidity('');
+    // React keeps its own value tracker on the instance: go through it, not around it.
+    const own = Object.getOwnPropertyDescriptor(input, 'value') ?? NATIVE.value;
+    const read = () => own.get.call(input);
+    let syncing = false;
+
+    const rename = () => {
+      const text = labelText(input);
+      if (name.textContent !== text) name.textContent = text;
+      // The parts sit inside the label: without this the input's name would include them.
+      if (text && (input.dataset.mnLabel !== undefined || !input.getAttribute('aria-label'))) {
+        input.dataset.mnLabel = '';
+        if (input.getAttribute('aria-label') !== text) input.setAttribute('aria-label', text);
       }
     };
-    // Apps (and React) set .value directly: keep the visible fields in step.
+    const mirror = () => {
+      const off = input.disabled || input.readOnly;
+      wrap.hidden = input.hidden;
+      for (const el of parts) {
+        el.disabled = off;
+        if (input.required) el.setAttribute('aria-required', 'true');
+        else el.removeAttribute('aria-required');
+      }
+      // App code marks the input invalid (or valid again): show it on the parts.
+      if (input.getAttribute('aria-invalid') === 'true')
+        parts[0].setAttribute('aria-invalid', 'true');
+      else if (message.hidden) for (const el of parts) el.removeAttribute('aria-invalid');
+    };
+    const clearError = () => {
+      message.hidden = true;
+      message.textContent = '';
+      for (const el of parts) el.removeAttribute('aria-invalid');
+    };
+    const show = () => {
+      if (syncing) return;
+      const v = read();
+      if (kind === 'time') {
+        const m = /^(\d{2}):(\d{2})/.exec(v);
+        hour.value = m ? m[1] : '';
+        if (m && ![...minute.options].some((o) => o.value === m[2]))
+          minute.append(option(m[2], m[2]));
+        minute.value = m ? m[2] : '';
+      } else {
+        const m = /^(\d{4})-(\d{2})(?:-(\d{2}))?$/.exec(v);
+        year.value = m ? m[1] : '';
+        month.value = m ? m[2] : '';
+        if (day) day.value = m?.[3] ?? '';
+      }
+      clearError();
+      mirror();
+    };
+
+    // Code that sets the value (or the date or number view of it) updates the parts.
     Object.defineProperty(input, 'value', {
       configurable: true,
-      get() {
-        return NATIVE_VALUE.get.call(this);
-      },
+      get: read,
       set(v) {
-        NATIVE_VALUE.set.call(this, v);
+        own.set.call(input, v);
         show();
       },
     });
-    const commit = () => {
+    for (const key of ['valueAsDate', 'valueAsNumber'])
+      if (NATIVE[key])
+        Object.defineProperty(input, key, {
+          configurable: true,
+          get() {
+            return NATIVE[key].get.call(input);
+          },
+          set(v) {
+            NATIVE[key].set.call(input, v);
+            show();
+          },
+        });
+
+    /** The ISO value of the parts; '' while they are incomplete. */
+    const compose = () => {
+      if (kind === 'time') {
+        if (hour.value && !minute.value) minute.value = '00';
+        return hour.value && minute.value ? `${hour.value}:${minute.value}` : '';
+      }
       if ((month.value || day?.value) && !year.value) year.value = String(new Date().getFullYear());
       const y = year.value.trim();
-      let next = '';
-      if (/^\d{4}$/.test(y) && month.value && (monthOnly || day.value)) {
-        if (monthOnly) next = `${y}-${month.value}`;
-        else {
-          const last = new Date(+y, +month.value, 0).getDate();
-          if (+day.value > last) day.value = pad(last);
-          next = `${y}-${month.value}-${day.value}`;
-        }
+      if (!/^[1-9]\d{3}$/.test(y) || !month.value || (day && !day.value)) return '';
+      if (!day) return `${y}-${month.value}`;
+      const last = new Date(+y, +month.value, 0).getDate();
+      if (+day.value > last) day.value = pad(last);
+      return `${y}-${month.value}-${day.value}`;
+    };
+    const commit = () => {
+      clearError();
+      const next = compose();
+      if (next === read()) return;
+      // NATIVE.value (not the tracker) on purpose: React must see this as a change.
+      NATIVE.value.set.call(input, next);
+      // The parts stay as the person left them, even while incomplete.
+      syncing = true;
+      try {
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+      } finally {
+        syncing = false;
       }
-      if (next === NATIVE_VALUE.get.call(input)) return;
-      NATIVE_VALUE.set.call(input, next);
-      input.dispatchEvent(new Event('input', { bubbles: true }));
-      input.dispatchEvent(new Event('change', { bubbles: true }));
     };
     for (const el of parts) el.addEventListener('change', commit);
-    year.addEventListener('input', () => {
-      year.value = year.value.replace(/\D/g, '').slice(0, 4);
-      if (year.value.length === 4) commit();
-    });
+    if (year)
+      year.addEventListener('input', () => {
+        const digits = year.value.replace(/\D/g, '').slice(0, 4);
+        if (digits !== year.value) year.value = digits;
+        if (digits.length === 4) commit();
+      });
     input.addEventListener('input', show);
     input.addEventListener('change', show);
-    // A required, empty field: point at the first empty part instead of the hidden input.
+    // A click on the label, or app code that focuses the field, lands on the first part.
+    input.addEventListener('focus', () => parts[0].focus());
+    wrap.addEventListener('focusin', rename);
+    input.form?.addEventListener('reset', () => setTimeout(show));
+
+    // Validation: the hidden input cannot show the browser's bubble, so the field says it.
     input.addEventListener('invalid', (e) => {
       e.preventDefault();
-      const empty = parts.find((el) => !el.value) || parts[0];
-      empty.setAttribute('aria-invalid', 'true');
-      empty.setCustomValidity?.('Bitte ein vollständiges Datum angeben.');
-      empty.reportValidity?.();
-      empty.focus();
+      const v = input.validity;
+      const what = kind === 'time' ? 'eine Uhrzeit' : 'ein Datum';
+      const fmt = (x) => (kind === 'time' ? x : formatDate(x));
+      message.textContent = v.valueMissing
+        ? `Bitte ${what} angeben.`
+        : v.rangeUnderflow
+          ? `Frühestens ${kind === 'time' ? 'um' : 'am'} ${fmt(input.min)}.`
+          : v.rangeOverflow
+            ? `Spätestens ${kind === 'time' ? 'um' : 'am'} ${fmt(input.max)}.`
+            : `Bitte ${what} vollständig angeben.`;
+      message.hidden = false;
+      const target = parts.find((el) => !el.value) || parts[0];
+      target.setAttribute('aria-invalid', 'true');
     });
-    new MutationObserver(show).observe(input, { attributes: true, attributeFilter: ['disabled'] });
+    new MutationObserver(mirror).observe(input, {
+      attributes: true,
+      attributeFilter: ['disabled', 'readonly', 'required', 'hidden', 'aria-invalid'],
+    });
+    if (input.labels?.[0])
+      // Changes inside the parts (option lists, the name span) are ours, not the label's.
+      new MutationObserver((records) => {
+        if (records.some((r) => !wrap.contains(r.target))) rename();
+      }).observe(input.labels[0], {
+        childList: true,
+        characterData: true,
+        subtree: true,
+      });
+    rename();
     show();
   }
 
-  /** <input type="time"> as Stunde : Minute (24 hours); the minute list follows `step`. */
-  function enhanceTime(input) {
-    if (input.dataset.mnDate || input.closest('[data-mn-native]')) return;
-    input.dataset.mnDate = 'time';
-    const wrap = document.createElement('span');
-    wrap.className = 'mn-date mn-time';
-    const describe = document.createElement('span');
-    describe.hidden = true;
-    describe.id = `mn-date-${++dateIds}`;
-    describe.textContent = labelText(input);
-    if (!input.getAttribute('aria-label') && describe.textContent)
-      input.setAttribute('aria-label', describe.textContent);
-    const every = Math.max(1, Math.round((Number(input.step) || 60) / 60));
-    const select = (name, values) => {
-      const el = document.createElement('select');
-      el.className = `mn-date-${name.toLowerCase()}`;
-      el.setAttribute('aria-label', name);
-      el.setAttribute('aria-describedby', describe.id);
-      el.append(option('–', ''), ...values.map((v) => option(v, v)));
-      return el;
-    };
-    const hour = select(
-      'Stunde',
-      Array.from({ length: 24 }, (_, i) => pad(i)),
-    );
-    const minute = select(
-      'Minute',
-      Array.from({ length: Math.ceil(60 / every) }, (_, i) => pad(i * every)),
-    );
-    const colon = document.createElement('span');
-    colon.className = 'mn-time-colon';
-    colon.textContent = ':';
-    colon.setAttribute('aria-hidden', 'true');
-    wrap.append(hour, colon, minute, describe);
-    input.after(wrap);
-    input.classList.add('mn-date-native');
-    input.tabIndex = -1;
-    input.setAttribute('aria-hidden', 'true');
-    const show = () => {
-      const m = /^(\d{2}):(\d{2})/.exec(NATIVE_VALUE.get.call(input));
-      hour.value = m ? m[1] : '';
-      if (m && ![...minute.options].some((o) => o.value === m[2])) minute.add(option(m[2], m[2]));
-      minute.value = m ? m[2] : '';
-      hour.disabled = minute.disabled = input.disabled;
-    };
-    Object.defineProperty(input, 'value', {
-      configurable: true,
-      get() {
-        return NATIVE_VALUE.get.call(this);
-      },
-      set(v) {
-        NATIVE_VALUE.set.call(this, v);
-        show();
-      },
-    });
-    const commit = () => {
-      if (hour.value && !minute.value) minute.value = '00';
-      const next = hour.value && minute.value ? `${hour.value}:${minute.value}` : '';
-      if (next === NATIVE_VALUE.get.call(input)) return;
-      NATIVE_VALUE.set.call(input, next);
-      input.dispatchEvent(new Event('input', { bubbles: true }));
-      input.dispatchEvent(new Event('change', { bubbles: true }));
-    };
-    hour.addEventListener('change', commit);
-    minute.addEventListener('change', commit);
-    input.addEventListener('input', show);
-    input.addEventListener('change', show);
-    input.addEventListener('invalid', (e) => {
-      e.preventDefault();
-      const empty = hour.value ? minute : hour;
-      empty.setAttribute('aria-invalid', 'true');
-      empty.setCustomValidity('Bitte eine Uhrzeit angeben.');
-      empty.reportValidity();
-      empty.focus();
-    });
-    new MutationObserver(show).observe(input, { attributes: true, attributeFilter: ['disabled'] });
-    show();
-  }
-
-  const DATE_FIELDS = 'input[type="date"], input[type="month"], input[type="time"]';
-  const enhanceField = (el) => (el.type === 'time' ? enhanceTime(el) : enhanceDate(el));
+  const FIELDS = 'input[type="date"], input[type="month"], input[type="time"]';
   function enhanceAll(root) {
-    if (root.matches?.(DATE_FIELDS)) enhanceField(root);
-    for (const el of root.querySelectorAll?.(DATE_FIELDS) ?? []) enhanceField(el);
+    if (root.matches?.(FIELDS)) enhanceField(root);
+    for (const el of root.querySelectorAll?.(FIELDS) ?? []) enhanceField(el);
   }
-  function startDates() {
+  function startFields() {
     const style = document.createElement('style');
     style.textContent = [
       // Fixed minimum widths: the parts wrap onto a second line in narrow columns.
       '.mn-date{display:flex;flex-wrap:wrap;gap:6px;align-items:center;align-self:start;min-width:0}',
-      '.mn-date>*{flex:1 1 0;width:auto}',
-      '.mn-date>.mn-date-tag{min-width:3.6em}',
-      '.mn-date>.mn-date-monat{min-width:4.6em;flex-grow:1.4}',
-      '.mn-date>.mn-date-jahr{min-width:4.4em;flex-grow:1.2}',
+      '.mn-date>select,.mn-date>input{flex:1 1 0;width:auto}',
+      '.mn-date>select.mn-date-tag{min-width:3.6em}',
+      '.mn-date>select.mn-date-monat{min-width:4.6em;flex-grow:1.4}',
+      '.mn-date>input.mn-date-jahr{min-width:4.4em;flex-grow:1.2}',
+      '.mn-time{flex-wrap:nowrap}.mn-time>select{min-width:3.6em}.mn-time>.mn-time-colon{flex:none;font-weight:700}',
+      '.mn-date>.mn-date-msg{flex:1 0 100%;font-size:.85em;font-weight:600;color:var(--mn-bad,#b42318)}',
       // A label next to a taller one (with a hint) keeps its field at the top.
       'label:has(> .mn-date){align-content:start}',
-      '.mn-time{flex-wrap:nowrap}.mn-time>select{min-width:3.6em}.mn-time>.mn-time-colon{flex:none;font-weight:700}',
       '.mn-date-native{position:absolute!important;width:1px!important;height:1px!important;min-height:0!important;padding:0!important;border:0!important;opacity:0;pointer-events:none;overflow:hidden;clip-path:inset(50%)}',
     ].join('');
     document.head.append(style);
@@ -442,8 +543,8 @@
       for (const r of records) for (const n of r.addedNodes) if (n.nodeType === 1) enhanceAll(n);
     }).observe(document.body, { childList: true, subtree: true });
   }
-  if (document.body) startDates();
-  else document.addEventListener('DOMContentLoaded', startDates, { once: true });
+  if (document.body) startFields();
+  else document.addEventListener('DOMContentLoaded', startFields, { once: true });
 
   window.mnui = {
     sheet: { open, close: () => closeCurrent() },

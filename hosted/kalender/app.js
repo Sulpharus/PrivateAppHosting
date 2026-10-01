@@ -1761,7 +1761,7 @@ async function openEditor(item, opts = {}) {
       s = fromInputs(sd.value, st.value);
       e = fromInputs(ed.value || sd.value, et.value || st.value);
     }
-    if (!s) return fail('Gib einen gültigen Beginn an, z. B. 05.10.2026 um 18:00.', sd);
+    if (!s) return fail('Gib einen gültigen Beginn an, z. B. 05. Okt. 2026 um 18:00.', sd);
     if (!e || e < s) return fail('Das Ende muss nach dem Beginn liegen.', ed);
     const link = url.value.trim();
     if (link && !safeUrl(link)) return fail('Der Link muss mit https:// beginnen.', url);

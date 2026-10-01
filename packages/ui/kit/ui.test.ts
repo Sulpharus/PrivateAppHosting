@@ -207,6 +207,117 @@ describe('German dates', () => {
     expect(input.value).toBe('07:30');
   });
 
+  it('keeps the parts after a partial edit and while the year is typed', async () => {
+    const form = await field(
+      '<label>Beginn<input type="date" name="d" value="2026-10-01"></label>',
+    );
+    const input = form.querySelector('input[name=d]') as HTMLInputElement;
+    const [day, month] = [...form.querySelectorAll('select')] as HTMLSelectElement[];
+    const year = form.querySelector('.mn-date-jahr') as HTMLInputElement;
+    year.value = '2';
+    year.dispatchEvent(new Event('input', { bubbles: true }));
+    year.dispatchEvent(new Event('change', { bubbles: true }));
+    // Incomplete: the form gets no date, but what the person typed stays.
+    expect(input.value).toBe('');
+    expect([day.value, month.value, year.value]).toEqual(['01', '10', '2']);
+    year.value = '2027';
+    year.dispatchEvent(new Event('input', { bubbles: true }));
+    expect(input.value).toBe('2027-10-01');
+  });
+
+  it('follows form.reset() and valueAsDate', async () => {
+    const form = await field(
+      '<label>Beginn<input type="date" name="d" value="2026-10-01"></label>',
+    );
+    const input = form.querySelector('input[name=d]') as HTMLInputElement;
+    const year = form.querySelector('.mn-date-jahr') as HTMLInputElement;
+    input.value = '2030-01-15';
+    form.reset();
+    await tick();
+    expect(input.value).toBe('2026-10-01');
+    expect(year.value).toBe('2026');
+    input.valueAsDate = new Date(Date.UTC(2031, 4, 9));
+    expect(year.value).toBe('2031');
+  });
+
+  it('sends focus to the first part and mirrors disabled and required', async () => {
+    const form = await field(
+      '<label>Beginn<input type="date" name="d" required></label><label>Ende<input type="time" name="t" disabled></label>',
+    );
+    const input = form.querySelector('input[name=d]') as HTMLInputElement;
+    input.focus();
+    expect(document.activeElement?.className).toBe('mn-date-tag');
+    expect(form.querySelector('.mn-date-tag')?.getAttribute('aria-required')).toBe('true');
+    const hour = form.querySelector('.mn-date-stunde') as HTMLSelectElement;
+    expect(hour.disabled).toBe(true);
+    (form.querySelector('input[name=t]') as HTMLInputElement).disabled = false;
+    await tick();
+    expect(hour.disabled).toBe(false);
+  });
+
+  it('says why a field is invalid without taking the focus', async () => {
+    const form = await field(
+      '<label>Beginn<input type="date" name="d" required></label><button id="other">x</button>',
+    );
+    const other = form.querySelector('#other') as HTMLButtonElement;
+    other.focus();
+    expect(form.checkValidity()).toBe(false);
+    const message = form.querySelector('.mn-date-msg') as HTMLElement;
+    expect(message.hidden).toBe(false);
+    expect(message.textContent).toBe('Bitte ein Datum angeben.');
+    expect(document.activeElement).toBe(other);
+    expect(form.querySelector('.mn-date-tag')?.getAttribute('aria-invalid')).toBe('true');
+  });
+
+  it('names the field from the visible label text only', async () => {
+    const form = await field(
+      '<label><span>Erste Zahlung</span><span hidden>Zahlungsdatum</span><input type="date" name="d"></label>',
+    );
+    const input = form.querySelector('input[name=d]') as HTMLInputElement;
+    expect(input.getAttribute('aria-label')).toBe('Erste Zahlung');
+    const day = form.querySelector('.mn-date-tag') as HTMLElement;
+    const [nameId] = (day.getAttribute('aria-describedby') ?? '').split(' ');
+    expect(document.getElementById(nameId ?? '')?.textContent).toBe('Erste Zahlung');
+  });
+
+  it('keeps an existing value tracker on the input (React)', async () => {
+    const native = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
+    const tracked: string[] = [];
+    const input = document.createElement('input');
+    input.type = 'date';
+    Object.defineProperty(input, 'value', {
+      configurable: true,
+      get() {
+        return native?.get?.call(this);
+      },
+      set(v: string) {
+        tracked.push(v);
+        native?.set?.call(this, v);
+      },
+    });
+    const label = document.createElement('label');
+    label.append('Datum', input);
+    document.body.append(label);
+    await tick();
+    input.value = '2026-01-01';
+    expect(tracked).toEqual(['2026-01-01']);
+    expect((label.querySelector('.mn-date-jahr') as HTMLInputElement).value).toBe('2026');
+  });
+
+  it('enhances a cloned field afresh', async () => {
+    const form = await field(
+      '<label>Beginn<input type="date" name="d" value="2026-10-01"></label>',
+    );
+    const copy = form.cloneNode(true) as HTMLFormElement;
+    document.body.append(copy);
+    await tick();
+    expect(copy.querySelectorAll('.mn-date')).toHaveLength(1);
+    const month = copy.querySelector('.mn-date-monat') as HTMLSelectElement;
+    month.value = '12';
+    month.dispatchEvent(new Event('change', { bubbles: true }));
+    expect((copy.querySelector('input[name=d]') as HTMLInputElement).value).toBe('2026-12-01');
+  });
+
   it('leaves inputs marked data-mn-native alone', async () => {
     const form = await field('<div data-mn-native><input type="date" name="n"></div>');
     expect(form.querySelector('.mn-date')).toBeNull();
