@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { programName, slugify } from './slug.ts';
+import { programName, slugify, uploadKind } from './slug.ts';
 
 describe('slugify', () => {
   it('makes addresses', () => {
@@ -15,5 +15,14 @@ describe('programName', () => {
     expect(programName('Notepad++-Setup-8.6.2-x64.exe')).toBe('Notepad++');
     expect(programName('VLC_win64_installer.msi')).toBe('VLC');
     expect(programName('setup.exe')).toBe('setup');
+  });
+});
+
+describe('uploadKind', () => {
+  it('tells web apps from programs', () => {
+    expect(uploadKind('app.ZIP')).toBe('webapp');
+    expect(uploadKind('setup.exe')).toBe('program');
+    expect(uploadKind('x.msi')).toBe('program');
+    expect(uploadKind('x.tar.gz')).toBeNull();
   });
 });

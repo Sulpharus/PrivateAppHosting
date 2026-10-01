@@ -15,6 +15,8 @@ import {
   RESERVED_SLUGS,
   slugify,
   slugSchema,
+  type UploadKind,
+  uploadKind,
 } from '@mininode/manifest';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { Hono } from 'hono';
@@ -35,16 +37,6 @@ export const PROGRAM_MAX = 95 * 1024 * 1024;
 
 const BUCKET = 'submissions';
 const idSchema = z.uuid();
-
-export type UploadKind = 'webapp' | 'program';
-
-/** What an upload is, from its file name; null for anything the box does not take. */
-export function uploadKind(filename: string): UploadKind | null {
-  const lower = filename.toLowerCase();
-  if (lower.endsWith('.zip')) return 'webapp';
-  if (lower.endsWith('.exe') || lower.endsWith('.msi')) return 'program';
-  return null;
-}
 
 /** A file name that is safe in a storage path and in a PowerShell command line. */
 export function safeFilename(raw: string): string {
@@ -212,7 +204,15 @@ async function startIntegration(env: ApiEnv, db: SupabaseClient, row: Submission
       status: 'failed',
       log: 'Der Einbau konnte nicht gestartet werden (GitHub hat den Start abgelehnt).',
     });
-    return Response.json(failed ?? row, { status: 502 });
+    return Response.json(
+      {
+        ...(failed ?? row),
+        error: 'github_unavailable',
+        message:
+          'GitHub hat den Start des Einbaus abgelehnt. Der Upload ist gespeichert; versuche es erneut.',
+      },
+      { status: 502 },
+    );
   }
   const queued = await updateRow(db, row.id, {
     status: 'queued',
@@ -380,7 +380,14 @@ async function startInstall(env: ApiEnv, db: SupabaseClient, row: SubmissionRow)
         ? 'Für dieses Programm läuft schon eine Installation.'
         : 'Die NucBox ist gerade nicht erreichbar. Der Upload ist gespeichert; versuche es später erneut.',
     });
-    return Response.json(waiting ?? row, { status: busy ? 409 : 502 });
+    return Response.json(
+      {
+        ...(waiting ?? row),
+        error: busy ? 'busy' : 'host_unavailable',
+        message: waiting?.log ?? 'Die Installation konnte nicht gestartet werden.',
+      },
+      { status: busy ? 409 : 502 },
+    );
   }
   const job = (await response.json()) as { id: string };
   const running = await updateRow(db, row.id, {

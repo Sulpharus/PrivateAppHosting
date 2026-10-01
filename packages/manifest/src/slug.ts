@@ -20,3 +20,13 @@ export function programName(filename: string): string {
   const words = base.split(/[-_ ]+/).filter((word) => word && !INSTALLER_NOISE.test(word));
   return (words.join(' ') || base).slice(0, 40);
 }
+
+export type UploadKind = 'webapp' | 'program';
+
+/** What an uploaded file is, from its name: a ZIP is a web app, .exe/.msi a program for the PC/server. */
+export function uploadKind(filename: string): UploadKind | null {
+  const lower = filename.toLowerCase();
+  if (lower.endsWith('.zip')) return 'webapp';
+  if (lower.endsWith('.exe') || lower.endsWith('.msi')) return 'program';
+  return null;
+}

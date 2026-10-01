@@ -63,3 +63,47 @@ export function isReauthError(error: unknown): boolean {
     /recent sign-in|row-level security/.test(message)
   );
 }
+
+/**
+ * Sends a file as the raw request body (with progress). The name travels in `X-Filename`, so the
+ * API can stream the body instead of parsing a form.
+ */
+export async function apiUpload<T>(
+  path: string,
+  file: File,
+  headers: Record<string, string>,
+  onProgress: (fraction: number) => void,
+): Promise<T> {
+  const { data } = await supabase().auth.getSession();
+  const token = data.session?.access_token;
+  if (!token) throw new ApiError('Nicht angemeldet.', 'unauthenticated', 401);
+  return new Promise<T>((resolve, reject) => {
+    const request = new XMLHttpRequest();
+    request.open('POST', `${apiUrl}${path}`);
+    request.setRequestHeader('Authorization', `Bearer ${token}`);
+    request.setRequestHeader('X-Filename', encodeURIComponent(file.name));
+    for (const [name, value] of Object.entries(headers)) request.setRequestHeader(name, value);
+    request.upload.onprogress = (event) => {
+      if (event.lengthComputable) onProgress(event.loaded / event.total);
+    };
+    request.onerror = () => reject(new ApiError('Die API ist nicht erreichbar.', 'unreachable', 0));
+    request.onload = () => {
+      let payload: { error?: string; message?: string } = {};
+      try {
+        payload = JSON.parse(request.responseText) as typeof payload;
+      } catch {
+        // An empty or non-JSON body is reported below by status.
+      }
+      if (request.status >= 200 && request.status < 300) resolve(payload as T);
+      else
+        reject(
+          new ApiError(
+            payload.message ?? 'Der Upload hat nicht geklappt.',
+            payload.error ?? 'error',
+            request.status,
+          ),
+        );
+    };
+    request.send(file);
+  });
+}
