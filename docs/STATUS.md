@@ -63,6 +63,8 @@ since the PR #12 deploy. Earlier deploys stopped at medialog and never shipped t
   Stunde : Minute.
   - e2e can still `.fill('2026-10-01')` the input found by its label.
   - To pick values like a person: `locator('.mn-date').getByRole('combobox', { name: 'Monat' })`.
+  - Opt out per field or area with `data-mn-native`. Invalid fields get a German message under
+    the parts (role=alert) instead of the browser bubble.
 - **Apps that load the kit:** haushalt, kalender, wunschliste, memory and medialog load
   `ui.css` and `ui.js`. The Sportplaner has its own styles and loads only `ui.js`.
 - **Plain-script apps** (sportplaner, haushalt) share one global scope per page. Testable pure
@@ -128,7 +130,9 @@ since the PR #12 deploy. Earlier deploys stopped at medialog and never shipped t
   - env-file expansion;
   - symlinks in exports;
   - unscanned binaries;
-  - inconsistent monthly-fee totals.
+  - inconsistent monthly-fee totals;
+  - date fields: lost on form reset, partial edits wiped, `type="month"` read as text in
+    desktop Firefox and Safari (the kit now reads the attribute and checks min/max itself).
 - **Secret scan.**
   - gitleaks runs over every commit of a PR.
   - Fake keys in tests must be built at runtime, e.g. `['eyJ…', '…'].join('.')`.

@@ -296,7 +296,11 @@
    */
   function enhanceField(input) {
     if (input.closest('[data-mn-native]')) return;
-    const kind = input.type === 'time' ? 'time' : input.type === 'month' ? 'month' : 'date';
+    // From the attribute: browsers without month fields (desktop Firefox, Safari) report 'text'.
+    const type = input.getAttribute('type')?.toLowerCase();
+    const kind = type === 'time' ? 'time' : type === 'month' ? 'month' : 'date';
+    /** False where the browser does not know this type: then min and max are checked here. */
+    const supported = input.type === kind;
     // A cloned field brings a dead copy of the parts: drop it and enhance afresh.
     const next = input.nextElementSibling;
     if (next?.classList.contains('mn-date')) {
@@ -415,6 +419,7 @@
         if (day) day.value = m?.[3] ?? '';
       }
       clearError();
+      checkRange();
       mirror();
     };
 
@@ -428,7 +433,7 @@
       },
     });
     for (const key of ['valueAsDate', 'valueAsNumber'])
-      if (NATIVE[key])
+      if (NATIVE[key] && supported)
         Object.defineProperty(input, key, {
           configurable: true,
           get() {
@@ -454,12 +459,28 @@
       if (+day.value > last) day.value = pad(last);
       return `${y}-${month.value}-${day.value}`;
     };
+    /** min and max for a type the browser treats as text (ISO strings compare in order). */
+    function checkRange() {
+      if (supported) return;
+      const v = read();
+      const min = input.getAttribute('min');
+      const max = input.getAttribute('max');
+      const fmt = (x) => (kind === 'time' ? x : formatDate(x));
+      input.setCustomValidity(
+        v && min && v < min
+          ? `Frühestens ${kind === 'time' ? 'um' : 'am'} ${fmt(min)}.`
+          : v && max && v > max
+            ? `Spätestens ${kind === 'time' ? 'um' : 'am'} ${fmt(max)}.`
+            : '',
+      );
+    }
     const commit = () => {
       clearError();
       const next = compose();
       if (next === read()) return;
       // NATIVE.value (not the tracker) on purpose: React must see this as a change.
       NATIVE.value.set.call(input, next);
+      checkRange();
       // The parts stay as the person left them, even while incomplete.
       syncing = true;
       try {
@@ -495,14 +516,19 @@
           ? `Frühestens ${kind === 'time' ? 'um' : 'am'} ${fmt(input.min)}.`
           : v.rangeOverflow
             ? `Spätestens ${kind === 'time' ? 'um' : 'am'} ${fmt(input.max)}.`
-            : `Bitte ${what} vollständig angeben.`;
+            : v.customError
+              ? input.validationMessage
+              : `Bitte ${what} vollständig angeben.`;
       message.hidden = false;
       const target = parts.find((el) => !el.value) || parts[0];
       target.setAttribute('aria-invalid', 'true');
     });
-    new MutationObserver(mirror).observe(input, {
+    new MutationObserver(() => {
+      checkRange();
+      mirror();
+    }).observe(input, {
       attributes: true,
-      attributeFilter: ['disabled', 'readonly', 'required', 'hidden', 'aria-invalid'],
+      attributeFilter: ['disabled', 'readonly', 'required', 'hidden', 'aria-invalid', 'min', 'max'],
     });
     if (input.labels?.[0])
       // Changes inside the parts (option lists, the name span) are ours, not the label's.

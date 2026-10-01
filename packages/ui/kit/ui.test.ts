@@ -193,6 +193,26 @@ describe('German dates', () => {
     expect(input.value).toBe(`${new Date().getFullYear()}-10`);
   });
 
+  it('keeps a month field a month where the browser treats it as text, and checks min itself', async () => {
+    const form = document.createElement('form');
+    form.innerHTML = '<label>Ab<input type="month" name="m" min="2026-11"></label>';
+    const input = form.querySelector('input[name=m]') as HTMLInputElement;
+    // Desktop Firefox and Safari report 'text' for type="month".
+    Object.defineProperty(input, 'type', { get: () => 'text' });
+    document.body.append(form);
+    await tick();
+    expect(form.querySelectorAll('select')).toHaveLength(1);
+    expect(Object.hasOwn(input, 'valueAsDate')).toBe(false);
+    const month = form.querySelector('select') as HTMLSelectElement;
+    (form.querySelector('.mn-date-jahr') as HTMLInputElement).value = '2026';
+    month.value = '10';
+    month.dispatchEvent(new Event('change', { bubbles: true }));
+    expect(input.value).toBe('2026-10');
+    expect(input.validationMessage).toBe('Frühestens am Nov. 2026.');
+    input.value = '2026-12';
+    expect(input.validationMessage).toBe('');
+  });
+
   it('shows a time input as Stunde : Minute in 24 hours, following its step', async () => {
     const form = await field(
       '<label>Uhrzeit<input type="time" name="t" step="300" value="18:30"></label>',
