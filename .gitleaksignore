@@ -2,3 +2,5 @@
 # them at runtime. Format: <commit>:<file>:<rule>:<line>
 600cd43269813ca6aefc95dc9964348c4928a70f:packages/cli/src/export.test.ts:generic-api-key:62
 e416136e710827dacd21d2e04b727c0d25064803:packages/cli/src/export.test.ts:generic-api-key:42
+# Fake key literal in the personal-key test of PR 15, already in history; the test builds keys at runtime now.
+4164be6342492d8fcf201a65798943888e2aef0f:apps/api/src/personal-keys.integration.test.ts:generic-api-key:202
