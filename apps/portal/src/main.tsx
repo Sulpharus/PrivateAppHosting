@@ -17,6 +17,7 @@ import { listenForRenewals, registerServiceWorker } from './lib/push.ts';
 import { initSupabase } from './lib/supabase.ts';
 import { applyStoredTheme } from './lib/theme.ts';
 import { Account } from './routes/Account.tsx';
+import { AccountKeys } from './routes/AccountKeys.tsx';
 import { AuthConfirm, AuthRefresh } from './routes/AuthPages.tsx';
 import { Home } from './routes/Home.tsx';
 import { Login } from './routes/Login.tsx';
@@ -110,6 +111,7 @@ const router = createBrowserRouter([
       { path: '/', element: <Home /> },
       { path: '/welcome', element: <Welcome /> },
       { path: '/account', element: <Account /> },
+      { path: '/account/keys', element: <AccountKeys /> },
       { path: '/games', element: <Games /> },
       { path: '/games/:slug', element: <GameProfile /> },
       {
