@@ -195,6 +195,16 @@ test('a course plans every session; cancelled sessions count nowhere', async ({ 
   const yearStart = `${new Date().getFullYear()}-01-01`;
   const past = [day(-2), day(-1)].filter((d) => d >= yearStart).length;
   await page.getByRole('button', { name: 'Statistik' }).click();
+  // The course costs so far: the shares of the sessions before today (70 € over 6 sessions).
+  if (past)
+    await expect(
+      page
+        .locator('#st-cost')
+        .getByText((past * (70 / 6)).toFixed(2).replace('.', ','), {
+          exact: false,
+        })
+        .first(),
+    ).toBeVisible();
   await expect(
     page.getByText(
       past ? `Teilnahme: 0 von ${past} geplanten Terminen` : 'Teilnahme an geplanten Terminen',

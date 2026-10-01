@@ -309,7 +309,9 @@ export function Home() {
             {apps && visible.length === 0 && (
               <p className="empty">
                 {webApps.length === 0
-                  ? 'Für dich sind noch keine Apps freigegeben.'
+                  ? gameCount > 0
+                    ? 'Für dich sind noch keine Apps freigegeben. Deine Spiele findest du im Gaming Hub.'
+                    : 'Für dich sind noch keine Apps freigegeben.'
                   : filter === 'favorites'
                     ? 'Markiere Apps mit dem Stern, um sie hier zu sammeln.'
                     : 'Keine App passt zur Suche.'}

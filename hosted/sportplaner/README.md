@@ -39,7 +39,13 @@ scheduling logic are unchanged. What changed:
 - **Kurspreis:** a price for the whole course or a monthly fee (`course.price`, `priceType`
   `total` or `month`).
   - It is split over the sessions that take place; cancelled sessions carry no share.
-  - A monthly fee is split over that month's sessions.
+  - A monthly fee is due for every calendar month with course sessions (also partial ones) and
+    is split over that month's sessions. A month whose sessions were all cancelled still costs
+    the fee; it is booked on its first session date, so the shares always add up to the total.
+  - A course linked to a tariff is paid through the tariff; Statistik does not count the course
+    price, nor a price per visit, as well.
+  - The rule lives in `js/price.js` (`splitCoursePrice`, `parseEuro` for German amounts such as
+    `1.200,50`), tested in `test/price.test.js`.
   - The detail view shows the average per session, and the day box shows the share of that
     session.
   - *Statistik* books each share on its date (`coursePrices` in `js/core.js`).

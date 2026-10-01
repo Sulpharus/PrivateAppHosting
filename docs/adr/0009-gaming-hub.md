@@ -65,7 +65,9 @@ kv, which every user of the app can overwrite, and would ask for its own player 
   - the username;
   - achievements derived from the figures, with nothing stored.
 - `/games/:slug` is the game profile: records, leaderboard and the latest rounds.
-- The start page links to the hub when a game is available.
+- Games appear only in the hub, never among the apps on the start page. The start page always
+  links to the hub ("Gaming Hub" button and the "Spiele" tab), even before a game exists.
+  (Changed 2026-10-01; before, games were also tiles on the start page.)
 
 **Construction prompts** gain five modules: Gaming Hub, game loop, levels and daily
 challenge, computer opponent, and sound and haptics. The game type points to `mn.game`.

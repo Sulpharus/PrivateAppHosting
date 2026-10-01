@@ -211,7 +211,8 @@ function sanitizeAct(raw, keepMedia = false) {
       raw.course &&
       isDay(raw.course.from) &&
       isDay(raw.course.until) &&
-      raw.course.from <= raw.course.until
+      raw.course.from <= raw.course.until &&
+      (new Date(raw.course.until) - new Date(raw.course.from)) / 864e5 < 104 * 7
         ? {
             from: raw.course.from,
             until: raw.course.until,

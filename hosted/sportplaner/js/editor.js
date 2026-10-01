@@ -493,25 +493,24 @@ function courseSessions() {
     if (days.has(wIdx(d))) n++;
   return n;
 }
-/* € per session in the editor: the draft's sessions without the cancelled ones */
+/* € per session in the editor, by the same rule as everywhere else (js/price.js) */
 function coursePriceNote() {
-  const c = draft.course,
-    price = parseMoney(c.priceText);
-  if (!(price > 0) || !c.from || !c.until || c.until < c.from) return '';
+  const c = draft.course;
+  if (!c.from || !c.until || c.until < c.from) return '';
   const days = new Set(draft.courseRows.flatMap((r) => r.days)),
-    off = new Set(draft.cancelled || []),
     dates = [];
   for (let d = parse(c.from), i = 0; ymd(d) <= c.until && i < 800; d = addDays(d, 1), i++)
-    if (days.has(wIdx(d)) && !off.has(ymd(d))) dates.push(ymd(d));
-  if (!dates.length) return '';
-  const months =
-    (+c.until.slice(0, 4) - +c.from.slice(0, 4)) * 12 +
-    +c.until.slice(5, 7) -
-    +c.from.slice(5, 7) +
-    1;
-  const total = c.priceType === 'month' ? price * months : price;
-  const offN = off.size ? ` (${off.size} ausgefallene nicht mitgerechnet)` : '';
-  return ` Kosten: ${eur(total)}${c.priceType === 'month' ? ` für ${months} ${months === 1 ? 'Monat' : 'Monate'}` : ''}, im Schnitt ${eur(total / dates.length)} pro Termin${offN}.`;
+    if (days.has(wIdx(d))) dates.push(ymd(d));
+  const cp = splitCoursePrice(
+    { price: parseEuro(c.priceText), priceType: c.priceType },
+    dates,
+    new Set(draft.cancelled || []),
+  );
+  if (!cp) return '';
+  const span =
+    cp.type === 'month' ? ` für ${cp.months} ${cp.months === 1 ? 'Monat' : 'Monate'}` : '';
+  const off = cp.cancelled ? ` (${cp.cancelled} ausgefallene nicht mitgerechnet)` : '';
+  return ` Kosten: ${eur(cp.total)}${span}${cp.avg !== null ? `, im Schnitt ${eur(cp.avg)} pro Termin` : ''}${off}.`;
 }
 function courseSummary() {
   const c = draft.course,
@@ -535,7 +534,7 @@ function renderCourse() {
     <div class="blk"><div class="blk-title"><b>Kurspreis</b></div>
       <div class="two"><label class="f">Preis in €<input data-cf="priceText" inputmode="decimal" autocomplete="off" placeholder="z. B. 120,00" value="${esc(c.priceText || '')}"></label>
       <label class="f">Gilt für<select data-cf="priceType"><option value="total"${c.priceType === 'month' ? '' : ' selected'}>den ganzen Kurs</option><option value="month"${c.priceType === 'month' ? ' selected' : ''}>jeden Monat (Monatsbeitrag)</option></select></label></div>
-      <p class="hint flat">Der Preis wird auf alle Termine verteilt, die stattfinden. Ausgefallene Termine zählen nicht mit; bei einem Monatsbeitrag auf die Termine des jeweiligen Monats.</p>
+      <p class="hint flat">Der Preis wird auf alle Termine verteilt, die stattfinden; ausgefallene Termine zählen nicht mit. Ein Monatsbeitrag gilt für jeden Monat mit Kursterminen, auch angebrochene, und wird auf dessen Termine verteilt. Ist ein Tarif mit dem Kurs verknüpft, zählt die Statistik nur den Tarif.</p>
     </div>
     <div class="blk"><div class="blk-title"><b>Trainingstage und Uhrzeit</b></div>
       ${draft.courseRows
@@ -598,8 +597,8 @@ function courseToSlots() {
   if (!c.from || !c.until) return 'Gib Kursbeginn und Kursende an.';
   if (c.until < c.from) return 'Das Kursende liegt vor dem Kursbeginn.';
   const priceText = String(c.priceText || '').trim();
-  if (priceText && !(parseMoney(priceText) >= 0 && parseMoney(priceText) <= 100000))
-    return 'Gib einen gültigen Kurspreis ein, z. B. 120,00.';
+  if (priceText && !(parseEuro(priceText) >= 0 && parseEuro(priceText) <= 100000))
+    return 'Gib einen gültigen Kurspreis ein, z. B. 120,00 oder 1.200.';
   if (dayCount(c.from, c.until) > 104 * 7) return 'Ein Kurs dauert höchstens 104 Wochen.';
   if (!rows.length) return 'Wähle mindestens einen Trainingstag für den Kurs.';
   const period = { type: 'range', from: c.from, until: c.until, label: 'Kurs' };
@@ -624,7 +623,7 @@ function courseToSlots() {
     season: { type: 'range', from: c.from, until: c.until },
     anchor: c.from,
   };
-  const price = parseMoney(c.priceText);
+  const price = parseEuro(c.priceText);
   draft.course = {
     from: c.from,
     until: c.until,

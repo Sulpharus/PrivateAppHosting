@@ -9,11 +9,7 @@ function plansChanged() {
 const eurF = new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' });
 const eur = (n) => eurF.format(n || 0);
 const numF = new Intl.NumberFormat('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const parseMoney = (v) => {
-  const s = String(v ?? '').replace(/[\s€]/g, '');
-  if (!s) return NaN;
-  return parseFloat(s.includes(',') ? s.replace(/\./g, '').replace(',', '.') : s);
-};
+const parseMoney = (v) => parseEuro(v);
 const UNITS = {
   day: ['Tag', 'Tage'],
   week: ['Woche', 'Wochen'],
@@ -131,9 +127,11 @@ function computeStats(Y) {
     forecast += fc;
     planStats.push({ p, total, visits: lv, perVisit: lv && total ? total / lv : null });
   }
-  // Course prices: each session that takes place carries its share, booked on its date.
+  // Course prices: each session that takes place carries its share, booked on its date. A
+  // course linked to a tariff is paid through the tariff and is not counted twice.
+  const tariffed = new Set(S.plans.flatMap((p) => p.activities || []));
   for (const a of S.acts) {
-    const cp = coursePrices(a);
+    const cp = tariffed.has(a.id) ? null : coursePrices(a);
     if (!cp) continue;
     covered.add(a.id);
     let spent = 0,
