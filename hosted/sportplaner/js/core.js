@@ -310,6 +310,8 @@ function nextMap() {
 function dataChanged() {
   buildIndex();
   scheduleRender();
+  // planned sessions go to the Kalender (js/suite.js); the first load waits a little longer
+  if (typeof suiteSoon === 'function') suiteSoon(S.loading ? 5000 : 3000);
 }
 
 const timeLabel = (s) =>

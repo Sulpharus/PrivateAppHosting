@@ -15,6 +15,9 @@ if (!result.ok) console.error(result.errors); // ["kind: kind \"spa\" cannot run
   stat ids or values outside `min`..`max` are dropped.
 - `googleScopes(manifest.google)` / `googleConnectSrc(…)` turn the `google` block into OAuth
   scopes (API) and CSP origins (gate); `ALL_GOOGLE_SCOPES` is what the portal asks Google for.
+- `@mininode/manifest/library` holds the App-Bibliothek (ADR 0011): the zod schema of
+  `infra/nucbox/library.json`, the validated `LIBRARY`, and `libraryManifest(entry, slug)` for
+  registering an installed program. `manifest.library` marks such apps.
 - `pnpm build` regenerates `schema.json` (JSON Schema for editors, referenced via `$schema`).
 - `pnpm test` runs the unit tests.
 

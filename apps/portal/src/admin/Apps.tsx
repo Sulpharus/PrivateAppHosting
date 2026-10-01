@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useStepUp } from '../auth/StepUp.tsx';
+import { Dialog } from '../components/Dialog.tsx';
+import { ApiError, api } from '../lib/api.ts';
 import { type AppRow, listApps, monogram, tileUrl, tintFor } from '../lib/apps.ts';
 import { type Category, listCategories } from '../lib/catalog.ts';
 import { platform } from '../lib/supabase.ts';
@@ -28,6 +30,7 @@ const RESERVED = new Set([
   'ai',
   'api',
   'auth',
+  'control',
   'guac',
   'login',
   'mail',
@@ -57,6 +60,12 @@ export function Apps() {
   const [accessFor, setAccessFor] = useState<AppRow | null>(null);
   const [members, setMembers] = useState<Set<string>>(new Set());
   const [whitelistMode, setWhitelistMode] = useState(false);
+  // The app stays set while the dialog closes, so its title does not flicker.
+  const [exportFor, setExportFor] = useState<AppRow | null>(null);
+  const [exportOpen, setExportOpen] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const [exported, setExported] = useState<{ text: string; runs: string } | null>(null);
 
   const load = useCallback(async () => {
     const [rows, cats, users] = await Promise.all([
@@ -188,6 +197,38 @@ export function Apps() {
     setAccessFor(app);
   };
 
+  const startExport = async (form: HTMLFormElement) => {
+    const app = exportFor;
+    if (!app) return;
+    const data = new FormData(form);
+    const repo = String(data.get('repo') ?? '').trim();
+    const visibility = String(data.get('visibility') ?? 'private');
+    if (
+      visibility === 'public' &&
+      !confirm(`Das Projekt ${repo} wird öffentlich: jeder kann den Code von ${app.name} lesen.`)
+    )
+      return;
+    setExportError(null);
+    setExporting(true);
+    try {
+      const { runs } = await run(() =>
+        api<{ runs: string }>(`/admin/apps/${app.slug}/export`, {
+          method: 'POST',
+          body: { repo, visibility },
+        }),
+      );
+      setExported({
+        runs,
+        text: `${app.name} wird als ${repo} auf GitHub angelegt. Das dauert etwa eine Minute; wird dabei etwas Privates gefunden, bricht der Export ab.`,
+      });
+      setExportOpen(false);
+    } catch (err) {
+      setExportError(err instanceof ApiError ? err.message : 'Das hat nicht geklappt.');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const saveAccess = () => {
     const app = accessFor;
     if (!app) return;
@@ -231,6 +272,14 @@ export function Apps() {
       {notice && (
         <p className="muted" role="status">
           {notice}
+        </p>
+      )}
+      {exported && (
+        <p className="muted" role="status">
+          {exported.text}{' '}
+          <a href={exported.runs} target="_blank" rel="noopener noreferrer">
+            Fortschritt auf GitHub
+          </a>
         </p>
       )}
       {apps.length === 0 && <p className="empty">Noch keine Apps veröffentlicht.</p>}
@@ -345,6 +394,20 @@ export function Apps() {
                           Entfernen
                         </button>
                       )}
+                      {app.kind !== 'link' && !app.library && (
+                        <button
+                          type="button"
+                          className="button small"
+                          aria-label={`${app.name} als GitHub-Projekt exportieren`}
+                          onClick={() => {
+                            setExportError(null);
+                            setExportFor(app);
+                            setExportOpen(true);
+                          }}
+                        >
+                          Als GitHub-Projekt
+                        </button>
+                      )}
                       <button
                         type="button"
                         className="button small"
@@ -420,6 +483,66 @@ export function Apps() {
           </div>
         </section>
       )}
+
+      <Dialog
+        open={exportOpen}
+        title={`${exportFor?.name ?? ''} als GitHub-Projekt`}
+        onClose={() => setExportOpen(false)}
+      >
+        {exportFor && (
+          <form
+            key={exportFor.slug}
+            className="stack"
+            style={{ gap: 12 }}
+            onSubmit={(event) => {
+              event.preventDefault();
+              void startExport(event.currentTarget);
+            }}
+          >
+            <p className="muted">
+              Der Code der App, wie er gerade läuft, wird zu einem eigenen GitHub-Projekt, das
+              andere in ihr MiniNode übernehmen können. Nutzerdaten, Schlüssel und Daten dieser
+              Installation kommen nicht mit; findet die Prüfung etwas davon, bricht der Export ab.
+            </p>
+            <label className="field">
+              Projektname
+              <input
+                name="repo"
+                defaultValue={`mininode-${exportFor.slug}`}
+                required
+                maxLength={100}
+                pattern="[A-Za-z0-9_\-][A-Za-z0-9._\-]*"
+                spellCheck={false}
+                autoCapitalize="off"
+              />
+            </label>
+            <fieldset className="access-mode">
+              <legend>Sichtbarkeit (nur beim ersten Export)</legend>
+              <label className="row" style={{ gap: 8 }}>
+                <input type="radio" name="visibility" value="private" defaultChecked />
+                Privat: nur du und wen du auf GitHub einlädst
+              </label>
+              <label className="row" style={{ gap: 8 }}>
+                <input type="radio" name="visibility" value="public" />
+                Öffentlich: jeder kann den Code sehen und übernehmen
+              </label>
+            </fieldset>
+            {exportError && (
+              <p className="error" role="alert">
+                {exportError}
+              </p>
+            )}
+            <div className="row row-end">
+              <button type="button" className="button small" onClick={() => setExportOpen(false)}>
+                Abbrechen
+              </button>
+              <button type="submit" className="button small primary" disabled={exporting}>
+                {exporting ? 'Wird gestartet …' : 'Exportieren'}
+              </button>
+            </div>
+          </form>
+        )}
+      </Dialog>
 
       <section className="card" aria-labelledby="link-title">
         <h2 id="link-title" className="section-title">

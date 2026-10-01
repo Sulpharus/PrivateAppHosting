@@ -23,5 +23,14 @@
       "docs": "https://operations.osmfoundation.org/policies/nominatim/",
       "reason": "Adressen prüfen und für die Karte in Koordinaten umwandeln"
     }
-  ]
+  ],
+  "suite": {
+    "uses": [
+      {
+        "type": "activity",
+        "access": "write",
+        "why": "Geplante Einheiten im Kalender zeigen"
+      }
+    ]
+  }
 }

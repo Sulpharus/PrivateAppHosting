@@ -1,0 +1,85 @@
+name: App-Bibliothek
+
+# Installs, updates or removes a program from the App-Bibliothek (infra/nucbox/library.json) on
+# the NucBox (ADR 0011). Started by the portal (Verwaltung → App-Bibliothek) through the API, or
+# by hand under Actions. Install: check → DNS → NucBox rollout → register in platform.apps.
+# Remove: disable in platform.apps (checks the entry) → stop on the NucBox.
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: install (also updates) or remove
+        type: choice
+        options: [install, remove]
+        default: install
+      entry:
+        description: Library entry id (infra/nucbox/library.json)
+        type: string
+        required: true
+      slug:
+        description: Address (<slug>.mininode.app)
+        type: string
+        required: true
+      environment:
+        description: Target environment
+        type: choice
+        options: [production, staging]
+        default: production
+
+permissions:
+  contents: read
+
+concurrency:
+  group: library-${{ inputs.environment }}-${{ inputs.slug }}
+  cancel-in-progress: false
+
+env:
+  DEPLOY_ENV: ${{ inputs.environment }}
+  # Public identifiers, as in deploy.yml.
+  SUPABASE_URL: ${{ inputs.environment == 'production' && 'https://ojicmpgqvoyakigvubek.supabase.co' || 'https://ttgrtecdqouiogiwcjag.supabase.co' }}
+  SUPABASE_PUBLISHABLE_KEY: ${{ inputs.environment == 'production' && 'sb_publishable_jv1tZqYWg51sNxJ5-GjMMw_tZqa1s1C' || 'sb_publishable_zQfFz-ruNPkIQauwa253iw_4zOZmiOB' }}
+
+jobs:
+  library:
+    name: ${{ inputs.action }} ${{ inputs.entry }} → ${{ inputs.slug }}
+    # The NucBox must be set up (docs/runbooks/nucbox-install.md); the catalog is read from main.
+    if: vars.NUCBOX_TUNNEL_ID != '' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    env:
+      SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+      STAGING_DOMAIN: ${{ vars.STAGING_DOMAIN }}
+      ENTRY: ${{ inputs.entry }}
+      SLUG: ${{ inputs.slug }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Check entry and address
+        if: inputs.action == 'install'
+        run: pnpm mininode library check "$ENTRY" "$SLUG" --env "$DEPLOY_ENV"
+      - name: DNS record → tunnel
+        if: inputs.action == 'install'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          TUNNEL_ID: ${{ vars.NUCBOX_TUNNEL_ID }}
+          DOMAIN: ${{ vars.STAGING_DOMAIN || 'mininode.app' }}
+        run: ./infra/cloudflare/dns-upsert.sh "$SLUG.$DOMAIN" "$TUNNEL_ID.cfargotunnel.com"
+      # Remove: the registry says which program runs there; a mismatch stops before the NucBox.
+      - name: Disable the app
+        if: inputs.action == 'remove'
+        run: pnpm mininode library remove "$SLUG" "$ENTRY" --env "$DEPLOY_ENV"
+      - uses: ./.github/actions/nucbox-ssh
+        with:
+          command: ${{ inputs.action == 'install' && format('library {0} {1}', inputs.slug, inputs.entry) || format('remove {0}', inputs.slug) }}
+          ssh-key: ${{ secrets.NUCBOX_DEPLOY_SSH_KEY }}
+          access-client-id: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          access-client-secret: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+      - name: Register the app
+        if: inputs.action == 'install'
+        run: pnpm mininode library install "$ENTRY" "$SLUG" --env "$DEPLOY_ENV"

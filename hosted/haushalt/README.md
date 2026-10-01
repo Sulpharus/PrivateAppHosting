@@ -31,6 +31,10 @@ tax form tables, budget inputs, print).
 - **Dein Monat (Übersicht):** income (booked, or at least the regular income) minus fixed costs
   and savings is what is free this month; a bar shows what is spent against where it should be
   by today, and what is still free per day. Without income it uses the budgets.
+- **Kalender:** the payments of fixed costs from last month to twelve months ahead are shared
+  `contract` records (due date, amount, kind, interval; source key `<fixed cost>#<month>`),
+  so they appear in the Kalender. Ended or deleted fixed costs leave it from this month on. Needs
+  the admin's approval of `suite.uses`.
 - **Statistik:** per year: average income and spending, fixed-cost and savings rate, income next
   to fixed and other spending per month (with a table), categories against the year before,
   fixed costs by kind, largest payees. Colours are the kit's `--mn-chart-*` series.

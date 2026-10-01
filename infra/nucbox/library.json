@@ -1,0 +1,78 @@
+{
+  "$comment": "App library (ADR 0011): self-hostable programs the admin installs on the NucBox with one click. Images are pinned by digest; nucbox-deploy reads this file from main. Schema: packages/manifest/src/library.ts.",
+  "entries": [
+    {
+      "id": "jellyfin",
+      "name": "Jellyfin",
+      "description": "Filme, Serien und Musik von der NucBox im Browser streamen",
+      "category": "Unterhaltung",
+      "website": "https://jellyfin.org",
+      "docs": "https://jellyfin.org/docs/",
+      "image": "docker.io/jellyfin/jellyfin:12.1.20260915-010956@sha256:78d3ea1207d1322471fcac39a614f004f2ccf7e878f95ab2977d752f07e4dd7e",
+      "port": 8096,
+      "memoryMb": 1536,
+      "healthPath": "/health",
+      "volumes": { "config": "/config", "cache": "/cache", "media": "/media" },
+      "env": { "JELLYFIN_PublishedServerUrl": "https://{host}" },
+      "readOnly": false,
+      "note": "Medien in den Ordner apps/<slug>/data/media auf der NucBox legen. Die TV- und Handy-Apps von Jellyfin kommen nicht durch den MiniNode-Login; im Browser geht alles."
+    },
+    {
+      "id": "n8n",
+      "name": "n8n",
+      "description": "Abläufe automatisieren: Webhooks, Mails, Tabellen und APIs verbinden",
+      "category": "Werkzeuge",
+      "website": "https://n8n.io",
+      "docs": "https://docs.n8n.io",
+      "image": "docker.io/n8nio/n8n:2.41.4@sha256:3cd1d3a03f5e059a0757d8c95823ff09ef61d3b6bf7fcb4ac3ac5fd5303b6c6d",
+      "port": 5678,
+      "memoryMb": 1024,
+      "healthPath": "/healthz",
+      "user": "1000:1000",
+      "volumes": { "data": "/home/node/.n8n" },
+      "env": {
+        "N8N_HOST": "{host}",
+        "N8N_PROTOCOL": "https",
+        "WEBHOOK_URL": "https://{host}/",
+        "N8N_DIAGNOSTICS_ENABLED": "false",
+        "N8N_PERSONALIZATION_ENABLED": "false",
+        "GENERIC_TIMEZONE": "Europe/Berlin",
+        "TZ": "Europe/Berlin"
+      },
+      "readOnly": false,
+      "note": "n8n hat ein eigenes Konto: beim ersten Öffnen legst du den Besitzer an. Webhooks von außen kommen nicht durch den MiniNode-Login."
+    },
+    {
+      "id": "uptime-kuma",
+      "name": "Uptime Kuma",
+      "description": "Websites und Dienste überwachen und bei Ausfall benachrichtigen",
+      "category": "Werkzeuge",
+      "website": "https://uptime.kuma.pet",
+      "docs": "https://github.com/louislam/uptime-kuma/wiki",
+      "image": "docker.io/louislam/uptime-kuma:2.5.5-rootless@sha256:c4e17ce033deb811aff8a61a5f8f736f35b1bd937458ddeec46c59ca190f0e03",
+      "port": 3001,
+      "memoryMb": 384,
+      "healthPath": "/",
+      "volumes": { "data": "/app/data" },
+      "env": { "TZ": "Europe/Berlin" },
+      "readOnly": false,
+      "note": "Beim ersten Öffnen legst du ein Uptime-Kuma-Konto an."
+    },
+    {
+      "id": "stirling-pdf",
+      "name": "Stirling PDF",
+      "description": "PDFs zusammenfügen, teilen, drehen, komprimieren und umwandeln",
+      "category": "Arbeit & Büro",
+      "website": "https://www.stirlingpdf.com",
+      "docs": "https://docs.stirlingpdf.com",
+      "image": "docker.io/stirlingtools/stirling-pdf:3.0.0@sha256:66b6edb8ee62e307a8b335166e8931a6e65b39c9bf73b5e517fbfe9c613ba221",
+      "port": 8080,
+      "memoryMb": 1536,
+      "healthPath": "/api/v1/info/status",
+      "volumes": { "configs": "/configs", "logs": "/logs" },
+      "env": { "DOCKER_ENABLE_SECURITY": "false", "LANGS": "de_DE" },
+      "readOnly": false,
+      "note": "Dateien werden nur zur Bearbeitung hochgeladen und nicht gespeichert."
+    }
+  ]
+}

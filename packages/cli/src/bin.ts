@@ -1,11 +1,13 @@
 #!/usr/bin/env node
 import { existsSync, readdirSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { basename, join, resolve } from 'node:path';
 import { changedApps } from './changed.ts';
 import type { DeployEnv } from './deploy/environment.ts';
 import { deployApp, devApp, readVersion } from './deploy/index.ts';
+import { checkLibraryInstall, installLibraryApp, removeLibraryApp } from './deploy/library.ts';
 import { hostedTargets, pruneApps } from './deploy/prune.ts';
 import { type DoctorReport, doctor, hostedApps } from './doctor.ts';
+import { exportApp } from './export.ts';
 
 const ROOT = resolve(import.meta.dirname, '../../..');
 
@@ -17,6 +19,10 @@ const USAGE = `mininode <command>
   deploy --changed <base-ref>       Deploy every app changed since <base-ref>
   changed <base-ref>                List hosted apps changed since <base-ref>
   prune [--env staging] [--dry-run] Delete Workers of apps removed from hosted/, disable them
+  export <app-dir> --out <dir>      Copy one app as a shareable project (no data, no keys)
+  library check <entry> <slug>      App-Bibliothek: check an install before the rollout
+  library install <entry> <slug>    App-Bibliothek: register an installed program
+  library remove <slug> <entry>     App-Bibliothek: disable a removed program
 `;
 
 function print(report: DoctorReport): boolean {
@@ -73,6 +79,38 @@ async function main(args: string[]): Promise<number> {
       await devApp(resolve(process.cwd(), target), Number(flag(args, '--port') ?? 8790));
       return 0;
     }
+    case 'export': {
+      const out = flag(args, '--out');
+      if (!target || !out) break;
+      const result = exportApp(ROOT, resolve(process.cwd(), target), resolve(process.cwd(), out));
+      if (result.findings.length > 0) {
+        console.error(`not exported: ${result.findings.length} finding(s) in ${result.slug}`);
+        for (const f of result.findings) console.error(`  ${f.file}:${f.line} ${f.rule}`);
+        return 1;
+      }
+      console.log(`exported ${result.slug} (${result.files.length} files) to ${out}`);
+      return 0;
+    }
+    case 'library': {
+      const [, , first, second] = args;
+      const env = envFlag(args);
+      if (target === 'check' && first && second) {
+        await checkLibraryInstall(env, first, second);
+        console.log(`ok ${first} → ${second}`);
+        return 0;
+      }
+      if (target === 'install' && first && second) {
+        await installLibraryApp(env, first, second, readVersion());
+        console.log(`registered ${second} (${first})`);
+        return 0;
+      }
+      if (target === 'remove' && first && second) {
+        await removeLibraryApp(env, first, second);
+        console.log(`disabled ${first}`);
+        return 0;
+      }
+      break;
+    }
     case 'deploy': {
       if (!target) break;
       const env = envFlag(args);
@@ -84,8 +122,21 @@ async function main(args: string[]): Promise<number> {
             .filter((dir) => existsSync(join(dir, 'mininode.json')))
         : [resolve(process.cwd(), target)];
       const version = readVersion();
-      for (const dir of dirs) await deployApp(dir, { env, version, dryRun });
+      // One broken app must not keep the others from shipping: deploy them all, then fail.
+      const failed: string[] = [];
+      for (const dir of dirs) {
+        try {
+          await deployApp(dir, { env, version, dryRun });
+        } catch (error) {
+          console.error(error instanceof Error ? error.message : error);
+          failed.push(basename(dir));
+        }
+      }
       if (dirs.length === 0) console.log('nothing to deploy');
+      if (failed.length > 0) {
+        console.error(`failed: ${failed.join(', ')}`);
+        return 1;
+      }
       return 0;
     }
   }

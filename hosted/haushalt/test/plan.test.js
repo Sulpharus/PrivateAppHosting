@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { amountFor, cleanRecurring, dueRecurring } from '../data.js';
-import { deviations, dueIn, matchFixed, monthly, monthMoney, nextDue, status } from '../plan.js';
+import {
+  calendarPayments,
+  deviations,
+  dueIn,
+  matchFixed,
+  monthly,
+  monthMoney,
+  nextDue,
+  status,
+} from '../plan.js';
 
 const rec = (over) =>
   cleanRecurring({
@@ -86,5 +95,33 @@ describe('month money', () => {
       budgets: 60000,
     });
     expect(m).toMatchObject({ basis: 'budgets', available: 60000 });
+  });
+});
+
+describe('calendar', () => {
+  it('lists the coming payments of fixed costs as dated contracts', () => {
+    const recs = [
+      rec({ id: 'rent', text: 'Miete', cents: 90000, type: 'wohnen', day: 3 }),
+      rec({
+        id: 'car',
+        text: 'Kfz',
+        cents: 48000,
+        every: 12,
+        start: '2026-03',
+        type: 'versicherung',
+      }),
+      rec({ id: 'old', text: 'Alt', end: '2026-08' }),
+    ];
+    const out = calendarPayments(recs, '2026-09-15', () => 'Wohnen', 12);
+    expect([...out.keys()].filter((k) => k.startsWith('rent')).length).toBe(14);
+    expect(out.has('car#2027-03')).toBe(true);
+    // ended in August: last month is still listed, nothing after it
+    expect([...out.keys()].filter((k) => k.startsWith('old'))).toEqual(['old#2026-08']);
+    expect(out.get('rent#2026-10')).toMatchObject({
+      title: 'Miete',
+      due_at: new Date(2026, 9, 3).toISOString(),
+      amount_cents: 90000,
+      data: { kind: 'rent', interval: 'month', direction: 'expense' },
+    });
   });
 });

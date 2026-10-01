@@ -34,6 +34,7 @@ const Remote = lazy(() => import('./admin/Remote.tsx').then((m) => ({ default: m
 const Ai = lazy(() => import('./admin/Ai.tsx').then((m) => ({ default: m.Ai })));
 const ApiKeys = lazy(() => import('./admin/ApiKeys.tsx').then((m) => ({ default: m.ApiKeys })));
 const Catalog = lazy(() => import('./admin/Catalog.tsx').then((m) => ({ default: m.Catalog })));
+const Library = lazy(() => import('./admin/Library.tsx').then((m) => ({ default: m.Library })));
 const NucBox = lazy(() => import('./admin/NucBox.tsx').then((m) => ({ default: m.NucBox })));
 const Suite = lazy(() => import('./admin/Suite.tsx').then((m) => ({ default: m.Suite })));
 const Games = lazy(() => import('./routes/Games.tsx').then((m) => ({ default: m.Games })));
@@ -120,6 +121,7 @@ const router = createBrowserRouter([
           { path: 'users', element: <Users /> },
           { path: 'remote', element: <Remote /> },
           { path: 'nucbox', element: <NucBox /> },
+          { path: 'library', element: <Library /> },
           { path: 'ai', element: <Ai /> },
           { path: 'api-keys', element: <ApiKeys /> },
           { path: 'suite', element: <Suite /> },

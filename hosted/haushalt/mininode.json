@@ -6,6 +6,19 @@
   "description": "Einnahmen und Ausgaben, Monatsbudgets, Bank-Import und automatische Übernahme in die Steuererklärung",
   "kind": "static",
   "target": "cloudflare",
-  "access": { "default": true },
-  "data": { "mode": "private" }
+  "access": {
+    "default": true
+  },
+  "data": {
+    "mode": "private"
+  },
+  "suite": {
+    "uses": [
+      {
+        "type": "contract",
+        "access": "write",
+        "why": "Fällige Fixkosten (Miete, Abos, Versicherungen) im Kalender zeigen"
+      }
+    ]
+  }
 }

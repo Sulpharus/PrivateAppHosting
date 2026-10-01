@@ -1,0 +1,90 @@
+name: App als GitHub-Projekt
+
+# Exports one hosted app as its own GitHub repository (ADR 0012), started from Verwaltung → Apps
+# through the API or by hand under Actions. Only files tracked on main are taken; the export
+# stops on any secret, instance identifier or personal address (mininode export + gitleaks).
+
+on:
+  workflow_dispatch:
+    inputs:
+      slug:
+        description: App (hosted/<slug>)
+        type: string
+        required: true
+      repo:
+        description: Repository name on GitHub
+        type: string
+        required: true
+      visibility:
+        description: Visibility of a new repository
+        type: choice
+        options: [private, public]
+        default: private
+
+permissions:
+  contents: read
+
+concurrency:
+  group: export-${{ inputs.repo }}
+  cancel-in-progress: false
+
+jobs:
+  # Runs the repository's code (pnpm install, mininode export); never sees the export token.
+  export:
+    name: Export ${{ inputs.slug }}
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    env:
+      SLUG: ${{ inputs.slug }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          # The commit authors are needed to recognise the owner's addresses and names.
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Export (stops on secrets and private identifiers)
+        run: |
+          [[ $SLUG =~ ^[a-z][a-z0-9-]{0,30}[a-z0-9]$ ]] || { echo "invalid slug"; exit 1; }
+          pnpm mininode export "hosted/$SLUG" --out "$RUNNER_TEMP/export"
+      - name: Second opinion (gitleaks)
+        run: |
+          docker run --rm -v "$RUNNER_TEMP/export:/scan:ro" \
+            zricethezav/gitleaks:v8.30.1@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f \
+            dir /scan --no-banner --redact
+      - uses: actions/upload-artifact@v4
+        with:
+          name: export
+          path: ${{ runner.temp }}/export
+          include-hidden-files: true
+          retention-days: 1
+
+  # Holds the token: checks out only the publish script and installs nothing.
+  publish:
+    name: Publish ${{ inputs.repo }}
+    needs: export
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          sparse-checkout: scripts/publish-export.sh
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: export
+          path: ${{ runner.temp }}/export
+      - name: Publish
+        env:
+          EXPORT_REPO_TOKEN: ${{ secrets.EXPORT_REPO_TOKEN }}
+          REPO: ${{ inputs.repo }}
+          VISIBILITY: ${{ inputs.visibility }}
+        run: |
+          description=$(sed -n '3p' "$RUNNER_TEMP/export/MININODE.md")
+          scripts/publish-export.sh "$RUNNER_TEMP/export" "$REPO" "$VISIBILITY" "$description"

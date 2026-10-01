@@ -11,6 +11,7 @@ const LINKS: [string, string][] = [
   ['/admin/users', 'Nutzer & Rollen'],
   ['/admin/remote', 'Remote-Apps'],
   ['/admin/nucbox', 'NucBox'],
+  ['/admin/library', 'App-Bibliothek'],
   ['/admin/ai', 'KI-Proxy'],
   ['/admin/api-keys', 'API-Schlüssel'],
   ['/admin/suite', 'Gemeinsame Daten'],

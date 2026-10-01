@@ -74,6 +74,8 @@ deploy workflow uses them and also uploads the Worker secrets, so nothing has to
 | `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | `node scripts/vapid-keys.ts` (Web Push; changing them later means every device switches push on again) | push notifications |
 | `GOOGLE_TOKEN_KEY` | `openssl rand -base64 32` (encrypts stored Google grants; keep a copy) | Gmail/Calendar in apps |
 | `VAULT_KEY` | `openssl rand -base64 32` (encrypts the API keys entered under Verwaltung → API-Schlüssel; keep a copy, losing it means entering every key again) | apps with external APIs |
+| `EXPORT_REPO_TOKEN` | fine-grained GitHub token, all repositories, *Administration* + *Contents: Read and write* (`app-export.md`; used only by the export workflow) | apps as GitHub projects |
+| `LIBRARY_DISPATCH_TOKEN` | fine-grained GitHub token, this repository only, *Actions: Read and write* (`app-library.md`) | App-Bibliothek installs |
 
 ### 3.1 Google sign-in (optional, 10 min)
 

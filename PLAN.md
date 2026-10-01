@@ -143,6 +143,15 @@ DNS is explicit: CI creates one record per app. There is no wildcard catch-all.
   - A meta-test fails if any `app_*` table lacks RLS or a policy lacks the grant check.
   - Negative tests: a user reading another app's schema; a `user` calling admin RPCs; the AI
     budget running out.
+- **Shared suite data (ADR 0002):** `platform.records` holds records of shared types (events,
+  tasks, sport sessions, contracts, bookings …, registry in `platform.record_types`) in
+  collections that can be shared with people as viewer or editor. Apps ask for types in
+  `mininode.json` (`suite.uses`); the admin grants them under Verwaltung → Gemeinsame Daten.
+  Writes go only through `suite_upsert` / `suite_delete` (identity merge, per-field priority,
+  JSON-schema check); deletes go to a 30-day bin. The Kalender reads everything dated from here.
+- **Google Calendar sync (ADR 0010):** `platform.gcal_*`, service role only; the API Worker
+  mirrors chosen Kalender sources into a Google calendar "MiniNode" and pulls the user's Google
+  calendars in, both ways.
 - **Migrations:** platform migrations live in `supabase/migrations`; each app's SQL lives in
   `hosted/<slug>/db/`. Both are applied by CI, first to staging, then to production.
 - **Backups and restore drill** as in §2. The drill restores the latest backup into a local
@@ -216,12 +225,17 @@ A framework-agnostic ES module, also built as a single `<script>` file for plain
 | Namespace | Purpose |
 |---|---|
 | `auth` | `user()`, `role()`, `requireLogin()` (redirects to central login), `signOut()` |
-| `data` | supabase-js client scoped to `app_<slug>`, plus a small key-value helper |
+| `db` | supabase-js client scoped to `app_<slug>` |
+| `kv`, `offline` | key-value store (per user or shared) with an offline queue (ADR 0005) |
 | `realtime` | channels and presence |
 | `files` | Storage scoped to the app |
 | `ai` | `chat()`, `json()` via the AI proxy (no keys on the client) |
-| `notify` | portal notifications |
-| `app` | manifest info, shared-account status |
+| `api` | calls to declared external APIs through the host-key proxy (ADR 0006) |
+| `google` | Gmail and Calendar tokens for declared scopes; `calendarSync` for the Kalender (ADR 0004, 0010) |
+| `push` | scheduled push reminders by key (ADR 0005) |
+| `suite` | shared records and collections: `type(t)`, `range()`, `collections()` … (ADR 0002) |
+| `game` | player name, sessions, results, leaderboards for games (ADR 0009) |
+| `people()`, `notify()` | people who may use the app (ADR 0008), portal notifications |
 
 The host injects the configuration (`/_mininode/config.json`), so the same build runs on
 staging and production.
@@ -352,6 +366,56 @@ staging and production.
 | 4 · NucBox | Proxmox runbook, tunnel, Traefik, forward-auth, deploy script, backups, restore drill, monitoring | A container fixture runs behind login; the restore drill passes |
 | 5 · Remote apps | Guacamole JSON auth, nucbox-control (VM power, queue), Windows lockdown scripts, admin (Remote) | A Windows program opens from the phone; the VM hibernates when idle |
 | 6 · Optional | Wine images, Redroid profile, Vercel path, analytics | Each behind a flag with a smoke test |
+
+### 15.1 Built beyond the phases
+
+Everyday apps and platform features that grew next to the phases, each with its ADR:
+
+| Area | State | Where |
+|---|---|---|
+| App Kit and construction prompts | done | ADR 0003, `docs/ai/DESIGN-SYSTEM.md`, `packages/ui/kit` |
+| Google services for apps | done | ADR 0004 |
+| Push reminders and offline apps | done | ADR 0005 |
+| Host API keys | done | ADR 0006 |
+| App catalog (favourites, categories, sets) | done | ADR 0007 |
+| People for in-app sharing | done | ADR 0008 |
+| Gaming Hub | done | ADR 0009, `hosted/memory` |
+| Suite core (shared records, collections, app grants) | done, lean phase | ADR 0002, `docs/suite/data-types.md` |
+| Kalender (own, shared and other apps' dates) | done | `hosted/kalender` |
+| Google Calendar two-way sync | done | ADR 0010, `docs/runbooks/kalender.md` |
+| Haushalt: PDF statements, fixed costs, Dein Monat, statistics | done | `hosted/haushalt` |
+| Sportplaner and Haushalt write their dates as suite records | done | planned sessions (`activity`), payments of fixed costs (`contract`) |
+| App library with one-click NucBox installs (Jellyfin, n8n …) | done, needs the NucBox | ADR 0011, `docs/runbooks/app-library.md` |
+| Apps as GitHub projects (no data, no keys) | done | ADR 0012, `docs/runbooks/app-export.md` |
+
+### 15.2 Sharing the platform (proposed, not started)
+
+Goal: others can download MiniNode, run it on their own Cloudflare + Supabase (and optionally a
+PC as NucBox) and remix it, without anything private from this installation.
+
+- **Already in place:**
+  - no secrets in the repository (rule + gitleaks in CI);
+  - user data only in Supabase;
+  - setup runbooks;
+  - single apps exportable (ADR 0012).
+- **Instance settings out of the code:** about 130 files name `mininode.app`. A few also name
+  the Supabase project refs, publishable keys, the Cloudflare account id or the GitHub owner.
+  They move into one `mininode.config.json` (domain, Cloudflare account, Supabase refs and
+  keys, repository). The Workers, the deploy workflow, the portal and the apps read it, and the
+  apps take the portal URL from the SDK.
+- **A clean start:** a public template repository generated from `main` (core code, docs,
+  sample app) with one fresh commit, not this repository's history. The personal apps and
+  their tests stay here. The export check of ADR 0012 runs over the whole template.
+- **First-run setup:**
+  - a `pnpm mininode init` wizard writes the config;
+  - `infra/cloudflare/bootstrap.sh` and `supabase link` already do the provider side;
+  - the first account becomes admin, as today.
+- **Hosts:**
+  - Cloudflare Workers is the default.
+  - The manifest already knows `vercel`.
+  - A plain Node/Docker host (the NucBox alone, any VPS) would need the gate and the API as a
+    Node server. That is the largest piece.
+- **License:** chosen by the owner (e.g. AGPL-3.0 to keep remixes open, or MIT).
 
 ---
 

@@ -96,3 +96,44 @@ export function monthMoney({ month, bookings, recs, day, days, budgets = 0 }) {
     basis: income > 0 ? 'income' : budgets > 0 ? 'budgets' : 'none',
   };
 }
+
+const CONTRACT_KIND = {
+  wohnen: 'rent',
+  abo: 'subscription',
+  versicherung: 'insurance',
+  kredit: 'loan',
+  einnahme: 'salary',
+};
+const INTERVAL = { 1: 'month', 3: 'quarter', 6: 'half_year', 12: 'year' };
+
+/**
+ * The payments of fixed costs from last month until `months` ahead, as shared `contract`
+ * records for the Kalender (ADR 0002): source key `<fixed cost id>#<YYYY-MM>` → fields. The due
+ * date is local midnight, so the Kalender shows it as an all-day date.
+ */
+export function calendarPayments(recs, today, categoryName, months = 12) {
+  const out = new Map();
+  const [y, m] = today.slice(0, 7).split('-').map(Number);
+  for (let i = -1; i <= months; i++) {
+    const d = new Date(y, m - 1 + i, 1);
+    const month = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    for (const rec of recs) {
+      if (!dueIn(rec, month)) continue;
+      const due = new Date(d.getFullYear(), d.getMonth(), rec.day);
+      out.set(`${rec.id}#${month}`, {
+        title: rec.text || categoryName(rec.cat) || 'Fixkosten',
+        due_at: due.toISOString(),
+        amount_cents: amountFor(rec, month),
+        currency: 'EUR',
+        data: {
+          kind: CONTRACT_KIND[rec.type] ?? 'other',
+          interval: INTERVAL[rec.every] ?? 'month',
+          category: (categoryName(rec.cat) || '').slice(0, 100) || null,
+          direction:
+            rec.kind === 'income' ? 'income' : rec.kind === 'transfer' ? 'transfer' : 'expense',
+        },
+      });
+    }
+  }
+  return out;
+}

@@ -47,6 +47,14 @@ scheduling logic are unchanged. What changed:
   saving; with several hits you pick one. Offline, the entry is saved and checked later: *Karte →
   Adressen prüfen* checks older entries one per second, as the Nominatim usage policy asks.
 
+## In the Kalender
+
+Planned sessions from a week ago to 90 days ahead are written as shared `activity` records
+(`js/suite.js`, ADR 0002; source key `<activity>#<date>`), with time, place, sport and whether a
+session was done or cancelled. Sessions no longer planned leave the Kalender; past ones stay.
+It needs the admin's approval of `suite.uses` (Verwaltung → Gemeinsame Daten); until then the
+Sportplaner works as before.
+
 ## Moving data over from the artifact
 
 In the artifact: *Bibliothek → Datensicherung → Exportieren*. Here: *Bibliothek →
