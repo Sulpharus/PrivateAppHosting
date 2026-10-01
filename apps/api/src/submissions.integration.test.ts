@@ -12,6 +12,14 @@ const secretKey = process.env.SUPABASE_SECRET_KEY;
 const dbUrl = process.env.SUPABASE_DB_URL;
 const enabled = Boolean(url && publishableKey && secretKey && dbUrl);
 
+interface Remote {
+  runtime: string;
+  program: string;
+  installer: { sha256: string; silentArgs?: string };
+}
+const remoteOf = (row: Record<string, unknown> | undefined) =>
+  (row?.manifest as { remote?: Remote } | undefined)?.remote;
+
 describe.skipIf(!enabled)('uploads', () => {
   const run = Date.now().toString(36);
   const password = 'correct horse battery staple';
@@ -205,8 +213,8 @@ describe.skipIf(!enabled)('uploads', () => {
     const remote = (
       app1?.manifest as { remote: { runtime: string; installer: { sha256: string } } }
     ).remote;
-    expect(remote.runtime).toBe('windows');
-    expect(remote.installer.sha256).toBe(row.sha256);
+    expect(remote?.runtime).toBe('windows');
+    expect(remote?.installer.sha256).toBe(row.sha256);
     expect(control.at(-1)?.body).toMatchObject({ app: slug, runtime: 'windows' });
     // Nobody has access until the admin gives it.
     const [grants] =
@@ -236,9 +244,7 @@ describe.skipIf(!enabled)('uploads', () => {
     );
     expect(((await done.json()) as { status: string }).status).toBe('installed');
     const [app2] = await sql`select manifest from platform.apps where slug = ${slug}`;
-    expect((app2?.manifest as { remote: { program: string } }).remote.program).toBe(
-      'C:\\Program Files\\Real\\real.exe',
-    );
+    expect(remoteOf(app2)?.program).toBe('C:\\Program Files\\Real\\real.exe');
   });
 
   it('turns a failed install into a review with the output, and retries with new arguments', async () => {
@@ -273,8 +279,8 @@ describe.skipIf(!enabled)('uploads', () => {
     const remote = (
       app3?.manifest as { remote: { program: string; installer: { silentArgs?: string } } }
     ).remote;
-    expect(remote.program).toBe('C:\\Apps\\prog.exe');
-    expect(remote.installer.silentArgs).toBe('/VERYSILENT /NORESTART');
+    expect(remote?.program).toBe('C:\\Apps\\prog.exe');
+    expect(remote?.installer.silentArgs).toBe('/VERYSILENT /NORESTART');
   });
 
   it('refuses addresses of apps that did not come from an upload', async () => {
