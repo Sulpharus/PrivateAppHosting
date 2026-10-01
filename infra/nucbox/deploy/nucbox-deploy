@@ -181,6 +181,10 @@ if [ "${args[0]}" = library ]; then
   if [ -f "$dir/deployed" ] && [ ! -f "$dir/library" ]; then
     die "$slug is a hosted container app"
   fi
+  # Another program's data stays its own: switching entries on one address is refused.
+  if [ -f "$dir/library" ] && [ "$(cat "$dir/library")" != "$entry_id" ]; then
+    die "$slug belongs to library entry $(cat "$dir/library")"
+  fi
   # The catalog on main is the only source; the caller only names an entry.
   # CATALOG_TOKEN (deploy.env): fine-grained, this repository only, Contents: read.
   catalog=$(GH_TOKEN=${CATALOG_TOKEN:-$GH_TOKEN} gh api -H "Accept: application/vnd.github.raw+json" \
@@ -200,22 +204,30 @@ if [ "${args[0]}" = library ]; then
   ((memory >= 64 && memory <= 4096)) || die "memory out of range"
   [[ $user =~ ^[1-9][0-9]{2,5}:[1-9][0-9]{2,5}$ ]] || die "invalid user"
 
+  # Containers write into data/: never follow a link they may have planted there (root chown).
+  no_link() { [ ! -L "$1" ] || die "refusing symlink $1"; }
+  no_link "$dir" && no_link "$dir/data"
   mkdir -p "$dir/data"
   volumes=()
   while IFS=$'\t' read -r name path; do
     [ -n "$name" ] || continue
     [[ $name =~ ^[a-z][a-z0-9-]{0,30}$ && $path =~ ^/[A-Za-z0-9._/-]{1,200}$ && $path != *..* ]] ||
       die "invalid volume $name"
+    no_link "$dir/data/$name"
     mkdir -p "$dir/data/$name"
-    chown "$user" "$dir/data/$name"
+    chown -h "$user" "$dir/data/$name"
     volumes+=("./data/$name:$path")
   done < <(jq -r '(.volumes // {}) | to_entries[] | "\(.key)\t\(.value)"' <<<"$entry")
   if [ "${#volumes[@]}" -eq 0 ]; then
-    chown "$user" "$dir/data"
+    chown -h "$user" "$dir/data"
     volumes=("./data:/data")
   fi
 
-  # Plain KEY=VALUE lines (compose env_file, no interpolation); {host}, {slug}, {domain} filled in.
+  log "pulling $image"
+  docker pull -q "$image" >/dev/null
+
+  # KEY='value' lines: single quotes stop Compose from expanding ${…} from this root shell's
+  # environment (GH_TOKEN). {host}, {slug} and {domain} are filled in; `$` is refused.
   host="$slug.$DOMAIN"
   : >"$dir/library.env.new"
   while IFS=$'\t' read -r key value; do
@@ -224,18 +236,17 @@ if [ "${args[0]}" = library ]; then
     value=${value//\{host\}/$host}
     value=${value//\{slug\}/$slug}
     value=${value//\{domain\}/$DOMAIN}
-    printf '%s=%s\n' "$key" "$value" >>"$dir/library.env.new"
+    [[ $value != *[\$\'\\]* ]] || die "environment value of $key contains \$, ' or \\"
+    printf "%s='%s'\n" "$key" "$value" >>"$dir/library.env.new"
   done < <(jq -r '(.env // {}) | to_entries[] | "\(.key)\t\(.value | gsub("[\n\r\t]"; " "))"' <<<"$entry")
   [ -f "$dir/library.env" ] && cp "$dir/library.env" "$dir/library.env.prev"
   mv "$dir/library.env.new" "$dir/library.env"
   env_files="library.env"
 
-  log "pulling $image"
-  docker pull -q "$image" >/dev/null
   [ -f "$dir/compose.yml" ] && cp "$dir/compose.yml" "$dir/compose.prev.yml"
-  echo "$entry_id" >"$dir/library"
   write_compose
   start_or_rollback "$entry_id ${image##*@}"
+  echo "$entry_id" >"$dir/library"
   exit 0
 fi
 

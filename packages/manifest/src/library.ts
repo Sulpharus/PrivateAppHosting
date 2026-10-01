@@ -9,8 +9,11 @@ import { CURRENT_SPEC_VERSION, type Manifest, slugSchema } from './schema.ts';
 /** `registry/name:tag@sha256:<64 hex>`: third-party images are pinned by digest, never a tag alone. */
 const IMAGE =
   /^[a-z0-9]+(?:[._-][a-z0-9]+)*(?:\.[a-z]{2,})?(?::\d+)?(?:\/[a-z0-9]+(?:[._-][a-z0-9]+)*)+(?::[A-Za-z0-9._-]{1,128})?@sha256:[a-f0-9]{64}$/;
-/** Values may use `{host}` (`<slug>.<domain>`), `{slug}` and `{domain}`; one line, no secrets. */
-const ENV_VALUE = /^[^\n\r\0]{0,500}$/;
+/**
+ * Values may use `{host}` (`<slug>.<domain>`), `{slug}` and `{domain}`; one line, no secrets,
+ * and no `$`, `'` or `\` (nucbox-deploy writes them single-quoted so Compose expands nothing).
+ */
+const ENV_VALUE = /^[^\n\r\t\0$'\\]{0,500}$/;
 
 export const libraryEntrySchema = z
   .object({

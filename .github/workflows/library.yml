@@ -2,7 +2,8 @@ name: App-Bibliothek
 
 # Installs, updates or removes a program from the App-Bibliothek (infra/nucbox/library.json) on
 # the NucBox (ADR 0011). Started by the portal (Verwaltung → App-Bibliothek) through the API, or
-# by hand under Actions. Order: check → DNS → NucBox rollout → register in platform.apps.
+# by hand under Actions. Install: check → DNS → NucBox rollout → register in platform.apps.
+# Remove: disable in platform.apps (checks the entry) → stop on the NucBox.
 
 on:
   workflow_dispatch:
@@ -69,6 +70,10 @@ jobs:
           TUNNEL_ID: ${{ vars.NUCBOX_TUNNEL_ID }}
           DOMAIN: ${{ vars.STAGING_DOMAIN || 'mininode.app' }}
         run: ./infra/cloudflare/dns-upsert.sh "$SLUG.$DOMAIN" "$TUNNEL_ID.cfargotunnel.com"
+      # Remove: the registry says which program runs there; a mismatch stops before the NucBox.
+      - name: Disable the app
+        if: inputs.action == 'remove'
+        run: pnpm mininode library remove "$SLUG" "$ENTRY" --env "$DEPLOY_ENV"
       - uses: ./.github/actions/nucbox-ssh
         with:
           command: ${{ inputs.action == 'install' && format('library {0} {1}', inputs.slug, inputs.entry) || format('remove {0}', inputs.slug) }}
@@ -78,6 +83,3 @@ jobs:
       - name: Register the app
         if: inputs.action == 'install'
         run: pnpm mininode library install "$ENTRY" "$SLUG" --env "$DEPLOY_ENV"
-      - name: Disable the app
-        if: inputs.action == 'remove'
-        run: pnpm mininode library remove "$SLUG" --env "$DEPLOY_ENV"

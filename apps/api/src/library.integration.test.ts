@@ -114,9 +114,13 @@ describe.skipIf(!enabled)('app library', () => {
     expect(
       (await post(tokens.admin, { action: 'install', entry: 'jellyfin', slug: 'Kino!' })).status,
     ).toBe(400);
-    expect(
-      (await post(tokens.admin, { action: 'install', entry: 'jellyfin', slug: 'api' })).status,
-    ).toBe(400);
+    const reserved = await post(tokens.admin, {
+      action: 'install',
+      entry: 'jellyfin',
+      slug: 'api',
+    });
+    expect(reserved.status).toBe(400);
+    expect(((await reserved.json()) as { message: string }).message).toContain('reserviert');
     expect(
       (await post(tokens.admin, { action: 'install', entry: 'jellyfin', slug: taken })).status,
     ).toBe(409);

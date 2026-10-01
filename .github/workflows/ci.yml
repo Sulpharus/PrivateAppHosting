@@ -56,7 +56,12 @@ jobs:
       - name: Shellcheck
         run: |
           shellcheck -S warning infra/cloudflare/*.sh infra/nucbox/deploy/nucbox-deploy \
-            infra/nucbox/wine/entrypoint.sh infra/nucbox/backup/*.sh scripts/*.sh
+            infra/nucbox/deploy/test.sh infra/nucbox/wine/entrypoint.sh infra/nucbox/backup/*.sh scripts/*.sh
+      - name: nucbox-deploy rollouts (stubbed docker)
+        run: |
+          infra/nucbox/deploy/test.sh
+          cd infra/nucbox/deploy/testdata && touch app.env
+          for f in *.compose.yml; do docker compose -f "$f" config --quiet --no-interpolate; done
       - name: Compose file is valid
         working-directory: infra/nucbox
         run: |

@@ -20,7 +20,7 @@ const USAGE = `mininode <command>
   prune [--env staging] [--dry-run] Delete Workers of apps removed from hosted/, disable them
   library check <entry> <slug>      App-Bibliothek: check an install before the rollout
   library install <entry> <slug>    App-Bibliothek: register an installed program
-  library remove <slug>             App-Bibliothek: disable a removed program
+  library remove <slug> <entry>     App-Bibliothek: disable a removed program
 `;
 
 function print(report: DoctorReport): boolean {
@@ -90,8 +90,8 @@ async function main(args: string[]): Promise<number> {
         console.log(`registered ${second} (${first})`);
         return 0;
       }
-      if (target === 'remove' && first) {
-        await removeLibraryApp(env, first);
+      if (target === 'remove' && first && second) {
+        await removeLibraryApp(env, first, second);
         console.log(`disabled ${first}`);
         return 0;
       }

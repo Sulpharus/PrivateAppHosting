@@ -6,6 +6,7 @@ export const RESERVED_SLUGS = [
   'ai',
   'api',
   'auth',
+  'control',
   'guac',
   'login',
   'mail',

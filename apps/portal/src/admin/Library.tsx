@@ -16,8 +16,6 @@ interface Installed {
   deployed_at: string | null;
 }
 
-const WORKFLOW = 'https://github.com/Sulpharus/PrivateAppHosting/actions/workflows/library.yml';
-
 /** `docker.io/jellyfin/jellyfin:12.1@sha256:…` → `12.1`. */
 function version(image: string): string {
   const name = image.split('@')[0] ?? '';
@@ -30,20 +28,37 @@ export function Library() {
   const [configured, setConfigured] = useState<boolean | null>(null);
   const [installed, setInstalled] = useState<Installed[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
+  const [notice, setNotice] = useState<{ text: string; runs: string } | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  // Until both loads succeed nobody may install: a failed lookup must not look like "free".
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const [status, apps] = await Promise.all([
-      api<{ configured: boolean }>('/admin/library').catch(() => ({ configured: false })),
+      api<{ configured: boolean }>('/admin/library').catch((err: unknown) =>
+        err instanceof ApiError ? err : new ApiError('', 'unreachable', 0),
+      ),
       platform()
         .from('apps')
         .select('slug, status, deployed_at, library:manifest->>library')
         .not('manifest->>library', 'is', null)
         .order('slug'),
     ]);
+    if (apps.error) {
+      setLoadError('Die installierten Programme konnten nicht geladen werden. Lade die Seite neu.');
+      return;
+    }
+    setInstalled(apps.data as Installed[]);
+    if (status instanceof ApiError) {
+      setLoadError(
+        status.status === 0
+          ? 'Die API ist gerade nicht erreichbar; installieren geht erst wieder, wenn sie antwortet.'
+          : status.message,
+      );
+      return;
+    }
+    setLoadError(null);
     setConfigured(status.configured);
-    setInstalled((apps.data as Installed[] | null) ?? []);
   }, []);
 
   useEffect(() => {
@@ -55,14 +70,19 @@ export function Library() {
     setNotice(null);
     setBusy(`${entry.id}:${slug}`);
     try {
-      await run(() =>
-        api('/admin/library', { method: 'POST', body: { action, entry: entry.id, slug } }),
+      const { runs } = await run(() =>
+        api<{ runs: string }>('/admin/library', {
+          method: 'POST',
+          body: { action, entry: entry.id, slug },
+        }),
       );
-      setNotice(
-        action === 'install'
-          ? `${entry.name} wird unter ${slug} eingerichtet. Das dauert ein paar Minuten; danach steht die App unter Verwaltung → Apps und du gibst sie frei.`
-          : `${entry.name} unter ${slug} wird entfernt. Die Daten bleiben auf der NucBox.`,
-      );
+      setNotice({
+        runs,
+        text:
+          action === 'install'
+            ? `${entry.name} wird unter ${slug} eingerichtet. Das dauert ein paar Minuten; danach steht die App unter Verwaltung → Apps und du gibst sie frei.`
+            : `${entry.name} unter ${slug} wird entfernt. Die Daten bleiben auf der NucBox.`,
+      });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Das hat nicht geklappt.');
     } finally {
@@ -84,9 +104,9 @@ export function Library() {
     return (
       <section key={entry.id} className="card" aria-labelledby={headingId}>
         <div className="row" style={{ flexWrap: 'wrap', gap: 8 }}>
-          <h3 id={headingId} style={{ flex: '1 1 200px', fontSize: 18 }}>
+          <h2 id={headingId} style={{ flex: '1 1 200px', fontSize: 18 }}>
             {entry.name}
-          </h3>
+          </h2>
           <span className="pill">{entry.category}</span>
           {mine.some((app) => app.status === 'online') && (
             <span className="pill ok">
@@ -197,9 +217,14 @@ export function Library() {
       </div>
       {configured === false && (
         <p className="error" role="alert">
-          Installationen sind noch nicht eingerichtet: Die NucBox und der Schlüssel{' '}
-          <code>LIBRARY_DISPATCH_TOKEN</code> fehlen (docs/runbooks/app-library.md). Die Links
-          funktionieren trotzdem.
+          Installationen sind noch nicht eingerichtet: der Schlüssel{' '}
+          <code>LIBRARY_DISPATCH_TOKEN</code> fehlt, und die NucBox muss laufen
+          (docs/runbooks/app-library.md). Die Links funktionieren trotzdem.
+        </p>
+      )}
+      {loadError && (
+        <p className="error" role="alert">
+          {loadError}
         </p>
       )}
       {error && (
@@ -209,8 +234,8 @@ export function Library() {
       )}
       {notice && (
         <p className="muted" role="status">
-          {notice}{' '}
-          <a href={WORKFLOW} target="_blank" rel="noopener noreferrer">
+          {notice.text}{' '}
+          <a href={notice.runs} target="_blank" rel="noopener noreferrer">
             Fortschritt auf GitHub
           </a>
         </p>

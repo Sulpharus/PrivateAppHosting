@@ -8,7 +8,7 @@ mininode deploy --changed <base-ref>       Deploy every app changed since <base-
 mininode changed <base-ref>                List hosted apps changed since <base-ref>
 mininode prune [--env staging] [--dry-run] Delete Workers of apps gone from hosted/ (--force if empty)
 mininode library check|install <entry> <slug> [--env]  App-Bibliothek: check, register (ADR 0011)
-mininode library remove <slug> [--env]     App-Bibliothek: disable a removed program
+mininode library remove <slug> <entry> [--env]  App-Bibliothek: disable a removed program
 ```
 
 **doctor** is the gate every AI-integrated app must pass (CI runs `--all`). Errors block the

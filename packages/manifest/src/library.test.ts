@@ -43,6 +43,8 @@ describe('app library', () => {
     ['a volume name with dots', { volumes: { '../x': '/x' } }],
     ['a volume path leaving its folder', { volumes: { data: '/x/../etc' } }],
     ['a multi-line env value', { env: { A: 'x\nB=y' } }],
+    ['an env value that expands variables', { env: { A: '${GH_TOKEN}' } }],
+    ['an env value with a quote', { env: { A: "it's" } }],
     ['an http website', { website: 'http://example.com' }],
     ['a health path with spaces', { healthPath: '/a b' }],
     ['unknown fields', { privileged: true }],
