@@ -1,0 +1,4 @@
+# Fake values in the export scanner's tests (ADR 0012), already in history; the tests now build
+# them at runtime. Format: <commit>:<file>:<rule>:<line>
+600cd43269813ca6aefc95dc9964348c4928a70f:packages/cli/src/export.test.ts:generic-api-key:62
+e416136e710827dacd21d2e04b727c0d25064803:packages/cli/src/export.test.ts:generic-api-key:42

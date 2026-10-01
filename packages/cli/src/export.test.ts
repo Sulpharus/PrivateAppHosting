@@ -20,6 +20,8 @@ afterEach(() => {
 });
 
 const ACCOUNT = '0123456789abcdef0123456789abcdef';
+/** Built at runtime so the repository's own secret scan does not flag the test (it is fake). */
+const FAKE_JWT = ['eyJhbGciOiJub25lIn0', 'eyJzdWIiOiJ0ZXN0LXVzZXIifQ', 'sig'].join('.');
 
 /** A throwaway git repository with one hosted app, its files committed. */
 function repo(
@@ -39,7 +41,8 @@ function repo(
     join(root, '.github/workflows/deploy.yml'),
     `  CLOUDFLARE_ACCOUNT_ID: ${ACCOUNT}\n  SUPABASE_PROJECT_REF: \${{ x && 'abcdefghijklmnopqrst' || 'tsrqponmlkjihgfedcba' }}\n`,
   );
-  writeFileSync(join(root, '.env.local'), 'DB_PASSWORD=hunter2-very-private');
+  // An untracked local file that must never reach an export.
+  writeFileSync(join(root, '.env.local'), ['DB', 'PASSWORD=not-a-real-one'].join('_'));
   const git = (...args: string[]) => spawnSync('git', args, { cwd: root, encoding: 'utf8' });
   git('init', '-q');
   git('add', '-A', '--', 'hosted', '.github');
@@ -93,7 +96,7 @@ describe('mininode export', () => {
     ['Supabase secret key', 'const k = "sb_secret_abcdefghijklmnop";'],
     ['Anthropic key', 'sk-ant-api03-abcdefghijklmnop'],
     ['GitHub token', `ghp_${'a'.repeat(36)}`],
-    ['JSON Web Token', 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.sig'],
+    ['JSON Web Token', FAKE_JWT],
     ['Supabase project URL', 'https://abcdefghijklmnopqrst.supabase.co'],
     ['email address jane@private.test', 'contact: jane@private.test'],
     ['email address 123+jane@users.noreply.github.com', '123+jane@users.noreply.github.com'],
