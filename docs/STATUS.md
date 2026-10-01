@@ -18,6 +18,10 @@ Last updated: 2026-10-01 (after the merge of PR #12).
 | App export | An app as its own GitHub repository, without data or keys | ADR 0012, runbook `app-export.md` |
 | Deploys | One failing app no longer stops the others | `.github/workflows/deploy.yml`, `mininode deploy --changed` |
 
+Since then: games show only in the Gaming Hub (the start page's "Gaming Hub" button and the
+"Spiele" tab are always there). A Sportplaner course can carry a price or monthly fee, which is
+split over the sessions that take place.
+
 The Sportplaner map (tab "Karte") and course mode (editor step "Zeiten" → "Kurs") were built in
 PR #10. They only reached production with the PR #12 deploy, because earlier deploys stopped
 at medialog.

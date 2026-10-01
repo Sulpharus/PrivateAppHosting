@@ -103,16 +103,18 @@ export function Home() {
     void load();
   }, [load]);
 
-  const webApps = useMemo(
+  const onlineApps = useMemo(
     () => (apps ?? []).filter((app) => app.kind !== 'remote' && app.status !== 'disabled'),
     [apps],
   );
+  // Games live in the Gaming Hub only, never among the apps on the start page.
+  const webApps = useMemo(() => onlineApps.filter((app) => !app.game_genre), [onlineApps]);
   const remoteApps = useMemo(
     () => (apps ?? []).filter((app) => app.kind === 'remote' && app.status !== 'disabled'),
     [apps],
   );
   const bySlug = useMemo(() => new Map(webApps.map((app) => [app.slug, app])), [webApps]);
-  const gameCount = webApps.filter((app) => app.game_genre).length;
+  const gameCount = onlineApps.length - webApps.length;
 
   const matchesQuery = (app: AppRow) => {
     const q = query.trim().toLowerCase();
@@ -164,7 +166,7 @@ export function Home() {
     }
   };
 
-  const down = webApps.filter((app) => app.status === 'down' || app.status === 'degraded');
+  const down = onlineApps.filter((app) => app.status === 'down' || app.status === 'degraded');
   const today = new Date().toLocaleDateString('de-DE', {
     weekday: 'long',
     day: 'numeric',
@@ -205,13 +207,16 @@ export function Home() {
               {greeting()}, {profile?.displayName ?? ''}.
             </h1>
           </div>
-          {gameCount > 0 && (
-            <Link to="/games" className="button hub-link">
-              <GamepadIcon />
-              Gaming Hub
-              <span className="count">{gameCount}</span>
-            </Link>
-          )}
+          <Link to="/games" className="button hub-link">
+            <GamepadIcon />
+            Gaming Hub
+            {gameCount > 0 && (
+              <span className="count">
+                {gameCount}
+                <span className="sr-only"> {gameCount === 1 ? 'Spiel' : 'Spiele'}</span>
+              </span>
+            )}
+          </Link>
           {apps && (
             <div className="status-pill" role="status">
               <span className="dot" style={{ color: down.length ? 'var(--warn)' : 'var(--ok)' }} />
@@ -404,12 +409,10 @@ export function Home() {
             Remote
           </a>
         )}
-        {gameCount > 0 && (
-          <Link to="/games">
-            <GamepadIcon />
-            Spiele
-          </Link>
-        )}
+        <Link to="/games">
+          <GamepadIcon />
+          Spiele
+        </Link>
         {profile?.role === 'admin' && (
           <Link to="/admin">
             <ServerIcon />

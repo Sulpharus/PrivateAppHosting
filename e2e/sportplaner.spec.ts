@@ -154,6 +154,9 @@ test('a course plans every session; cancelled sessions count nowhere', async ({ 
   }
   await row.getByLabel('Beginn').fill('18:00');
   await expect(dialog.getByText(/7 Termine vom .* Du bist für alle eingeplant\./)).toBeVisible();
+  // 70 € for the whole course: 10 € per session.
+  await dialog.getByLabel('Preis in €').fill('70');
+  await expect(dialog.getByText(/im Schnitt 10,00\s€ pro Termin/)).toBeVisible();
   await dialog.getByRole('button', { name: 'Weiter', exact: true }).click();
   await expect(
     dialog.getByText(/Kurs: Du bist automatisch für alle Termine eingeplant/),
@@ -182,6 +185,9 @@ test('a course plans every session; cancelled sessions count nowhere', async ({ 
   );
   await expect(detail.getByText(/Nicht stattgefunden/)).toBeVisible();
   await expect(detail.getByText('Kurs: alle 7 Termine, 1 ausgefallen')).toBeVisible();
+  // The cancelled session no longer carries a share: 70 € over 6 sessions.
+  await expect(detail.getByText(/im Schnitt 11,67\s€ pro Termin/)).toBeVisible();
+  await expect(detail.getByText(/1 ausgefallene nicht mitgerechnet/)).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(page.locator('.tile-off')).toHaveText('Ausgefallen');
 

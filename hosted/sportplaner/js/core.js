@@ -295,6 +295,44 @@ function courseDates(a) {
     if (slotsOn(a, ymd(d)).length) out.push(ymd(d));
   return out;
 }
+/* the course price (whole course, or a fee per calendar month) split over the sessions that
+   take place: cancelled sessions are left out. `per` maps each session date to its share, so the
+   statistics book every share in its own year. Null without a price. */
+function coursePrices(a) {
+  const c = a.course,
+    price = +(c && c.price) || 0;
+  if (!price || !c.from || !c.until) return null;
+  const all = courseDates(a),
+    dates = all.filter((d) => !isCancelled(a, d)),
+    per = new Map();
+  let total = price;
+  if (c.priceType === 'month') {
+    const months = [];
+    for (let y = +c.from.slice(0, 4), m = +c.from.slice(5, 7); ; ) {
+      const key = `${y}-${String(m).padStart(2, '0')}`;
+      months.push(key);
+      if (key >= c.until.slice(0, 7) || months.length > 30) break;
+      m++;
+      if (m > 12) {
+        m = 1;
+        y++;
+      }
+    }
+    total = price * months.length;
+    const inMonth = new Map();
+    for (const d of dates) inMonth.set(d.slice(0, 7), (inMonth.get(d.slice(0, 7)) || 0) + 1);
+    for (const d of dates) per.set(d, price / inMonth.get(d.slice(0, 7)));
+  } else for (const d of dates) per.set(d, price / dates.length);
+  return {
+    price,
+    type: c.priceType === 'month' ? 'month' : 'total',
+    total,
+    sessions: dates.length,
+    cancelled: all.length - dates.length,
+    avg: dates.length ? total / dates.length : null,
+    per,
+  };
+}
 function nextMap() {
   const t = todayStr();
   if (nextCache && nextCache.t === t) return nextCache.m;

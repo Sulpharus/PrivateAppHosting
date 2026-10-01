@@ -131,6 +131,21 @@ function computeStats(Y) {
     forecast += fc;
     planStats.push({ p, total, visits: lv, perVisit: lv && total ? total / lv : null });
   }
+  // Course prices: each session that takes place carries its share, booked on its date.
+  for (const a of S.acts) {
+    const cp = coursePrices(a);
+    if (!cp) continue;
+    covered.add(a.id);
+    let spent = 0,
+      planned = 0;
+    for (const [d, share] of cp.per) {
+      if (d < from || d > yEnd) continue;
+      planned += share;
+      if (d <= to) spent += share;
+    }
+    push(spent, a, null, 'Kurse');
+    forecast += planned;
+  }
   for (const a of S.acts) {
     const pr = +a.visitPrice || 0;
     if (pr > 0 && !covered.has(a.id)) {

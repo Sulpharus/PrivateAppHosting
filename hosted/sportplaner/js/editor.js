@@ -51,6 +51,8 @@ function openEditor(a) {
         .map((s) => ({ days: [...(s.days || [])], start: s.start || '', end: s.end || '' }))
     : [];
   if (draft.course && !draft.courseRows.length) draft.courseRows = [newRow()];
+  if (draft.course && +draft.course.price > 0)
+    draft.course.priceText = numF.format(draft.course.price);
   uploads = new Set();
   removed = new Set();
   uploading = 0;
@@ -491,13 +493,33 @@ function courseSessions() {
     if (days.has(wIdx(d))) n++;
   return n;
 }
+/* € per session in the editor: the draft's sessions without the cancelled ones */
+function coursePriceNote() {
+  const c = draft.course,
+    price = parseMoney(c.priceText);
+  if (!(price > 0) || !c.from || !c.until || c.until < c.from) return '';
+  const days = new Set(draft.courseRows.flatMap((r) => r.days)),
+    off = new Set(draft.cancelled || []),
+    dates = [];
+  for (let d = parse(c.from), i = 0; ymd(d) <= c.until && i < 800; d = addDays(d, 1), i++)
+    if (days.has(wIdx(d)) && !off.has(ymd(d))) dates.push(ymd(d));
+  if (!dates.length) return '';
+  const months =
+    (+c.until.slice(0, 4) - +c.from.slice(0, 4)) * 12 +
+    +c.until.slice(5, 7) -
+    +c.from.slice(5, 7) +
+    1;
+  const total = c.priceType === 'month' ? price * months : price;
+  const offN = off.size ? ` (${off.size} ausgefallene nicht mitgerechnet)` : '';
+  return ` Kosten: ${eur(total)}${c.priceType === 'month' ? ` für ${months} ${months === 1 ? 'Monat' : 'Monate'}` : ''}, im Schnitt ${eur(total / dates.length)} pro Termin${offN}.`;
+}
 function courseSummary() {
   const c = draft.course,
     n = courseSessions();
   if (!c.from || !c.until) return 'Gib Kursbeginn und Kursende an.';
   if (c.until < c.from) return 'Das Kursende liegt vor dem Kursbeginn.';
   if (!n) return 'Wähle mindestens einen Trainingstag.';
-  return `${n} ${n === 1 ? 'Termin' : 'Termine'} vom ${dLabel(c.from)} bis ${dLabel(c.until)}. Du bist für alle eingeplant.`;
+  return `${n} ${n === 1 ? 'Termin' : 'Termine'} vom ${dLabel(c.from)} bis ${dLabel(c.until)}. Du bist für alle eingeplant.${coursePriceNote()}`;
 }
 function renderCourse() {
   const el = $('#coursebox');
@@ -509,6 +531,11 @@ function renderCourse() {
       <label class="f">Kursende<input type="date" data-cf="until" value="${esc(c.until || '')}"></label></div>
       <label class="f">Kurslänge in Wochen<input type="number" min="1" max="104" inputmode="numeric" data-cf="weeks" value="${weeks}" placeholder="z. B. 10"></label>
       <p class="hint flat">Die Länge setzt das Kursende ab Kursbeginn.</p>
+    </div>
+    <div class="blk"><div class="blk-title"><b>Kurspreis</b></div>
+      <div class="two"><label class="f">Preis in €<input data-cf="priceText" inputmode="decimal" autocomplete="off" placeholder="z. B. 120,00" value="${esc(c.priceText || '')}"></label>
+      <label class="f">Gilt für<select data-cf="priceType"><option value="total"${c.priceType === 'month' ? '' : ' selected'}>den ganzen Kurs</option><option value="month"${c.priceType === 'month' ? ' selected' : ''}>jeden Monat (Monatsbeitrag)</option></select></label></div>
+      <p class="hint flat">Der Preis wird auf alle Termine verteilt, die stattfinden. Ausgefallene Termine zählen nicht mit; bei einem Monatsbeitrag auf die Termine des jeweiligen Monats.</p>
     </div>
     <div class="blk"><div class="blk-title"><b>Trainingstage und Uhrzeit</b></div>
       ${draft.courseRows
@@ -563,13 +590,16 @@ function showOfferType() {
 function courseToSlots() {
   document
     .querySelectorAll(
-      '#coursebox [data-cf=from], #coursebox [data-cf=until], #coursebox [data-cf=row]',
+      '#coursebox [data-cf=from], #coursebox [data-cf=until], #coursebox [data-cf=row], #coursebox [data-cf=priceText], #coursebox [data-cf=priceType]',
     )
     .forEach(courseFieldSync);
   const c = draft.course,
     rows = draft.courseRows.filter((r) => r.days.length);
   if (!c.from || !c.until) return 'Gib Kursbeginn und Kursende an.';
   if (c.until < c.from) return 'Das Kursende liegt vor dem Kursbeginn.';
+  const priceText = String(c.priceText || '').trim();
+  if (priceText && !(parseMoney(priceText) >= 0 && parseMoney(priceText) <= 100000))
+    return 'Gib einen gültigen Kurspreis ein, z. B. 120,00.';
   if (dayCount(c.from, c.until) > 104 * 7) return 'Ein Kurs dauert höchstens 104 Wochen.';
   if (!rows.length) return 'Wähle mindestens einen Trainingstag für den Kurs.';
   const period = { type: 'range', from: c.from, until: c.until, label: 'Kurs' };
@@ -594,7 +624,17 @@ function courseToSlots() {
     season: { type: 'range', from: c.from, until: c.until },
     anchor: c.from,
   };
-  draft.course = { from: c.from, until: c.until };
+  const price = parseMoney(c.priceText);
+  draft.course = {
+    from: c.from,
+    until: c.until,
+    ...(price > 0
+      ? {
+          price: Math.round(price * 100) / 100,
+          priceType: c.priceType === 'month' ? 'month' : 'total',
+        }
+      : {}),
+  };
   return null;
 }
 const BLOCK_HANDLERS = {

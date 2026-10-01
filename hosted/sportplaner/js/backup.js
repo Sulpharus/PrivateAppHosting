@@ -212,7 +212,18 @@ function sanitizeAct(raw, keepMedia = false) {
       isDay(raw.course.from) &&
       isDay(raw.course.until) &&
       raw.course.from <= raw.course.until
-        ? { from: raw.course.from, until: raw.course.until }
+        ? {
+            from: raw.course.from,
+            until: raw.course.until,
+            ...(Number.isFinite(+raw.course.price) &&
+            +raw.course.price > 0 &&
+            +raw.course.price <= 100000
+              ? {
+                  price: Math.round(+raw.course.price * 100) / 100,
+                  priceType: raw.course.priceType === 'month' ? 'month' : 'total',
+                }
+              : {}),
+          }
         : undefined,
     photos,
     thumbs,

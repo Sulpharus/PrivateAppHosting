@@ -50,7 +50,7 @@ function detailBodyHTML(a, ds) {
     if (s.length || planned) {
       const on = (a.done || []).includes(ds),
         off = isCancelled(a, ds);
-      today = `<div class="today-box${off ? ' is-off' : ''}"><span><small>${fmt(parse(ds), { weekday: 'long', day: 'numeric', month: 'long' })}</small><b>${esc(off ? 'Ausgefallen' : s.length ? s.map(timeLabel).join(', ') : 'Geplant')}</b></span><span class="tb-actions">${off ? '' : `<button class="done-btn ${planned ? 'on' : ''}" data-action="plan-toggle" aria-pressed="${planned}">${planned ? ICON.check : ''}Eingeplant</button><button class="done-btn ${on ? 'on' : ''}" data-action="toggle-done" aria-pressed="${on}">${on ? ICON.check + 'Erledigt' : 'Erledigt'}</button>`}<button class="done-btn ${off ? 'on' : ''}" data-action="toggle-cancel" aria-pressed="${off}">${off ? ICON.check + 'Ausgefallen' : 'Ausgefallen'}</button></span>${off ? '<small class="tb-note">Nicht stattgefunden. Zählt weder als Teilnahme noch als verpasst.</small>' : ''}</div>`;
+      today = `<div class="today-box${off ? ' is-off' : ''}"><span><small>${fmt(parse(ds), { weekday: 'long', day: 'numeric', month: 'long' })}</small><b>${esc(off ? 'Ausgefallen' : s.length ? s.map(timeLabel).join(', ') : 'Geplant')}</b>${!off && coursePrices(a)?.per.has(ds) ? `<small>${eur(coursePrices(a).per.get(ds))} für diesen Termin</small>` : ''}</span><span class="tb-actions">${off ? '' : `<button class="done-btn ${planned ? 'on' : ''}" data-action="plan-toggle" aria-pressed="${planned}">${planned ? ICON.check : ''}Eingeplant</button><button class="done-btn ${on ? 'on' : ''}" data-action="toggle-done" aria-pressed="${on}">${on ? ICON.check + 'Erledigt' : 'Erledigt'}</button>`}<button class="done-btn ${off ? 'on' : ''}" data-action="toggle-cancel" aria-pressed="${off}">${off ? ICON.check + 'Ausgefallen' : 'Ausgefallen'}</button></span>${off ? '<small class="tb-note">Nicht stattgefunden. Zählt weder als Teilnahme noch als verpasst.</small>' : ''}</div>`;
     }
   }
   const facts = [];
@@ -104,7 +104,10 @@ function detailBodyHTML(a, ds) {
       `<p>${esc(SIGNUP[a.signup] || 'Nicht nötig')}</p>${a.signupNotes ? `<p class="muted">${esc(a.signupNotes)}</p>` : ''}${a.signupUrl ? `<p><a href="${esc(safeUrl(a.signupUrl))}" target="_blank" rel="noopener">Anmeldeseite öffnen</a></p>` : ''}`,
     ]);
   } else facts.push(['Anmeldung', '<p>Nicht nötig</p>']);
+  const cp = coursePrices(a);
   const costLines = [
+    cp &&
+      `<p>Kurs: ${eur(cp.price)} ${cp.type === 'month' ? 'pro Monat' : 'für den ganzen Kurs'}${cp.avg !== null ? `, im Schnitt <b>${eur(cp.avg)} pro Termin</b>` : ''}</p><p class="muted">${cp.sessions} ${cp.sessions === 1 ? 'Termin' : 'Termine'}${cp.type === 'month' ? `, ${eur(cp.total)} insgesamt` : ''}${cp.cancelled ? `; ${cp.cancelled} ausgefallene nicht mitgerechnet` : ''}</p>`,
     a.cost && `<p>${esc(a.cost)}</p>`,
     +a.visitPrice > 0 && `<p>${eur(+a.visitPrice)} pro Besuch</p>`,
     ...S.plans

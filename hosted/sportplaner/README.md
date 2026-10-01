@@ -36,6 +36,13 @@ scheduling logic are unchanged. What changed:
 
 - **Kurs** (step *Zeiten*): start and end (or its length in weeks), training days and times. Every
   session is planned; single sessions can be dropped in the detail view.
+- **Kurspreis:** a price for the whole course or a monthly fee (`course.price`, `priceType`
+  `total` or `month`).
+  - It is split over the sessions that take place; cancelled sessions carry no share.
+  - A monthly fee is split over that month's sessions.
+  - The detail view shows the average per session, and the day box shows the share of that
+    session.
+  - *Statistik* books each share on its date (`coursePrices` in `js/core.js`).
 - **Ausgefallen** marks a session that did not take place. It counts neither as attended nor as
   missed. *Statistik* shows attendance as attended out of planned sessions up to today.
 - **Karte:** every activity whose address was checked appears as a pin, with filters (all, on
