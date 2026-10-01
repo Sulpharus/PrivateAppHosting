@@ -26,6 +26,7 @@ describe.skipIf(!enabled)('app export', () => {
   const tokens: Record<'admin' | 'user', string> = { admin: '', user: '' };
   const own = `exp-own-${run}`;
   const link = `exp-link-${run}`;
+  const program = `exp-lib-${run}`;
   const dispatches: { headers: Headers; body: unknown; url: string }[] = [];
 
   const realFetch = globalThis.fetch;
@@ -80,12 +81,20 @@ describe.skipIf(!enabled)('app export', () => {
           manifest: {},
           link_url: 'https://example.com',
         },
+        {
+          slug: program,
+          name: 'Jellyfin',
+          description: 'Jellyfin',
+          kind: 'container',
+          target: 'nucbox',
+          manifest: { library: 'jellyfin' },
+        },
       ]);
     if (error) throw error;
   });
 
   afterAll(async () => {
-    await admin.schema('platform').from('apps').delete().in('slug', [own, link]);
+    await admin.schema('platform').from('apps').delete().in('slug', [own, link, program]);
     for (const id of users) await admin.auth.admin.deleteUser(id);
     vi.restoreAllMocks();
   });
@@ -107,9 +116,10 @@ describe.skipIf(!enabled)('app export', () => {
     expect((await post(tokens.admin, own, ok, base as unknown as ApiEnv)).status).toBe(503);
   });
 
-  it('refuses unknown apps, link tiles and bad repository names', async () => {
+  it('refuses unknown apps, link tiles, library programs and bad repository names', async () => {
     expect((await post(tokens.admin, `nope-${run}`, ok)).status).toBe(404);
     expect((await post(tokens.admin, link, ok)).status).toBe(400);
+    expect((await post(tokens.admin, program, ok)).status).toBe(400);
     expect((await post(tokens.admin, own, { ...ok, repo: '../x' })).status).toBe(400);
     expect((await post(tokens.admin, own, { ...ok, visibility: 'internal' })).status).toBe(400);
     expect(dispatches).toHaveLength(0);

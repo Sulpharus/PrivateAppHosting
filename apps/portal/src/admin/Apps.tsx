@@ -60,7 +60,9 @@ export function Apps() {
   const [accessFor, setAccessFor] = useState<AppRow | null>(null);
   const [members, setMembers] = useState<Set<string>>(new Set());
   const [whitelistMode, setWhitelistMode] = useState(false);
+  // The app stays set while the dialog closes, so its title does not flicker.
   const [exportFor, setExportFor] = useState<AppRow | null>(null);
+  const [exportOpen, setExportOpen] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
   const [exported, setExported] = useState<{ text: string; runs: string } | null>(null);
@@ -219,7 +221,7 @@ export function Apps() {
         runs,
         text: `${app.name} wird als ${repo} auf GitHub angelegt. Das dauert etwa eine Minute; wird dabei etwas Privates gefunden, bricht der Export ab.`,
       });
-      setExportFor(null);
+      setExportOpen(false);
     } catch (err) {
       setExportError(err instanceof ApiError ? err.message : 'Das hat nicht geklappt.');
     } finally {
@@ -400,6 +402,7 @@ export function Apps() {
                           onClick={() => {
                             setExportError(null);
                             setExportFor(app);
+                            setExportOpen(true);
                           }}
                         >
                           Als GitHub-Projekt
@@ -482,12 +485,13 @@ export function Apps() {
       )}
 
       <Dialog
-        open={exportFor !== null}
+        open={exportOpen}
         title={`${exportFor?.name ?? ''} als GitHub-Projekt`}
-        onClose={() => setExportFor(null)}
+        onClose={() => setExportOpen(false)}
       >
         {exportFor && (
           <form
+            key={exportFor.slug}
             className="stack"
             style={{ gap: 12 }}
             onSubmit={(event) => {
@@ -529,7 +533,7 @@ export function Apps() {
               </p>
             )}
             <div className="row row-end">
-              <button type="button" className="button small" onClick={() => setExportFor(null)}>
+              <button type="button" className="button small" onClick={() => setExportOpen(false)}>
                 Abbrechen
               </button>
               <button type="submit" className="button small primary" disabled={exporting}>

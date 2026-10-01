@@ -36,4 +36,8 @@ The log lists each finding as `file:line rule`:
 | email address … | Replace it with an `example.com` address or remove it. |
 | a key (GitHub token, private key, …) | It must not be in the repository at all. Remove it, **rotate the key** (`key-rotation.md`), merge, export again. |
 | gitleaks finding | As above. gitleaks redacts the value in the log. |
-| "exists and is not a MiniNode export" | A repository of that name already exists on your account. Pick another name. |
+| symbolic link / submodule | Replace it with the real file, or remove it from the app. |
+| data file / binary file | Exports carry code. Remove the file from the app (or keep data in Supabase). |
+| image metadata (EXIF) | Strip it, e.g. `exiftool -all= photo.jpg`, commit, export again. |
+| "is not the export of this app" | A repository of that name exists and is not this app's export. Pick another name. |
+| "is public, but a private export was asked for" | The earlier export is public. Export as public on purpose, or pick another name. |

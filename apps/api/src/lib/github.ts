@@ -24,7 +24,7 @@ export async function dispatchWorkflow(
     return problem(
       503,
       'not_configured',
-      'Noch nicht eingerichtet: der Schlüssel LIBRARY_DISPATCH_TOKEN fehlt.',
+      'Noch nicht eingerichtet: der GitHub-Startschlüssel fehlt (LIBRARY_DISPATCH_TOKEN).',
     );
   const repo = workflowRepo(env);
   const response = await fetch(
