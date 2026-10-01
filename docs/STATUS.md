@@ -74,25 +74,21 @@ since the PR #12 deploy. Earlier deploys stopped at medialog and never shipped t
 
 ## Waiting on the owner
 
-1. `SUPABASE_DB_URL` in the GitHub environment `production` → the Session pooler string
-   (`…pooler.supabase.com:5432`). Until then the deploys of medialog and wunschliste fail
-   (IPv6-only direct connection). The other apps deploy anyway. Afterwards, run Deploy by hand
-   with "all_apps".
-2. Approve the suite requests under Verwaltung → Gemeinsame Daten:
+1. Approve the suite requests under Verwaltung → Gemeinsame Daten:
    - Kalender: event delete, the other types read;
    - Sportplaner: activity write;
    - Haushalt: contract write.
-3. Connect Google with calendar access under "Dein Konto" (Google Calendar sync).
-4. NucBox setup (`nucbox-install.md`): `vars.NUCBOX_TUNNEL_ID`, deploy SSH key, Access
+2. Connect Google with calendar access under "Dein Konto" (Google Calendar sync).
+3. NucBox setup (`nucbox-install.md`): `vars.NUCBOX_TUNNEL_ID`, deploy SSH key, Access
    secrets. Container apps and the App-Bibliothek need it.
-5. GitHub tokens:
+4. GitHub tokens:
    - `LIBRARY_DISPATCH_TOKEN`: Actions write, this repository. Starts the library and export
      workflows.
    - `CATALOG_TOKEN`: Contents read, this repository. Goes into `/etc/mininode/deploy.env` on
      the NucBox.
    - `EXPORT_REPO_TOKEN`: Administration + Contents write, all repositories.
    - See `app-library.md` and `app-export.md`.
-6. Pick a license before sharing an exported app.
+5. Pick a license before sharing an exported app.
 
 ## Open and proposed work
 
@@ -142,6 +138,9 @@ since the PR #12 deploy. Earlier deploys stopped at medialog and never shipped t
   - Never merge without the owner's explicit "mergen".
   - After a merge, restart the branch from `origin/main`.
 - **Network.**
+  - Deploys reach the production database through the Session pooler (`SUPABASE_DB_URL`,
+    user `postgres.<ref>`, URL-encoded password); the direct `db.<ref>.supabase.co` host is
+    IPv6 only and fails on GitHub runners.
   - `*.mininode.app` and the production Supabase cannot be reached from the container
     (proxy 403), and the Supabase MCP server does not connect.
   - To check a deploy, use the GitHub Actions job logs.
