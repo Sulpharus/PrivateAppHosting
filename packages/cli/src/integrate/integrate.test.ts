@@ -1,9 +1,10 @@
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
+import { slugify } from '@mininode/manifest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { stripExternalStyles } from './convert.ts';
-import { deriveName, integrate, slugify } from './index.ts';
+import { deriveName, integrate } from './index.ts';
 import { serverRoutes } from './inspect.ts';
 import { checkZipListing, UnpackError } from './unpack.ts';
 import { lintExemption } from './verify.ts';

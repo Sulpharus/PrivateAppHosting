@@ -1,6 +1,7 @@
 import { type Manifest, manifestSchema } from './schema.ts';
 
 export * from './schema.ts';
+export { programName, slugify } from './slug.ts';
 
 export const MANIFEST_FILENAME = 'mininode.json';
 export const PLATFORM_DOMAIN = 'mininode.app';

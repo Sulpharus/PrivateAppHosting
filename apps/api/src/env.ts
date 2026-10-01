@@ -31,6 +31,15 @@ export interface ApiEnv extends Env {
   GITHUB_DISPATCH_TOKEN?: string;
   /** owner/repo of the workflow; defaults to Sulpharus/PrivateAppHosting. */
   GITHUB_REPO?: string;
+  /**
+   * R2 (S3 API) credentials with Object Read & Write on the installers bucket. Without them
+   * programs cannot be uploaded in Verwaltung (web apps can).
+   */
+  R2_ENDPOINT?: string;
+  R2_ACCESS_KEY_ID?: string;
+  R2_SECRET_ACCESS_KEY?: string;
+  /** Defaults to mininode-installers (the bucket nucbox-control reads). */
+  R2_BUCKET?: string;
   /** Push requests per cron run (default 40, for the Workers Free subrequest limit). */
   PUSH_SEND_BUDGET?: string;
 }

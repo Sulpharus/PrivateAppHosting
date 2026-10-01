@@ -195,6 +195,15 @@ describe('install script', () => {
     expect(script).toContain("'C:\\Program Files\\O''Kasse\\kasse.exe'");
   });
 
+  it('looks for the new executable when the program path is only a guess', () => {
+    const script = windowsInstallScript(request, 'https://r2.example/signed?x=1');
+    expect(script).toContain('$started = Get-Date');
+    expect(script).toContain('CreationTime -ge $started');
+    expect(script).toContain('MININODE_PROGRAM=$program');
+    expect(script).toContain('-Name Path -Value $program');
+    expect(script.indexOf('MININODE_PROGRAM')).toBeGreaterThan(script.indexOf('Start-Process'));
+  });
+
   it('supports winget and encodes for -EncodedCommand', () => {
     const script = windowsInstallScript(
       { ...request, installer: undefined, wingetId: 'Mozilla.Firefox' },

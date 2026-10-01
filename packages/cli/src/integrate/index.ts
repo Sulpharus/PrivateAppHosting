@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
-import { MANIFEST_FILENAME, RESERVED_SLUGS, slugSchema } from '@mininode/manifest';
+import { MANIFEST_FILENAME, RESERVED_SLUGS, slugify, slugSchema } from '@mininode/manifest';
 import { doctor } from '../doctor.ts';
 import {
   type ConvertContext,
@@ -37,19 +37,6 @@ const GENERIC_NAMES = new Set([
   'project',
   'vite-react-typescript-starter',
 ]);
-
-/** `Mein Versicherungs-Manager!` → `mein-versicherungs-manager`. */
-export function slugify(value: string): string {
-  const slug = value
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .replace(/ß/g, 'ss')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-  const letterFirst = /^[a-z]/.test(slug) ? slug : slug ? `app-${slug}` : '';
-  return letterFirst.slice(0, 32).replace(/-+$/g, '');
-}
 
 /** The name an export goes by: AI Studio metadata, page title, package name, then the file name. */
 export function deriveName(inspection: Inspection, origin: string): string {
