@@ -1462,3 +1462,64 @@ code,
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+
+/* ---------- own order and drawers ---------- */
+
+.reorder-item {
+  position: relative;
+  min-width: 0;
+}
+.reorder-item.editing {
+  outline: 2px dashed var(--line);
+  outline-offset: 2px;
+  border-radius: var(--radius-l);
+  cursor: grab;
+}
+.reorder-item.dragging {
+  opacity: 0.45;
+}
+.reorder-controls {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: flex;
+  gap: 4px;
+  padding: 2px;
+  border-radius: var(--radius-m);
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+.reorder-controls .pin:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.drawer-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.chip.add {
+  border-style: dashed;
+}
+.check-list {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  max-height: 50vh;
+  overflow: auto;
+}
+.check-row {
+  min-height: var(--tap);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+}
+.check-row input {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--accent);
+}

@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import { useAuth } from '../auth/AuthProvider.tsx';
+import { AppDrawersDialog, DrawerContentDialog, NameDialog } from '../components/DrawerDialogs.tsx';
 import {
   AppsIcon,
+  DrawerIcon,
   ExternalIcon,
   GamepadIcon,
   ScreenIcon,
@@ -12,6 +14,7 @@ import {
   UserIcon,
 } from '../components/icons.tsx';
 import { RemoteCard } from '../components/RemoteCard.tsx';
+import { ReorderGrid } from '../components/ReorderGrid.tsx';
 import { TopBar } from '../components/TopBar.tsx';
 import {
   type AppRow,
@@ -22,6 +25,7 @@ import {
   tileUrl,
   tintFor,
 } from '../lib/apps.ts';
+import { applyOrder, scopeOf } from '../lib/arrange.ts';
 import {
   type AppSet,
   type Category,
@@ -35,8 +39,9 @@ import {
   setFavorite,
   sortApps,
 } from '../lib/catalog.ts';
+import { useArrangement } from '../lib/useArrangement.ts';
 
-/** `all`, `favorites`, `shared` or `cat:<category id>`. */
+/** `all`, `favorites`, `shared`, `cat:<category id>` or `drawer:<drawer id>`. */
 type Filter = string;
 
 const SORT_KEY = 'mn-sort';
@@ -76,6 +81,15 @@ export function Home() {
   const [sort, setSort] = useState<Sort>(storedSort);
   const [query, setQuery] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const arrange = useArrangement('apps');
+  const [editing, setEditing] = useState(false);
+  const [dialog, setDialog] = useState<
+    | { kind: 'new' }
+    | { kind: 'rename'; id: string }
+    | { kind: 'fill'; id: string }
+    | { kind: 'app'; slug: string }
+    | null
+  >(null);
 
   const load = useCallback(async () => {
     try {
@@ -129,16 +143,23 @@ export function Home() {
     if (id === 'favorites') return favorites.has(app.slug);
     if (id === 'shared') return app.data_mode === 'shared-account';
     if (id.startsWith('cat:')) return app.category_id === id.slice(4);
+    if (id.startsWith('drawer:'))
+      return arrange.drawers.find((d) => d.id === id.slice(7))?.apps.includes(app.slug) ?? false;
     return true;
   };
-  const visible = sortApps(
-    webApps.filter((app) => inFilter(app, filter) && matchesQuery(app)),
-    sort,
-    usage,
-  );
+  const filtered = webApps.filter((app) => inFilter(app, filter) && matchesQuery(app));
+  // "Eigene Reihenfolge": what the person arranged for this screen, the rest by name behind it.
+  const visible =
+    sort === 'custom'
+      ? applyOrder(sortApps(filtered, 'name', usage), arrange.orders.get(scopeOf.view(filter)))
+      : sortApps(filtered, sort, usage);
+  const drawer = filter.startsWith('drawer:')
+    ? (arrange.drawers.find((d) => d.id === filter.slice(7)) ?? null)
+    : null;
 
   const changeSort = (next: Sort) => {
     setSort(next);
+    if (next !== 'custom') setEditing(false);
     try {
       localStorage.setItem(SORT_KEY, next);
     } catch {
@@ -182,10 +203,20 @@ export function Home() {
     ...categories
       .map((cat): [Filter, string, number] => [`cat:${cat.id}`, cat.name, count(`cat:${cat.id}`)])
       .filter(([, , n]) => n > 0),
+    ...arrange.drawers.map((d): [Filter, string, number] => [
+      `drawer:${d.id}`,
+      d.name,
+      count(`drawer:${d.id}`),
+    ]),
   ];
   // A category that vanished after a reload (deleted, or no apps left) falls back to "Alle".
   useEffect(() => {
-    if (filter.startsWith('cat:') && apps && !chips.some(([id]) => id === filter)) setFilter('all');
+    if (
+      (filter.startsWith('cat:') || filter.startsWith('drawer:')) &&
+      apps &&
+      !chips.some(([id]) => id === filter)
+    )
+      setFilter('all');
   });
   const curated = sets
     .map((set) => ({ ...set, members: set.apps.flatMap((slug) => bySlug.get(slug) ?? []) }))
@@ -293,7 +324,24 @@ export function Home() {
                     <span className="count">{n}</span>
                   </button>
                 ))}
+                <button
+                  type="button"
+                  className="chip add"
+                  onClick={() => setDialog({ kind: 'new' })}
+                >
+                  + Schublade
+                </button>
               </fieldset>
+              {sort === 'custom' && visible.length > 1 && (
+                <button
+                  type="button"
+                  className="button small"
+                  aria-pressed={editing}
+                  onClick={() => setEditing(!editing)}
+                >
+                  {editing ? 'Fertig' : 'Anordnen'}
+                </button>
+              )}
               <label className="sort-select">
                 <span className="sr-only">Sortieren</span>
                 <select value={sort} onChange={(event) => changeSort(event.target.value as Sort)}>
@@ -306,6 +354,43 @@ export function Home() {
               </label>
             </div>
 
+            {drawer && (
+              <div className="drawer-bar">
+                <DrawerIcon />
+                <strong>{drawer.name}</strong>
+                <span className="spacer" />
+                <button
+                  type="button"
+                  className="button small"
+                  onClick={() => setDialog({ kind: 'fill', id: drawer.id })}
+                >
+                  Apps wählen
+                </button>
+                <button
+                  type="button"
+                  className="button small"
+                  onClick={() => setDialog({ kind: 'rename', id: drawer.id })}
+                >
+                  Umbenennen
+                </button>
+                <button
+                  type="button"
+                  className="button small danger"
+                  onClick={() => {
+                    if (confirm(`Schublade „${drawer.name}“ löschen? Die Apps bleiben erhalten.`))
+                      void arrange.remove(drawer.id);
+                  }}
+                >
+                  Löschen
+                </button>
+              </div>
+            )}
+            {arrange.error && (
+              <p className="error" role="alert">
+                {arrange.error}
+              </p>
+            )}
+
             {apps && visible.length === 0 && (
               <p className="empty">
                 {webApps.length === 0
@@ -314,19 +399,28 @@ export function Home() {
                     : 'Für dich sind noch keine Apps freigegeben.'
                   : filter === 'favorites'
                     ? 'Markiere Apps mit dem Stern, um sie hier zu sammeln.'
-                    : 'Keine App passt zur Suche.'}
+                    : drawer
+                      ? 'Diese Schublade ist noch leer. Wähle oben „Apps wählen“.'
+                      : 'Keine App passt zur Suche.'}
               </p>
             )}
 
-            <div className="tiles">
-              {visible.map((app) => (
-                <div key={app.slug} style={{ position: 'relative' }}>
+            <ReorderGrid
+              items={visible}
+              editing={editing}
+              label={(app) => app.name}
+              onReorder={(slugs) => void arrange.reorder(scopeOf.view(filter), slugs)}
+              render={(app) => (
+                <div style={{ position: 'relative' }}>
                   <a
                     className="tile"
                     href={tileUrl(app)}
                     target={target(app)}
                     rel={rel(app)}
-                    onClick={() => recordOpen(app.slug)}
+                    onClick={(event) => {
+                      if (editing) event.preventDefault();
+                      else recordOpen(app.slug);
+                    }}
                   >
                     <div className="tile-head">
                       <div
@@ -368,9 +462,18 @@ export function Home() {
                   >
                     <StarIcon />
                   </button>
+                  <button
+                    type="button"
+                    className="pin"
+                    style={{ position: 'absolute', right: 48, bottom: 4 }}
+                    aria-label={`${app.name} in Schubladen`}
+                    onClick={() => setDialog({ kind: 'app', slug: app.slug })}
+                  >
+                    <DrawerIcon />
+                  </button>
                 </div>
-              ))}
-            </div>
+              )}
+            />
           </section>
 
           {remoteApps.length > 0 && (
@@ -399,6 +502,64 @@ export function Home() {
           )}
         </div>
       </main>
+
+      <NameDialog
+        open={dialog?.kind === 'new'}
+        title="Neue Schublade"
+        confirm="Anlegen"
+        onClose={() => setDialog(null)}
+        onSubmit={(name) => {
+          setDialog(null);
+          void arrange.create(name).then((created) => {
+            if (created) setFilter(`drawer:${created.id}`);
+          });
+        }}
+      />
+      <NameDialog
+        open={dialog?.kind === 'rename'}
+        title="Schublade umbenennen"
+        confirm="Speichern"
+        initial={arrange.drawers.find((d) => dialog?.kind === 'rename' && d.id === dialog.id)?.name}
+        onClose={() => setDialog(null)}
+        onSubmit={(name) => {
+          if (dialog?.kind === 'rename') void arrange.rename(dialog.id, name);
+          setDialog(null);
+        }}
+      />
+      <DrawerContentDialog
+        open={dialog?.kind === 'fill'}
+        drawer={arrange.drawers.find((d) => dialog?.kind === 'fill' && d.id === dialog.id) ?? null}
+        options={webApps.map((a) => ({ slug: a.slug, name: a.name }))}
+        onClose={() => setDialog(null)}
+        onSave={(slugs) => {
+          const target = arrange.drawers.find((d) => dialog?.kind === 'fill' && d.id === dialog.id);
+          if (target) void arrange.setApps(target, slugs);
+          setDialog(null);
+        }}
+      />
+      <AppDrawersDialog
+        open={dialog?.kind === 'app'}
+        slug={dialog?.kind === 'app' ? dialog.slug : ''}
+        appName={(dialog?.kind === 'app' && bySlug.get(dialog.slug)?.name) || 'App'}
+        drawers={arrange.drawers}
+        onClose={() => setDialog(null)}
+        onToggle={(target, member) =>
+          dialog?.kind === 'app' &&
+          void arrange.setApps(
+            target,
+            member
+              ? [...target.apps, dialog.slug]
+              : target.apps.filter((slug) => slug !== dialog.slug),
+          )
+        }
+        onCreate={(name) => {
+          if (dialog?.kind !== 'app') return;
+          const slug = dialog.slug;
+          void arrange.create(name).then((created) => {
+            if (created) void arrange.setApps(created, [slug]);
+          });
+        }}
+      />
 
       <nav className="tabbar" aria-label="Hauptnavigation">
         <Link to="/" aria-current="page">
