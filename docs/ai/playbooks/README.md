@@ -1,5 +1,8 @@
 # Integration playbooks
 
+`pnpm mininode integrate <zip>` does the mechanical part of the Vite/AI Studio and static-HTML
+playbooks by script (ADR 0013). Use the playbooks below for what it reports as `needs_review`.
+
 Pick the playbook by what the export contains (first match wins):
 
 | Signal in the export | Playbook |

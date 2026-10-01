@@ -10,7 +10,8 @@ small Worker (`worker/index.ts`) that adds security headers and exposes `/config
 | `/auth/refresh` | Central session refresh used by app gates (avoids refresh-token races) |
 | `/welcome` | First visit after an invite: name, passkey, optional password |
 | `/account` | Profile, passkeys (add/rename/remove), password, sign out |
-| `/` | Apps the user may open (favourites, categories, sorting, app sets, link tiles; ADR 0007), remote apps with live status and queue |
+| `/` | Apps the user may open (favourites, categories, sorting, own drawers and order (ADR 0015), app sets, link tiles; ADR 0007), remote apps with live status and queue |
+| `/account/keys` | Own API keys for APIs the admin set to "persönlich", with instructions (ADR 0014) |
 | `/admin/*` | Host Manager (admins only; sensitive actions require a sign-in < 10 min) |
 
 All passkey calls live in `src/auth/passkeys.ts` (ADR 0001). The session cookie is `mn-auth` on

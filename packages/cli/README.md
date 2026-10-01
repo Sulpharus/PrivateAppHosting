@@ -8,9 +8,17 @@ mininode deploy --changed <base-ref>       Deploy every app changed since <base-
 mininode changed <base-ref>                List hosted apps changed since <base-ref>
 mininode prune [--env staging] [--dry-run] Delete Workers of apps gone from hosted/ (--force if empty)
 mininode export <app-dir> --out <dir>      One app as a shareable folder; stops on keys and private data (ADR 0012)
+mininode integrate <zip|dir> [--slug x] [--build] [--tidy] [--json f] [--report f]  Export → hosted/<slug> by script; exit 2 = needs review (ADR 0013)
+mininode submission fetch|status <id> …    Uploads from Verwaltung (used by integrate.yml)
 mininode library check|install <entry> <slug> [--env]  App-Bibliothek: check, register (ADR 0011)
 mininode library remove <slug> <entry> [--env]  App-Bibliothek: disable a removed program
 ```
+
+**integrate** turns an export (ZIP or folder) into `hosted/<slug>` when it knows the shape and
+leaves nothing behind otherwise (`src/integrate/`, ADR 0013): `inspect.ts` classifies and collects
+the reasons it must stop, `convert.ts` rewrites Vite/AI Studio apps, plain HTML and ready
+manifests, `verify.ts` builds (`--build`) and formats (`--tidy`). Exit code 0 = integrated, 2 =
+needs review (the report names the codes), 1 = error.
 
 **doctor** is the gate every AI-integrated app must pass (CI runs `--all`). Errors block the
 deploy, warnings are shown in review:

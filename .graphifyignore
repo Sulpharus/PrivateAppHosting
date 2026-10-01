@@ -11,3 +11,4 @@ biome.json
 turbo.json
 **/tsconfig*.json
 graphify-out/
+hosted/*/vendor/
