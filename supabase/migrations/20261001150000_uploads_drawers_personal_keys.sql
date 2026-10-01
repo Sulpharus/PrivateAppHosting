@@ -93,11 +93,14 @@ grant all on platform.user_drawers, platform.user_drawer_items, platform.user_ap
 create policy user_drawers_own on platform.user_drawers for all to authenticated
   using (user_id = (select auth.uid()))
   with check (user_id = (select auth.uid()));
-create policy user_drawer_items_own on platform.user_drawer_items for all to authenticated
+-- Reading, reordering and removing an entry only needs the drawer to be yours (an app whose grant
+-- was withdrawn later can still be removed); putting an app in needs the grant.
+create policy user_drawer_items_select on platform.user_drawer_items for select to authenticated
   using (exists (
     select 1 from platform.user_drawers d
     where d.id = drawer_id and d.user_id = (select auth.uid())
-  ))
+  ));
+create policy user_drawer_items_insert on platform.user_drawer_items for insert to authenticated
   with check (
     (select platform.has_grant(app_slug))
     and exists (
@@ -105,6 +108,20 @@ create policy user_drawer_items_own on platform.user_drawer_items for all to aut
       where d.id = drawer_id and d.user_id = (select auth.uid())
     )
   );
+create policy user_drawer_items_update on platform.user_drawer_items for update to authenticated
+  using (exists (
+    select 1 from platform.user_drawers d
+    where d.id = drawer_id and d.user_id = (select auth.uid())
+  ))
+  with check (exists (
+    select 1 from platform.user_drawers d
+    where d.id = drawer_id and d.user_id = (select auth.uid())
+  ));
+create policy user_drawer_items_delete on platform.user_drawer_items for delete to authenticated
+  using (exists (
+    select 1 from platform.user_drawers d
+    where d.id = drawer_id and d.user_id = (select auth.uid())
+  ));
 create policy user_app_order_own on platform.user_app_order for all to authenticated
   using (user_id = (select auth.uid()))
   with check (user_id = (select auth.uid()));
@@ -141,6 +158,11 @@ create trigger user_drawer_items_limit before insert on platform.user_drawer_ite
 -- ---------- API keys: site-wide or personal ----------
 -- sitewide: the admin's key serves everyone (ADR 0006). personal: every user brings their own;
 -- calls without it fail with api_key_missing and the app asks for it.
+-- A link from an uploaded app's manifest is shown to users: https only (the manifest says the same).
+alter table platform.api_services drop constraint api_services_docs_url_check;
+alter table platform.api_services
+  add constraint api_services_docs_url_check check (docs_url is null or docs_url ~ '^https://');
+
 alter table platform.api_services
   add column key_mode text not null default 'sitewide' check (key_mode in ('sitewide', 'personal'));
 grant select (key_mode) on platform.api_services to authenticated;

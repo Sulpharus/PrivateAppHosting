@@ -178,7 +178,7 @@ export function ApiKeys() {
         <div className="muted" style={{ fontSize: 14 }}>
           <span className="mono">{service.id}</span> ·{' '}
           <span className="mono">{service.base_url}</span> · {placement(service.auth)}
-          {service.docs_url && (
+          {service.docs_url?.startsWith('https://') && (
             <>
               {' · '}
               <a href={service.docs_url} target="_blank" rel="noopener noreferrer">

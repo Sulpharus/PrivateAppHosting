@@ -190,7 +190,7 @@ export const apiServiceSchema = z
     baseUrl: z.string().refine(isAllowedApiBase, 'baseUrl must be a public https URL'),
     auth: apiAuthSchema,
     /** Where the admin gets a key. */
-    docs: z.url().optional(),
+    docs: z.url({ protocol: /^https$/ }).optional(),
     /** Why the app needs it (German, shown to the admin). */
     reason: z.string().min(1).max(200),
   })

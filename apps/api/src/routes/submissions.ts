@@ -51,6 +51,16 @@ export function guessProgramPath(name: string): string {
   return `C:\\Program Files\\${folder}\\${folder}.exe`;
 }
 
+/** A Windows path for the RemoteApp entry: printable, no quotes or line breaks (also no smart quotes). */
+export function validProgramPath(path: string): boolean {
+  return (
+    path.length > 0 &&
+    path.length <= 260 &&
+    // biome-ignore lint/suspicious/noControlCharactersInRegex: control characters are what is refused
+    !/[\u0000-\u001f"\u2018-\u201f]/.test(path)
+  );
+}
+
 const argsSchema = z
   .string()
   .max(200)
@@ -265,7 +275,7 @@ async function uploadProgram(
       `Aus „${name}“ ergibt sich keine gültige Adresse. Gib sie an (Kleinbuchstaben, Ziffern, Bindestriche).`,
     );
   const program = options.program?.trim() || guessProgramPath(name);
-  if (program.length > 260 || /[\r\n"]/.test(program))
+  if (!validProgramPath(program))
     return problem(400, 'invalid_request', 'Der Programmpfad ist ungültig.');
 
   const db = adminClient(env);
@@ -306,23 +316,29 @@ async function uploadProgram(
   const parsed = parseManifest(manifest);
   if (!parsed.ok) return problem(400, 'invalid_request', parsed.errors.join('; '));
 
-  const { error: appError } = await db
-    .schema('platform')
-    .from('apps')
-    .upsert({
-      slug,
-      name,
-      description: manifest.description,
-      kind: 'remote',
-      target: 'remote',
-      data_mode: 'private',
-      allowed_roles: manifest.access.roles,
-      manifest,
-      // Nobody has a grant yet; the admin gives access after the install worked.
-      status: existing ? undefined : 'online',
-      deployed_version: 'upload',
-      deployed_at: new Date().toISOString(),
-    });
+  // A re-upload replaces the program, not what the admin decided about the app (roles, status).
+  const appFields = {
+    slug,
+    name,
+    description: manifest.description,
+    manifest,
+    deployed_version: 'upload',
+    deployed_at: new Date().toISOString(),
+  };
+  const { error: appError } = existing
+    ? await db.schema('platform').from('apps').update(appFields).eq('slug', slug)
+    : await db
+        .schema('platform')
+        .from('apps')
+        .insert({
+          ...appFields,
+          kind: 'remote',
+          target: 'remote',
+          data_mode: 'private',
+          allowed_roles: manifest.access.roles,
+          // Nobody has a grant yet; the admin gives access after the install worked.
+          status: 'online',
+        });
   if (appError) return problem(500, 'db_error', 'Die App konnte nicht angelegt werden.');
 
   const { data: row, error } = await db
@@ -461,6 +477,8 @@ async function setProgramPath(db: SupabaseClient, slug: string, program: string)
     .select('manifest')
     .eq('slug', slug)
     .maybeSingle<{ manifest: { remote?: RemoteManifest } }>();
+  // The path comes out of the guest's output: it gets the same check as one typed by the admin.
+  if (!validProgramPath(program)) return;
   if (!data?.manifest.remote || data.manifest.remote.program === program) return;
   await db
     .schema('platform')
@@ -514,7 +532,7 @@ submissions.post(
     if (!c.env.NUCBOX_CONTROL_TOKEN)
       return problem(503, 'not_configured', 'Die NucBox ist nicht eingerichtet.');
     const { program, silentArgs } = body.data;
-    if (program !== undefined && (/[\r\n"]/.test(program) || !program.trim()))
+    if (program !== undefined && !validProgramPath(program.trim()))
       return problem(400, 'invalid_request', 'Der Programmpfad ist ungültig.');
     if (row.slug && (program !== undefined || silentArgs !== undefined)) {
       const { data: app } = await db

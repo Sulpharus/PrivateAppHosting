@@ -11,3 +11,6 @@ PC/server edition) is left out; a Cloud-only setup works without it.
   programs: `mininode-pc-server-<version>.zip` of the same release.
 
 See `PLAN.md` for the architecture and `docs/STATUS.md` for where things stand.
+
+The API keeps its NucBox routes (`apps/api/src/routes/nucbox.ts`) and the install runbook is
+included; without the PC/server edition they simply have nothing to talk to.

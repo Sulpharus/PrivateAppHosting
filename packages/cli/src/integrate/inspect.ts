@@ -115,6 +115,11 @@ export function htmlProblems(html: string, file: string, inlineScripts: boolean)
   return reasons;
 }
 
+/** Registry versions only: no paths, git, tarball or workspace sources that could pull in other code. */
+export function isRegistrySpec(spec: string): boolean {
+  return /^[\^~<>=*xX0-9. |-]+$/.test(spec) || ['latest', 'next'].includes(spec);
+}
+
 export function inspectProject(root: string): Inspection {
   const files = [...walk(root)].map((file) => relative(root, file).replaceAll('\\', '/'));
   const has = (name: string) => files.includes(name);
@@ -164,6 +169,30 @@ export function inspectProject(root: string): Inspection {
     installer: 'Installationsprogramm (läuft über „Programme“, nicht als Web-App)',
     unknown: 'unbekannte Projektform',
   };
+  for (const [name, spec] of Object.entries(deps)) {
+    if (!isRegistrySpec(spec))
+      blockers.push({
+        code: 'dependency_source',
+        file: 'package.json',
+        message: `Die Abhängigkeit ${name} kommt nicht aus der Paket-Registry („${spec}“).`,
+      });
+  }
+  if (framework === 'mininode') {
+    const manifest = readJson<{ kind?: string; target?: string; access?: { default?: boolean } }>(
+      join(root, 'mininode.json'),
+    );
+    if (
+      !manifest ||
+      !['static', 'spa'].includes(manifest.kind ?? '') ||
+      manifest.target !== 'cloudflare'
+    )
+      blockers.push({
+        code: 'manifest_unsupported',
+        file: 'mininode.json',
+        message:
+          'Die mitgelieferte mininode.json ist keine statische oder Single-Page-App auf Cloudflare (Container, Remote und andere Ziele braucht eine Prüfung).',
+      });
+  }
   const review = reviewBy[framework];
   if (review)
     blockers.push({

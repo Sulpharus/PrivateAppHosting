@@ -74,10 +74,15 @@ export function tidy(root: string, result: IntegrateResult): IntegrateResult {
   if (after.status === 0)
     return { ...result, actions: [...result.actions, 'Code mit Biome formatiert'] };
   const count = /Found (\d+) errors?/.exec(`${after.stdout}${after.stderr}`)?.[1] ?? 'mehrere';
-  const path = join(root, 'biome.json');
-  writeFileSync(path, lintExemption(readFileSync(path, 'utf8'), result.slug));
+  // The exemption is a change to a root file: the trusted publish step makes it (`mininode
+  // exempt <slug>`), not this build. Locally the file is changed right away.
+  if (!process.env.CI) {
+    const path = join(root, 'biome.json');
+    writeFileSync(path, lintExemption(readFileSync(path, 'utf8'), result.slug));
+  }
   return {
     ...result,
+    lintExempt: true,
     actions: [...result.actions, 'Code mit Biome formatiert'],
     warnings: [
       ...result.warnings,

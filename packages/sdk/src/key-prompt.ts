@@ -1,6 +1,7 @@
 // The popup for APIs that need a personal key (ADR 0014). It is shown by the SDK when a call is
 // refused with `api_key_missing` for a personal API, so every app gets it without any code.
-// Plain DOM and inline styles: apps do not all load the platform's stylesheet.
+// Plain DOM and inline styles: apps do not all load the platform's stylesheet, so the colours are
+// literal values on purpose (the one exception to "tokens only"; they match the portal's tokens).
 
 export interface KeyPromptInfo {
   service: string;
@@ -38,7 +39,8 @@ export function promptForKey(portalUrl: string, info: KeyPromptInfo): Promise<vo
   if ((dismissedUntil.get(info.service) ?? 0) > Date.now()) return Promise.resolve();
   shown.add(info.service);
 
-  const dark = matchMedia?.('(prefers-color-scheme: dark)').matches ?? false;
+  const dark =
+    typeof matchMedia === 'function' && matchMedia('(prefers-color-scheme: dark)').matches;
   const dialog = el(
     'dialog',
     { id: `mn-key-prompt-${info.service}` },

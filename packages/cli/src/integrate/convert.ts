@@ -375,6 +375,14 @@ export function convertNative(ctx: ConvertContext): Converted {
     warnings: [],
   };
   copyTree(ctx.inspection, ctx.outDir, () => false);
+  // Whatever the export asks for, access is the admin's decision: never "for everybody".
+  const path = join(ctx.outDir, MANIFEST_FILENAME);
+  const manifest = JSON.parse(readFileSync(path, 'utf8')) as { access?: { default?: boolean } };
+  if (manifest.access?.default) {
+    manifest.access.default = false;
+    writeFileSync(path, `${JSON.stringify(manifest, null, 2)}\n`);
+    converted.actions.push('access.default auf false gesetzt (Zugriff vergibt der Admin)');
+  }
   if (!ctx.inspection.files.includes('README.md')) writeReadme(ctx, converted);
   return converted;
 }

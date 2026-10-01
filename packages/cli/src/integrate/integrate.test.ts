@@ -198,6 +198,61 @@ describe('integrate: other shapes', () => {
   });
 });
 
+describe('integrate: guards for what an export brings along', () => {
+  it('refuses dependencies from paths, git or tarballs', () => {
+    const { input } = project(
+      studio({
+        'package.json': JSON.stringify({
+          dependencies: { react: '^19.0.1', evil: 'github:someone/evil', local: 'file:../x' },
+          devDependencies: { vite: '^6.2.3', other: 'https://example.org/x.tgz' },
+        }),
+      }),
+    );
+    const result = integrate({ input, root: dir });
+    expect(result.reasons.filter((r) => r.code === 'dependency_source')).toHaveLength(3);
+  });
+
+  it('sends manifests for containers and remote programs to review', () => {
+    const { input } = project({
+      'mininode.json': JSON.stringify({
+        specVersion: 1,
+        slug: 'server',
+        name: 'Server',
+        description: 'x',
+        kind: 'container',
+        target: 'nucbox',
+        container: { port: 3000 },
+      }),
+      Dockerfile: 'FROM node',
+      'index.html': '<html></html>',
+    });
+    expect(integrate({ input, root: dir }).reasons.map((r) => r.code)).toContain(
+      'manifest_unsupported',
+    );
+  });
+
+  it('never gives a native export access for everybody', () => {
+    const { input, hosted } = project({
+      'mininode.json': JSON.stringify({
+        specVersion: 1,
+        slug: 'offen',
+        name: 'Offen',
+        description: 'x',
+        kind: 'static',
+        target: 'cloudflare',
+        access: { default: true, roles: ['user', 'trusted', 'admin'] },
+      }),
+      'index.html': '<html></html>',
+      'README.md': '# Offen\n',
+    });
+    const result = integrate({ input, root: dir, hostedDir: hosted });
+    expect(result.status).toBe('integrated');
+    expect(
+      JSON.parse(readFileSync(join(hosted, 'offen/mininode.json'), 'utf8')).access.default,
+    ).toBe(false);
+  });
+});
+
 describe('helpers', () => {
   it('derives addresses and names', () => {
     expect(slugify('Mein Versicherungs-Manager!')).toBe('mein-versicherungs-manager');

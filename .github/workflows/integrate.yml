@@ -86,7 +86,7 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version-file: .nvmrc
-          cache: pnpm
+          # No cache: this job runs the export's code and must not write what other jobs restore.
       - run: pnpm install --frozen-lockfile
       - uses: actions/download-artifact@v5
         with:
@@ -99,14 +99,17 @@ jobs:
           pnpm mininode integrate upload/upload.zip --build --tidy --json result.json --report report.md
           echo "code=$?" >> "$GITHUB_OUTPUT"
       - name: Collect the result
+        env:
+          CODE: ${{ steps.integrate.outputs.code }}
         run: |
           mkdir -p out
           cp result.json report.md out/
           slug=$(jq -r '.slug // empty' result.json)
-          if [ "${{ steps.integrate.outputs.code }}" = "0" ] && [[ "$slug" =~ ^[a-z][a-z0-9-]{0,30}[a-z0-9]$ ]]; then
+          # Only the app's own folder leaves this job: the lockfile and biome.json are made again
+          # by the publish job, which does not run the export's code.
+          if [ "$CODE" = "0" ] && [[ "$slug" =~ ^[a-z][a-z0-9-]{0,30}[a-z0-9]$ ]]; then
             mkdir -p "out/hosted"
             cp -r "hosted/$slug" "out/hosted/$slug"
-            cp pnpm-lock.yaml biome.json out/
           fi
       - uses: actions/upload-artifact@v4
         with:
@@ -129,6 +132,7 @@ jobs:
       STAGING_DOMAIN: ${{ vars.STAGING_DOMAIN }}
       GH_TOKEN: ${{ secrets.INTEGRATE_TOKEN || github.token }}
       CODE: ${{ needs.build.outputs.code }}
+      AUTOMERGE: ${{ vars.INTEGRATE_AUTOMERGE }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -151,22 +155,37 @@ jobs:
           slug=$(jq -r .slug artifacts/result/result.json)
           [[ "$slug" =~ ^[a-z][a-z0-9-]{0,30}[a-z0-9]$ ]] || { echo "bad slug" >&2; exit 1; }
           short=${SUBMISSION:0:8}
-          cp -r "artifacts/result/hosted/$slug" "hosted/$slug"
-          cp artifacts/result/pnpm-lock.yaml artifacts/result/biome.json .
+          src="artifacts/result/hosted/$slug"
+          [ -d "$src" ] || { echo "no app in the result" >&2; exit 1; }
+          # What came out of the build job is only the app's folder, and it must hold plain files.
+          if [ -n "$(find "$src" -type l)" ]; then echo "links in the result" >&2; exit 1; fi
+          [ ! -e "hosted/$slug" ] || { echo "hosted/$slug exists" >&2; exit 1; }
+          cp -r "$src" "hosted/$slug"
+          # Root files are made here, in the job that does not run the export's code.
+          pnpm install --lockfile-only --ignore-scripts
+          if [ "$(jq -r '.lintExempt // false' artifacts/result/result.json)" = "true" ]; then
+            pnpm mininode exempt "$slug"
+            pnpm exec biome format --write biome.json
+          fi
           git config user.name "mininode-integrate"
           git config user.email "integrate@users.noreply.github.com"
           git checkout -b "auto/$slug-$short"
           git add "hosted/$slug" pnpm-lock.yaml biome.json
+          # Nothing else may be part of the commit.
+          bad=$(git diff --cached --name-only | grep -vE "^(hosted/$slug/|pnpm-lock\.yaml$|biome\.json$)" || true)
+          [ -z "$bad" ] || { echo "unexpected files: $bad" >&2; exit 1; }
           git commit -m "feat($slug): integrate uploaded export automatically" \
             -m "Built by mininode integrate from an upload in Verwaltung. See hosted/$slug/README.md."
-          if [ "${{ vars.INTEGRATE_AUTOMERGE }}" = "true" ]; then
+          # The report contains names taken from the upload: show it as code, not as markup.
+          fence=$(printf '\140\140\140')
+          { echo "Automatisch eingebaut (Verwaltung → Hochladen). Bericht:"; echo "${fence}text"; sed "s/${fence}/'''/g" artifacts/result/report.md; echo "$fence"; } > body.md
+          if [ "$AUTOMERGE" = "true" ]; then
             git push origin "HEAD:refs/heads/main"
             pr=""
           else
             git push origin "auto/$slug-$short"
             pr=$(gh pr create --base main --head "auto/$slug-$short" \
-              --title "feat($slug): automatisch integriert" \
-              --body-file artifacts/result/report.md)
+              --title "feat($slug): automatisch integriert" --body-file body.md)
           fi
           pnpm mininode submission status "$SUBMISSION" integrated \
             --result artifacts/result/result.json --report artifacts/result/report.md \
@@ -191,7 +210,10 @@ jobs:
             echo "<!-- mininode-submission id=$SUBMISSION env=$DEPLOY_ENV -->"
             echo "Ein Upload braucht eine KI-Prüfung. Das ZIP liegt im Branch \`$branch\` unter \`review-inbox/$short/\`."
             echo
-            cat artifacts/result/report.md
+            fence=$(printf '\140\140\140')
+            echo "${fence}text"
+            sed "s/${fence}/'''/g" artifacts/result/report.md
+            echo "$fence"
             echo
             echo "**So geht's weiter:** Claude Code mit dem Skill \`integrate-app\` starten (\"arbeite die ai-review-Issues ab\"). Der Lauf baut die App nach \`hosted/<slug>\`, eröffnet einen PR mit \`Closes #<diese Issue>\` und räumt den Branch \`$branch\` ab. Beim Schließen der Issue erscheint die App in Verwaltung → Hochladen als eingebaut."
           } > issue.md

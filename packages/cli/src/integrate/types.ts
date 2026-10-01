@@ -35,4 +35,6 @@ export interface IntegrateResult {
   actions: string[];
   /** Folder of the integrated app (absent when it needs review). */
   outDir: string | null;
+  /** The app's own lint findings exempt it from the linter (the publish step applies this). */
+  lintExempt?: boolean;
 }

@@ -25,6 +25,9 @@ export async function listPersonalKeys(): Promise<PersonalKey[]> {
   return (data as PersonalKey[] | null) ?? [];
 }
 
+/** Only https links are rendered as links (the address comes from an uploaded app's manifest). */
+const safeLink = (url: string | null) => (url?.startsWith('https://') ? url : null);
+
 const host = (url: string) => {
   try {
     return new URL(url).hostname;
@@ -52,15 +55,17 @@ export function AccountKeys() {
     void load();
   }, [load]);
 
-  const save = async (service: PersonalKey, key: string) => {
+  const save = async (service: PersonalKey, key: string): Promise<boolean> => {
     setError(null);
     setSaved(null);
     try {
       await api(`/me/api-keys/${service.service_id}`, { method: 'PUT', body: { key } });
       setSaved(service.service_id);
       await load();
+      return true;
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Das hat nicht geklappt.');
+      return false;
     }
   };
 
@@ -119,7 +124,7 @@ export function AccountKeys() {
             open={service.service_id === wanted || service.key_hint === null}
             justSaved={saved === service.service_id}
             back={back}
-            onSave={(key) => void save(service, key)}
+            onSave={(key) => save(service, key)}
             onRemove={() => void remove(service)}
           />
         ))}
@@ -133,7 +138,7 @@ function KeyCard(props: {
   open: boolean;
   justSaved: boolean;
   back: string | null;
-  onSave(key: string): void;
+  onSave(key: string): Promise<boolean>;
   onRemove(): void;
 }) {
   const { service } = props;
@@ -170,11 +175,15 @@ function KeyCard(props: {
         </summary>
         <ol className="stack" style={{ gap: 8, paddingLeft: 20 }}>
           <li>
-            {service.docs_url ? (
+            {safeLink(service.docs_url) ? (
               <>
                 Öffne die Seite des Anbieters:{' '}
-                <a href={service.docs_url} target="_blank" rel="noopener noreferrer">
-                  {host(service.docs_url)}
+                <a
+                  href={safeLink(service.docs_url) ?? undefined}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {host(service.docs_url ?? '')}
                 </a>
                 .
               </>
@@ -198,13 +207,15 @@ function KeyCard(props: {
           className="budget-row"
           onSubmit={(event) => {
             event.preventDefault();
-            const data = new FormData(event.currentTarget);
-            const key = String(data.get('key') ?? '').trim();
-            if (key.length >= 12) {
-              props.onSave(key);
-              setReplacing(false);
-              event.currentTarget.reset();
-            }
+            const form = event.currentTarget;
+            const key = String(new FormData(form).get('key') ?? '').trim();
+            // Keep what was typed until the save worked.
+            if (key.length >= 12)
+              void props.onSave(key).then((saved) => {
+                if (!saved) return;
+                setReplacing(false);
+                form.reset();
+              });
           }}
         >
           <label className="field" style={{ flex: '1 1 260px' }}>

@@ -214,6 +214,7 @@ describe('install script', () => {
       'Write-Output 1',
     );
     expect(psQuote("a'b")).toBe("'a''b'");
+    expect(psQuote('a\u2019b')).toBe("'a\u2019\u2019b'");
   });
 
   it('creates valid Proxmox snapshot names', () => {

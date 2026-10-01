@@ -46,9 +46,12 @@ jobs:
           esac
           { echo "editions=$editions"; echo "version=$version"; } >> "$GITHUB_OUTPUT"
       - name: Build the packages
+        env:
+          VERSION: ${{ steps.plan.outputs.version }}
+          EDITIONS: ${{ steps.plan.outputs.editions }}
         run: |
           # shellcheck disable=SC2086
-          scripts/package-release.sh "${{ steps.plan.outputs.version }}" release-out ${{ steps.plan.outputs.editions }}
+          scripts/package-release.sh "$VERSION" release-out $EDITIONS
       - name: Check the checksums
         run: cd release-out && sha256sum -c SHA256SUMS
       - name: Publish

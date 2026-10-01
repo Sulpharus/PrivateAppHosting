@@ -52,7 +52,9 @@ export function r2Signer(options: {
 }
 
 /** Single-quoted PowerShell literal. */
-export const psQuote = (value: string) => `'${value.replace(/'/g, "''")}'`;
+// PowerShell treats the typographic single quotes (U+2018..U+201B) like the plain one.
+export const psQuote = (value: string) =>
+  `'${value.replace(/['\u2018\u2019\u201a\u201b]/g, (q) => q + q)}'`;
 
 export function defaultSilentArgs(r2Key: string): string {
   return r2Key.toLowerCase().endsWith('.msi') ? '/qn /norestart' : '/S';

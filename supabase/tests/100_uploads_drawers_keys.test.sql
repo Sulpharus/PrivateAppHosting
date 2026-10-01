@@ -1,5 +1,5 @@
 begin;
-select plan(29);
+select plan(30);
 select tests.reset();
 
 -- The first user becomes admin (bootstrap).
@@ -89,6 +89,13 @@ select is((select count(*)::int from platform.admin_personal_key_counts()), 0, '
 select tests.logout();
 select platform.register_app_apis('wetter', '[{"id":"owm","name":"OpenWeatherMap","baseUrl":"https://other.example.com","auth":{"type":"bearer"},"reason":"Wetter"}]');
 select is((select count(*)::int from platform.user_api_keys), 0, 'a changed target drops every personal key');
+
+-- An entry whose app grant was withdrawn later can still be removed from the drawer.
+delete from platform.app_grants where user_id = :'anna_id' and app_slug = 'wetter';
+select tests.login(:'anna_id');
+select lives_ok(format($$delete from platform.user_drawer_items where drawer_id = %L$$, :'drawer_id'),
+  'a stale entry can be removed');
+select tests.logout();
 
 select * from finish();
 rollback;

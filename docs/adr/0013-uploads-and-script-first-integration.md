@@ -45,7 +45,9 @@ library) has three jobs, so that the export's own build code never runs next to 
 `fetch` (service key) downloads the ZIP from the private `submissions` bucket; `build` (no
 secrets, read-only token) runs the script with `--build --tidy` (formatting; findings of imported
 code exempt the app from the linter in `biome.json`) and hands over the result as an artifact;
-`publish` (secrets) only copies the result of a validated slug into the repository, then
+`publish` (secrets) copies only the app's folder (plain files, no links) of a validated slug into the
+repository, makes the lockfile and the lint exemption itself, refuses a commit that touches anything
+else, then
 - success: branch `auto/<slug>-<id>` and a pull request, or a push to `main` when the repository
   variable `INTEGRATE_AUTOMERGE` is `true` (the deploy then starts);
 - needs review: branch `review/<id>` with the ZIP and the report, and an issue labelled

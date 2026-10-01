@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   ALL_GOOGLE_SCOPES,
+  apiServiceSchema,
   appSchemaName,
   googleConnectSrc,
   googleScopes,
@@ -218,5 +219,24 @@ describe('apis', () => {
       'not a url',
     ])
       expect(isAllowedApiBase(bad), bad).toBe(false);
+  });
+});
+
+describe('api docs links', () => {
+  it('accept https only', () => {
+    const api = {
+      id: 'wetter',
+      name: 'Wetter',
+      baseUrl: 'https://api.example.com/v1',
+      auth: { type: 'bearer' },
+      reason: 'x',
+    };
+    expect(apiServiceSchema.safeParse({ ...api, docs: 'https://example.com/keys' }).success).toBe(
+      true,
+    );
+    expect(apiServiceSchema.safeParse({ ...api, docs: 'javascript:alert(1)' }).success).toBe(false);
+    expect(apiServiceSchema.safeParse({ ...api, docs: 'http://example.com/keys' }).success).toBe(
+      false,
+    );
   });
 });

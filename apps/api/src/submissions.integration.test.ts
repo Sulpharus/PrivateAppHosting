@@ -210,9 +210,7 @@ describe.skipIf(!enabled)('uploads', () => {
 
     const [app1] = await sql`select kind, target, manifest from platform.apps where slug = ${slug}`;
     expect(app1).toMatchObject({ kind: 'remote', target: 'remote' });
-    const remote = (
-      app1?.manifest as { remote: { runtime: string; installer: { sha256: string } } }
-    ).remote;
+    const remote = remoteOf(app1);
     expect(remote?.runtime).toBe('windows');
     expect(remote?.installer.sha256).toBe(row.sha256);
     expect(control.at(-1)?.body).toMatchObject({ app: slug, runtime: 'windows' });
@@ -276,9 +274,7 @@ describe.skipIf(!enabled)('uploads', () => {
     });
     expect(retry.status).toBe(202);
     const [app3] = await sql`select manifest from platform.apps where slug = ${slug}`;
-    const remote = (
-      app3?.manifest as { remote: { program: string; installer: { silentArgs?: string } } }
-    ).remote;
+    const remote = remoteOf(app3);
     expect(remote?.program).toBe('C:\\Apps\\prog.exe');
     expect(remote?.installer.silentArgs).toBe('/VERYSILENT /NORESTART');
   });
