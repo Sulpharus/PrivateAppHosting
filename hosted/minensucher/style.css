@@ -1,0 +1,108 @@
+/* Minensucher: the board. Everything else comes from the App Kit. */
+.ms-page {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+.ms-main {
+  display: grid;
+  gap: var(--mn-s4);
+}
+.ms-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mn-s3);
+  align-items: center;
+  justify-content: space-between;
+}
+.ms-scroll {
+  overflow: auto;
+  padding: var(--mn-s2);
+  border-radius: var(--mn-r-md);
+  background: var(--mn-surface-2);
+}
+.ms-board {
+  --cell: 32px;
+  display: grid;
+  gap: 2px;
+  width: max-content;
+  margin: 0 auto;
+}
+@media (pointer: coarse) {
+  .ms-board {
+    --cell: 44px;
+  }
+}
+.ms-row {
+  display: grid;
+  grid-template-columns: repeat(var(--cols), var(--cell));
+  gap: 2px;
+}
+.ms-cell {
+  width: var(--cell);
+  height: var(--cell);
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: var(--mn-surface);
+  box-shadow: inset 0 -2px 0 var(--mn-line);
+  color: var(--mn-ink);
+  font: 700 16px / 1 var(--mn-font-mono, monospace);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  user-select: none;
+  touch-action: manipulation;
+}
+.ms-cell:focus-visible {
+  outline: 3px solid var(--mn-accent);
+  outline-offset: 1px;
+  z-index: 1;
+}
+.ms-cell.open {
+  background: var(--mn-bg);
+  box-shadow: none;
+  cursor: default;
+}
+.ms-cell.flag {
+  color: var(--mn-accent-text);
+}
+.ms-cell.boom {
+  background: var(--mn-danger, #b3261e);
+  color: #fff;
+}
+.ms-cell.n1 {
+  color: #1f5fbf;
+}
+.ms-cell.n2 {
+  color: #2f7a35;
+}
+.ms-cell.n3 {
+  color: #b3261e;
+}
+.ms-cell.n4 {
+  color: #5b2f9e;
+}
+.ms-cell.n5 {
+  color: #8a4a00;
+}
+.ms-cell.n6 {
+  color: #007a82;
+}
+.ms-cell.n7 {
+  color: var(--mn-ink);
+}
+.ms-cell.n8 {
+  color: var(--mn-muted);
+}
+.ms-end {
+  text-align: center;
+  display: grid;
+  gap: var(--mn-s2);
+}
+.ms-section h2 {
+  font-size: var(--mn-fs-lg);
+}
+.ms-section p {
+  color: var(--mn-muted);
+  max-width: 62ch;
+}

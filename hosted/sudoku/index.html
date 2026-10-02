@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="de" data-accent="teal">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Sudoku</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230f6e6e'/%3E%3Cpath d='M12 6v20M20 6v20M6 12h20M6 20h20' stroke='white' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/_mininode/ui.css">
+  <link rel="stylesheet" href="/style.css">
+  <script src="/_mininode/ui.js"></script>
+  <script src="/_mininode/game.js"></script>
+  <script src="/_mininode/sdk.js" defer></script>
+  <script type="module" src="/app.js"></script>
+</head>
+<body class="mn-app">
+  <div class="mn-page su-page">
+    <header class="mn-top"><div class="mn-top-inner">
+      <div class="mn-top-text"><a class="mn-home" href="https://mininode.app">← Alle Apps</a><h1>Sudoku</h1><p class="mn-sub" id="player">Jedes Rätsel wird neu erzeugt und hat genau eine Lösung.</p></div>
+      <div class="mn-top-tools"><a class="mn-btn" id="hub" href="https://mininode.app/games/sudoku">Gaming Hub</a></div>
+    </div></header>
+    <main class="mn-main su-main">
+      <!-- biome-ignore lint/a11y/useSemanticElements: a segmented control and a grid have no native element -->
+      <div class="mn-seg" id="levels" role="group" aria-label="Schwierigkeit"></div>
+      <div class="mn-kpis">
+        <div class="mn-kpi"><b id="time">0:00</b><span>Zeit</span></div>
+        <div class="mn-kpi"><b id="hints">0</b><span>Tipps (je +30 s)</span></div>
+      </div>
+      <p class="mn-muted" id="busy" role="status" hidden>Rätsel wird erzeugt …</p>
+      <div class="su-play">
+        <!-- biome-ignore lint/a11y/useSemanticElements: a segmented control and a grid have no native element -->
+        <div class="su-board" id="board" role="grid" aria-label="Sudoku-Feld"></div>
+        <div class="su-side">
+          <!-- biome-ignore lint/a11y/useSemanticElements: a segmented control and a grid have no native element -->
+          <div class="su-pad" id="pad" role="group" aria-label="Ziffern"></div>
+          <div class="su-tools">
+            <button type="button" class="mn-btn" id="notes" aria-pressed="false">Notizen</button>
+            <button type="button" class="mn-btn" id="erase">Löschen</button>
+            <button type="button" class="mn-btn" id="undo">Rückgängig</button>
+            <button type="button" class="mn-btn" id="hint">Tipp</button>
+            <button type="button" class="mn-btn mn-btn--primary" id="restart">Neues Rätsel</button>
+          </div>
+        </div>
+      </div>
+      <p class="mn-sr-only" id="announce" aria-live="polite"></p>
+      <section class="mn-card su-end" id="end" hidden tabindex="-1" aria-labelledby="end-title">
+        <h2 id="end-title">Geschafft!</h2>
+        <p id="end-text"></p>
+      </section>
+      <section aria-labelledby="lb-title" class="su-section">
+        <div class="mn-sect"><h2 id="lb-title">Bestenliste (schnellste Zeit)</h2></div>
+        <p class="mn-muted" id="record"></p>
+        <div id="leaders"></div>
+      </section>
+      <section class="su-section" aria-labelledby="rules-title">
+        <h2 id="rules-title">Regeln</h2>
+        <p>Jede Reihe, jede Spalte und jeder 3×3-Block enthält die Ziffern 1 bis 9 genau einmal. Wähle ein Feld und tippe eine Ziffer; mit „Notizen“ merkst du dir mögliche Ziffern. Doppelte Ziffern werden markiert. Ein Tipp füllt das gewählte Feld und kostet 30 Sekunden. Tastatur: Pfeiltasten, Ziffern 1–9, Entf zum Löschen, N für Notizen, Z für Rückgängig.</p>
+      </section>
+    </main>
+  </div>
+</body>
+</html>

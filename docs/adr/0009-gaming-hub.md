@@ -71,7 +71,9 @@ kv, which every user of the app can overwrite, and would ask for its own player 
 
 **Construction prompts** gain five modules: Gaming Hub, game loop, levels and daily
 challenge, computer opponent, and sound and haptics. The game type points to `mn.game`.
-`hosted/memory` is the reference game.
+`hosted/memory` is the reference game. Later games (Minensucher, Sudoku, Solitär, 2048,
+Codeknacker) share the kit helper `/_mininode/game.js` (`window.mnGame`) for login, playtime,
+result saving and the leaderboard list instead of copying that shell.
 
 ## Consequences
 

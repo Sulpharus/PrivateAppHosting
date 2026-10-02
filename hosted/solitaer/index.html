@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="de" data-accent="green">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Solitär</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23226b3a'/%3E%3Crect x='9' y='6' width='14' height='20' rx='2.5' fill='white'/%3E%3Cpath d='M16 11l3 4-3 4-3-4z' fill='%23226b3a'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/_mininode/ui.css">
+  <link rel="stylesheet" href="/style.css">
+  <script src="/_mininode/ui.js"></script>
+  <script src="/_mininode/game.js"></script>
+  <script src="/_mininode/sdk.js" defer></script>
+  <script type="module" src="/app.js"></script>
+</head>
+<body class="mn-app">
+  <div class="mn-page sol-page">
+    <header class="mn-top"><div class="mn-top-inner">
+      <div class="mn-top-text"><a class="mn-home" href="https://mininode.app">← Alle Apps</a><h1>Solitär</h1><p class="mn-sub" id="player">Alle Karten auf die vier Ablagen bringen.</p></div>
+      <div class="mn-top-tools"><a class="mn-btn" id="hub" href="https://mininode.app/games/solitaer">Gaming Hub</a></div>
+    </div></header>
+    <main class="mn-main sol-main">
+      <div class="mn-kpis">
+        <div class="mn-kpi"><b id="time">0:00</b><span>Zeit</span></div>
+        <div class="mn-kpi"><b id="moves">0</b><span>Züge</span></div>
+        <div class="mn-kpi"><b id="score">0</b><span>Punkte</span></div>
+      </div>
+      <div class="sol-tools">
+        <button type="button" class="mn-btn" id="undo">Rückgängig</button>
+        <button type="button" class="mn-btn" id="finish" hidden>Automatisch beenden</button>
+        <button type="button" class="mn-btn" id="giveup">Aufgeben</button>
+        <button type="button" class="mn-btn mn-btn--primary" id="restart">Neues Spiel</button>
+      </div>
+      <div class="sol-scroll">
+        <!-- biome-ignore lint/a11y/useSemanticElements: a card table has no native element -->
+        <div class="sol-table" id="table" role="group" aria-label="Spieltisch"></div>
+      </div>
+      <p class="mn-sr-only" id="announce" aria-live="polite"></p>
+      <section class="mn-card sol-end" id="end" hidden tabindex="-1" aria-labelledby="end-title">
+        <h2 id="end-title">Ergebnis</h2>
+        <p id="end-text"></p>
+      </section>
+      <section aria-labelledby="lb-title" class="sol-section">
+        <div class="mn-sect"><h2 id="lb-title">Bestenliste (meiste Punkte)</h2></div>
+        <p class="mn-muted" id="record"></p>
+        <div id="leaders"></div>
+      </section>
+      <section class="sol-section" aria-labelledby="rules-title">
+        <h2 id="rules-title">Regeln</h2>
+        <p>Ziehe vom Stapel Karte für Karte auf den Ablagestapel. Im Tableau legst du Karten absteigend und in abwechselnden Farben aneinander; auf einen leeren Platz darf nur ein König. Die vier Ablagen oben rechts baust du je Farbe vom Ass bis zum König auf. Tippe eine Karte an und dann das Ziel; tippst du dieselbe Karte noch einmal, geht sie von selbst auf ihre Ablage oder an eine passende Stelle. Punkte: Ablagestapel → Tableau +5, Karte auf eine Ablage +10, Karte aufdecken +5, Ablage → Tableau −15. Tastatur: Pfeiltasten wählen, Enter oder Leertaste nimmt auf und legt ab, F schickt auf die Ablage, D zieht eine Karte, Z macht rückgängig.</p>
+      </section>
+    </main>
+  </div>
+</body>
+</html>

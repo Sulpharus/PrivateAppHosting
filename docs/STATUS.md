@@ -44,6 +44,7 @@ Where things are documented:
 | App export | An app as its own GitHub repository, without data or keys | ADR 0012, runbook `app-export.md` |
 | Deploys | One failing app no longer stops the others | `.github/workflows/deploy.yml`, `mininode deploy --changed` |
 | Gaming Hub | Games show only in the hub; the start page's "Gaming Hub" button and "Spiele" tab are always there | ADR 0009, `apps/portal/src/routes/Home.tsx` |
+| More games | Minensucher (3 levels), Sudoku (own generator, 5 levels rated by technique), Solitär (Klondike), 2048, Codeknacker (Mastermind); shared `window.mnGame` helper | `hosted/{minensucher,sudoku,solitaer,n2048,codeknacker}`, `packages/ui/kit/game.js`, `e2e/games-more.spec.ts` |
 | Uploads | Verwaltung → Hochladen: ZIP = web app (script `mininode integrate`, then PR; what it cannot do becomes a GitHub issue `ai-review`), `.exe`/`.msi` = program for the PC/server | ADR 0013, `docs/runbooks/uploads.md`, `programs.md` |
 | Compat layers | `window.MiniNode` and `localStorage` apps run through `@mininode/sdk` (`installMiniNodeCompat`, `installLocalStorageSync`) | `packages/sdk/src/compat.ts` |
 | Own drawers and order | Schubladen and "Eigene Reihenfolge" per screen, on the start page and in the Gaming Hub | ADR 0015 |
@@ -71,7 +72,7 @@ since the PR #12 deploy. Earlier deploys stopped at medialog and never shipped t
   - Opt out per field or area with `data-mn-native`. Invalid fields get a German message under
     the parts (role=alert) instead of the browser bubble.
 - **Apps that load the kit:** haushalt, kalender, wunschliste, memory and medialog load
-  `ui.css` and `ui.js`. The Sportplaner has its own styles and loads only `ui.js`.
+  `ui.css` and `ui.js`; the games also load `game.js`. The Sportplaner has its own styles and loads only `ui.js`.
 - **Plain-script apps** (sportplaner, haushalt) share one global scope per page. Testable pure
   logic goes into its own file:
   - Sportplaner: `js/price.js`, tested by reading and evaluating the file in Vitest.

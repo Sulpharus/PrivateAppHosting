@@ -1,0 +1,41 @@
+{
+  "$schema": "../../packages/manifest/schema.json",
+  "specVersion": 1,
+  "slug": "minensucher",
+  "name": "Minensucher",
+  "description": "Minen finden, ohne eine zu treffen: drei Stufen mit Bestzeiten im Gaming Hub",
+  "kind": "static",
+  "target": "cloudflare",
+  "access": { "default": true },
+  "data": { "mode": "none" },
+  "game": {
+    "genre": "puzzle",
+    "players": "solo",
+    "stats": [
+      {
+        "id": "time_leicht",
+        "label": "Zeit Leicht",
+        "better": "lower",
+        "format": "seconds",
+        "min": 1,
+        "max": 7200
+      },
+      {
+        "id": "time_mittel",
+        "label": "Zeit Mittel",
+        "better": "lower",
+        "format": "seconds",
+        "min": 3,
+        "max": 7200
+      },
+      {
+        "id": "time_schwer",
+        "label": "Zeit Schwer",
+        "better": "lower",
+        "format": "seconds",
+        "min": 10,
+        "max": 7200
+      }
+    ]
+  }
+}

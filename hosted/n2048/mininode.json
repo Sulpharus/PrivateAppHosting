@@ -1,0 +1,19 @@
+{
+  "$schema": "../../packages/manifest/schema.json",
+  "specVersion": 1,
+  "slug": "n2048",
+  "name": "2048",
+  "description": "Kacheln verschieben und verschmelzen, bis 2048 erreicht ist, mit Bestenliste für Punkte und größte Kachel",
+  "kind": "static",
+  "target": "cloudflare",
+  "access": { "default": true },
+  "data": { "mode": "none" },
+  "game": {
+    "genre": "puzzle",
+    "players": "solo",
+    "stats": [
+      { "id": "score", "label": "Punkte", "better": "higher", "min": 4, "max": 3000000 },
+      { "id": "tile", "label": "Größte Kachel", "better": "higher", "min": 4, "max": 131072 }
+    ]
+  }
+}

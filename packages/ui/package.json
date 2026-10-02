@@ -7,7 +7,8 @@
     "./tokens.css": "./src/tokens.css",
     "./fonts.css": "./src/fonts.css",
     "./kit/ui.css": "./kit/ui.css",
-    "./kit/ui.js": "./kit/ui.js"
+    "./kit/ui.js": "./kit/ui.js",
+    "./kit/game.js": "./kit/game.js"
   },
   "dependencies": {
     "@fontsource-variable/bricolage-grotesque": "5.3.0",

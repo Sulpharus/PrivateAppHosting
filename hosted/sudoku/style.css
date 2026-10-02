@@ -1,0 +1,144 @@
+/* Sudoku: the board and the number pad. Everything else comes from the App Kit. */
+.su-page {
+  max-width: 980px;
+  margin: 0 auto;
+}
+.su-main {
+  display: grid;
+  gap: var(--mn-s4);
+}
+.su-play {
+  display: grid;
+  gap: var(--mn-s4);
+  justify-items: center;
+}
+@media (min-width: 820px) {
+  .su-play {
+    grid-template-columns: auto 1fr;
+    justify-items: start;
+    align-items: start;
+  }
+}
+.su-board {
+  --cell: min(10.4vw, 52px);
+  display: grid;
+  grid-template-columns: repeat(9, var(--cell));
+  border: 3px solid var(--mn-ink);
+  border-radius: 6px;
+  width: max-content;
+  background: var(--mn-line);
+  gap: 1px;
+}
+.su-cell {
+  position: relative;
+  width: var(--cell);
+  height: var(--cell);
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: var(--mn-surface);
+  color: var(--mn-accent-text);
+  font: 600 calc(var(--cell) * 0.55) / 1 var(--mn-font-text, inherit);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+/* Thicker lines between the blocks. */
+.su-cell[data-c="2"],
+.su-cell[data-c="5"] {
+  margin-right: 2px;
+}
+.su-cell[data-r="2"],
+.su-cell[data-r="5"] {
+  margin-bottom: 2px;
+}
+.su-cell.given {
+  color: var(--mn-ink);
+  font-weight: 800;
+}
+.su-cell.peer {
+  background: var(--mn-surface-2);
+}
+.su-cell.same {
+  background: var(--mn-accent-soft, var(--mn-surface-2));
+}
+.su-cell.selected {
+  background: var(--mn-accent-soft, var(--mn-surface-2));
+  outline: 3px solid var(--mn-accent);
+  outline-offset: -3px;
+}
+.su-cell.bad {
+  color: var(--mn-danger, #b3261e);
+  text-decoration: underline wavy;
+}
+.su-cell:focus-visible {
+  outline: 3px solid var(--mn-accent);
+  outline-offset: -3px;
+  z-index: 1;
+}
+.su-notes {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  width: 100%;
+  height: 100%;
+  padding: 2px;
+  font: 600 calc(var(--cell) * 0.24) / 1 var(--mn-font-text, inherit);
+  color: var(--mn-muted);
+}
+.su-notes span {
+  display: grid;
+  place-items: center;
+}
+.su-side {
+  display: grid;
+  gap: var(--mn-s3);
+  width: 100%;
+  max-width: 340px;
+}
+.su-pad {
+  display: grid;
+  grid-template-columns: repeat(9, 1fr);
+  gap: var(--mn-s1);
+}
+@media (min-width: 820px) {
+  .su-pad {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+.su-key {
+  min-height: 44px;
+  border: 1px solid var(--mn-line);
+  border-radius: var(--mn-r-sm, 8px);
+  background: var(--mn-surface);
+  color: var(--mn-ink);
+  font: 700 20px / 1 var(--mn-font-text, inherit);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.su-key:focus-visible {
+  outline: 3px solid var(--mn-accent);
+  outline-offset: 2px;
+}
+.su-key:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.su-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mn-s2);
+}
+.su-end {
+  text-align: center;
+  display: grid;
+  gap: var(--mn-s2);
+}
+.su-section h2 {
+  font-size: var(--mn-fs-lg);
+}
+.su-section p {
+  color: var(--mn-muted);
+  max-width: 62ch;
+}

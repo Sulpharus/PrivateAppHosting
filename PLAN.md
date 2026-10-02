@@ -380,6 +380,7 @@ Everyday apps and platform features that grew next to the phases, each with its 
 | App catalog (favourites, categories, sets) | done | ADR 0007 |
 | People for in-app sharing | done | ADR 0008 |
 | Gaming Hub (games only there, not on the start page) | done | ADR 0009, `hosted/memory` |
+| More Gaming Hub games: Minensucher, Sudoku (generator, five levels), Solitär, 2048, Codeknacker | done | `hosted/minensucher`, `sudoku`, `solitaer`, `n2048`, `codeknacker`; shared helper `packages/ui/kit/game.js` |
 | Suite core (shared records, collections, app grants) | done, lean phase | ADR 0002, `docs/suite/data-types.md` |
 | Kalender (own, shared and other apps' dates) | done | `hosted/kalender` |
 | Google Calendar two-way sync | done | ADR 0010, `docs/runbooks/kalender.md` |

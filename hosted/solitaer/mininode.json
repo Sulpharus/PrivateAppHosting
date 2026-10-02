@@ -1,0 +1,27 @@
+{
+  "$schema": "../../packages/manifest/schema.json",
+  "specVersion": 1,
+  "slug": "solitaer",
+  "name": "Solitär",
+  "description": "Klassisches Klondike mit einer Karte pro Zug, Punkten und Bestzeiten im Gaming Hub",
+  "kind": "static",
+  "target": "cloudflare",
+  "access": { "default": true },
+  "data": { "mode": "none" },
+  "game": {
+    "genre": "karten",
+    "players": "solo",
+    "stats": [
+      {
+        "id": "time",
+        "label": "Zeit",
+        "better": "lower",
+        "format": "seconds",
+        "min": 30,
+        "max": 7200
+      },
+      { "id": "moves", "label": "Züge", "better": "lower", "min": 52, "max": 5000 },
+      { "id": "score", "label": "Punkte", "better": "higher", "min": 0, "max": 1000 }
+    ]
+  }
+}
