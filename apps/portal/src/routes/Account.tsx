@@ -102,11 +102,13 @@ export function Account() {
     if (!profile || language === profile.language) return;
     setError(null);
     setMessage(null);
-    const { error: updateError } = await platform()
+    const { data: saved, error: updateError } = await platform()
       .from('profiles')
       .update({ language })
-      .eq('user_id', profile.userId);
-    if (updateError) {
+      .eq('user_id', profile.userId)
+      .select('language');
+    // No error but no row either: RLS refused it, nothing was saved.
+    if (updateError || !saved?.length) {
       setError(
         language === 'en'
           ? 'Could not save the language.'

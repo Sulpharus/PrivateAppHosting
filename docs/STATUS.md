@@ -25,7 +25,7 @@ Where things are documented:
 | Topic | Read |
 | --- | --- |
 | Architecture, phases, data model | `PLAN.md` |
-| Decisions | `docs/adr/0001`–`0017` |
+| Decisions | `docs/adr/0001`–`0018` |
 | Operations: setup, NucBox, keys, Kalender, App-Bibliothek, app export, restore | `docs/runbooks/` (index in its README) |
 | Building apps with AI: spec, design system, prompt modules, playbooks | `docs/ai/` |
 | Shared data types (suite) | `docs/suite/data-types.md` |
@@ -56,6 +56,7 @@ Where things are documented:
 | Verwaltung menu | "Hochladen" is a button in Apps; Apps has a switch Apps / Gaming Hub and sorts by name, category, own drawer or status; "Hardware-Server" holds Auslastung (was NucBox), Remote-Apps and App-Bibliothek (old URLs redirect) | `apps/portal/src/admin/{Apps,Hardware,AdminLayout}.tsx` |
 | KI-Werkstatt | Features in 7 collapsible groups with search; 19 new feature modules (money, dates, editor, drag sort, AI chat/vision, roles, comments, accessibility, errors, testing, migration, game save/touch/generator/kit, container, remote program, library entry) and 2 new types (Server-Dienst, Programm) | `docs/ai/prompts/`, `apps/portal/src/admin/{Workshop,prompts}.ts(x)` |
 | Language switch | Per person in Konto → "Sprache / Language" (de/en, profile + `mn-lang` cookie); every hosted app has `i18n/de.json` + `en.json`; new apps must ship both; doctor checks them | ADR 0017, `docs/ai/LANGUAGE-PACKAGES.md`, `packages/ui/kit/i18n.js`, `e2e/language.spec.ts` |
+| App logos | Verwaltung → Apps uploads a logo per app (bucket `app-icons`); deploy picks up `icon.svg`; prompt module "App-Logo"; tile buttons in their own row | ADR 0018, `apps/portal/src/lib/appIcon.ts`, `packages/cli/src/deploy/icon.ts`, `e2e/app-icons.spec.ts` |
 | German formats | Date, month and time inputs as German parts in every browser; full dates as "01. Okt. 2026"; German numbers | `packages/ui/kit/ui.js`, `docs/ai/DESIGN-SYSTEM.md` §8 |
 
 The Sportplaner map (tab "Karte") and course mode (editor step "Zeiten" → "Kurs") are live

@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { useStepUp } from '../auth/StepUp.tsx';
+import { AppIcon } from '../components/AppIcon.tsx';
 import { Dialog } from '../components/Dialog.tsx';
 import { ApiError, api } from '../lib/api.ts';
-import { type AppRow, listApps, monogram, tileUrl, tintFor } from '../lib/apps.ts';
+import { clearAppIcon, setAppIcon } from '../lib/appIcon.ts';
+import { type AppRow, listApps, tileUrl } from '../lib/apps.ts';
 import { type Category, listCategories } from '../lib/catalog.ts';
 import { platform } from '../lib/supabase.ts';
 import { useArrangement } from '../lib/useArrangement.ts';
@@ -136,6 +138,15 @@ export function Apps() {
       });
       if (rpcError) throw rpcError;
     }, `Kategorie von ${app.name} gespeichert.`);
+
+  const uploadIcon = (app: AppRow, file: File) =>
+    void guarded(
+      () => setAppIcon(app.slug, file, app.icon_path),
+      `Logo von ${app.name} gespeichert.`,
+    );
+
+  const removeIcon = (app: AppRow) =>
+    void guarded(() => clearAppIcon(app.slug, app.icon_path), `Logo von ${app.name} entfernt.`);
 
   const saveLink = (form: HTMLFormElement) => {
     const data = new FormData(form);
@@ -398,18 +409,7 @@ export function Apps() {
                   <tr key={app.slug}>
                     <td>
                       <div className="row">
-                        <div
-                          className="monogram"
-                          style={{
-                            background: tintFor(app.slug),
-                            width: 32,
-                            height: 32,
-                            fontSize: 12,
-                          }}
-                          aria-hidden="true"
-                        >
-                          {monogram(app.name)}
-                        </div>
+                        <AppIcon app={app} size={32} fontSize={12} />
                         <div>
                           <a
                             href={tileUrl(app)}
@@ -420,6 +420,31 @@ export function Apps() {
                           </a>
                           <div className="muted mono">
                             {app.link_url ?? `${app.slug}.mininode.app`}
+                          </div>
+                          <div className="row" style={{ gap: 4, flexWrap: 'wrap' }}>
+                            <label className="button small ghost" style={{ cursor: 'pointer' }}>
+                              {app.icon_path ? 'Logo ändern' : 'Logo hochladen'}
+                              <input
+                                type="file"
+                                accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                                className="sr-only"
+                                aria-label={`Logo für ${app.name} wählen`}
+                                onChange={(event) => {
+                                  const file = event.target.files?.[0];
+                                  event.target.value = '';
+                                  if (file) uploadIcon(app, file);
+                                }}
+                              />
+                            </label>
+                            {app.icon_path && (
+                              <button
+                                type="button"
+                                className="button small ghost"
+                                onClick={() => removeIcon(app)}
+                              >
+                                Logo entfernen
+                              </button>
+                            )}
                           </div>
                         </div>
                       </div>

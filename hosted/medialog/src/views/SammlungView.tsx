@@ -2,7 +2,7 @@ import type React from 'react';
 import { useMemo, useState } from 'react';
 import { MediaRow } from '../components/MediaRow';
 import { MediaTile } from '../components/MediaTile';
-import { t } from '../i18n';
+import { locale, t } from '../i18n';
 import { executeSemanticSearch } from '../services/semanticSearch';
 import type { MediaItem } from '../types';
 
@@ -202,12 +202,12 @@ export const SammlungView: React.FC<SammlungViewProps> = ({
           return new Date(b.item.updatedAt).getTime() - new Date(a.item.updatedAt).getTime();
         }
         if (sortBy === 'title') {
-          return a.item.title.localeCompare(b.item.title, 'de');
+          return a.item.title.localeCompare(b.item.title, locale());
         }
         if (sortBy === 'console') {
           const conA = a.item.console || a.item.platform || 'ZZZ';
           const conB = b.item.console || b.item.platform || 'ZZZ';
-          return conA.localeCompare(conB, 'de');
+          return conA.localeCompare(conB, locale());
         }
         if (sortBy === 'rating') {
           return (b.item.rating || 0) - (a.item.rating || 0);

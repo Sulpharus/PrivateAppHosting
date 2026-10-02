@@ -1412,7 +1412,7 @@ async function searchSteamGames(query: string): Promise<ApiSearchResult[]> {
         sourceApi: 'steam',
         attribution: 'Daten: Steam Store',
         title,
-        creator: 'Steam Publisher / Entwickler',
+        creator: t('api.gameDeveloper'),
         kind: 'game',
         genres: [t('api.genreGame'), 'PC / Steam'],
         cover,

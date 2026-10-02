@@ -18,6 +18,7 @@ import { createClient } from '@supabase/supabase-js';
 import postgres from 'postgres';
 import { doctor } from '../doctor.ts';
 import { type DeployEnv, environmentSettings } from './environment.ts';
+import { syncIcon } from './icon.ts';
 import { exposeSchemas, migrateApp, migrationFiles } from './migrate.ts';
 import { registerApp } from './register.ts';
 import { appWranglerConfig } from './wrangler-config.ts';
@@ -262,6 +263,10 @@ export async function deployApp(appDir: string, options: DeployOptions): Promise
     options.origins ?? (env.name === 'local' ? [] : [`https://${manifest.slug}.${env.domain}`]);
   await registerApp(db, manifest, options.version, origins);
   log(`  registered ${manifest.slug} (${options.version})`);
+  // A logo is a nice-to-have: a failing upload must not undo a finished deploy.
+  await syncIcon(db, appDir, manifest.slug, log).catch((error: Error) =>
+    log(`  logo skipped: ${error.message}`),
+  );
 }
 
 /** Local preview: registers the app in the local database and serves it through the gate. */

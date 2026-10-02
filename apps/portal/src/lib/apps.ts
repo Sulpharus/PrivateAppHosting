@@ -29,6 +29,8 @@ export interface AppRow {
   game_genre: string | null;
   /** Set for programs from the App-Bibliothek (ADR 0011). */
   library: string | null;
+  /** Logo in the bucket `app-icons` (ADR 0018); the monogram when null. */
+  icon_path: string | null;
 }
 
 export interface RemoteStatus {
@@ -56,7 +58,7 @@ export async function listApps(): Promise<AppRow[]> {
   const { data, error } = await platform()
     .from('apps')
     .select(
-      'slug, name, description, kind, target, data_mode, status, is_default, deployed_version, deployed_at, remote_runtime:manifest->remote->>runtime, category_id, category_manual, created_at, link_url, whitelist, game_genre:manifest->game->>genre, library:manifest->>library',
+      'slug, name, description, kind, target, data_mode, status, is_default, deployed_version, deployed_at, remote_runtime:manifest->remote->>runtime, category_id, category_manual, created_at, link_url, whitelist, game_genre:manifest->game->>genre, library:manifest->>library, icon_path',
     )
     .order('name');
   if (error) {

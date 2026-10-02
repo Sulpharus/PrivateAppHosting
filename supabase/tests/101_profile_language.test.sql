@@ -1,5 +1,5 @@
 begin;
-select plan(6);
+select plan(7);
 select tests.reset();
 
 select tests.create_user('admin@example.com') as admin_id \gset
@@ -16,9 +16,10 @@ select throws_ok($$update platform.profiles set language = 'fr' where user_id = 
   '23514', null, 'only the offered languages are accepted');
 
 select tests.login(:'ben_id');
-select is_empty($$update platform.profiles set language = 'en' where user_id = (select user_id from platform.profiles where display_name = 'anna') returning 1$$,
+select is_empty(format($f$update platform.profiles set language = 'en' where user_id = %L returning 1$f$, :'anna_id'),
   'nobody changes the language of someone else');
 select tests.logout();
+select ok(not has_column_privilege('anon', 'platform.profiles', 'language', 'update'), 'anonymous visitors cannot change it');
 select is((select language from platform.profiles where user_id = :'anna_id'), 'en', 'the other person is unchanged');
 
 select * from finish();

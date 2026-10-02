@@ -145,9 +145,7 @@ export function itemsFor(
       });
     }
   }
-  return out.sort(
-    (a, b) => a.start - b.start || b.end - a.end || a.title.localeCompare(b.title, 'de'),
-  );
+  return out.sort((a, b) => a.start - b.start || b.end - a.end || a.title.localeCompare(b.title));
 }
 
 /** Items that touch a day (multi-day and all-day ones included). */

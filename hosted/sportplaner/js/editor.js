@@ -228,7 +228,15 @@ function toRange(p) {
 }
 // Stored period label of a course (kept for existing data); shown in the active language.
 const COURSE_LABEL = 'Kurs';
-const labelText = (label) => (label === COURSE_LABEL ? tr('period.course') : label || '');
+// Labels that the app writes itself are stored as markers, so they follow the language.
+const SEASON_WINTER = '__winter';
+const SEASON_SUMMER = '__summer';
+const MARKER_KEYS = {
+  [COURSE_LABEL]: 'period.course',
+  [SEASON_WINTER]: 'ed.blockWinter',
+  [SEASON_SUMMER]: 'ed.blockSummer',
+};
+const labelText = (label) => (MARKER_KEYS[label] ? tr(MARKER_KEYS[label]) : label || '');
 const yearlyCheck = (attr, on) =>
   `<label class="yearly-check"><input type="checkbox" ${attr}${on ? ' checked' : ''}>${esc(tr('ed.repeatYearly'))}</label>`;
 const seasonOpts = (scope) => [
@@ -436,8 +444,12 @@ function fieldSync(t) {
   if (!draft || !t.dataset || !t.dataset.f) return;
   const { f, b, r, k, s: si } = t.dataset;
   if (f === 'row') draft.blocks[+b].rows[+r][k] = t.value;
-  else if (f === 'per') draft.blocks[+b].period[k] = t.value;
-  else if (f === 'single') draft.singles[+si][k] = t.value;
+  else if (f === 'per') {
+    const period = draft.blocks[+b].period;
+    // An unchanged marker label ("Winter") stays a marker, so it follows the language.
+    if (k === 'label' && MARKER_KEYS[period[k]] && t.value === tr(MARKER_KEYS[period[k]])) return;
+    period[k] = t.value;
+  } else if (f === 'single') draft.singles[+si][k] = t.value;
 }
 const syncSlotsDOM = () => {
   if (draft && draft.blocks) document.querySelectorAll('#slots [data-f]').forEach(fieldSync);
@@ -775,10 +787,10 @@ const BLOCK_HANDLERS = {
   'blk-split': (t) => {
     const b = draft.blocks[+t.dataset.b];
     const winter = {
-      period: { type: 'yearly', from: '10-01', until: '03-31', label: tr('ed.blockWinter') },
+      period: { type: 'yearly', from: '10-01', until: '03-31', label: SEASON_WINTER },
       rows: b.rows.map((r) => ({ ...r, days: [...r.days] })),
     };
-    b.period = { type: 'yearly', from: '04-01', until: '09-30', label: tr('ed.blockSummer') };
+    b.period = { type: 'yearly', from: '04-01', until: '09-30', label: SEASON_SUMMER };
     draft.blocks.splice(+t.dataset.b + 1, 0, winter);
     renderSlots();
     toast(tr('ed.splitToast'));

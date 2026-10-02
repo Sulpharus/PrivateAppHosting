@@ -48,6 +48,12 @@ every app; `docs/ai/LANGUAGE-PACKAGES.md` says how to write them (British Englis
 in both languages, brand and app names stay, formats follow the locale). The KI-Werkstatt prompts
 and the `integrate-app` skill carry the same rule.
 
+Known limits: texts a person saved from an API or by default (Medialog's fallback genres and
+creators, a Kalender reminder's title once scheduled) keep the language of the moment they were
+written. Sportplaner's season labels ("Winter", "Sommer", "Kurs") are stored as markers and follow
+the language. A dialog that is open during a language change is redrawn when it closes (Medialog
+remounts the app at once, so unsaved editor input is lost).
+
 ## Not covered
 
 - The portal itself (start page, Verwaltung, login) is still German; only the Konto language card is

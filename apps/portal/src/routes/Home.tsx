@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import { useAuth } from '../auth/AuthProvider.tsx';
+import { AppIcon } from '../components/AppIcon.tsx';
 import { AppDrawersDialog, DrawerContentDialog, NameDialog } from '../components/DrawerDialogs.tsx';
 import {
   AppsIcon,
@@ -411,7 +412,7 @@ export function Home() {
               label={(app) => app.name}
               onReorder={(slugs) => void arrange.reorder(scopeOf.view(filter), slugs)}
               render={(app) => (
-                <div style={{ position: 'relative' }}>
+                <div className="tile-box">
                   <a
                     className="tile"
                     href={tileUrl(app)}
@@ -423,13 +424,7 @@ export function Home() {
                     }}
                   >
                     <div className="tile-head">
-                      <div
-                        className="monogram"
-                        style={{ background: tintFor(app.slug) }}
-                        aria-hidden="true"
-                      >
-                        {monogram(app.name)}
-                      </div>
+                      <AppIcon app={app} />
                       <div className="tile-title">
                         <strong>{app.name}</strong>
                         <span className="mono">
@@ -452,25 +447,25 @@ export function Home() {
                     </div>
                     <p>{app.description}</p>
                   </a>
-                  <button
-                    type="button"
-                    className="pin fav"
-                    style={{ position: 'absolute', right: 4, bottom: 4 }}
-                    aria-pressed={favorites.has(app.slug)}
-                    aria-label={`${app.name} als Favorit`}
-                    onClick={() => void toggleFavorite(app.slug)}
-                  >
-                    <StarIcon />
-                  </button>
-                  <button
-                    type="button"
-                    className="pin"
-                    style={{ position: 'absolute', right: 48, bottom: 4 }}
-                    aria-label={`${app.name} in Schubladen`}
-                    onClick={() => setDialog({ kind: 'app', slug: app.slug })}
-                  >
-                    <DrawerIcon />
-                  </button>
+                  <div className="tile-actions">
+                    <button
+                      type="button"
+                      className="pin"
+                      aria-label={`${app.name} in Schubladen`}
+                      onClick={() => setDialog({ kind: 'app', slug: app.slug })}
+                    >
+                      <DrawerIcon />
+                    </button>
+                    <button
+                      type="button"
+                      className="pin fav"
+                      aria-pressed={favorites.has(app.slug)}
+                      aria-label={`${app.name} als Favorit`}
+                      onClick={() => void toggleFavorite(app.slug)}
+                    >
+                      <StarIcon />
+                    </button>
+                  </div>
                 </div>
               )}
             />

@@ -47,7 +47,7 @@
     } catch {
       // offline without a cached copy: the app stays in German
     }
-    if (found && typeof found !== 'object') found = null;
+    if (found && (typeof found !== 'object' || Array.isArray(found))) found = null;
     packages.set(code, found);
     return found;
   };

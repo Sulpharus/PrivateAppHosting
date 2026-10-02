@@ -415,7 +415,10 @@
         month.value = chosen;
       }
       if (year) year.placeholder = words().year;
-      if (!message.hidden) input.dispatchEvent(new Event('invalid'));
+      if (!message.hidden) {
+        checkRange();
+        input.dispatchEvent(new Event('invalid'));
+      }
     };
     relabelers.add(relabel);
     input.classList.add('mn-date-native');
