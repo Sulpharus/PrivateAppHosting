@@ -3,6 +3,7 @@ id: keyboard
 title: Tastatur und Desktop
 summary: Tastenkürzel, Mehrfachauswahl, Kontextmenü, breite Layouts
 order: 97
+group: qualitaet
 ---
 
 ## Feature: keyboard and desktop use

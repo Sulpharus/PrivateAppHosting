@@ -6,6 +6,8 @@ export interface PromptPart {
   title: string;
   summary: string;
   accent?: string;
+  /** Modules only: the id of the group they are listed under (see MODULE_GROUPS). */
+  group?: string;
   order: number;
   body: string;
 }
@@ -35,6 +37,48 @@ export interface Brief {
   short: boolean;
   /** Paste the kit CSS into the prompt instead of attaching ui.css. */
   embedKit: boolean;
+}
+
+/** The collapsible groups of features in the composer, in this order. */
+export const MODULE_GROUPS: { id: string; label: string; hint: string }[] = [
+  { id: 'daten', label: 'Daten und Inhalte', hint: 'Eingeben, speichern, finden, drucken' },
+  { id: 'anbindungen', label: 'KI und Anbindungen', hint: 'KI, Google, APIs, Karten, andere Apps' },
+  {
+    id: 'teilen',
+    label: 'Teilen und Zusammenarbeit',
+    hint: 'Mehrere Personen, Rechte, Kommentare',
+  },
+  { id: 'offline', label: 'Erinnerungen und Offline', hint: 'Push, Timer, ohne Internet arbeiten' },
+  {
+    id: 'qualitaet',
+    label: 'Qualität und Bedienung',
+    hint: 'Start, Tastatur, Barrierefreiheit, Tests',
+  },
+  { id: 'spiele', label: 'Spiele', hint: 'Gaming Hub, Steuerung, Level, Generatoren' },
+  {
+    id: 'server',
+    label: 'Server und Programme',
+    hint: 'Container, PC/Server-Programme, Bibliothek',
+  },
+];
+
+export interface ModuleGroup {
+  id: string;
+  label: string;
+  hint: string;
+  parts: PromptPart[];
+}
+
+/** Sorts modules into MODULE_GROUPS; modules with an unknown or no group land in "Weitere". */
+export function groupModules(modules: PromptPart[]): ModuleGroup[] {
+  const known = new Set(MODULE_GROUPS.map((g) => g.id));
+  const groups: ModuleGroup[] = MODULE_GROUPS.map((g) => ({
+    ...g,
+    parts: modules.filter((m) => m.group === g.id),
+  }));
+  const rest = modules.filter((m) => !m.group || !known.has(m.group));
+  if (rest.length) groups.push({ id: 'weitere', label: 'Weitere', hint: '', parts: rest });
+  return groups.filter((g) => g.parts.length > 0);
 }
 
 export const ACCENTS: [string, string][] = [
@@ -129,6 +173,7 @@ export function parsePart(raw: string): PromptPart {
     title: meta.title ?? meta.id ?? '',
     summary: meta.summary ?? '',
     ...(meta.accent ? { accent: meta.accent } : {}),
+    ...(meta.group ? { group: meta.group } : {}),
     order: Number(meta.order ?? 100),
     body,
   };

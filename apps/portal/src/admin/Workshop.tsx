@@ -9,6 +9,7 @@ import {
   BUILDERS,
   type Builder,
   compose,
+  groupModules,
   slugify,
 } from './prompts.ts';
 
@@ -52,6 +53,8 @@ export function Workshop() {
   });
   const [accentTouched, setAccentTouched] = useState(false);
   const [status, setStatus] = useState('');
+  const [filter, setFilter] = useState('');
+  const groups = useMemo(() => groupModules(LIBRARY.modules), []);
   const output = useRef<HTMLTextAreaElement>(null);
   const prompt = useMemo(() => compose(brief, LIBRARY), [brief]);
   const set = <K extends keyof Brief>(key: K, value: Brief[K]) =>
@@ -195,21 +198,66 @@ export function Workshop() {
 
             <fieldset className="workshop-set">
               <legend>Funktionen</legend>
-              <div className="workshop-checks">
-                {LIBRARY.modules.map((m) => (
-                  <label key={m.id}>
-                    <input
-                      type="checkbox"
-                      checked={brief.modules.includes(m.id)}
-                      onChange={() => toggleModule(m.id)}
-                    />
-                    <span>
-                      {m.title}
-                      <small className="muted">{m.summary}</small>
-                    </span>
-                  </label>
-                ))}
-              </div>
+              <label className="field">
+                <span className="sr-only">Funktionen durchsuchen</span>
+                <input
+                  type="search"
+                  value={filter}
+                  onChange={(e) => setFilter(e.target.value)}
+                  placeholder="Funktion suchen, z. B. Kamera, Geld, Spiel"
+                  autoComplete="off"
+                />
+              </label>
+              {groups.map((group) => {
+                const needle = filter.trim().toLowerCase();
+                const parts = needle
+                  ? group.parts.filter((m) =>
+                      `${m.title} ${m.summary}`.toLowerCase().includes(needle),
+                    )
+                  : group.parts;
+                if (parts.length === 0) return null;
+                const chosen = group.parts.filter((m) => brief.modules.includes(m.id)).length;
+                return (
+                  <details
+                    key={group.id}
+                    className="workshop-group"
+                    open={needle ? true : undefined}
+                  >
+                    <summary>
+                      <span className="workshop-group-title">{group.label}</span>
+                      <span className="muted small-text">{group.hint}</span>
+                      <span className={`pill${chosen ? ' accent' : ''}`}>
+                        {chosen > 0 ? `${chosen} gewählt` : `${group.parts.length}`}
+                      </span>
+                    </summary>
+                    <div className="workshop-checks">
+                      {parts.map((m) => (
+                        <label key={m.id}>
+                          <input
+                            type="checkbox"
+                            checked={brief.modules.includes(m.id)}
+                            onChange={() => toggleModule(m.id)}
+                          />
+                          <span>
+                            {m.title}
+                            <small className="muted">{m.summary}</small>
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  </details>
+                );
+              })}
+              {brief.modules.length > 0 && (
+                <p className="muted small-text">
+                  {brief.modules.length} {brief.modules.length === 1 ? 'Funktion' : 'Funktionen'}{' '}
+                  gewählt:{' '}
+                  {LIBRARY.modules
+                    .filter((m) => brief.modules.includes(m.id))
+                    .map((m) => m.title)
+                    .join(', ')}
+                </p>
+              )}
             </fieldset>
 
             <div className="workshop-two">

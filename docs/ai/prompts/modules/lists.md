@@ -3,6 +3,7 @@ id: lists
 title: Listen und Aufgaben
 summary: Checklisten, Unteraufgaben, Reihenfolge, Erledigt-Bereich, Einkaufslisten
 order: 22
+group: daten
 ---
 
 ## Feature: lists and tasks

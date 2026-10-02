@@ -3,6 +3,7 @@ id: print
 title: Drucken und PDF
 summary: Druckansicht, Listen und Berichte als PDF über den Browser
 order: 52
+group: daten
 ---
 
 ## Feature: printing and PDF

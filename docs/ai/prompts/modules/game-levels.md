@@ -3,6 +3,7 @@ id: game-levels
 title: Level, Schwierigkeit und Tagesrätsel
 summary: Fortschritt über Level, Schwierigkeitsstufen und ein tägliches Rätsel für alle
 order: 103
+group: spiele
 ---
 
 ## Feature: progression and daily challenge

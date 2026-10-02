@@ -3,6 +3,7 @@ id: stats
 title: Statistik und Diagramme
 summary: Kennzahlen, Balken, Jahresübersicht, Heatmap
 order: 90
+group: daten
 ---
 
 ## Feature: statistics and charts

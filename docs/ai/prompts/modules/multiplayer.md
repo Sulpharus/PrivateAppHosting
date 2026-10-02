@@ -3,6 +3,7 @@ id: multiplayer
 title: Mehrspieler
 summary: Partien zwischen Nutzern, Züge in Echtzeit, Lobby
 order: 100
+group: spiele
 ---
 
 ## Feature: multiplayer

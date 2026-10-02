@@ -3,6 +3,7 @@ id: onboarding
 title: Erster Start und Hilfe
 summary: Leere Zustände, Beispieldaten, kurze Einführung, Hilfetexte
 order: 16
+group: qualitaet
 ---
 
 ## Feature: first start and help

@@ -3,6 +3,7 @@ id: import-export
 title: Import und Export
 summary: JSON-Sicherung, CSV-Import mit Spaltenzuordnung, CSV-Export
 order: 50
+group: daten
 ---
 
 ## Feature: import and export

@@ -3,6 +3,7 @@ id: privacy
 title: Sensible Daten und Datenschutz
 summary: Gesundheits-, Finanz- oder Personendaten sparsam und nachvollziehbar speichern
 order: 95
+group: qualitaet
 ---
 
 ## Feature: sensitive data

@@ -3,6 +3,7 @@ id: timer
 title: Timer und Zeiterfassung
 summary: Stoppuhr, Countdown, Zeiten erfassen, Bildschirm wach halten
 order: 58
+group: offline
 ---
 
 ## Feature: timers and time tracking

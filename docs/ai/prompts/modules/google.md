@@ -3,6 +3,7 @@ id: google
 title: Gmail und Google Kalender
 summary: Mails und Termine des angemeldeten Nutzers lesen und schreiben
 order: 35
+group: anbindungen
 ---
 
 ## Feature: Gmail and Google Calendar

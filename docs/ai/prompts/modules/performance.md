@@ -3,6 +3,7 @@ id: performance
 title: Große Datenmengen
 summary: Tausende Einträge, Seitenweise laden, schnelle Listen, Indizes
 order: 96
+group: daten
 ---
 
 ## Feature: large amounts of data

@@ -3,6 +3,7 @@ id: game-opponent
 title: Computergegner
 summary: KI-Gegner für Brett- und Kartenspiele in mehreren Stärken
 order: 104
+group: spiele
 ---
 
 ## Feature: computer opponent

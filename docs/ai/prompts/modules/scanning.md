@@ -3,6 +3,7 @@ id: scanning
 title: Kamera und Scannen
 summary: Barcodes und QR-Codes per Foto erkennen, Dokumente fotografieren
 order: 18
+group: daten
 ---
 
 ## Feature: camera and scanning

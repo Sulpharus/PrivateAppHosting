@@ -146,7 +146,12 @@ test('the KI-Werkstatt composes a prompt for a new app', async ({ page }) => {
   await page.getByLabel('Name der App').fill('Bücherregal');
   await page.getByLabel('Was soll die App können?').fill('Gelesene Bücher mit Bewertung.');
   await page.getByRole('button', { name: 'Archiv und Sammlung' }).click();
+  // Features sit in collapsible groups; the group opens with a click and counts what is chosen.
+  await expect(page.getByRole('checkbox', { name: /Fotos und Dateien/ })).toBeHidden();
+  await page.getByText('Daten und Inhalte', { exact: true }).click();
   await page.getByRole('checkbox', { name: /Fotos und Dateien/ }).check();
+  await expect(page.getByText('1 gewählt')).toBeVisible();
+
   await page.getByLabel('Wo baust du sie?').selectOption({ label: 'Google AI Studio' });
   const prompt = page.getByLabel('Fertiger Prompt');
   await expect(prompt).toHaveValue(/# Build the MiniNode app "Bücherregal"/);

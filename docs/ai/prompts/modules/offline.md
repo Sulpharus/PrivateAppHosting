@@ -3,6 +3,7 @@ id: offline
 title: Offline nutzbar
 summary: App öffnet ohne Internet, Einträge offline anlegen, Abgleich bei Verbindung
 order: 64
+group: offline
 ---
 
 ## Feature: offline use and sync

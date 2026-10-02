@@ -3,6 +3,7 @@ id: notifications
 title: Erinnerungen
 summary: Fällige Einträge in der App und in der Glocke des Portals
 order: 60
+group: offline
 ---
 
 ## Feature: reminders
