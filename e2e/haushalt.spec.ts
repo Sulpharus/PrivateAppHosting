@@ -140,14 +140,7 @@ test('haushalt plans fixed costs, spots a changed price and shows the month', as
   await signIn(page, clara);
 
   await page.getByRole('button', { name: 'Planung' }).first().click();
-  try {
-    await expect(page.getByText('Noch keine Fixkosten')).toBeVisible();
-  } catch (error) {
-    // TEMPORARY diagnosis of a CI-only failure.
-    const text = await page.locator('body').innerText().catch(() => 'n/a');
-    console.log('DEBUG-PAGE', page.url(), JSON.stringify(text.slice(0, 1800)), JSON.stringify(errors));
-    throw error;
-  }
+  await expect(page.getByText('Noch keine Fixkosten')).toBeVisible();
   const dialog = page.getByRole('dialog');
   const addFixed = async (text: string, amount: string, art: string, kind?: string) => {
     await page.getByRole('button', { name: 'Fixkosten hinzufügen' }).first().click();
