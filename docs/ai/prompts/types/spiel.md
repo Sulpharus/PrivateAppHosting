@@ -21,7 +21,8 @@ Small games: puzzles, quizzes, card or board games, reflex games.
   Compute the level from xp with a fixed formula and show progress with `mn-meter`.
 - **Gaming Hub:** add the `game` block to `mininode.json` and report playtime and rounds with
   `mn.game` (module "Gaming Hub anbinden"). The username comes from the hub; leaderboards come
-  from `mn.game.leaderboard()`, not from your own kv keys.
+  from `mn.game.leaderboard()`, not from your own kv keys. The kit script `/_mininode/game.js`
+  (`window.mnGame`: `connect`, `timer`, `report`, `leaders`) does that shell for you.
 - **Motion:** short `transform` animations for moves; everything stays playable with
   `prefers-reduced-motion`.
 - **Fairness:** randomness from `crypto.getRandomValues`, scoring rules shown on *Regeln*.

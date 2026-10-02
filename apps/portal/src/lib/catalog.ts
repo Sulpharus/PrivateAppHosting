@@ -116,13 +116,14 @@ export function recordOpen(slug: string): void {
     .catch(() => undefined);
 }
 
-export type Sort = 'name' | 'used' | 'new' | 'old';
+export type Sort = 'name' | 'used' | 'new' | 'old' | 'custom';
 
 export const SORT_LABEL: Record<Sort, string> = {
   name: 'A–Z',
   used: 'Meistgenutzt',
   new: 'Neu',
   old: 'Alt',
+  custom: 'Eigene Reihenfolge',
 };
 
 /** Sorts apps for the start page; ties fall back to the name. */

@@ -1,0 +1,64 @@
+name: KI-Prüfung abgeschlossen
+
+# When an `ai-review` issue (opened by integrate.yml) is closed, the upload in Verwaltung →
+# Hochladen follows: done when a session finished the integration, dismissed when closed as not
+# planned. The branch review/<id> with the ZIP is removed in both cases.
+
+on:
+  issues:
+    types: [closed]
+
+permissions:
+  contents: write
+
+jobs:
+  marker:
+    name: Read the marker
+    if: contains(github.event.issue.labels.*.name, 'ai-review')
+    runs-on: ubuntu-latest
+    outputs:
+      id: ${{ steps.read.outputs.id }}
+      env: ${{ steps.read.outputs.env }}
+    steps:
+      - id: read
+        env:
+          BODY: ${{ github.event.issue.body }}
+        run: |
+          line=$(printf '%s' "$BODY" | grep -o 'mininode-submission id=[0-9a-f-]* env=[a-z]*' | head -n1 || true)
+          [ -n "$line" ] || { echo "no marker"; exit 0; }
+          id=$(printf '%s' "$line" | sed -E 's/.* id=([0-9a-f-]+) .*/\1/')
+          env=$(printf '%s' "$line" | sed -E 's/.* env=([a-z]+)$/\1/')
+          [[ "$id" =~ ^[0-9a-f-]{36}$ ]] || exit 0
+          [[ "$env" =~ ^(production|staging)$ ]] || exit 0
+          { echo "id=$id"; echo "env=$env"; } >> "$GITHUB_OUTPUT"
+
+  close:
+    name: Update the upload
+    needs: marker
+    if: needs.marker.outputs.id != ''
+    runs-on: ubuntu-latest
+    environment: ${{ needs.marker.outputs.env }}
+    env:
+      SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+      SUPABASE_URL: ${{ needs.marker.outputs.env == 'production' && 'https://ojicmpgqvoyakigvubek.supabase.co' || 'https://ttgrtecdqouiogiwcjag.supabase.co' }}
+      SUPABASE_PUBLISHABLE_KEY: ${{ needs.marker.outputs.env == 'production' && 'sb_publishable_jv1tZqYWg51sNxJ5-GjMMw_tZqa1s1C' || 'sb_publishable_zQfFz-ruNPkIQauwa253iw_4zOZmiOB' }}
+      STAGING_DOMAIN: ${{ vars.STAGING_DOMAIN }}
+      REASON: ${{ github.event.issue.state_reason }}
+      ID: ${{ needs.marker.outputs.id }}
+      DEPLOY_ENV: ${{ needs.marker.outputs.env }}
+      ISSUE: ${{ github.event.issue.html_url }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Update the upload
+        run: |
+          status=integrated
+          [ "$REASON" = "not_planned" ] && status=dismissed
+          pnpm mininode submission status "$ID" "$status" --review "$ISSUE" --env "$DEPLOY_ENV"
+      - name: Remove the review branch
+        run: git push origin --delete "review/${ID:0:8}" || true

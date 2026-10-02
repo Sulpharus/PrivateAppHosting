@@ -1,0 +1,61 @@
+{
+  "$schema": "../../packages/manifest/schema.json",
+  "specVersion": 1,
+  "slug": "sudoku",
+  "name": "Sudoku",
+  "description": "Frisch erzeugte Rätsel in fünf Stufen, jedes mit genau einer Lösung, und Bestzeiten im Gaming Hub",
+  "kind": "static",
+  "target": "cloudflare",
+  "access": {
+    "default": true
+  },
+  "data": {
+    "mode": "none"
+  },
+  "game": {
+    "genre": "puzzle",
+    "players": "solo",
+    "stats": [
+      {
+        "id": "time_1",
+        "label": "Zeit Sehr leicht",
+        "better": "lower",
+        "format": "seconds",
+        "min": 10,
+        "max": 7200
+      },
+      {
+        "id": "time_2",
+        "label": "Zeit Leicht",
+        "better": "lower",
+        "format": "seconds",
+        "min": 15,
+        "max": 7200
+      },
+      {
+        "id": "time_3",
+        "label": "Zeit Mittel",
+        "better": "lower",
+        "format": "seconds",
+        "min": 25,
+        "max": 7200
+      },
+      {
+        "id": "time_4",
+        "label": "Zeit Schwer",
+        "better": "lower",
+        "format": "seconds",
+        "min": 40,
+        "max": 7200
+      },
+      {
+        "id": "time_5",
+        "label": "Zeit Extrem",
+        "better": "lower",
+        "format": "seconds",
+        "min": 60,
+        "max": 7200
+      }
+    ]
+  }
+}

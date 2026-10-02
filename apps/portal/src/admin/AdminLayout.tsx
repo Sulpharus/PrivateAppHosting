@@ -7,6 +7,7 @@ import { platform } from '../lib/supabase.ts';
 const LINKS: [string, string][] = [
   ['/admin', 'Übersicht'],
   ['/admin/apps', 'Apps'],
+  ['/admin/upload', 'Hochladen'],
   ['/admin/catalog', 'Kategorien & Pakete'],
   ['/admin/users', 'Nutzer & Rollen'],
   ['/admin/remote', 'Remote-Apps'],
@@ -69,7 +70,12 @@ function useMissingKeys(enabled: boolean): number {
     if (!enabled || !pathname) return;
     let current = true;
     void Promise.all([
-      platform().from('api_services').select('id').is('key_hint', null).neq('auth->>type', 'none'),
+      platform()
+        .from('api_services')
+        .select('id')
+        .is('key_hint', null)
+        .eq('key_mode', 'sitewide')
+        .neq('auth->>type', 'none'),
       platform().from('app_api_services').select('service_id'),
     ]).then(([services, requests]) => {
       if (!current || services.error || requests.error) return;

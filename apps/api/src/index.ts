@@ -14,6 +14,7 @@ import { library } from './routes/library.ts';
 import { nucbox } from './routes/nucbox.ts';
 import { deliverPushes, push } from './routes/push.ts';
 import { controlHeaders, remote } from './routes/remote.ts';
+import { submissions } from './routes/submissions.ts';
 
 export const app = new Hono<AppContext>();
 
@@ -33,7 +34,18 @@ app.use(
         return null;
       }
     },
-    allowHeaders: ['Authorization', 'Content-Type', 'Accept', 'Accept-Language'],
+    allowHeaders: [
+      'Authorization',
+      'Content-Type',
+      'Accept',
+      'Accept-Language',
+      // Uploads in Verwaltung (ADR 0013) send the file name and the program settings as headers.
+      'X-Filename',
+      'X-Runtime',
+      'X-Slug',
+      'X-Program',
+      'X-Silent-Args',
+    ],
     allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
     // Marks the API proxy's own refusals, so the SDK can tell them from the external API's answers.
     exposeHeaders: ['X-MiniNode-Error'],
@@ -46,6 +58,7 @@ app.route('/', apis);
 app.route('/', nucbox);
 app.route('/', library);
 app.route('/', appExports);
+app.route('/', submissions);
 app.route('/google/calendar', gcal);
 app.route('/google', google);
 app.route('/hooks', hooks);

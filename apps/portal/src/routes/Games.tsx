@@ -1,7 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router';
+import { AppDrawersDialog, DrawerContentDialog, NameDialog } from '../components/DrawerDialogs.tsx';
+import { DrawerIcon } from '../components/icons.tsx';
+import { ReorderGrid } from '../components/ReorderGrid.tsx';
 import { TopBar } from '../components/TopBar.tsx';
 import { appUrl, monogram, tintFor } from '../lib/apps.ts';
+import { applyOrder, scopeOf } from '../lib/arrange.ts';
 import {
   achievements,
   byGenre,
@@ -23,6 +27,7 @@ import {
   streak,
   winRate,
 } from '../lib/games.ts';
+import { useArrangement } from '../lib/useArrangement.ts';
 
 // Gaming Hub (ADR 0009): every game at a glance, one username for all of them, playtime,
 // results and records per game, and leaderboards.
@@ -177,11 +182,25 @@ function ActivityChart({ days }: { days: GameDay[] }) {
   );
 }
 
-function GameCard({ game }: { game: HubGame }) {
+function GameCard({
+  game,
+  editing,
+  onDrawers,
+}: {
+  game: HubGame;
+  editing: boolean;
+  onDrawers(): void;
+}) {
   const firstRecord = game.stats.find((s) => game.records[s.id] !== undefined);
   return (
     <div className="tile game-tile">
-      <Link to={`/games/${game.slug}`} className="game-tile-link">
+      <Link
+        to={`/games/${game.slug}`}
+        className="game-tile-link"
+        onClick={(event) => {
+          if (editing) event.preventDefault();
+        }}
+      >
         <div className="tile-head">
           <div className="monogram" style={{ background: tintFor(game.slug) }} aria-hidden="true">
             {monogram(game.name)}
@@ -215,9 +234,25 @@ function GameCard({ game }: { game: HubGame }) {
         </dl>
         <span className="sr-only">Spielprofil öffnen</span>
       </Link>
-      <a className="button small primary" href={appUrl(game.slug)}>
-        Spielen
-      </a>
+      <div className="row" style={{ gap: 8 }}>
+        <a
+          className="button small primary"
+          href={appUrl(game.slug)}
+          onClick={(event) => {
+            if (editing) event.preventDefault();
+          }}
+        >
+          Spielen
+        </a>
+        <button
+          type="button"
+          className="pin"
+          aria-label={`${game.name} in Schubladen`}
+          onClick={onDrawers}
+        >
+          <DrawerIcon />
+        </button>
+      </div>
     </div>
   );
 }
@@ -227,6 +262,12 @@ export function Games() {
   const [days, setDays] = useState<GameDay[]>([]);
   const [recent, setRecent] = useState<RecentRound[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const arrange = useArrangement('games');
+  const [view, setView] = useState('all');
+  const [editing, setEditing] = useState(false);
+  const [dialog, setDialog] = useState<
+    { kind: 'new' } | { kind: 'rename' | 'fill' } | { kind: 'game'; slug: string } | null
+  >(null);
 
   useEffect(() => {
     Promise.all([loadHub(), loadDays(daysAgo(365)), loadRecent(undefined, 8)]).then(
@@ -252,6 +293,13 @@ export function Games() {
   // Days are grouped in Berlin time on the server; the local date matches for users there.
   const current = streak(days, ymd(new Date()));
   const badges = achievements(games ?? [], Math.max(current, longestStreak(days)));
+  const openDrawer = view.startsWith('drawer:')
+    ? (arrange.drawers.find((d) => d.id === view.slice(7)) ?? null)
+    : null;
+  const inDrawer = applyOrder(
+    (games ?? []).filter((g) => openDrawer?.apps.includes(g.slug)),
+    openDrawer ? arrange.orders.get(scopeOf.drawer(openDrawer.id)) : undefined,
+  );
   const last = [...(games ?? [])]
     .filter((g) => g.lastPlayed)
     .sort((a, b) => (b.lastPlayed ?? '').localeCompare(a.lastPlayed ?? ''))[0];
@@ -329,18 +377,135 @@ export function Games() {
                     App als Spiel veröffentlicht ist.
                   </p>
                 )}
-                {byGenre(games).map(([genre, list]) => (
-                  <section key={genre} className="stack" aria-labelledby={`genre-${genre}`}>
-                    <h2 id={`genre-${genre}`} className="section-title">
-                      {GENRE_LABEL[genre]}
-                    </h2>
-                    <div className="tiles">
-                      {list.map((g) => (
-                        <GameCard key={g.slug} game={g} />
+                {games.length > 0 && (
+                  <div className="filter-bar">
+                    <fieldset className="chip-scroll">
+                      <legend className="sr-only">Ansicht</legend>
+                      {[
+                        ['all', 'Alle', games.length] as const,
+                        ...arrange.drawers.map(
+                          (d) =>
+                            [
+                              `drawer:${d.id}`,
+                              d.name,
+                              d.apps.filter((slug) => games.some((g) => g.slug === slug)).length,
+                            ] as const,
+                        ),
+                      ].map(([id, label, n]) => (
+                        <button
+                          key={id}
+                          type="button"
+                          className="chip"
+                          aria-pressed={view === id}
+                          onClick={() => setView(id)}
+                        >
+                          {label}
+                          <span className="count">{n}</span>
+                        </button>
                       ))}
-                    </div>
+                      <button
+                        type="button"
+                        className="chip add"
+                        onClick={() => setDialog({ kind: 'new' })}
+                      >
+                        + Schublade
+                      </button>
+                    </fieldset>
+                    <button
+                      type="button"
+                      className="button small"
+                      aria-pressed={editing}
+                      onClick={() => setEditing(!editing)}
+                    >
+                      {editing ? 'Fertig' : 'Anordnen'}
+                    </button>
+                  </div>
+                )}
+                {arrange.error && (
+                  <p className="error" role="alert">
+                    {arrange.error}
+                  </p>
+                )}
+                {openDrawer && (
+                  <div className="drawer-bar">
+                    <DrawerIcon />
+                    <strong>{openDrawer.name}</strong>
+                    <span className="spacer" />
+                    <button
+                      type="button"
+                      className="button small"
+                      onClick={() => setDialog({ kind: 'fill' })}
+                    >
+                      Spiele wählen
+                    </button>
+                    <button
+                      type="button"
+                      className="button small"
+                      onClick={() => setDialog({ kind: 'rename' })}
+                    >
+                      Umbenennen
+                    </button>
+                    <button
+                      type="button"
+                      className="button small danger"
+                      onClick={() => {
+                        if (
+                          confirm(
+                            `Schublade „${openDrawer.name}“ löschen? Die Spiele bleiben erhalten.`,
+                          )
+                        ) {
+                          void arrange.remove(openDrawer.id);
+                          setView('all');
+                        }
+                      }}
+                    >
+                      Löschen
+                    </button>
+                  </div>
+                )}
+                {openDrawer ? (
+                  <section className="stack" aria-label={openDrawer.name}>
+                    {inDrawer.length === 0 && (
+                      <p className="empty">Diese Schublade ist noch leer. Wähle „Spiele wählen“.</p>
+                    )}
+                    <ReorderGrid
+                      items={inDrawer}
+                      editing={editing}
+                      label={(g) => g.name}
+                      onReorder={(slugs) =>
+                        void arrange.reorder(scopeOf.drawer(openDrawer.id), slugs)
+                      }
+                      render={(g) => (
+                        <GameCard
+                          game={g}
+                          editing={editing}
+                          onDrawers={() => setDialog({ kind: 'game', slug: g.slug })}
+                        />
+                      )}
+                    />
                   </section>
-                ))}
+                ) : (
+                  byGenre(games).map(([genre, list]) => (
+                    <section key={genre} className="stack" aria-labelledby={`genre-${genre}`}>
+                      <h2 id={`genre-${genre}`} className="section-title">
+                        {GENRE_LABEL[genre]}
+                      </h2>
+                      <ReorderGrid
+                        items={applyOrder(list, arrange.orders.get(scopeOf.genre(genre)))}
+                        editing={editing}
+                        label={(g) => g.name}
+                        onReorder={(slugs) => void arrange.reorder(scopeOf.genre(genre), slugs)}
+                        render={(g) => (
+                          <GameCard
+                            game={g}
+                            editing={editing}
+                            onDrawers={() => setDialog({ kind: 'game', slug: g.slug })}
+                          />
+                        )}
+                      />
+                    </section>
+                  ))
+                )}
               </div>
 
               <aside className="stack" style={{ gap: 24 }} aria-label="Dein Spielprofil">
@@ -388,6 +553,64 @@ export function Games() {
           </>
         )}
       </main>
+      <NameDialog
+        open={dialog?.kind === 'new'}
+        title="Neue Schublade"
+        confirm="Anlegen"
+        onClose={() => setDialog(null)}
+        onSubmit={(name) => {
+          setDialog(null);
+          void arrange.create(name).then((created) => {
+            if (created) setView(`drawer:${created.id}`);
+          });
+        }}
+      />
+      <NameDialog
+        open={dialog?.kind === 'rename'}
+        title="Schublade umbenennen"
+        confirm="Speichern"
+        initial={openDrawer?.name}
+        onClose={() => setDialog(null)}
+        onSubmit={(name) => {
+          if (openDrawer) void arrange.rename(openDrawer.id, name);
+          setDialog(null);
+        }}
+      />
+      <DrawerContentDialog
+        open={dialog?.kind === 'fill'}
+        drawer={openDrawer}
+        options={(games ?? []).map((g) => ({ slug: g.slug, name: g.name }))}
+        onClose={() => setDialog(null)}
+        onSave={(slugs) => {
+          if (openDrawer) void arrange.setApps(openDrawer, slugs);
+          setDialog(null);
+        }}
+      />
+      <AppDrawersDialog
+        open={dialog?.kind === 'game'}
+        slug={dialog?.kind === 'game' ? dialog.slug : ''}
+        appName={
+          (dialog?.kind === 'game' && games?.find((g) => g.slug === dialog.slug)?.name) || 'Spiel'
+        }
+        drawers={arrange.drawers}
+        onClose={() => setDialog(null)}
+        onToggle={(target, member) =>
+          dialog?.kind === 'game' &&
+          void arrange.setApps(
+            target,
+            member
+              ? [...target.apps, dialog.slug]
+              : target.apps.filter((slug) => slug !== dialog.slug),
+          )
+        }
+        onCreate={(name) => {
+          if (dialog?.kind !== 'game') return;
+          const slug = dialog.slug;
+          void arrange.create(name).then((created) => {
+            if (created) void arrange.setApps(created, [slug]);
+          });
+        }}
+      />
     </>
   );
 }

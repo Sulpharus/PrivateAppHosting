@@ -42,7 +42,13 @@ other page, e.g. a plain Vite dev server on another port, see no data.
 External APIs with keys (weather, maps, …) are declared in the manifest's `apis` block and called
 through `mn.api(id).fetch(path, init)` (the API's own response) or `.json(path)`. The admin enters
 each key once under Verwaltung → API-Schlüssel; until then calls throw an `ExternalApiError`
-with `keyMissing === true`.
+with `keyMissing === true`. When the admin set the API to personal keys, the SDK also shows a popup
+(once, "Schlüssel einrichten" / "Später") that leads to the account page where the user enters their
+own key; the error then has `needsPersonalKey === true` (ADR 0014).
+
+Apps built for other shims keep working through two compatibility layers that `mininode integrate`
+wires in: `installMiniNodeCompat(mn)` defines `window.MiniNode` (auth, `db` → `mn.kv`, `ai` →
+`mn.ai`) and `installLocalStorageSync(mn)` keeps `localStorage` in the account (ADR 0013).
 
 ## Development
 

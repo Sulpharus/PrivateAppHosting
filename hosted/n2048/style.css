@@ -1,0 +1,121 @@
+/* 2048: the board and the tiles. Everything else comes from the App Kit. */
+.g-page {
+  max-width: 900px;
+  margin: 0 auto;
+}
+.g-main {
+  display: grid;
+  gap: var(--mn-s4);
+}
+.g-play {
+  display: grid;
+  gap: var(--mn-s4);
+  justify-items: center;
+}
+@media (min-width: 760px) {
+  .g-play {
+    grid-template-columns: auto 1fr;
+    justify-items: start;
+    align-items: start;
+  }
+}
+.g-board {
+  --size: min(92vw, 440px);
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-auto-rows: 1fr;
+  gap: 8px;
+  width: var(--size);
+  height: var(--size);
+  padding: 8px;
+  border-radius: var(--mn-r-md);
+  background: var(--mn-surface-2);
+  touch-action: none;
+  user-select: none;
+}
+.g-tile {
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: var(--mn-surface);
+  color: var(--mn-ink);
+  font: 800 clamp(20px, 7vw, 40px) / 1 var(--mn-font-display, inherit);
+}
+.g-tile.big {
+  font-size: clamp(16px, 5.5vw, 32px);
+}
+.g-tile.huge {
+  font-size: clamp(13px, 4.4vw, 26px);
+}
+.g-tile.t {
+  background: color-mix(in srgb, var(--mn-accent) calc(var(--l) * 8%), var(--mn-surface));
+}
+.g-tile.hot {
+  background: var(--mn-accent);
+  color: var(--mn-on-accent, #fff);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .g-tile.new {
+    animation: g-pop 140ms ease-out;
+  }
+}
+@keyframes g-pop {
+  from {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+.g-side {
+  display: grid;
+  gap: var(--mn-s4);
+  justify-items: center;
+}
+.g-arrows {
+  display: grid;
+  grid-template-columns: repeat(3, 56px);
+  grid-template-rows: repeat(2, 56px);
+  gap: var(--mn-s2);
+}
+.g-arrows .mn-btn {
+  min-width: 56px;
+  min-height: 56px;
+  font-size: 22px;
+}
+.g-up {
+  grid-column: 2;
+  grid-row: 1;
+}
+.g-left {
+  grid-column: 1;
+  grid-row: 2;
+}
+.g-down {
+  grid-column: 2;
+  grid-row: 2;
+}
+.g-right {
+  grid-column: 3;
+  grid-row: 2;
+}
+.g-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mn-s2);
+  justify-content: center;
+}
+.g-end {
+  text-align: center;
+  display: grid;
+  gap: var(--mn-s2);
+}
+.g-section h2 {
+  font-size: var(--mn-fs-lg);
+}
+.g-section p {
+  color: var(--mn-muted);
+  max-width: 62ch;
+}

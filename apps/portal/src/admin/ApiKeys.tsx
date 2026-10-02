@@ -22,6 +22,8 @@ interface ServiceRow {
   docs_url: string | null;
   key_hint: string | null;
   key_updated_at: string | null;
+  /** `sitewide`: one key of the admin for everyone. `personal`: everyone enters their own (ADR 0014). */
+  key_mode: 'sitewide' | 'personal';
 }
 
 interface RequestRow {
@@ -41,18 +43,28 @@ export function ApiKeys() {
   const { run } = useStepUp();
   const [services, setServices] = useState<ServiceRow[]>([]);
   const [requests, setRequests] = useState<RequestRow[]>([]);
+  const [personalKeys, setPersonalKeys] = useState<Map<string, number>>(new Map());
   const [editing, setEditing] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    const [s, r] = await Promise.all([
+    const [s, r, counts] = await Promise.all([
       platform()
         .from('api_services')
-        .select('id, name, base_url, auth, docs_url, key_hint, key_updated_at')
+        .select('id, name, base_url, auth, docs_url, key_hint, key_updated_at, key_mode')
         .order('name'),
       platform().from('app_api_services').select('app_slug, service_id, reason').order('app_slug'),
+      platform().rpc('admin_personal_key_counts'),
     ]);
+    setPersonalKeys(
+      new Map(
+        ((counts.data as { service_id: string; users: number }[] | null) ?? []).map((row) => [
+          row.service_id,
+          Number(row.users),
+        ]),
+      ),
+    );
     setServices((s.data as ServiceRow[] | null) ?? []);
     setRequests((r.data as RequestRow[] | null) ?? []);
   }, []);
@@ -102,15 +114,38 @@ export function ApiKeys() {
     );
   };
 
+  const setMode = (service: ServiceRow, mode: 'sitewide' | 'personal') => {
+    if (
+      mode === 'personal' &&
+      !confirm(
+        `${service.name} auf persönliche Schlüssel umstellen? Wer die App nutzt, wird beim ersten Aufruf nach dem eigenen Schlüssel gefragt. Dein gespeicherter Schlüssel bleibt erhalten, wird aber nicht mehr benutzt.`,
+      )
+    )
+      return;
+    void guarded(
+      () => api(`/admin/api-services/${service.id}/mode`, { method: 'PUT', body: { mode } }),
+      mode === 'personal'
+        ? `${service.name}: jeder trägt jetzt den eigenen Schlüssel ein.`
+        : `${service.name}: dein Schlüssel gilt wieder für alle.`,
+    );
+  };
+
   const appsOf = (id: string) => requests.filter((r) => r.service_id === id);
   const keyless = (s: ServiceRow) => s.auth.type === 'none';
-  const missing = services.filter((s) => !keyless(s) && !s.key_hint && appsOf(s.id).length > 0);
-  const ready = services.filter((s) => (keyless(s) || s.key_hint) && appsOf(s.id).length > 0);
+  const personal = (s: ServiceRow) => s.key_mode === 'personal' && !keyless(s);
+  // Personal APIs need no key from the admin; each person enters their own.
+  const missing = services.filter(
+    (s) => !keyless(s) && !personal(s) && !s.key_hint && appsOf(s.id).length > 0,
+  );
+  const ready = services.filter(
+    (s) => (keyless(s) || personal(s) || s.key_hint) && appsOf(s.id).length > 0,
+  );
   const unused = services.filter((s) => appsOf(s.id).length === 0);
 
   const card = (service: ServiceRow) => {
     const apps = appsOf(service.id);
-    const open = !keyless(service) && (editing === service.id || !service.key_hint);
+    const open =
+      !keyless(service) && !personal(service) && (editing === service.id || !service.key_hint);
     return (
       <section key={service.id} className="card" aria-labelledby={`api-${service.id}`}>
         <div className="row" style={{ flexWrap: 'wrap', gap: 8 }}>
@@ -121,6 +156,10 @@ export function ApiKeys() {
             <span className="pill ok">
               <span className="dot" />
               Kein Schlüssel nötig
+            </span>
+          ) : personal(service) ? (
+            <span className="pill accent">
+              Persönlich · {personalKeys.get(service.id) ?? 0} Schlüssel
             </span>
           ) : service.key_hint ? (
             <span className="pill ok">
@@ -139,7 +178,7 @@ export function ApiKeys() {
         <div className="muted" style={{ fontSize: 14 }}>
           <span className="mono">{service.id}</span> ·{' '}
           <span className="mono">{service.base_url}</span> · {placement(service.auth)}
-          {service.docs_url && (
+          {service.docs_url?.startsWith('https://') && (
             <>
               {' · '}
               <a href={service.docs_url} target="_blank" rel="noopener noreferrer">
@@ -148,6 +187,35 @@ export function ApiKeys() {
             </>
           )}
         </div>
+        {!keyless(service) && apps.length > 0 && (
+          <fieldset className="chip-scroll" style={{ border: 0, padding: 0, margin: 0 }}>
+            <legend className="sr-only">Wessen Schlüssel</legend>
+            <button
+              type="button"
+              className="chip"
+              aria-pressed={!personal(service)}
+              onClick={() => personal(service) && setMode(service, 'sitewide')}
+            >
+              Für alle (dein Schlüssel)
+            </button>
+            <button
+              type="button"
+              className="chip"
+              aria-pressed={personal(service)}
+              onClick={() => !personal(service) && setMode(service, 'personal')}
+            >
+              Persönlich (jeder trägt seinen ein)
+            </button>
+          </fieldset>
+        )}
+        {personal(service) && (
+          <p className="muted" style={{ fontSize: 14 }}>
+            Ruft jemand die API ohne eigenen Schlüssel auf, fragt die App danach und führt zu einer
+            Anleitung im Profil. Du siehst nie die Schlüssel der anderen.
+            {service.key_hint &&
+              ' Dein eigener Admin-Schlüssel bleibt gespeichert, wird aber nicht benutzt.'}
+          </p>
+        )}
         {apps.length > 0 && (
           <ul className="stack" style={{ gap: 4, paddingLeft: 18 }}>
             {apps.map((r) => (
@@ -198,7 +266,7 @@ export function ApiKeys() {
           </form>
         ) : (
           <div className="row row-end">
-            {service.key_hint && apps.length > 0 && (
+            {service.key_hint && !personal(service) && apps.length > 0 && (
               <button type="button" className="button small" onClick={() => setEditing(service.id)}>
                 Ersetzen
               </button>

@@ -1410,3 +1410,138 @@ code,
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
 }
+
+/* ---------- Verwaltung → Hochladen ---------- */
+
+.dropzone {
+  min-height: 120px;
+  padding: 20px;
+  border-radius: var(--radius-l);
+  border: 2px dashed var(--line);
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  text-align: center;
+  cursor: pointer;
+}
+
+.dropzone:hover,
+.dropzone.over {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.upload-bar {
+  flex: 1 1 200px;
+  height: 12px;
+  accent-color: var(--accent);
+}
+
+.upload-options summary {
+  min-height: var(--tap);
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.log {
+  margin: 8px 0 0;
+  padding: 12px;
+  max-height: 320px;
+  overflow: auto;
+  border-radius: var(--radius-s);
+  background: var(--surface-2);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* ---------- own order and drawers ---------- */
+
+.reorder-item {
+  position: relative;
+  min-width: 0;
+}
+.reorder-item.editing {
+  outline: 2px dashed var(--line);
+  outline-offset: 2px;
+  border-radius: var(--radius-l);
+  cursor: grab;
+}
+.reorder-item.dragging {
+  opacity: 0.45;
+}
+.reorder-controls {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: flex;
+  gap: 4px;
+  padding: 2px;
+  border-radius: var(--radius-m);
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+.reorder-controls .pin:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.drawer-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.chip.add {
+  border-style: dashed;
+}
+.check-list {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  max-height: 50vh;
+  overflow: auto;
+}
+.check-row {
+  min-height: var(--tap);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+}
+.check-row input {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--accent);
+}
+
+/* Gemeinsame Daten: one table, every column at the same place in every row */
+.table--fixed {
+  table-layout: fixed;
+}
+.table--fixed td {
+  overflow-wrap: anywhere;
+}
+.suite-grant {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.suite-grant .field {
+  flex: 1 1 140px;
+}
+@media (max-width: 700px) {
+  .table--fixed {
+    table-layout: auto;
+  }
+}

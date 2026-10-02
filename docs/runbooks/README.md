@@ -8,3 +8,6 @@
 6. [kalender.md](kalender.md): approve the Kalender's data, Google Calendar sync, troubleshooting
 8. [app-export.md](app-export.md): an app as its own GitHub project, without data or keys
 7. [app-library.md](app-library.md): App-Bibliothek setup, installing Jellyfin, n8n and others, adding programs
+9. [uploads.md](uploads.md): upload web apps from Verwaltung, script-first integration, AI review queue
+10. [programs.md](programs.md): install programs on the PC/server from Verwaltung, large installers
+11. [releases.md](releases.md): cloud, PC/server and complete packages per version

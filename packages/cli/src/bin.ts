@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { existsSync, readdirSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename, join, resolve } from 'node:path';
 import { changedApps } from './changed.ts';
 import type { DeployEnv } from './deploy/environment.ts';
@@ -8,6 +8,10 @@ import { checkLibraryInstall, installLibraryApp, removeLibraryApp } from './depl
 import { hostedTargets, pruneApps } from './deploy/prune.ts';
 import { type DoctorReport, doctor, hostedApps } from './doctor.ts';
 import { exportApp } from './export.ts';
+import { integrate, reportMarkdown } from './integrate/index.ts';
+import type { IntegrateResult } from './integrate/types.ts';
+import { lintExemption, tidy, verifyBuild } from './integrate/verify.ts';
+import { fetchSubmission, type SubmissionStatus, setSubmissionStatus } from './submissions.ts';
 
 const ROOT = resolve(import.meta.dirname, '../../..');
 
@@ -20,6 +24,11 @@ const USAGE = `mininode <command>
   changed <base-ref>                List hosted apps changed since <base-ref>
   prune [--env staging] [--dry-run] Delete Workers of apps removed from hosted/, disable them
   export <app-dir> --out <dir>      Copy one app as a shareable project (no data, no keys)
+  integrate <zip|dir> [--slug x]    Turn an export into hosted/<slug> by script (exit 2: needs review)
+                                    [--build] [--tidy] [--json file] [--report file]
+  exempt <slug>                     Exempt an imported app from the linter (publish step)
+  submission fetch <id> --out <file>  Download an uploaded ZIP (workflow)
+  submission status <id> <status> [--result file] [--report file] [--pr url] [--review url] [--run url]
   library check <entry> <slug>      App-Bibliothek: check an install before the rollout
   library install <entry> <slug>    App-Bibliothek: register an installed program
   library remove <slug> <entry>     App-Bibliothek: disable a removed program
@@ -60,6 +69,58 @@ async function main(args: string[]): Promise<number> {
         return 0;
       }
       return dirs.map((dir) => print(doctor(dir))).every(Boolean) ? 0 : 1;
+    }
+    case 'integrate': {
+      if (!target) break;
+      const input = resolve(process.cwd(), target);
+      const slug = flag(args, '--slug');
+      let result = integrate({ input, root: ROOT, ...(slug ? { slug } : {}) });
+      if (args.includes('--build')) result = verifyBuild(ROOT, result);
+      if (args.includes('--tidy')) result = tidy(ROOT, result);
+      const report = reportMarkdown(result, basename(input));
+      const jsonOut = flag(args, '--json');
+      const reportOut = flag(args, '--report');
+      if (jsonOut)
+        writeFileSync(resolve(process.cwd(), jsonOut), `${JSON.stringify(result, null, 2)}\n`);
+      if (reportOut) writeFileSync(resolve(process.cwd(), reportOut), report);
+      console.log(report);
+      return result.status === 'integrated' ? 0 : 2;
+    }
+    case 'exempt': {
+      if (!target || !/^[a-z][a-z0-9-]{0,30}[a-z0-9]$/.test(target)) break;
+      const path = join(ROOT, 'biome.json');
+      writeFileSync(path, lintExemption(readFileSync(path, 'utf8'), target));
+      return 0;
+    }
+    case 'submission': {
+      const [, , id, status] = args;
+      const env = envFlag(args);
+      if (target === 'fetch' && id) {
+        const out = flag(args, '--out');
+        if (!out) break;
+        console.log(await fetchSubmission(env, id, resolve(process.cwd(), out)));
+        return 0;
+      }
+      if (target === 'status' && id && status) {
+        const resultFile = flag(args, '--result');
+        const reportFile = flag(args, '--report');
+        const result = resultFile
+          ? (JSON.parse(
+              readFileSync(resolve(process.cwd(), resultFile), 'utf8'),
+            ) as IntegrateResult)
+          : null;
+        const report = reportFile ? readFileSync(resolve(process.cwd(), reportFile), 'utf8') : null;
+        const pr = flag(args, '--pr');
+        const review = flag(args, '--review');
+        const run = flag(args, '--run');
+        await setSubmissionStatus(env, id, status as SubmissionStatus, result, report, {
+          ...(pr ? { pr } : {}),
+          ...(review ? { review } : {}),
+          ...(run ? { run } : {}),
+        });
+        return 0;
+      }
+      break;
     }
     case 'prune': {
       const dirs = existsSync(join(ROOT, 'hosted')) ? readdirSync(join(ROOT, 'hosted')) : [];

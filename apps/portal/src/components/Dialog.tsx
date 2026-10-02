@@ -13,8 +13,13 @@ export function Dialog(props: {
   useEffect(() => {
     const dialog = ref.current;
     if (!dialog) return;
+    const opener = document.activeElement;
     if (props.open && !dialog.open) dialog.showModal();
     if (!props.open && dialog.open) dialog.close();
+    // Also when the dialog is unmounted instead of closed: focus goes back to what opened it.
+    return () => {
+      if (props.open && opener instanceof HTMLElement && opener.isConnected) opener.focus();
+    };
   }, [props.open]);
 
   return (

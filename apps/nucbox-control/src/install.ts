@@ -52,7 +52,9 @@ export function r2Signer(options: {
 }
 
 /** Single-quoted PowerShell literal. */
-export const psQuote = (value: string) => `'${value.replace(/'/g, "''")}'`;
+// PowerShell treats the typographic single quotes (U+2018..U+201B) like the plain one.
+export const psQuote = (value: string) =>
+  `'${value.replace(/['\u2018\u2019\u201a\u201b]/g, (q) => q + q)}'`;
 
 export function defaultSilentArgs(r2Key: string): string {
   return r2Key.toLowerCase().endsWith('.msi') ? '/qn /norestart' : '/S';
@@ -60,7 +62,11 @@ export function defaultSilentArgs(r2Key: string): string {
 
 /** The PowerShell run inside the Windows guest (as SYSTEM, via the QEMU guest agent). */
 export function windowsInstallScript(request: InstallRequest, downloadUrl: string | null): string {
-  const lines = ['$ErrorActionPreference = "Stop"', '$ProgressPreference = "SilentlyContinue"'];
+  const lines = [
+    '$ErrorActionPreference = "Stop"',
+    '$ProgressPreference = "SilentlyContinue"',
+    '$started = Get-Date',
+  ];
   if (request.installer && downloadUrl) {
     const file = request.installer.r2Key.split('/').pop() ?? 'installer.exe';
     const args = request.installer.silentArgs ?? defaultSilentArgs(file);
@@ -85,10 +91,21 @@ export function windowsInstallScript(request: InstallRequest, downloadUrl: strin
   // RemoteApp alias `||<slug>` → program. Only allow-listed programs can be started over RDP.
   const key = `HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Terminal Server\\TSAppAllowList\\Applications\\${request.app}`;
   lines.push(
-    `if (-not (Test-Path ${psQuote(request.program)})) { throw "program not found after install" }`,
+    `$program = ${psQuote(request.program)}`,
+    // The path of an upload is a guess: look for what the installer just created and say so.
+    'if (-not (Test-Path -LiteralPath $program)) {',
+    '  $roots = @($env:ProgramFiles, ${env:ProgramFiles(x86)}, $env:ProgramData) | Where-Object { $_ -and (Test-Path $_) }',
+    "  $fresh = @(Get-ChildItem -Path $roots -Recurse -Filter '*.exe' -ErrorAction SilentlyContinue | Where-Object { $_.CreationTime -ge $started -and $_.Name -notmatch '^(unins|uninst|setup|update|crash|vc_redist)' })",
+    `  $hint = ${psQuote(request.app.replaceAll('-', ''))}`,
+    "  $match = @($fresh | Where-Object { $_.BaseName -replace '[^A-Za-z0-9]', '' -like \"*$hint*\" }) | Select-Object -First 1",
+    '  if (-not $match -and $fresh.Count -eq 1) { $match = $fresh[0] }',
+    '  if (-not $match) { throw "program not found after install (looked for new .exe files below Program Files)" }',
+    '  $program = $match.FullName',
+    '  Write-Output "MININODE_PROGRAM=$program"',
+    '}',
     `New-Item -Path ${psQuote(key)} -Force | Out-Null`,
     `Set-ItemProperty -Path ${psQuote(key)} -Name Name -Value ${psQuote(request.app)}`,
-    `Set-ItemProperty -Path ${psQuote(key)} -Name Path -Value ${psQuote(request.program)}`,
+    `Set-ItemProperty -Path ${psQuote(key)} -Name Path -Value $program`,
     `Set-ItemProperty -Path ${psQuote(key)} -Name CommandLineSetting -Value 0 -Type DWord`,
     `Set-ItemProperty -Path ${psQuote(key)} -Name ShowInTSWA -Value 0 -Type DWord`,
     'Write-Output "installed"',

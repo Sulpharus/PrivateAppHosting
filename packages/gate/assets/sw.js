@@ -12,6 +12,7 @@ const PRECACHE = [
   '/_mininode/sdk.js',
   '/_mininode/ui.css',
   '/_mininode/ui.js',
+  '/_mininode/game.js',
   '/_mininode/pwa.js',
   '/_mininode/manifest.webmanifest',
   '/_mininode/icon.svg',

@@ -17,6 +17,7 @@ import { listenForRenewals, registerServiceWorker } from './lib/push.ts';
 import { initSupabase } from './lib/supabase.ts';
 import { applyStoredTheme } from './lib/theme.ts';
 import { Account } from './routes/Account.tsx';
+import { AccountKeys } from './routes/AccountKeys.tsx';
 import { AuthConfirm, AuthRefresh } from './routes/AuthPages.tsx';
 import { Home } from './routes/Home.tsx';
 import { Login } from './routes/Login.tsx';
@@ -36,6 +37,7 @@ const ApiKeys = lazy(() => import('./admin/ApiKeys.tsx').then((m) => ({ default:
 const Catalog = lazy(() => import('./admin/Catalog.tsx').then((m) => ({ default: m.Catalog })));
 const Library = lazy(() => import('./admin/Library.tsx').then((m) => ({ default: m.Library })));
 const NucBox = lazy(() => import('./admin/NucBox.tsx').then((m) => ({ default: m.NucBox })));
+const Upload = lazy(() => import('./admin/Upload.tsx').then((m) => ({ default: m.Upload })));
 const Suite = lazy(() => import('./admin/Suite.tsx').then((m) => ({ default: m.Suite })));
 const Games = lazy(() => import('./routes/Games.tsx').then((m) => ({ default: m.Games })));
 const GameProfile = lazy(() =>
@@ -109,6 +111,7 @@ const router = createBrowserRouter([
       { path: '/', element: <Home /> },
       { path: '/welcome', element: <Welcome /> },
       { path: '/account', element: <Account /> },
+      { path: '/account/keys', element: <AccountKeys /> },
       { path: '/games', element: <Games /> },
       { path: '/games/:slug', element: <GameProfile /> },
       {
@@ -117,6 +120,7 @@ const router = createBrowserRouter([
         children: [
           { index: true, element: <Overview /> },
           { path: 'apps', element: <Apps /> },
+          { path: 'upload', element: <Upload /> },
           { path: 'catalog', element: <Catalog /> },
           { path: 'users', element: <Users /> },
           { path: 'remote', element: <Remote /> },

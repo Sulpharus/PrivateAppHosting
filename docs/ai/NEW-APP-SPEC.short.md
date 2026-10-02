@@ -85,6 +85,8 @@ if (!(await mn.google.connected())) showLink(mn.google.connectUrl()); // "Google
 try {
   const weather = await mn.api('openweathermap').json('/weather?q=München&units=metric');
 } catch (err) {
+  // keyMissing: not set up yet. needsPersonalKey: the admin chose personal keys; the SDK has already
+  // shown the popup that leads the user to enter their own, so only show a quiet "not set up" state.
   if (err instanceof ExternalApiError && err.keyMissing) showSetupState(); // not an error screen
 }
 

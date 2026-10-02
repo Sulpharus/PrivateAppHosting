@@ -45,6 +45,11 @@ export default defineConfig({
       ['medialog', 8797],
       ['memory', 8798],
       ['kalender', 8799],
+      ['minensucher', 8800],
+      ['sudoku', 8801],
+      ['solitaer', 8802],
+      ['n2048', 8803],
+      ['codeknacker', 8804],
     ].map(([slug, port]) => ({
       command: `pnpm mininode dev hosted/${slug} --port ${port}`,
       url: `http://localhost:${port}/_mininode/config.json`,

@@ -3,12 +3,16 @@
 //   PUT    /admin/api-keys/:service     admin enters or replaces the key
 //   DELETE /admin/api-keys/:service     admin removes the key (the entry stays)
 //   DELETE /admin/api-services/:service admin removes an entry no app uses any more
+//   PUT    /admin/api-services/:service/mode  admin: sitewide | personal (ADR 0014)
+//   PUT    /me/api-keys/:service        a user enters their own key for a personal API
+//   DELETE /me/api-keys/:service        a user removes their own key
 
 import { isAllowedApiBase } from '@mininode/manifest';
 import { createClient } from '@supabase/supabase-js';
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { type AppContext, problem, requireUser } from '../lib/auth.ts';
+import { readCapped } from '../lib/body.ts';
 import { seal, unseal } from '../lib/google.ts';
 import { adminClient } from '../lib/supabase.ts';
 
@@ -24,6 +28,9 @@ interface ServiceRow {
   base_url: string;
   auth: Auth;
   key_enc: string | null;
+  /** `sitewide`: the admin's key serves everyone. `personal`: every user brings their own. */
+  key_mode: 'sitewide' | 'personal';
+  docs_url: string | null;
 }
 
 const serviceId = z.string().regex(/^[a-z][a-z0-9-]{1,40}$/);
@@ -51,36 +58,15 @@ function allowed(key: string): boolean {
  * cannot be decrypted once the entry points elsewhere (defence in depth; the deploy also drops
  * the key when the target changes).
  */
-export function keyBinding(service: Pick<ServiceRow, 'id' | 'base_url' | 'auth'>): string {
+export function keyBinding(
+  service: Pick<ServiceRow, 'id' | 'base_url' | 'auth'>,
+  userId?: string,
+): string {
   const auth = Object.fromEntries(
     Object.entries(service.auth).sort(([a], [b]) => a.localeCompare(b)),
   );
-  return `${service.id}\n${service.base_url}\n${JSON.stringify(auth)}`;
-}
-
-/** Reads at most `max` bytes; null when the body is larger (whatever Content-Length says). */
-async function readCapped(body: ReadableStream<Uint8Array> | null, max: number) {
-  if (!body) return new Uint8Array();
-  const reader = body.getReader();
-  const chunks: Uint8Array[] = [];
-  let size = 0;
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    size += value.byteLength;
-    if (size > max) {
-      await reader.cancel();
-      return null;
-    }
-    chunks.push(value);
-  }
-  const out = new Uint8Array(size);
-  let offset = 0;
-  for (const chunk of chunks) {
-    out.set(chunk, offset);
-    offset += chunk.byteLength;
-  }
-  return out;
+  // A personal key is also bound to its owner: it cannot be moved to another account's row.
+  return `${service.id}\n${service.base_url}\n${JSON.stringify(auth)}${userId ? `\nuser:${userId}` : ''}`;
 }
 
 /**
@@ -151,7 +137,7 @@ apis.all('/proxy/:service/*', requireUser(), async (c) => {
     db
       .schema('platform')
       .from('api_services')
-      .select('id, name, base_url, auth, key_enc')
+      .select('id, name, base_url, auth, key_enc, key_mode, docs_url')
       .eq('id', id.data)
       .maybeSingle<ServiceRow>(),
   ]);
@@ -168,7 +154,31 @@ apis.all('/proxy/:service/*', requireUser(), async (c) => {
   const vaultKey = c.env.VAULT_KEY;
   if (!keyless && !vaultKey)
     return problem(503, 'vault_not_configured', 'API-Schlüssel sind nicht eingerichtet.');
-  if (!keyless && !service.key_enc)
+  // Personal mode: the caller's own key, or the app asks them for it (ADR 0014).
+  const personal = !keyless && service.key_mode === 'personal';
+  let sealedKey = service.key_enc;
+  if (personal) {
+    const { data: own } = await db
+      .schema('platform')
+      .from('user_api_keys')
+      .select('key_enc')
+      .eq('user_id', userId)
+      .eq('service_id', service.id)
+      .maybeSingle<{ key_enc: string }>();
+    sealedKey = own?.key_enc ?? null;
+    if (!sealedKey)
+      return Response.json(
+        {
+          error: 'api_key_missing',
+          message: `Für ${service.name} fehlt dein persönlicher Schlüssel.`,
+          personal: true,
+          service: service.id,
+          serviceName: service.name,
+        },
+        { status: 503 },
+      );
+  }
+  if (!keyless && !sealedKey)
     return problem(
       503,
       'api_key_missing',
@@ -200,15 +210,26 @@ apis.all('/proxy/:service/*', requireUser(), async (c) => {
   // Some public APIs refuse requests without a User-Agent (Workers send none by default).
   headers.set('User-Agent', 'MiniNode/1.0 (+https://mininode.app)');
   try {
-    if (!keyless && vaultKey && service.key_enc)
+    if (!keyless && vaultKey && sealedKey)
       withKey(
         url,
         headers,
         service.auth,
-        await unseal(vaultKey, service.key_enc, keyBinding(service)),
+        await unseal(vaultKey, sealedKey, keyBinding(service, personal ? userId : undefined)),
       );
   } catch (err) {
     log('api_key_unreadable', { service: service.id, error: String(err) });
+    if (personal)
+      return Response.json(
+        {
+          error: 'api_key_unreadable',
+          message: `Dein Schlüssel für ${service.name} lässt sich nicht lesen. Bitte trage ihn neu ein.`,
+          personal: true,
+          service: service.id,
+          serviceName: service.name,
+        },
+        { status: 503 },
+      );
     return problem(
       503,
       'api_key_unreadable',
@@ -353,3 +374,92 @@ apis.delete(
     return c.body(null, 204);
   },
 );
+
+apis.put(
+  '/admin/api-services/:service/mode',
+  requireUser({ role: 'admin', recentAuth: 600 }),
+  async (c) => {
+    const id = serviceId.safeParse(c.req.param('service'));
+    const body = z
+      .object({ mode: z.enum(['sitewide', 'personal']) })
+      .strict()
+      .safeParse(await c.req.json().catch(() => null));
+    if (!id.success || !body.success) return problem(400, 'invalid_request', 'Ungültige Anfrage.');
+    const db = adminClient(c.env);
+    const { data: service } = await db
+      .schema('platform')
+      .from('api_services')
+      .select('id, auth')
+      .eq('id', id.data)
+      .maybeSingle<{ id: string; auth: Auth }>();
+    if (!service) return problem(404, 'not_found', 'Unbekannte API.');
+    if (service.auth.type === 'none')
+      return problem(409, 'keyless', 'Diese API braucht keinen Schlüssel.');
+    const { error } = await db
+      .schema('platform')
+      .from('api_services')
+      .update({ key_mode: body.data.mode })
+      .eq('id', id.data);
+    if (error) return problem(500, 'db_error', 'Speichern fehlgeschlagen.');
+    await audit(c, c.get('claims').sub, `api_service.mode_${body.data.mode}`, id.data);
+    return c.body(null, 204);
+  },
+);
+
+/** The personal-key APIs this user may set a key for (the same list the account page shows). */
+async function personalService(
+  c: { env: AppContext['Bindings']; get: (key: 'token') => string },
+  id: string,
+) {
+  const asUser = createClient(c.env.SUPABASE_URL, c.env.SUPABASE_PUBLISHABLE_KEY, {
+    global: { headers: { Authorization: `Bearer ${c.get('token')}` } },
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+  const { data } = await asUser.schema('platform').rpc('my_api_keys');
+  if (!((data ?? []) as { service_id: string }[]).some((row) => row.service_id === id)) return null;
+  const { data: service } = await adminClient(c.env)
+    .schema('platform')
+    .from('api_services')
+    .select('id, base_url, auth')
+    .eq('id', id)
+    .maybeSingle<Pick<ServiceRow, 'id' | 'base_url' | 'auth'>>();
+  return service;
+}
+
+apis.put('/me/api-keys/:service', requireUser(), async (c) => {
+  const id = serviceId.safeParse(c.req.param('service'));
+  const body = keySchema.safeParse(await c.req.json().catch(() => null));
+  if (!id.success || !body.success) return problem(400, 'invalid_request', 'Ungültiger Schlüssel.');
+  if (!c.env.VAULT_KEY)
+    return problem(503, 'vault_not_configured', 'API-Schlüssel sind nicht eingerichtet.');
+  const service = await personalService(c, id.data);
+  if (!service)
+    return problem(404, 'not_found', 'Für diese API brauchst du keinen eigenen Schlüssel.');
+  const userId = c.get('claims').sub;
+  const { error } = await adminClient(c.env)
+    .schema('platform')
+    .from('user_api_keys')
+    .upsert({
+      user_id: userId,
+      service_id: service.id,
+      key_enc: await seal(c.env.VAULT_KEY, body.data.key, keyBinding(service, userId)),
+      key_hint: body.data.key.slice(-4),
+      updated_at: new Date().toISOString(),
+    });
+  if (error) return problem(500, 'db_error', 'Speichern fehlgeschlagen.');
+  log('personal_api_key_set', { service: service.id });
+  return c.body(null, 204);
+});
+
+apis.delete('/me/api-keys/:service', requireUser(), async (c) => {
+  const id = serviceId.safeParse(c.req.param('service'));
+  if (!id.success) return problem(400, 'invalid_request', 'Unbekannte API.');
+  const { error } = await adminClient(c.env)
+    .schema('platform')
+    .from('user_api_keys')
+    .delete()
+    .eq('user_id', c.get('claims').sub)
+    .eq('service_id', id.data);
+  if (error) return problem(500, 'db_error', 'Entfernen fehlgeschlagen.');
+  return c.body(null, 204);
+});

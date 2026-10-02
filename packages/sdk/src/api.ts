@@ -1,4 +1,5 @@
 import type { MininodeConfig } from './config.ts';
+import { promptForKey } from './key-prompt.ts';
 
 // External APIs with host-level keys (ADR 0006): an app declares each API in mininode.json
 // (`apis`), the admin enters the key once under Verwaltung → API-Schlüssel, and calls go through
@@ -14,9 +15,16 @@ export class ExternalApiError extends Error {
      */
     readonly code: string,
     readonly status: number,
+    /** For a personal API (ADR 0014): the key is the user's own, and the SDK has asked for it. */
+    readonly personal: { service: string; serviceName: string } | null = null,
   ) {
     super(message);
     this.name = 'ExternalApiError';
+  }
+
+  /** The user has to enter their own key (a popup already asked); show "not set up yet". */
+  get needsPersonalKey(): boolean {
+    return this.personal !== null;
   }
 
   /** The key is not there yet; show a friendly "not set up yet" state instead of an error. */
@@ -52,11 +60,26 @@ export function createApi(config: MininodeConfig, session: TokenSource) {
           const body = (await response.json().catch(() => ({}))) as {
             error?: string;
             message?: string;
+            personal?: boolean;
+            service?: string;
+            serviceName?: string;
           };
+          const personal =
+            body.personal === true && body.service && body.serviceName
+              ? { service: body.service, serviceName: body.serviceName }
+              : null;
+          // A personal API without the user's key: ask for it right here (once), then let the
+          // app show its own "not set up" state from the error.
+          if (personal)
+            void promptForKey(config.portalUrl, {
+              ...personal,
+              again: body.error === 'api_key_unreadable',
+            });
           throw new ExternalApiError(
             body.message ?? response.statusText,
             body.error ?? 'error',
             response.status,
+            personal,
           );
         }
         return response;

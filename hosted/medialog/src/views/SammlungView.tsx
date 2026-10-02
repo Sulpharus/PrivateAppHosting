@@ -382,31 +382,6 @@ export const SammlungView: React.FC<SammlungViewProps> = ({
             </button>
           </div>
         )}
-
-        {/* Semantic Query Discovery Suggestions */}
-        <div className="flex items-center gap-1.5 overflow-x-auto mt-2 text-xs text-[var(--mn-muted)]">
-          <span className="font-semibold shrink-0">Vorschläge:</span>
-          {[
-            'Manga & Manhwa',
-            'Solo Leveling',
-            'Hörbuch Klassiker',
-            'Berserk',
-            'Nintendo Switch',
-            'PlayStation 5',
-            '★ 10/10 Meisterwerke',
-            'Am Lesen / Hören',
-            'Sci-Fi Serien',
-          ].map((term) => (
-            <button
-              key={term}
-              type="button"
-              className="mn-chip mn-chip--plain text-xs shrink-0 hover:bg-[var(--mn-accent-soft)] hover:text-[var(--mn-accent-text)] transition-colors cursor-pointer"
-              onClick={() => setSearch(term)}
-            >
-              {term}
-            </button>
-          ))}
-        </div>
       </div>
 
       {/* Filter Chips by Category */}

@@ -2,4 +2,9 @@
 export { AiError } from './ai.ts';
 export { ExternalApiError } from './api.ts';
 export { GoogleError } from './google.ts';
-export { createMininode, mininode } from './index.ts';
+export {
+  createMininode,
+  installLocalStorageSync,
+  installMiniNodeCompat,
+  mininode,
+} from './index.ts';

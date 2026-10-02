@@ -16,6 +16,7 @@ import { useStepUp } from '../auth/StepUp.tsx';
 import { TopBar } from '../components/TopBar.tsx';
 import { isReauthError } from '../lib/api.ts';
 import { platform, supabase } from '../lib/supabase.ts';
+import { PersonalKeysCard } from './AccountKeys.tsx';
 import { NotificationsCard } from './AccountNotifications.tsx';
 import { AuthenticatorCard, GoogleCard } from './AccountSecurity.tsx';
 
@@ -220,6 +221,7 @@ export function Account() {
         )}
 
         <NotificationsCard feedback={feedback} />
+        <PersonalKeysCard />
         <AuthenticatorCard feedback={feedback} />
         <GoogleCard
           feedback={feedback}

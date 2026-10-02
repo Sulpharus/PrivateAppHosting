@@ -14,8 +14,9 @@ password). Built for a handful of trusted people, not the public.
   hibernates when nobody uses it.
 - **AI** (`ai.mininode.app`): one proxy for Gemini and Claude with per-app model lists and
   monthly budgets; apps never see a provider key.
-- **Adding apps**: drop a ZIP (Claude artifact, AI Studio export, any project) into `inbox/`
-  and run `/integrate-app` in Claude Code; `git push` deploys it.
+- **Adding apps**: upload the ZIP in Verwaltung → Hochladen; a script integrates what it knows
+  and hands the rest to an AI review. Or drop it into `inbox/` and run `/integrate-app` in Claude
+  Code; `git push` deploys it. Programs for the PC/server are uploaded the same way (`.exe`/`.msi`).
 
 ## Start here
 
@@ -24,7 +25,8 @@ password). Built for a handful of trusted people, not the public.
 | understand the design | [PLAN.md](PLAN.md), [docs/adr/](docs/adr/) |
 | set up the platform from scratch | [docs/runbooks/first-setup.md](docs/runbooks/first-setup.md) |
 | set up the home server | [docs/runbooks/nucbox-install.md](docs/runbooks/nucbox-install.md) |
-| add an app | [docs/runbooks/add-app.md](docs/runbooks/add-app.md) |
+| add an app | [docs/runbooks/uploads.md](docs/runbooks/uploads.md), [docs/runbooks/add-app.md](docs/runbooks/add-app.md) |
+| download the cloud or PC/server edition | [docs/runbooks/releases.md](docs/runbooks/releases.md) |
 | build an app with an AI | [docs/ai/NEW-APP-SPEC.md](docs/ai/NEW-APP-SPEC.md) |
 | work on the code | [CLAUDE.md](CLAUDE.md) |
 

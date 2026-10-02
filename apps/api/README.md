@@ -16,6 +16,10 @@ Hono Worker for everything that needs the service role or a secret:
 | `POST /push/test` | signed-in user | Sends a test notification to all of the caller's devices |
 | `ALL /proxy/:service/*` | signed-in user with grant, from the app's own origin, API declared by the app | Calls the external API with the host-level key added server-side (ADR 0006) |
 | `PUT` / `DELETE /admin/api-keys/:service` | admin, recent sign-in | Stores (encrypted with `VAULT_KEY`) or removes the key of an API |
+| `PUT /admin/api-services/:service/mode` | admin, recent sign-in | `sitewide` or `personal` keys for an API (ADR 0014) |
+| `PUT` / `DELETE /me/api-keys/:service` | signed in | A user enters or removes their own key for a personal API |
+| `GET /admin/submissions/config`, `POST /admin/submissions` | admin (`POST`: recent) | Uploads: ZIP (web app → `integrate.yml`) or `.exe`/`.msi` (program → R2 + NucBox), ADR 0013 |
+| `GET /admin/submissions/:id`, `POST …/retry`, `POST …/dismiss` | admin | An upload; refreshes a running program install; try again; take it off the list |
 | `DELETE /admin/api-services/:service` | admin, recent sign-in | Removes an API entry no app declares any more |
 | `POST /remote/sessions` | signed-in user with grant | Queue or start a remote session; returns a Guacamole link |
 | `POST /remote/sessions/:id/heartbeat` | session owner | Keeps the session alive |
@@ -42,3 +46,6 @@ pnpm dev                     # wrangler dev
 pnpm types                   # regenerate worker-configuration.d.ts after editing wrangler.jsonc
 pnpm test                    # unit tests; integration tests need `pnpm test:integration` from the root
 ```
+
+Secrets for uploads (optional): `R2_ENDPOINT`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` (and
+`R2_BUCKET`) for program installers; the ZIP path uses `GITHUB_DISPATCH_TOKEN` like the library.

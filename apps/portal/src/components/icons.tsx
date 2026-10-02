@@ -123,3 +123,12 @@ export const GamepadIcon = ({ size = 20 }: IconProps) => (
     <path d="M5.5 8v2.5M4.25 9.25h2.5M12.5 8.5h.01M11.5 10h.01" />
   </svg>
 );
+
+/** A drawer: an open box with a handle. */
+export const DrawerIcon = ({ size = 18 }: IconProps) => (
+  <svg {...base(size)} aria-hidden="true">
+    <rect x="2.5" y="3" width="13" height="5" rx="1.2" />
+    <rect x="2.5" y="10" width="13" height="5" rx="1.2" />
+    <path d="M7.5 5.5h3M7.5 12.5h3" />
+  </svg>
+);

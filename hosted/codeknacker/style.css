@@ -1,0 +1,147 @@
+/* Codeknacker: the rows, the slots and the symbol pad. Everything else comes from the App Kit. */
+.ck-page {
+  max-width: 720px;
+  margin: 0 auto;
+}
+.ck-main {
+  display: grid;
+  gap: var(--mn-s4);
+}
+.ck-rows {
+  display: grid;
+  gap: var(--mn-s2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ck-row {
+  display: flex;
+  align-items: center;
+  gap: var(--mn-s3);
+  padding: var(--mn-s2) var(--mn-s3);
+  border-radius: var(--mn-r-md);
+  background: var(--mn-surface-2);
+}
+.ck-row .n {
+  width: 2ch;
+  color: var(--mn-muted);
+  font-variant-numeric: tabular-nums;
+}
+.ck-row .fb {
+  margin-left: auto;
+  text-align: right;
+  color: var(--mn-ink);
+  font-size: var(--mn-fs-sm);
+}
+.ck-sym {
+  --c: var(--mn-ink);
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 2px solid var(--c);
+  border-radius: 50%;
+  background: var(--mn-surface);
+  color: var(--c);
+  font: 700 22px / 1 var(--mn-font-text, inherit);
+  padding: 0;
+}
+.ck-sym.s0 {
+  --c: #b3261e;
+}
+.ck-sym.s1 {
+  --c: #1f5fbf;
+}
+.ck-sym.s2 {
+  --c: #2f7a35;
+}
+.ck-sym.s3 {
+  --c: #8a4a00;
+}
+.ck-sym.s4 {
+  --c: #5b2f9e;
+}
+.ck-sym.s5 {
+  --c: #007a82;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .ck-sym.s0 {
+    --c: #ff8a80;
+  }
+  :root:not([data-theme="light"]) .ck-sym.s1 {
+    --c: #8ab4ff;
+  }
+  :root:not([data-theme="light"]) .ck-sym.s2 {
+    --c: #7fd18a;
+  }
+  :root:not([data-theme="light"]) .ck-sym.s3 {
+    --c: #f0b45c;
+  }
+  :root:not([data-theme="light"]) .ck-sym.s4 {
+    --c: #c9a3ff;
+  }
+  :root:not([data-theme="light"]) .ck-sym.s5 {
+    --c: #5fd6dd;
+  }
+}
+:root[data-theme="dark"] .ck-sym.s0 {
+  --c: #ff8a80;
+}
+:root[data-theme="dark"] .ck-sym.s1 {
+  --c: #8ab4ff;
+}
+:root[data-theme="dark"] .ck-sym.s2 {
+  --c: #7fd18a;
+}
+:root[data-theme="dark"] .ck-sym.s3 {
+  --c: #f0b45c;
+}
+:root[data-theme="dark"] .ck-sym.s4 {
+  --c: #c9a3ff;
+}
+:root[data-theme="dark"] .ck-sym.s5 {
+  --c: #5fd6dd;
+}
+button.ck-sym {
+  cursor: pointer;
+  touch-action: manipulation;
+}
+button.ck-sym:focus-visible {
+  outline: 3px solid var(--mn-accent);
+  outline-offset: 2px;
+}
+.ck-entry {
+  display: grid;
+  gap: var(--mn-s3);
+}
+.ck-slots,
+.ck-pad {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mn-s3);
+}
+.ck-slots .ck-sym {
+  border-style: dashed;
+  color: var(--mn-muted);
+}
+.ck-slots .ck-sym.filled {
+  border-style: solid;
+  color: var(--c);
+}
+.ck-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mn-s2);
+}
+.ck-end {
+  text-align: center;
+  display: grid;
+  gap: var(--mn-s2);
+}
+.ck-section h2 {
+  font-size: var(--mn-fs-lg);
+}
+.ck-section p {
+  color: var(--mn-muted);
+  max-width: 62ch;
+}
