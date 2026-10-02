@@ -7,7 +7,7 @@ export function AppIcon({
   size,
   fontSize,
 }: {
-  app: Pick<AppRow, 'slug' | 'name' | 'icon_path'>;
+  app: Pick<AppRow, 'slug' | 'name'> & { icon_path?: string | null };
   size?: number;
   fontSize?: number;
 }) {

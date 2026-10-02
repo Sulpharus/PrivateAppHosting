@@ -35,6 +35,8 @@ export interface HubGame {
   losses: number;
   draws: number;
   records: Record<string, number>;
+  /** Logo in the bucket `app-icons` (ADR 0018). */
+  icon_path?: string | null;
 }
 
 export interface GameDay {
@@ -85,7 +87,22 @@ export async function loadHub(): Promise<HubGame[]> {
         records: Record<string, number | string>;
       }[]
     >('game_hub');
+  // The logos live on the app rows, not in the hub function.
+  const { data: icons } = await platform()
+    .from('apps')
+    .select('slug, icon_path')
+    .in(
+      'slug',
+      (rows ?? []).map((r) => r.slug),
+    );
+  const iconOf = new Map(
+    ((icons as { slug: string; icon_path: string | null }[] | null) ?? []).map((i) => [
+      i.slug,
+      i.icon_path,
+    ]),
+  );
   return (rows ?? []).map((r) => ({
+    icon_path: iconOf.get(r.slug) ?? null,
     slug: r.slug,
     name: r.name,
     genre: GENRE_LABEL[r.genre] ? r.genre : 'sonstiges',

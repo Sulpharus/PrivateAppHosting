@@ -28,5 +28,4 @@ buttons also overlapped the description text.
 
 ## Consequences
 
-One column, one RPC, one bucket; the portal shows the logo in tiles, Remote-Apps and Verwaltung.
-The Gaming Hub cards still use the monogram.
+One column, one RPC, one bucket; the portal shows the logo in tiles, Remote-Apps, Verwaltung and the Gaming Hub.
