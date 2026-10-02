@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { buildRule, describeRule, occurrenceKey, occurrences, parseRule } from '../rrule.js';
 
@@ -66,10 +67,26 @@ describe('rrule', () => {
     expect(occurrences(d, null, range('2026-10-02', '2026-10-03'))).toEqual([]);
   });
 
-  it('describes rules in German', () => {
-    expect(describeRule(parseRule('FREQ=WEEKLY;INTERVAL=2;BYDAY=MO;COUNT=10'))).toBe(
-      'Jede 2. Woche am Montag, 10-mal',
+  it('describes rules in German and English', () => {
+    // A translator over the real packages: plural objects pick `one` for 1, else `other`.
+    const translator = (code) => {
+      const pack = JSON.parse(readFileSync(new URL(`../i18n/${code}.json`, import.meta.url)));
+      return (key, params = {}) => {
+        let value = pack[key];
+        if (typeof value === 'object') value = params.n === 1 ? value.one : value.other;
+        return value.replace(/\{(\w+)\}/g, (_, name) => String(params[name]));
+      };
+    };
+    const de = translator('de');
+    const en = translator('en');
+    const biweekly = parseRule('FREQ=WEEKLY;INTERVAL=2;BYDAY=MO;COUNT=10');
+    expect(describeRule(biweekly, de)).toBe('Jede 2. Woche am Montag, 10-mal');
+    expect(describeRule(biweekly, en, 'en-GB')).toBe('Every 2 weeks on Monday, 10 times');
+    const lastFriday = parseRule('FREQ=MONTHLY;BYDAY=-1FR');
+    expect(describeRule(lastFriday, de)).toBe('Monatlich am letzten Freitag');
+    expect(describeRule(lastFriday, en, 'en-GB')).toBe('Monthly on the last Friday');
+    expect(describeRule(parseRule('FREQ=DAILY;UNTIL=20261231T000000Z'), en, 'en-GB')).toMatch(
+      /^Daily, until 3\d Dec 2026$|^Daily, until 31 Dec 2026$/,
     );
-    expect(describeRule(parseRule('FREQ=MONTHLY;BYDAY=-1FR'))).toBe('Monatlich am letzten Freitag');
   });
 });

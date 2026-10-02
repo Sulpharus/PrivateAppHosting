@@ -5,6 +5,7 @@
 //
 //   An app ships i18n/de.json and i18n/en.json (declared under "i18n" in mininode.json):
 //   { "app.title": "Haushalt", "count.items": { "one": "{n} Eintrag", "other": "{n} Einträge" } }
+//   (a plural object may also have "zero": "Keine Einträge", used for 0)
 //
 //   Markup keeps its German text (it works without script) and names the key:
 //     <h1 data-i18n="app.title">Haushalt</h1>
@@ -63,7 +64,9 @@
     if (entry === undefined) return key;
     if (typeof entry === 'object') {
       const n = Number(params?.n ?? params?.count ?? 0);
-      const category = new Intl.PluralRules(LOCALES[lang]).select(n);
+      // `zero` is for "No entries": German and English have no zero form of their own.
+      const category =
+        n === 0 && 'zero' in entry ? 'zero' : new Intl.PluralRules(LOCALES[lang]).select(n);
       entry = entry[category] ?? entry.other ?? Object.values(entry)[0] ?? key;
     }
     return interpolate(String(entry), params);

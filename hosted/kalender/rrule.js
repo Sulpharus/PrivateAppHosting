@@ -179,31 +179,44 @@ export function occurrences(start, rule, { from, to, exdates = new Set(), max = 
   return out;
 }
 
-const DAY_NAMES = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
-const ORDINAL = { 1: 'ersten', 2: 'zweiten', 3: 'dritten', 4: 'vierten', '-1': 'letzten' };
-/** A German summary for the detail view, e.g. "Jede 2. Woche am Montag, Mittwoch, 10-mal". */
-export function describeRule(rule) {
+const ORD = { 1: true, 2: true, 3: true, 4: true, '-1': true };
+const EVERY = {
+  DAILY: 'rule.everyDays',
+  WEEKLY: 'rule.everyWeeks',
+  MONTHLY: 'rule.everyMonths',
+  YEARLY: 'rule.everyYears',
+};
+const ONCE = {
+  DAILY: 'rule.daily',
+  WEEKLY: 'rule.weekly',
+  MONTHLY: 'rule.monthly',
+  YEARLY: 'rule.yearly',
+};
+/**
+ * A summary for the detail view, e.g. "Every 2 weeks on Monday, Wednesday, 10 times". `t` is the
+ * page's translator (language keys `rule.*` and `weekdayLong.0` (Sunday) to `.6`), `locale` the
+ * language of the end date.
+ */
+export function describeRule(rule, t, locale = 'de-DE') {
   if (!rule) return '';
-  const every =
-    rule.interval > 1
-      ? {
-          DAILY: `Alle ${rule.interval} Tage`,
-          WEEKLY: `Jede ${rule.interval}. Woche`,
-          MONTHLY: `Alle ${rule.interval} Monate`,
-          YEARLY: `Alle ${rule.interval} Jahre`,
-        }[rule.freq]
-      : { DAILY: 'Täglich', WEEKLY: 'Wöchentlich', MONTHLY: 'Monatlich', YEARLY: 'Jährlich' }[
-          rule.freq
-        ];
-  let text = every;
+  let text = rule.interval > 1 ? t(EVERY[rule.freq], { n: rule.interval }) : t(ONCE[rule.freq]);
   if (rule.byday.length) {
-    const names = rule.byday.map(
-      (b) => (b.n ? `${ORDINAL[b.n] ?? `${b.n}.`} ` : '') + DAY_NAMES[b.wd],
-    );
-    text += rule.freq === 'WEEKLY' ? ` am ${names.join(', ')}` : ` am ${names.join(', ')}`;
+    const days = rule.byday.map((b) => {
+      const day = t(`weekdayLong.${b.wd}`);
+      if (!b.n) return day;
+      const ord = t(b.n in ORD ? `rule.ord.${b.n}` : 'rule.ordN', { n: b.n });
+      return t('rule.nth', { ord, day });
+    });
+    text = t('rule.on', { text, days: days.join(', ') });
   }
-  if (rule.count) text += `, ${rule.count}-mal`;
-  else if (rule.until)
-    text += `, bis ${rule.until.toLocaleDateString('de-DE', { day: '2-digit', month: 'short', year: 'numeric' })}`;
+  if (rule.count) text = t('rule.count', { text, n: rule.count });
+  else if (rule.until) {
+    const date = rule.until.toLocaleDateString(locale, {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    });
+    text = t('rule.until', { text, date });
+  }
   return text;
 }

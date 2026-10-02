@@ -2,6 +2,7 @@ import type React from 'react';
 import { useState } from 'react';
 import { Overlay } from '../components/Overlay';
 import { showToast } from '../components/Toast';
+import { t } from '../i18n';
 import type { AppSettings } from '../services/settings';
 import type { Person } from '../services/sharing';
 import type { MediaItem, MediaKind, MediaList, MediaStatus, MiniNodeUser } from '../types';
@@ -68,15 +69,23 @@ export const EinstellungenView: React.FC<EinstellungenViewProps> = ({
     else if (theme === 'system') document.documentElement.removeAttribute('data-theme');
     else document.documentElement.setAttribute('data-theme', theme);
     showToast(
-      `Design auf ${theme === 'dark' ? 'Dunkel' : theme === 'light' ? 'Hell' : 'System'} gesetzt`,
+      t('opt.themeSet', {
+        name: t(
+          theme === 'dark'
+            ? 'opt.themeDark'
+            : theme === 'light'
+              ? 'opt.themeLight'
+              : 'opt.themeSystem',
+        ),
+      }),
     );
   };
 
   // Set Accent
   const handleSetAccent = (accent: string) => {
     void onChangeSettings({ accent }).then(
-      () => showToast('Akzentfarbe gespeichert'),
-      () => showToast('Akzentfarbe konnte nicht gespeichert werden'),
+      () => showToast(t('opt.accentSaved')),
+      () => showToast(t('opt.accentFailed')),
     );
   };
 
@@ -96,10 +105,10 @@ export const EinstellungenView: React.FC<EinstellungenViewProps> = ({
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `medialog-sicherung-${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = t('opt.backupFile', { date: new Date().toISOString().slice(0, 10) });
     a.click();
     URL.revokeObjectURL(url);
-    showToast('JSON-Sicherung heruntergeladen');
+    showToast(t('opt.backupDownloaded'));
   };
 
   // Import JSON Backup
@@ -112,7 +121,7 @@ export const EinstellungenView: React.FC<EinstellungenViewProps> = ({
       try {
         const raw = JSON.parse(reader.result as string);
         if (!raw || !Array.isArray(raw.items)) {
-          alert('Ungültige Sicherungsdatei: Das Format entspricht nicht Medialog.');
+          alert(t('opt.backupInvalid'));
           return;
         }
 
@@ -135,7 +144,7 @@ export const EinstellungenView: React.FC<EinstellungenViewProps> = ({
             return {
               ...(rest as unknown as MediaItem),
               id: str(it.id, 200) || crypto.randomUUID(),
-              title: str(it.title, 200) || 'Ohne Titel',
+              title: str(it.title, 200) || t('opt.untitled'),
               creator: str(it.creator, 200),
               year: num(it.year),
               kind: (KINDS.includes(String(it.kind)) ? it.kind : 'book') as MediaItem['kind'],
@@ -158,7 +167,7 @@ export const EinstellungenView: React.FC<EinstellungenViewProps> = ({
             return {
               ...(rest as unknown as MediaList),
               id: str(l.id, 200) || crypto.randomUUID(),
-              title: str(l.title, 200) || 'Liste',
+              title: str(l.title, 200) || t('opt.listDefault'),
               kind: (LIST_KINDS.includes(String(l.kind)) ? l.kind : 'custom') as MediaList['kind'],
               itemIds: Array.isArray(l.itemIds) ? l.itemIds.map(String) : [],
               customItems: Array.isArray(l.customItems) ? l.customItems : [],
@@ -170,11 +179,11 @@ export const EinstellungenView: React.FC<EinstellungenViewProps> = ({
 
         const skipped = await onImportFullBackup({ items: sanitizedItems, lists: sanitizedLists });
         showToast(
-          `${sanitizedItems.length} Einträge und ${sanitizedLists.length} Listen gelesen` +
-            (skipped ? `, ${skipped} hier neuere behalten` : ''),
+          t('opt.backupRead', { items: sanitizedItems.length, lists: sanitizedLists.length }) +
+            (skipped ? t('opt.backupKept', { n: skipped }) : ''),
         );
       } catch (_err) {
-        alert('Fehler beim Lesen der JSON-Datei.');
+        alert(t('opt.backupError'));
       }
     };
     reader.readAsText(file);
@@ -185,14 +194,14 @@ export const EinstellungenView: React.FC<EinstellungenViewProps> = ({
     // German CSV with ; and UTF-8 BOM
     const bom = '\uFEFF';
     const headers = [
-      'Titel',
-      'Urheber',
-      'Jahr',
-      'Typ',
-      'Status',
-      'Bewertung',
-      'Notizen',
-      'Aktualisiert',
+      t('csv.title'),
+      t('csv.creator'),
+      t('csv.year'),
+      t('csv.type'),
+      t('csv.status'),
+      t('csv.rating'),
+      t('csv.notes'),
+      t('csv.updated'),
     ];
     const rows = items.map((it) => [
       `"${(it.title || '').replace(/"/g, '""')}"`,
@@ -210,10 +219,10 @@ export const EinstellungenView: React.FC<EinstellungenViewProps> = ({
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `medialog-sammlung-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = t('opt.csvFile', { date: new Date().toISOString().slice(0, 10) });
     a.click();
     URL.revokeObjectURL(url);
-    showToast('CSV-Export heruntergeladen');
+    showToast(t('opt.csvExported'));
   };
 
   // Read CSV for column mapping
@@ -275,7 +284,7 @@ export const EinstellungenView: React.FC<EinstellungenViewProps> = ({
       const rawTitle = row[columnMapping.title] || '';
       if (!rawTitle.trim()) continue;
 
-      const rawCreator = row[columnMapping.creator] || 'Unbekannt';
+      const rawCreator = row[columnMapping.creator] || t('common.unknown');
       const rawYear = parseInt(row[columnMapping.year] || '', 10) || undefined;
       const rawKind = (row[columnMapping.kind] || 'book').toLowerCase();
       const rawStatus = (row[columnMapping.status] || 'active').toLowerCase();
@@ -311,7 +320,7 @@ export const EinstellungenView: React.FC<EinstellungenViewProps> = ({
         kind: finalKind,
         bookSubtype: inferredSubtype,
         genres: [],
-        tags: ['CSV-Import'],
+        tags: [t('opt.csvTag')],
         status,
         rating: rawRating && rawRating >= 1 && rawRating <= 10 ? rawRating : undefined,
         notes: rawNotes ? rawNotes.replace(/^"|"$/g, '').trim() : undefined,
@@ -323,9 +332,9 @@ export const EinstellungenView: React.FC<EinstellungenViewProps> = ({
 
     if (newItems.length > 0) {
       await onImportItems(newItems);
-      showToast(`${newItems.length} Einträge aus CSV importiert`);
+      showToast(t('opt.csvImported', { n: newItems.length }));
     } else {
-      showToast('Keine Einträge zum Importieren gefunden');
+      showToast(t('opt.csvNone'));
     }
     setShowCsvMappingModal(false);
   };
@@ -334,7 +343,7 @@ export const EinstellungenView: React.FC<EinstellungenViewProps> = ({
     <div className="grid gap-6">
       {/* Card 1: Konto und Suche */}
       <div className="mn-card">
-        <h3 className="text-base font-bold mb-1">Konto</h3>
+        <h3 className="text-base font-bold mb-1">{t('opt.account')}</h3>
         <div className="flex items-center gap-3 p-3 bg-[var(--mn-surface-2)] rounded-xl mb-4">
           <span
             className="w-10 h-10 rounded-full bg-[var(--mn-accent)] text-[var(--mn-accent-ink)] font-bold flex items-center justify-center"
@@ -347,24 +356,24 @@ export const EinstellungenView: React.FC<EinstellungenViewProps> = ({
             <span className="block text-xs text-[var(--mn-muted)]">{currentUser.email}</span>
           </div>
           <a className="mn-btn text-xs" href={accountUrl}>
-            Konto verwalten
+            {t('opt.manageAccount')}
           </a>
         </div>
         <p className="text-xs text-[var(--mn-muted)]">
           {people.length === 0
-            ? 'Außer dir nutzt noch niemand Medialog.'
-            : `Teilen kannst du mit: ${people.map((p) => p.name).join(', ')}.`}
+            ? t('opt.nobodyElse')
+            : t('opt.shareWith', { names: people.map((p) => p.name).join(', ') })}
         </p>
+        <p className="text-xs text-[var(--mn-muted)] mt-1">{t('opt.languageNote')}</p>
       </div>
 
       <div className="mn-card">
-        <h3 className="text-base font-bold mb-1">Online-Suche</h3>
+        <h3 className="text-base font-bold mb-1">{t('opt.onlineSearch')}</h3>
         <label className="flex items-center justify-between gap-3 py-2">
           <span>
-            <span className="block font-semibold text-sm">Deutsche Titel bevorzugen</span>
+            <span className="block font-semibold text-sm">{t('opt.preferGerman')}</span>
             <span className="block text-xs text-[var(--mn-muted)]">
-              Sucht zusätzlich nach deutschen Ausgaben und zeigt den deutschen Titel, wenn es einen
-              gibt.
+              {t('opt.preferGermanHint')}
             </span>
           </span>
           <input
@@ -373,11 +382,8 @@ export const EinstellungenView: React.FC<EinstellungenViewProps> = ({
             checked={settings.preferGermanTitles}
             onChange={(e) =>
               void onChangeSettings({ preferGermanTitles: e.target.checked }).then(
-                () =>
-                  showToast(
-                    e.target.checked ? 'Deutsche Titel bevorzugt' : 'Originaltitel bevorzugt',
-                  ),
-                () => showToast('Einstellung konnte nicht gespeichert werden'),
+                () => showToast(t(e.target.checked ? 'opt.germanOn' : 'opt.germanOff')),
+                () => showToast(t('opt.settingFailed')),
               )
             }
           />
@@ -386,19 +392,16 @@ export const EinstellungenView: React.FC<EinstellungenViewProps> = ({
 
       {/* Card 2: Datensicherung & Export/Import */}
       <div className="mn-card">
-        <h3 className="text-base font-bold mb-1">Import & Export</h3>
-        <p className="text-xs text-[var(--mn-muted)] mb-4">
-          Sichere deine Mediensammlung oder importiere bestehende Daten aus CSV (Goodreads,
-          Letterboxd) oder JSON.
-        </p>
+        <h3 className="text-base font-bold mb-1">{t('opt.importExport')}</h3>
+        <p className="text-xs text-[var(--mn-muted)] mb-4">{t('opt.importExportHint')}</p>
 
         <div className="grid gap-4 sm:grid-cols-2">
           {/* JSON Backup */}
           <div className="p-4 bg-[var(--mn-surface-2)] rounded-xl grid gap-3">
             <div>
-              <b className="block text-sm">JSON-Vollsicherung</b>
+              <b className="block text-sm">{t('opt.jsonBackup')}</b>
               <span className="block text-xs text-[var(--mn-muted)]">
-                Beinhaltet alle Medien, Bewertungen, Einzelfolgen und Listen.
+                {t('opt.jsonBackupHint')}
               </span>
             </div>
             <div className="flex gap-2">
@@ -407,10 +410,10 @@ export const EinstellungenView: React.FC<EinstellungenViewProps> = ({
                 className="mn-btn mn-btn--primary text-xs flex-1"
                 onClick={handleExportJsonBackup}
               >
-                Sicherung herunterladen
+                {t('opt.download')}
               </button>
               <label className="mn-btn mn-btn--ghost text-xs cursor-pointer flex-1 text-center">
-                <span>Wiederherstellen</span>
+                <span>{t('opt.restore')}</span>
                 <input
                   type="file"
                   accept=".json,application/json"
@@ -424,10 +427,8 @@ export const EinstellungenView: React.FC<EinstellungenViewProps> = ({
           {/* CSV Export & Import */}
           <div className="p-4 bg-[var(--mn-surface-2)] rounded-xl grid gap-3">
             <div>
-              <b className="block text-sm">CSV-Datenaustausch</b>
-              <span className="block text-xs text-[var(--mn-muted)]">
-                Tabelle mit Semikolon-Trennung und Spaltenzuordnung beim Import.
-              </span>
+              <b className="block text-sm">{t('opt.csvExchange')}</b>
+              <span className="block text-xs text-[var(--mn-muted)]">{t('opt.csvHint')}</span>
             </div>
             <div className="flex gap-2">
               <button
@@ -435,10 +436,10 @@ export const EinstellungenView: React.FC<EinstellungenViewProps> = ({
                 className="mn-btn mn-btn--primary text-xs flex-1"
                 onClick={handleExportCsv}
               >
-                CSV Exportieren
+                {t('opt.csvExport')}
               </button>
               <label className="mn-btn mn-btn--ghost text-xs cursor-pointer flex-1 text-center">
-                <span>CSV Importieren</span>
+                <span>{t('opt.csvImport')}</span>
                 <input
                   type="file"
                   accept=".csv,text/csv"
@@ -453,38 +454,36 @@ export const EinstellungenView: React.FC<EinstellungenViewProps> = ({
 
       {/* Card 3: Design & Erscheinungsbild */}
       <div className="mn-card">
-        <h3 className="text-base font-bold mb-1">Erscheinungsbild & Theme</h3>
-        <p className="text-xs text-[var(--mn-muted)] mb-4">
-          Wähle dein bevorzugtes Farbschema und die Akzentfarbe.
-        </p>
+        <h3 className="text-base font-bold mb-1">{t('opt.appearance')}</h3>
+        <p className="text-xs text-[var(--mn-muted)] mb-4">{t('opt.appearanceHint')}</p>
 
         <div className="grid gap-4 sm:grid-cols-2">
           {/* Light/Dark/System Toggle */}
           <div>
             <span className="block text-xs font-semibold text-[var(--mn-muted)] mb-2">
-              Farbschema
+              {t('opt.scheme')}
             </span>
-            <fieldset className="mn-seg" aria-label="Theme wählen">
+            <fieldset className="mn-seg" aria-label={t('opt.chooseTheme')}>
               <button
                 type="button"
                 aria-pressed={currentTheme === 'system'}
                 onClick={() => handleSetTheme('system')}
               >
-                System
+                {t('opt.themeSystem')}
               </button>
               <button
                 type="button"
                 aria-pressed={currentTheme === 'light'}
                 onClick={() => handleSetTheme('light')}
               >
-                Hell
+                {t('opt.themeLight')}
               </button>
               <button
                 type="button"
                 aria-pressed={currentTheme === 'dark'}
                 onClick={() => handleSetTheme('dark')}
               >
-                Dunkel
+                {t('opt.themeDark')}
               </button>
             </fieldset>
           </div>
@@ -492,9 +491,9 @@ export const EinstellungenView: React.FC<EinstellungenViewProps> = ({
           {/* Accent Color */}
           <div>
             <span className="block text-xs font-semibold text-[var(--mn-muted)] mb-2">
-              Akzentfarbe
+              {t('opt.accent')}
             </span>
-            <fieldset className="mn-chips" aria-label="Akzentfarbe wählen">
+            <fieldset className="mn-chips" aria-label={t('opt.chooseAccent')}>
               {['blue', 'green', 'violet', 'amber', 'rose', 'teal'].map((acc) => (
                 <button
                   key={acc}
@@ -503,7 +502,7 @@ export const EinstellungenView: React.FC<EinstellungenViewProps> = ({
                   aria-pressed={currentAccent === acc}
                   onClick={() => handleSetAccent(acc)}
                 >
-                  {acc.charAt(0).toUpperCase() + acc.slice(1)}
+                  {t(`accent.${acc}`)}
                 </button>
               ))}
             </fieldset>
@@ -520,23 +519,26 @@ export const EinstellungenView: React.FC<EinstellungenViewProps> = ({
               className="mn-btn mn-btn--ghost"
               onClick={() => setShowCsvMappingModal(false)}
             >
-              Abbrechen
+              {t('common.cancel')}
             </button>
-            <h2 id="csv-title">CSV-Spaltenzuordnung</h2>
+            <h2 id="csv-title">{t('opt.csvMapping')}</h2>
             <span />
           </div>
 
           <div className="mn-sheet-body grid gap-4">
             <p className="text-xs text-[var(--mn-muted)]">
-              Erkannter Trenner:{' '}
-              <b className="mn-num">{csvDelimiter === ';' ? 'Semikolon (;)' : 'Komma (,)'}</b>.
-              Ordne die Spalten deiner CSV-Datei den Feldern von Medialog zu:
+              {t('opt.delimiterFound', {
+                delimiter: t(
+                  csvDelimiter === ';' ? 'opt.delimiterSemicolon' : 'opt.delimiterComma',
+                ),
+              })}{' '}
+              {t('opt.mapIntro')}
             </p>
 
             {/* Column Mapping Selects */}
             <div className="grid grid-cols-2 gap-3 text-xs">
               <label className="mn-field">
-                Titel *
+                {t('opt.mapTitle')}
                 <select
                   value={columnMapping.title}
                   onChange={(e) =>
@@ -546,14 +548,14 @@ export const EinstellungenView: React.FC<EinstellungenViewProps> = ({
                   {csvRawLines[0]?.map((col, idx) => (
                     // biome-ignore lint/suspicious/noArrayIndexKey: CSV columns are identified by their position
                     <option key={idx} value={idx}>
-                      Spalte {idx + 1}: {col || '(leer)'}
+                      {t('opt.column', { n: idx + 1, name: col || t('opt.columnEmpty') })}
                     </option>
                   ))}
                 </select>
               </label>
 
               <label className="mn-field">
-                Urheber / Autor
+                {t('opt.mapCreator')}
                 <select
                   value={columnMapping.creator}
                   onChange={(e) =>
@@ -563,14 +565,14 @@ export const EinstellungenView: React.FC<EinstellungenViewProps> = ({
                   {csvRawLines[0]?.map((col, idx) => (
                     // biome-ignore lint/suspicious/noArrayIndexKey: CSV columns are identified by their position
                     <option key={idx} value={idx}>
-                      Spalte {idx + 1}: {col || '(leer)'}
+                      {t('opt.column', { n: idx + 1, name: col || t('opt.columnEmpty') })}
                     </option>
                   ))}
                 </select>
               </label>
 
               <label className="mn-field">
-                Erscheinungsjahr
+                {t('opt.mapYear')}
                 <select
                   value={columnMapping.year}
                   onChange={(e) =>
@@ -580,14 +582,14 @@ export const EinstellungenView: React.FC<EinstellungenViewProps> = ({
                   {csvRawLines[0]?.map((col, idx) => (
                     // biome-ignore lint/suspicious/noArrayIndexKey: CSV columns are identified by their position
                     <option key={idx} value={idx}>
-                      Spalte {idx + 1}: {col || '(leer)'}
+                      {t('opt.column', { n: idx + 1, name: col || t('opt.columnEmpty') })}
                     </option>
                   ))}
                 </select>
               </label>
 
               <label className="mn-field">
-                Bewertung (1–10)
+                {t('opt.mapRating')}
                 <select
                   value={columnMapping.rating}
                   onChange={(e) =>
@@ -597,7 +599,7 @@ export const EinstellungenView: React.FC<EinstellungenViewProps> = ({
                   {csvRawLines[0]?.map((col, idx) => (
                     // biome-ignore lint/suspicious/noArrayIndexKey: CSV columns are identified by their position
                     <option key={idx} value={idx}>
-                      Spalte {idx + 1}: {col || '(leer)'}
+                      {t('opt.column', { n: idx + 1, name: col || t('opt.columnEmpty') })}
                     </option>
                   ))}
                 </select>
@@ -606,9 +608,7 @@ export const EinstellungenView: React.FC<EinstellungenViewProps> = ({
 
             {/* Preview table of first 5 rows */}
             <div>
-              <span className="block font-semibold text-xs mb-2">
-                Vorschau der ersten 5 Zeilen:
-              </span>
+              <span className="block font-semibold text-xs mb-2">{t('opt.preview')}</span>
               <div className="overflow-x-auto border border-[var(--mn-line)] rounded-lg">
                 <table className="w-full text-xs text-left border-collapse">
                   <thead className="bg-[var(--mn-surface-2)]">
@@ -616,7 +616,7 @@ export const EinstellungenView: React.FC<EinstellungenViewProps> = ({
                       {csvRawLines[0]?.map((col, i) => (
                         // biome-ignore lint/suspicious/noArrayIndexKey: CSV rows and cells are identified by their position
                         <th key={i} className="p-2 border-b border-[var(--mn-line)]">
-                          {col || `Spalte ${i + 1}`}
+                          {col || t('opt.columnHead', { n: i + 1 })}
                         </th>
                       ))}
                     </tr>
@@ -643,7 +643,7 @@ export const EinstellungenView: React.FC<EinstellungenViewProps> = ({
               className="mn-btn mn-btn--primary w-full mt-2"
               onClick={handleConfirmCsvImport}
             >
-              CSV jetzt importieren
+              {t('opt.importNow')}
             </button>
           </div>
         </Overlay>

@@ -2,8 +2,9 @@ import type React from 'react';
 import { useState } from 'react';
 import { Overlay } from '../components/Overlay';
 import { showToast } from '../components/Toast';
+import { locale, t } from '../i18n';
 import type { ConsumptionLogEntry, MediaItem } from '../types';
-import { formatDateDe, formatMinutes, getKindLabel } from '../utils/text';
+import { formatDate, formatMinutes, getKindLabel, getSubtypeLabel } from '../utils/text';
 
 interface StatistikViewProps {
   items: MediaItem[];
@@ -38,7 +39,7 @@ export const StatistikView: React.FC<StatistikViewProps> = ({ items, onSaveItem 
     ratedItems.length > 0
       ? (
           ratedItems.reduce((acc, it) => acc + (it.rating || 0), 0) / ratedItems.length
-        ).toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+        ).toLocaleString(locale(), { minimumFractionDigits: 1, maximumFractionDigits: 1 })
       : '-';
 
   // Aggregate all consumption logs across all media items
@@ -50,7 +51,7 @@ export const StatistikView: React.FC<StatistikViewProps> = ({ items, onSaveItem 
   });
 
   // Calculate day-by-day activity for the past 70 days (10 full weeks ending on a Sunday)
-  const today = new Date('2026-09-29T12:00:00Z');
+  const today = new Date();
   const pastDays = Array.from({ length: 70 }, (_, i) => {
     const d = new Date(today);
     d.setDate(today.getDate() - (69 - i));
@@ -66,8 +67,8 @@ export const StatistikView: React.FC<StatistikViewProps> = ({ items, onSaveItem 
     else if (count === 2) intensityClass = 'l2';
     else if (count === 1) intensityClass = 'l1';
 
-    const dayName = d.toLocaleDateString('de-DE', { weekday: 'long' });
-    const formattedDate = d.toLocaleDateString('de-DE', {
+    const dayName = d.toLocaleDateString(locale(), { weekday: 'long' });
+    const formattedDate = d.toLocaleDateString(locale(), {
       day: '2-digit',
       month: 'short',
       year: 'numeric',
@@ -79,7 +80,8 @@ export const StatistikView: React.FC<StatistikViewProps> = ({ items, onSaveItem 
       isSunday,
       count,
       intensityClass,
-      label: `${dayName}, ${formattedDate} (${count} ${count === 1 ? 'Aktivität' : 'Aktivitäten'})`,
+      title: `${dayName}, ${formattedDate}`,
+      label: t('stats.dayLabel', { day: dayName, date: formattedDate, n: count }),
       matchingLogs,
     };
   });
@@ -112,7 +114,7 @@ export const StatistikView: React.FC<StatistikViewProps> = ({ items, onSaveItem 
     setShowAddLogModal(false);
     setLogAction('');
     setLogNote('');
-    showToast(`Aktivität für den ${formatDateDe(logDate)} gespeichert`);
+    showToast(t('stats.logSaved', { date: formatDate(logDate) }));
   };
 
   // Details for selected day
@@ -144,27 +146,27 @@ export const StatistikView: React.FC<StatistikViewProps> = ({ items, onSaveItem 
       <div className="mn-kpis">
         <div className="mn-kpi">
           <b>{items.length}</b>
-          <span>Gesamte Werke</span>
+          <span>{t('stats.kpiTotal')}</span>
         </div>
         <div className="mn-kpi">
           <b>{doneItems.length}</b>
-          <span>Beendete Werke</span>
+          <span>{t('stats.kpiDone')}</span>
         </div>
         <div className="mn-kpi">
           <b>★ {avgRating}</b>
-          <span>Durchschnitt (1–10)</span>
+          <span>{t('stats.kpiAvg')}</span>
         </div>
         <div className="mn-kpi">
           <b>{totalPages}</b>
-          <span>Gelesene Seiten</span>
+          <span>{t('stats.kpiPages')}</span>
         </div>
         <div className="mn-kpi">
           <b>{formatMinutes(totalAudioMinutes)}</b>
-          <span>Gehörte Hörbücher</span>
+          <span>{t('stats.kpiAudio')}</span>
         </div>
         <div className="mn-kpi">
-          <b>{totalHours} h</b>
-          <span>Gespielte Stunden</span>
+          <b>{t('stats.hoursValue', { n: totalHours })}</b>
+          <span>{t('stats.kpiHours')}</span>
         </div>
       </div>
 
@@ -172,11 +174,11 @@ export const StatistikView: React.FC<StatistikViewProps> = ({ items, onSaveItem 
       <div className="mn-card">
         <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
           <div>
-            <h3 className="text-base font-bold">Konsum-Aktivität der letzten 10 Wochen</h3>
+            <h3 className="text-base font-bold">{t('stats.activityTitle')}</h3>
             <p className="text-xs text-[var(--mn-muted)]">
-              Klicke auf einen Tag, um alle Aktivitäten einzusehen.{' '}
+              {t('stats.activityHint')}{' '}
               <span className="font-semibold text-amber-600 dark:text-amber-400">
-                Sonntage sind mit goldener Umrandung hervorgehoben.
+                {t('stats.sundayHint')}
               </span>
             </p>
           </div>
@@ -188,13 +190,13 @@ export const StatistikView: React.FC<StatistikViewProps> = ({ items, onSaveItem 
               setShowAddLogModal(true);
             }}
           >
-            📅 Aktivität nach Datum loggen
+            {t('stats.logByDate')}
           </button>
         </div>
 
         {/* Live Hover Info Display */}
         <div className="h-6 text-xs font-semibold text-[var(--mn-accent-text)] mb-2">
-          {hoveredDayInfo ? `ℹ️ ${hoveredDayInfo}` : 'Bewege die Maus über einen Tag für Details'}
+          {hoveredDayInfo ? `ℹ️ ${hoveredDayInfo}` : t('stats.hoverHint')}
         </div>
 
         {/* 70 Days Grid (10 columns x 7 days) */}
@@ -231,15 +233,15 @@ export const StatistikView: React.FC<StatistikViewProps> = ({ items, onSaveItem 
         <div className="flex flex-wrap items-center justify-between text-xs text-[var(--mn-muted)] mt-3 pt-2 border-t border-[var(--mn-line)]">
           <div className="flex items-center gap-2">
             <span className="inline-block w-4 h-4 rounded border-[2.5px] border-[#d4af37] bg-[var(--mn-surface)]" />
-            <span>Sonntag (Gold)</span>
+            <span>{t('stats.legendSunday')}</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span>Keine Aktivität</span>
+            <span>{t('stats.legendNone')}</span>
             <span className="w-3 h-3 rounded bg-[var(--mn-surface)] border border-[var(--mn-line)]" />
             <span className="w-3 h-3 rounded bg-blue-100 dark:bg-blue-900/40" />
             <span className="w-3 h-3 rounded bg-[var(--mn-accent-soft)]" />
             <span className="w-3 h-3 rounded bg-[var(--mn-accent)]" />
-            <span>Sehr aktiv</span>
+            <span>{t('stats.legendMany')}</span>
           </div>
         </div>
       </div>
@@ -248,20 +250,18 @@ export const StatistikView: React.FC<StatistikViewProps> = ({ items, onSaveItem 
       <div className="mn-cols">
         {/* Book Subtypes Breakdown */}
         <div className="mn-card">
-          <h3 className="text-base font-bold mb-1">Buch-Formate & Manga ({bookItems.length})</h3>
-          <p className="text-xs text-[var(--mn-muted)] mb-4">
-            Manga, Manhwa, Manhua, Romane und Comics im Archiv
-          </p>
+          <h3 className="text-base font-bold mb-1">
+            {t('stats.formatsTitle', { n: bookItems.length })}
+          </h3>
+          <p className="text-xs text-[var(--mn-muted)] mb-4">{t('stats.formatsHint')}</p>
           {subtypesList.length > 0 ? (
             subtypesList.map(([sub, count]) => {
               const pct = Math.round((count / bookItems.length) * 100);
               return (
                 <div key={sub} className="mn-bar">
                   <div className="mn-bar-top">
-                    <b>{sub}</b>
-                    <span>
-                      {count} {count === 1 ? 'Titel' : 'Titel'}, {pct} %
-                    </span>
+                    <b>{getSubtypeLabel(sub)}</b>
+                    <span>{t('stats.titles', { n: count, pct })}</span>
                   </div>
                   <div className="mn-meter">
                     <i style={{ width: `${pct}%` }} />
@@ -270,15 +270,13 @@ export const StatistikView: React.FC<StatistikViewProps> = ({ items, onSaveItem 
               );
             })
           ) : (
-            <p className="text-xs text-[var(--mn-muted)]">
-              Noch keine Bücher oder Manga verzeichnet.
-            </p>
+            <p className="text-xs text-[var(--mn-muted)]">{t('stats.noBooks')}</p>
           )}
         </div>
 
         {/* Top Genres */}
         <div className="mn-card">
-          <h3 className="text-base font-bold mb-4">Top Genres</h3>
+          <h3 className="text-base font-bold mb-4">{t('stats.topGenres')}</h3>
           {topGenres.length > 0 ? (
             topGenres.map(([genre, count]) => {
               const pct = Math.round((count / items.length) * 100);
@@ -286,9 +284,7 @@ export const StatistikView: React.FC<StatistikViewProps> = ({ items, onSaveItem 
                 <div key={genre} className="mn-bar">
                   <div className="mn-bar-top">
                     <b>{genre}</b>
-                    <span>
-                      {count} {count === 1 ? 'Werk' : 'Werke'}, {pct} %
-                    </span>
+                    <span>{t('stats.works', { n: count, pct })}</span>
                   </div>
                   <div className="mn-meter">
                     <i style={{ width: `${pct}%` }} />
@@ -297,7 +293,7 @@ export const StatistikView: React.FC<StatistikViewProps> = ({ items, onSaveItem 
               );
             })
           ) : (
-            <p className="text-xs text-[var(--mn-muted)]">Noch keine Genres erfasst.</p>
+            <p className="text-xs text-[var(--mn-muted)]">{t('stats.noGenres')}</p>
           )}
         </div>
       </div>
@@ -311,30 +307,32 @@ export const StatistikView: React.FC<StatistikViewProps> = ({ items, onSaveItem 
               className="mn-btn mn-btn--ghost"
               onClick={() => setSelectedDay(null)}
             >
-              Schließen
+              {t('common.close')}
             </button>
-            <h2 id="day-title">{formatDateDe(selectedDay)}</h2>
+            <h2 id="day-title">{formatDate(selectedDay)}</h2>
             <span />
           </div>
 
           <div className="mn-sheet-body grid gap-4">
             <div className="flex items-center justify-between pb-2 border-b border-[var(--mn-line)]">
               <div>
-                <b className="text-base block">{selectedDayInfo.label.split('(')[0]}</b>
+                <b className="text-base block">{selectedDayInfo.title}</b>
                 {selectedDayInfo.isSunday && (
                   <span className="inline-block text-xs font-bold text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/40 px-2 py-0.5 rounded-full mt-1">
-                    ✨ Sonntag
+                    {t('stats.sunday')}
                   </span>
                 )}
               </div>
               <span className="mn-chip mn-chip--plain font-bold">
-                {selectedDayInfo.count} {selectedDayInfo.count === 1 ? 'Eintrag' : 'Einträge'}
+                {t('stats.entries', { n: selectedDayInfo.count })}
               </span>
             </div>
 
             {selectedDayInfo.matchingLogs.length > 0 ? (
               <div className="grid gap-2.5">
-                <h4 className="text-xs font-bold text-[var(--mn-muted)]">An diesem Tag geloggt:</h4>
+                <h4 className="text-xs font-bold text-[var(--mn-muted)]">
+                  {t('stats.loggedThatDay')}
+                </h4>
                 {selectedDayInfo.matchingLogs.map((log) => (
                   <div
                     key={log.id}
@@ -351,7 +349,7 @@ export const StatistikView: React.FC<StatistikViewProps> = ({ items, onSaveItem 
                     </p>
                     {log.progressNote && (
                       <p className="text-xs text-[var(--mn-muted)] mt-1.5 italic">
-                        „{log.progressNote}“
+                        {t('stats.noteQuote', { text: log.progressNote })}
                       </p>
                     )}
                   </div>
@@ -359,7 +357,7 @@ export const StatistikView: React.FC<StatistikViewProps> = ({ items, onSaveItem 
               </div>
             ) : (
               <div className="p-6 text-center text-sm text-[var(--mn-muted)] bg-[var(--mn-surface-2)] rounded-xl">
-                Für diesen Tag wurde noch keine Aktivität protokolliert.
+                {t('stats.noneThatDay')}
               </div>
             )}
 
@@ -373,7 +371,7 @@ export const StatistikView: React.FC<StatistikViewProps> = ({ items, onSaveItem 
                   setShowAddLogModal(true);
                 }}
               >
-                + Aktivität für den {formatDateDe(selectedDay)} eintragen
+                {t('stats.addForDay', { date: formatDate(selectedDay) })}
               </button>
             </div>
           </div>
@@ -389,16 +387,16 @@ export const StatistikView: React.FC<StatistikViewProps> = ({ items, onSaveItem 
               className="mn-btn mn-btn--ghost"
               onClick={() => setShowAddLogModal(false)}
             >
-              Abbrechen
+              {t('common.cancel')}
             </button>
-            <h2 id="add-log-title">Konsum-Aktivität eintragen</h2>
+            <h2 id="add-log-title">{t('stats.addLogTitle')}</h2>
             <span />
           </div>
 
           <form onSubmit={handleSaveManualLog} className="mn-sheet-body mn-form">
             <fieldset>
               <label className="mn-field">
-                Datum der Aktivität *
+                {t('stats.logDate')}
                 <input
                   type="date"
                   required
@@ -408,7 +406,7 @@ export const StatistikView: React.FC<StatistikViewProps> = ({ items, onSaveItem 
               </label>
 
               <label className="mn-field">
-                Werk auswählen *
+                {t('stats.logWork')}
                 <select value={logWorkId} onChange={(e) => setLogWorkId(e.target.value)} required>
                   {items.map((it) => (
                     <option key={it.id} value={it.id}>
@@ -419,21 +417,21 @@ export const StatistikView: React.FC<StatistikViewProps> = ({ items, onSaveItem 
               </label>
 
               <label className="mn-field">
-                Was hast du gemacht? *
+                {t('stats.logWhat')}
                 <input
                   type="text"
                   required
-                  placeholder="z. B. Kapitel 4 gelesen, Folge 2 geschaut, Band 14 beendet ..."
+                  placeholder={t('stats.logWhatPh')}
                   value={logAction}
                   onChange={(e) => setLogAction(e.target.value)}
                 />
               </label>
 
               <label className="mn-field">
-                Optionale Notiz / Eindrücke
+                {t('stats.logNote')}
                 <textarea
                   rows={3}
-                  placeholder="Gedanken, Zitate oder Rezension ..."
+                  placeholder={t('stats.logNotePh')}
                   value={logNote}
                   onChange={(e) => setLogNote(e.target.value)}
                 />
@@ -441,7 +439,7 @@ export const StatistikView: React.FC<StatistikViewProps> = ({ items, onSaveItem 
             </fieldset>
 
             <button type="submit" className="mn-btn mn-btn--primary w-full mt-4">
-              Aktivität speichern
+              {t('stats.logSave')}
             </button>
           </form>
         </Overlay>

@@ -43,3 +43,7 @@ the privacy rules against the local stack; `e2e/wunschliste.spec.ts` runs the wh
 three users.
 
 `access.default` is true: every user gets the app (existing users on the first deploy).
+
+## Languages
+
+German and English (`i18n/de.json`, `i18n/en.json`, declared under `i18n` in `mininode.json`). The person's choice in Konto → Sprache applies; an unknown key falls back to German. New texts need a key in both files; `pnpm mininode doctor hosted/wunschliste` checks them (ADR 0017).

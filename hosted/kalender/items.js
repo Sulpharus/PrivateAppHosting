@@ -10,8 +10,8 @@ export const appName = (slug) => APP_NAMES[slug] ?? slug;
 
 /**
  * The source a record belongs to: events made in this app are grouped by collection
- * (Meine Termine, Familienkalender, …); records from other apps by app and type
- * (Sportplaner · Sporteinheit), so each can be shown, hidden and coloured on its own.
+ * (My events, Family calendar, …); records from other apps by app and type
+ * (Sportplaner · Training session), so each can be shown, hidden and coloured on its own.
  */
 export function sourceOf(record) {
   const app = record.created_by_app ?? record.source_app ?? '';
@@ -19,7 +19,7 @@ export function sourceOf(record) {
 }
 
 /** Labels and default colours for every source seen in the records and collections. */
-export function sourcesFrom(records, collections, types, known = {}) {
+export function sourcesFrom(records, collections, types, known = {}, shared = 'Shared calendar') {
   const label = Object.fromEntries(types.map((t) => [t.type, t.label]));
   const map = new Map();
   // Default colours avoid the ones already chosen, so they stay stable when choices are saved.
@@ -46,16 +46,16 @@ export function sourcesFrom(records, collections, types, known = {}) {
     });
   };
   for (const c of collections.filter((c) => c.family === 'kalender'))
-    add(`col:${c.id}`, c.name, 'Kalender', { collection: c });
+    add(`col:${c.id}`, c.name, 'calendars', { collection: c });
   for (const r of records) {
     const id = sourceOf(r);
     if (id.startsWith('col:')) {
       const c = collections.find((x) => `col:${x.id}` === id);
-      add(id, c?.name ?? 'Geteilter Kalender', 'Kalender', c ? { collection: c } : {});
+      add(id, c?.name ?? shared, 'calendars', c ? { collection: c } : {});
     } else {
       const [, app, type] = id.split(':');
       // Bookings are many; they start hidden.
-      add(id, `${appName(app)} · ${label[type] ?? type}`, 'Apps', {
+      add(id, `${appName(app)} · ${label[type] ?? type}`, 'apps', {
         app,
         type,
         hiddenByDefault: type === 'transaction',
@@ -66,7 +66,7 @@ export function sourcesFrom(records, collections, types, known = {}) {
   for (const [id, saved] of Object.entries(known)) {
     if (!id.startsWith('app:') || !saved.name) continue;
     const [, app, type] = id.split(':');
-    add(id, saved.name, 'Apps', { app, type });
+    add(id, saved.name, 'apps', { app, type });
   }
   return [...map.values()];
 }
@@ -106,7 +106,10 @@ export function spanOf(record, projection) {
  * Items in [from, to): one per occurrence, with `key` (record + occurrence), the source and
  * whether this app may edit it.
  */
-export function itemsFor(records, { from, to, projections, sources, roles }) {
+export function itemsFor(
+  records,
+  { from, to, projections, sources, roles, untitled = '(untitled)' },
+) {
   const out = [];
   const byId = new Map(sources.map((s) => [s.id, s]));
   for (const r of records) {
@@ -125,7 +128,7 @@ export function itemsFor(records, { from, to, projections, sources, roles }) {
       out.push({
         key: rule ? `${r.id}@${occurrenceKey(start)}` : r.id,
         record: r,
-        title: r.title || '(ohne Titel)',
+        title: r.title || untitled,
         start,
         end,
         allDay: span.allDay,

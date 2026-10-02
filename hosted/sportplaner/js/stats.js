@@ -6,28 +6,42 @@ S.costBy = 'provider';
 function plansChanged() {
   scheduleRender();
 }
-const eurF = new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' });
-const eur = (n) => eurF.format(n || 0);
-const numF = new Intl.NumberFormat('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const parseMoney = (v) => parseEuro(v);
-const UNITS = {
-  day: ['Tag', 'Tage'],
-  week: ['Woche', 'Wochen'],
-  month: ['Monat', 'Monate'],
-  year: ['Jahr', 'Jahre'],
+const numFormats = new Map();
+const numFormat = (kind) => {
+  const k = loc() + kind;
+  if (!numFormats.has(k))
+    numFormats.set(
+      k,
+      new Intl.NumberFormat(
+        loc(),
+        kind === 'eur'
+          ? { style: 'currency', currency: 'EUR' }
+          : { minimumFractionDigits: 2, maximumFractionDigits: 2 },
+      ),
+    );
+  return numFormats.get(k);
 };
-const EVERY1 = { day: 'täglich', week: 'wöchentlich', month: 'monatlich', year: 'jährlich' };
+const eur = (n) => numFormat('eur').format(n || 0);
+const numF = { format: (n) => numFormat('dec').format(n) };
+const parseMoney = (v) => parseEuro(v);
+// Stored values are the keys; the values are language keys.
+const UNITS = {
+  day: 'unit.day',
+  week: 'unit.week',
+  month: 'unit.month',
+  year: 'unit.year',
+};
 const PTYPES = {
-  recurring: 'Wiederkehrend (Abo, Mitgliedschaft)',
-  once: 'Einmalig',
-  visit: 'Pro Besuch',
-  card: 'Mehrfachkarte (z. B. 10er-Karte)',
+  recurring: 'plan.type.recurring',
+  once: 'plan.type.once',
+  visit: 'plan.type.visit',
+  card: 'plan.type.card',
 };
 const PLAN_AMOUNT_LABEL = {
-  recurring: 'Betrag pro Zahlung in €',
-  once: 'Betrag in €',
-  visit: 'Preis pro Besuch in €',
-  card: 'Kartenpreis in €',
+  recurring: 'plan.amount.recurring',
+  once: 'plan.amount.once',
+  visit: 'plan.amount.visit',
+  card: 'plan.amount.card',
 };
 
 function addInterval(d, n, unit) {
@@ -58,13 +72,20 @@ function paymentsCount(p, from, to) {
 }
 function planSummary(p) {
   const a = eur(p.amount);
+  const date = (v) => fmt(parse(v), { day: '2-digit', month: 'short', year: 'numeric' });
   if (p.type === 'once')
-    return `${a} einmalig${p.start ? ' am ' + fmt(parse(p.start), { day: '2-digit', month: 'short', year: 'numeric' }) : ''}`;
-  if (p.type === 'visit') return `${a} pro Besuch`;
-  if (p.type === 'card') return `${p.visits || 10}er-Karte für ${a}`;
+    return p.start
+      ? tr('plan.sumOnceOn', { amount: a, date: date(p.start) })
+      : tr('plan.sumOnce', { amount: a });
+  if (p.type === 'visit') return tr('plan.sumVisit', { amount: a });
+  if (p.type === 'card') return tr('plan.sumCard', { visits: p.visits || 10, amount: a });
   const n = +p.every || 1,
     u = p.unit || 'month';
-  return `${a} ${n === 1 ? EVERY1[u] : `alle ${n} ${UNITS[u][1]}`}${p.end ? ', gekündigt zum ' + fmt(parse(p.end), { day: '2-digit', month: 'short', year: 'numeric' }) : ''}`;
+  const text =
+    n === 1
+      ? tr('plan.sumEvery', { amount: a, every: tr(`plan.every1.${u}`) })
+      : tr('plan.sumEveryN', { amount: a, n, unit: tr(UNITS[u]) });
+  return p.end ? tr('plan.cancelledOn', { text, date: date(p.end) }) : text;
 }
 const visitsIn = (a, from, to) =>
   (a.done || []).reduce((c, d) => c + (d >= from && d <= to ? 1 : 0), 0);
@@ -87,8 +108,8 @@ function computeStats(Y) {
       entries.push({
         amount,
         act: a ? a.id : null,
-        provider: (p && p.provider) || (a && a.provider) || 'Ohne Anbieter',
-        category: (p && p.category) || (a && a.category) || 'Ohne Sportart',
+        provider: (p && p.provider) || (a && a.provider) || tr('stats.noProvider'),
+        category: (p && p.category) || (a && a.category) || tr('stats.noSport'),
         tarif: label,
       });
   };
@@ -141,14 +162,14 @@ function computeStats(Y) {
       planned += share;
       if (d <= to) spent += share;
     }
-    push(spent, a, null, 'Kurse');
+    push(spent, a, null, tr('stats.courses'));
     forecast += planned;
   }
   for (const a of S.acts) {
     const pr = +a.visitPrice || 0;
     if (pr > 0 && !covered.has(a.id)) {
       const c = pr * vis.get(a.id);
-      push(c, a, null, 'Einzelpreise');
+      push(c, a, null, tr('stats.singlePrices'));
       forecast += c;
     }
   }
@@ -194,27 +215,31 @@ function computeStats(Y) {
   };
 }
 
-SKELETON.stats = `<div id="st-sum"></div><div class="card heat-card" id="st-heat"></div><div class="stat-cols"><div id="st-usage"></div><div id="st-cost"></div></div><div id="st-plans"></div>`;
+SKELETON_EXTRA.push(() => ({
+  stats: `<div id="st-sum"></div><div class="card heat-card" id="st-heat"></div><div class="stat-cols"><div id="st-usage"></div><div id="st-cost"></div></div><div id="st-plans"></div>`,
+}));
 
 function updStats() {
   const Y = S.year,
     st = computeStats(Y),
     td = todayStr();
   setHeader(
-    'Statistik',
-    st.isCurrent
-      ? 'Stand heute'
-      : Y < new Date().getFullYear()
-        ? 'Abgeschlossenes Jahr'
-        : 'Kommendes Jahr',
+    tr('stats.title'),
+    tr(
+      st.isCurrent
+        ? 'stats.subCurrent'
+        : Y < new Date().getFullYear()
+          ? 'stats.subPast'
+          : 'stats.subFuture',
+    ),
   );
   setHTML(
     $('#tools'),
-    `<div class="stepper" role="group" aria-label="Jahr"><button class="arrow" data-action="year" data-dir="-1" aria-label="Vorheriges Jahr">${ICON.left}</button><b>${Y}</b><button class="arrow" data-action="year" data-dir="1" aria-label="Nächstes Jahr">${ICON.right}</button></div>`,
+    `<div class="stepper" role="group" aria-label="${esc(tr('stats.year'))}"><button class="arrow" data-action="year" data-dir="-1" aria-label="${esc(tr('stats.prevYear'))}">${ICON.left}</button><b>${Y}</b><button class="arrow" data-action="year" data-dir="1" aria-label="${esc(tr('stats.nextYear'))}">${ICON.right}</button></div>`,
   );
   setHTML(
     $('#st-sum'),
-    `<div class="kpis"><div><b>${st.sessions}</b><span>Einheiten</span></div><div><b>${st.activeDays}</b><span>Aktive Tage</span></div><div><b>${st.plannedN ? `${Math.round((st.attended / st.plannedN) * 100)} %` : '–'}</b><span>${st.plannedN ? `Teilnahme: ${st.attended} von ${st.plannedN} geplanten Terminen` : 'Teilnahme an geplanten Terminen'}</span></div><div><b>${eur(st.total)}</b><span>${st.isCurrent ? 'Kosten bisher' : 'Kosten'}</span></div></div>${st.plannedN ? '<p class="note kpi-note">Ausgefallene Termine zählen weder als Teilnahme noch als verpasst.</p>' : ''}`,
+    `<div class="kpis"><div><b>${st.sessions}</b><span>${esc(tr('stats.sessions'))}</span></div><div><b>${st.activeDays}</b><span>${esc(tr('stats.activeDays'))}</span></div><div><b>${st.plannedN ? `${Math.round((st.attended / st.plannedN) * 100)} %` : '–'}</b><span>${esc(st.plannedN ? tr('stats.attendance', { attended: st.attended, planned: st.plannedN }) : tr('stats.attendanceEmpty'))}</span></div><div><b>${eur(st.total)}</b><span>${esc(tr(st.isCurrent ? 'stats.costSoFar' : 'stats.cost'))}</span></div></div>${st.plannedN ? `<p class="note kpi-note">${esc(tr('stats.cancelledNote'))}</p>` : ''}`,
   );
 
   const months = [...Array(12)]
@@ -226,68 +251,68 @@ function updStats() {
       for (let d = 1; d <= days; d++) {
         const ds = `${Y}-${pad(m + 1)}-${pad(d)}`,
           c = st.byDay.get(ds) || 0;
-        cells += `<button class="hm l${Math.min(c, 3)}${ds === td ? ' now' : ''}" data-action="heatday" data-date="${ds}" aria-label="${d}. ${mn}: ${c} ${c === 1 ? 'Einheit' : 'Einheiten'}"></button>`;
+        cells += `<button class="hm l${Math.min(c, 3)}${ds === td ? ' now' : ''}" data-action="heatday" data-date="${ds}" aria-label="${esc(tr('stats.heatCell', { day: d, month: mn, n: c }))}"></button>`;
       }
       return `<div class="hm-month"><span>${fmt(first, { month: 'short' }).replace('.', '')}</span><div class="hm-grid">${cells}</div></div>`;
     })
     .join('');
   setHTML(
     $('#st-heat'),
-    `<div class="heat">${months}</div><div class="hm-legend">Weniger<i class="hm"></i><i class="hm l1"></i><i class="hm l2"></i><i class="hm l3"></i>Mehr</div>`,
+    `<div class="heat">${months}</div><div class="hm-legend">${esc(tr('stats.less'))}<i class="hm"></i><i class="hm l1"></i><i class="hm l2"></i><i class="hm l3"></i>${esc(tr('stats.more'))}</div>`,
   );
 
   const maxN = Math.max(1, ...st.usage.map((u) => u.n));
   setHTML(
     $('#st-usage'),
-    `<div class="sect"><h3>Nutzung</h3></div>` +
+    `<div class="sect"><h3>${esc(tr('stats.usage'))}</h3></div>` +
       (st.usage.length
-        ? `<div class="card pad">${st.usage.map((u) => `<button class="ubar" data-action="open" data-id="${esc(u.a.id)}"><span class="u-top"><b>${esc(u.a.name)}</b><span>${u.n}×${u.cost ? ', ' + eur(u.cost) + (u.n ? ` (${eur(u.cost / u.n)} pro Besuch)` : '') : ''}</span></span><span class="meter"><i style="width:${Math.max(2, (u.n / maxN) * 100)}%"></i></span></button>`).join('')}</div>`
-        : `<p class="note">Noch keine Besuche in ${Y}. Markiere Aktivitäten als erledigt oder trage Besuche in der Detailansicht nach.</p>`),
+        ? `<div class="card pad">${st.usage.map((u) => `<button class="ubar" data-action="open" data-id="${esc(u.a.id)}"><span class="u-top"><b>${esc(u.a.name)}</b><span>${u.n}×${u.cost ? esc(tr('stats.usageCost', { cost: eur(u.cost) }) + (u.n ? ` ${tr('stats.usagePerVisit', { cost: eur(u.cost / u.n) })}` : '')) : ''}</span></span><span class="meter"><i style="width:${Math.max(2, (u.n / maxN) * 100)}%"></i></span></button>`).join('')}</div>`
+        : `<p class="note">${esc(tr('stats.noVisitsYet', { year: Y }))}</p>`),
   );
 
   const g = st.groups[S.costBy],
     maxC = Math.max(0.01, ...g.map((x) => x[1]));
-  const seg = `<div class="seg" role="group" aria-label="Kosten gruppieren nach">${[
-    ['provider', 'Anbieter'],
-    ['category', 'Sportart'],
-    ['tarif', 'Tarif'],
+  const seg = `<div class="seg" role="group" aria-label="${esc(tr('stats.groupBy'))}">${[
+    ['provider', tr('stats.byProvider')],
+    ['category', tr('stats.bySport')],
+    ['tarif', tr('stats.byTariff')],
   ]
     .map(
       ([k, l]) =>
-        `<button type="button" class="${S.costBy === k ? 'on' : ''}" data-action="costby" data-by="${k}" aria-pressed="${S.costBy === k}">${l}</button>`,
+        `<button type="button" class="${S.costBy === k ? 'on' : ''}" data-action="costby" data-by="${k}" aria-pressed="${S.costBy === k}">${esc(l)}</button>`,
     )
     .join('')}</div>`;
   const fc =
     st.isCurrent && st.forecast > st.total + 0.005
-      ? `Voraussichtlich ${eur(st.forecast)} im ganzen Jahr`
+      ? tr('stats.forecast', { amount: eur(st.forecast) })
       : st.isCurrent
-        ? 'Bis heute'
-        : `Gesamt ${Y}`;
+        ? tr('stats.untilToday')
+        : tr('stats.total', { year: Y });
   setHTML(
     $('#st-cost'),
-    `<div class="sect"><h3>Kosten</h3></div>` +
+    `<div class="sect"><h3>${esc(tr('stats.cost'))}</h3></div>` +
       (st.total || st.forecast
-        ? `<div class="card pad"><div class="costhead"><b>${eur(st.total)}</b><span>${fc}</span></div>${seg}${g.map(([k, v]) => `<div class="ubar"><span class="u-top"><b>${esc(k)}</b><span>${eur(v)}, ${Math.round((v / (st.total || 1)) * 100)} %</span></span><span class="meter"><i style="width:${Math.max(2, (v / maxC) * 100)}%"></i></span></div>`).join('')}</div>`
-        : `<p class="note">Noch keine Kosten für ${Y}. Lege unten einen Tarif an oder trage bei einer Aktivität einen Preis pro Besuch ein.</p>`),
+        ? `<div class="card pad"><div class="costhead"><b>${eur(st.total)}</b><span>${esc(fc)}</span></div>${seg}${g.map(([k, v]) => `<div class="ubar"><span class="u-top"><b>${esc(k)}</b><span>${eur(v)}, ${Math.round((v / (st.total || 1)) * 100)} %</span></span><span class="meter"><i style="width:${Math.max(2, (v / maxC) * 100)}%"></i></span></div>`).join('')}</div>`
+        : `<p class="note">${esc(tr('stats.noCostYet', { year: Y }))}</p>`),
   );
 
   const actName = (id) => (S.acts.find((a) => a.id === id) || {}).name;
   setHTML(
     $('#st-plans'),
-    `<div class="sect"><h3>Tarife und Mitgliedschaften</h3>${S.plans.length ? '<button class="link" data-action="new-plan">Hinzufügen</button>' : ''}</div>` +
+    `<div class="sect"><h3>${esc(tr('stats.plansTitle'))}</h3>${S.plans.length ? `<button class="link" data-action="new-plan">${esc(tr('action.add'))}</button>` : ''}</div>` +
       (S.plans.length
         ? `<div class="list-card">${[...st.planStats]
-            .sort((x, y) => x.p.name.localeCompare(y.p.name, 'de'))
+            .sort((x, y) => x.p.name.localeCompare(y.p.name, loc()))
             .map(({ p, total, visits, perVisit }) => {
               const links = (p.activities || []).map(actName).filter(Boolean);
-              return `<button class="row prow" data-action="edit-plan" data-id="${esc(p.id)}"><span class="min"><h4>${esc(p.name)}</h4><p>${esc([planSummary(p), p.provider].filter(Boolean).join(', '))}</p>${links.length ? `<p>${esc(links.join(', '))}</p>` : ''}</span><span class="next"><b>${eur(total)}</b>${visits ? `${visits} ${visits === 1 ? 'Besuch' : 'Besuche'}` : ''}${perVisit ? `<br>${eur(perVisit)} pro Besuch` : ''}</span></button>`;
+              return `<button class="row prow" data-action="edit-plan" data-id="${esc(p.id)}"><span class="min"><h4>${esc(p.name)}</h4><p>${esc([planSummary(p), p.provider].filter(Boolean).join(', '))}</p>${links.length ? `<p>${esc(links.join(', '))}</p>` : ''}</span><span class="next"><b>${eur(total)}</b>${visits ? esc(tr('stats.visits', { n: visits })) : ''}${perVisit ? `<br>${esc(tr('stats.perVisit', { price: eur(perVisit) }))}` : ''}</span></button>`;
             })
             .join('')}</div>`
         : emptyHTML(
             'stats',
-            'Noch keine Tarife',
-            'Trage Mitgliedschaften, Abos und Mehrfachkarten ein, z. B. Urban Sports Club oder dein Gym.',
-            '<button class="btn primary" data-action="new-plan">Tarif hinzufügen</button>',
+            esc(tr('stats.noPlans')),
+            esc(tr('stats.noPlansText')),
+            `<button class="btn primary" data-action="new-plan">${esc(tr('stats.addPlan'))}</button>`,
           )),
   );
 }
@@ -319,46 +344,50 @@ function openPlanEditor(p) {
   const uniq = (key) =>
     [
       ...new Set([...S.acts.map((x) => x[key]), ...S.plans.map((x) => x[key])].filter(Boolean)),
-    ].sort((x, y) => x.localeCompare(y, 'de'));
+    ].sort((x, y) => x.localeCompare(y, loc()));
   const v = (k) => esc(pdraft[k] ?? '');
   const opt = (val, label, cur) =>
     `<option value="${esc(val)}"${val === cur ? ' selected' : ''}>${esc(label)}</option>`;
-  const acts = [...S.acts].sort((x, y) => x.name.localeCompare(y.name, 'de'));
+  const acts = [...S.acts].sort((x, y) => x.name.localeCompare(y.name, loc()));
   openSheet(
-    `<div class="bar"><button class="btn ghost" data-action="close">Abbrechen</button><h2 id="sheet-title">${p ? 'Tarif bearbeiten' : 'Neuer Tarif'}</h2><span></span></div>
+    `<div class="bar"><button class="btn ghost" data-action="close">${esc(tr('action.cancel'))}</button><h2 id="sheet-title">${esc(tr(p ? 'plan.edit' : 'plan.new'))}</h2><span></span></div>
   <form class="form" id="planform" data-type="${esc(pdraft.type)}" novalidate>
-    <fieldset><legend>Tarif</legend>
-      <label class="f">Name<input name="name" value="${v('name')}" placeholder="z. B. Urban Sports Club M" autocomplete="off"></label>
-      <div class="two"><label class="f">Anbieter<input name="provider" value="${v('provider')}" list="pprovs" autocomplete="off"></label><label class="f">Sportart<input name="category" value="${v('category')}" list="pcats" placeholder="optional" autocomplete="off"></label></div>
+    <fieldset><legend>${esc(tr('plan.sectionPlan'))}</legend>
+      <label class="f">${esc(tr('plan.name'))}<input name="name" value="${v('name')}" placeholder="${esc(tr('plan.namePlaceholder'))}" autocomplete="off"></label>
+      <div class="two"><label class="f">${esc(tr('plan.provider'))}<input name="provider" value="${v('provider')}" list="pprovs" autocomplete="off"></label><label class="f">${esc(tr('plan.sport'))}<input name="category" value="${v('category')}" list="pcats" placeholder="${esc(tr('plan.optional'))}" autocomplete="off"></label></div>
       <datalist id="pprovs">${uniq('provider')
         .map((c) => `<option value="${esc(c)}">`)
         .join('')}</datalist><datalist id="pcats">${uniq('category')
         .map((c) => `<option value="${esc(c)}">`)
         .join('')}</datalist>
-      <p class="hint">Ohne Anbieter oder Sportart werden die Kosten nach deinen Besuchen auf die zugeordneten Aktivitäten verteilt.</p>
+      <p class="hint">${esc(tr('plan.hintAllocate'))}</p>
     </fieldset>
-    <fieldset><legend>Zahlung</legend>
-      <label class="f">Zahlungsart<select name="type" id="ptype">${Object.entries(PTYPES)
-        .map(([k, l]) => opt(k, l, pdraft.type))
+    <fieldset><legend>${esc(tr('plan.sectionPayment'))}</legend>
+      <label class="f">${esc(tr('plan.paymentType'))}<select name="type" id="ptype">${Object.entries(
+        PTYPES,
+      )
+        .map(([k, l]) => opt(k, tr(l), pdraft.type))
         .join('')}</select></label>
-      <div class="two"><label class="f"><span id="amountlbl">${PLAN_AMOUNT_LABEL[pdraft.type]}</span><input name="amount" inputmode="decimal" value="${pdraft.amount === '' ? '' : esc(numF.format(pdraft.amount))}" placeholder="0,00" autocomplete="off"></label>
-        <label class="f only-card">Anzahl Besuche<input name="visits" type="number" inputmode="numeric" min="1" value="${v('visits')}"></label>
-        <label class="f only-recurring">Alle<input name="every" type="number" inputmode="numeric" min="1" value="${v('every')}"></label></div>
-      <label class="f only-recurring">Intervall<select name="unit">${Object.entries(UNITS)
-        .map(([k, l]) => opt(k, l[1], pdraft.unit))
+      <div class="two"><label class="f"><span id="amountlbl">${esc(tr(PLAN_AMOUNT_LABEL[pdraft.type]))}</span><input name="amount" inputmode="decimal" value="${pdraft.amount === '' ? '' : esc(numF.format(pdraft.amount))}" placeholder="${esc(tr('plan.amountPlaceholder'))}" autocomplete="off"></label>
+        <label class="f only-card">${esc(tr('plan.cardVisits'))}<input name="visits" type="number" inputmode="numeric" min="1" value="${v('visits')}"></label>
+        <label class="f only-recurring">${esc(tr('plan.every'))}<input name="every" type="number" inputmode="numeric" min="1" value="${v('every')}"></label></div>
+      <label class="f only-recurring">${esc(tr('plan.interval'))}<select name="unit">${Object.entries(
+        UNITS,
+      )
+        .map(([k, l]) => opt(k, tr(l), pdraft.unit))
         .join('')}</select></label>
-      <div class="two only-dated"><label class="f"><span class="only-recurring">Erste Zahlung</span><span class="only-once">Zahlungsdatum</span><input type="date" name="start" value="${v('start')}"></label><label class="f only-recurring">Gekündigt zum<input type="date" name="end" value="${v('end')}"></label></div>
-      <p class="hint only-recurring">„Gekündigt zum“ leer lassen, solange der Tarif läuft.</p>
-      <p class="hint only-card">Jeder Besuch wird anteilig verbucht: Kartenpreis geteilt durch die Anzahl Besuche.</p>
+      <div class="two only-dated"><label class="f"><span class="only-recurring">${esc(tr('plan.firstPayment'))}</span><span class="only-once">${esc(tr('plan.paymentDate'))}</span><input type="date" name="start" value="${v('start')}"></label><label class="f only-recurring">${esc(tr('plan.cancelledTo'))}<input type="date" name="end" value="${v('end')}"></label></div>
+      <p class="hint only-recurring">${esc(tr('plan.hintCancelled'))}</p>
+      <p class="hint only-card">${esc(tr('plan.hintCard'))}</p>
     </fieldset>
-    <fieldset><legend>Gilt für</legend>
-      ${acts.length ? `<div class="checks">${acts.map((a) => `<label><input type="checkbox" name="acts" value="${esc(a.id)}"${(pdraft.activities || []).includes(a.id) ? ' checked' : ''}><span>${esc(a.name)}${a.provider ? `<small>${esc(a.provider)}</small>` : ''}</span></label>`).join('')}</div>` : '<p class="hint">Lege zuerst Aktivitäten an, um sie diesem Tarif zuzuordnen.</p>'}
-      <p class="hint">Besuche dieser Aktivitäten werden dem Tarif zugerechnet, daraus ergeben sich die Kosten pro Besuch.</p>
+    <fieldset><legend>${esc(tr('plan.appliesTo'))}</legend>
+      ${acts.length ? `<div class="checks">${acts.map((a) => `<label><input type="checkbox" name="acts" value="${esc(a.id)}"${(pdraft.activities || []).includes(a.id) ? ' checked' : ''}><span>${esc(a.name)}${a.provider ? `<small>${esc(a.provider)}</small>` : ''}</span></label>`).join('')}</div>` : `<p class="hint">${esc(tr('plan.addActivitiesFirst'))}</p>`}
+      <p class="hint">${esc(tr('plan.hintVisits'))}</p>
     </fieldset>
-    <fieldset><legend>Notizen</legend><label class="f">Notizen<textarea name="notes" rows="3">${v('notes')}</textarea></label></fieldset>
+    <fieldset><legend>${esc(tr('plan.notes'))}</legend><label class="f">${esc(tr('plan.notes'))}<textarea name="notes" rows="3">${v('notes')}</textarea></label></fieldset>
     <p class="err" id="perr" role="alert" hidden></p>
   </form>
-  <div class="sheet-foot">${p ? '<button type="button" class="btn danger" data-action="del-plan">Tarif löschen</button>' : ''}<span class="grow"></span><button type="button" class="btn primary" data-action="save-plan">${p ? 'Speichern' : 'Tarif anlegen'}</button></div>`,
+  <div class="sheet-foot">${p ? `<button type="button" class="btn danger" data-action="del-plan">${esc(tr('plan.delete'))}</button>` : ''}<span class="grow"></span><button type="button" class="btn primary" data-action="save-plan">${esc(tr(p ? 'plan.save' : 'plan.create'))}</button></div>`,
     true,
   );
 }
@@ -377,23 +406,20 @@ async function savePlan() {
   p.every = Math.max(1, parseInt(fd.get('every'), 10) || 1);
   p.visits = Math.max(1, parseInt(fd.get('visits'), 10) || 1);
   p.activities = fd.getAll('acts');
-  if (!p.name) return fail('Gib dem Tarif einen Namen.');
-  if (!(p.amount >= 0)) return fail('Gib einen gültigen Betrag ein, z. B. 29,90.');
+  if (!p.name) return fail(tr('plan.errName'));
+  if (!(p.amount >= 0)) return fail(tr('plan.errAmount'));
   if ((p.type === 'recurring' || p.type === 'once') && !p.start)
-    return fail(
-      p.type === 'once' ? 'Gib das Zahlungsdatum an.' : 'Gib das Datum der ersten Zahlung an.',
-    );
-  if (p.type === 'recurring' && p.end && p.end < p.start)
-    return fail('Das Kündigungsdatum liegt vor der ersten Zahlung.');
+    return fail(tr(p.type === 'once' ? 'plan.errDateOnce' : 'plan.errDateFirst'));
+  if (p.type === 'recurring' && p.end && p.end < p.start) return fail(tr('plan.errCancelBefore'));
   if (p.type !== 'recurring') p.end = '';
   p.updatedAt = Date.now();
   const isNew = S.sheet.isNew;
   try {
     await persistPlan(p);
     closeSheet();
-    toast(isNew ? 'Tarif hinzugefügt' : 'Tarif gespeichert');
+    toast(tr(isNew ? 'plan.added' : 'plan.saved'));
   } catch {
-    fail('Speichern fehlgeschlagen. Prüfe deine Verbindung und versuche es erneut.');
+    fail(tr('plan.saveFailed'));
   }
 }
 async function persistPlan(p) {
@@ -435,10 +461,10 @@ Object.assign(H, {
   'del-plan': async (t) => {
     if (!planDelArmed) {
       planDelArmed = true;
-      t.textContent = 'Zum Löschen erneut tippen';
+      t.textContent = tr('plan.confirmDelete');
       setTimeout(() => {
         planDelArmed = false;
-        if (t.isConnected) t.textContent = 'Tarif löschen';
+        if (t.isConnected) t.textContent = tr('plan.delete');
       }, 3000);
       return;
     }
@@ -446,27 +472,26 @@ Object.assign(H, {
     closeSheet();
     try {
       await removePlan(p);
-      toast('Tarif gelöscht');
+      toast(tr('plan.deleted'));
     } catch {
-      toast('Löschen fehlgeschlagen. Bitte erneut versuchen.');
+      toast(tr('plan.deleteFailed'));
     }
   },
   'add-visit': async () => {
     const a = S.acts.find((x) => x.id === S.sheet.id),
       d = $('#visitdate') && $('#visitdate').value;
     if (!a || !d) return;
-    if (d > todayStr()) return toast('Besuche können nur bis heute eingetragen werden.');
-    if ((a.done || []).includes(d))
-      return toast('Für diesen Tag ist bereits ein Besuch eingetragen.');
+    if (d > todayStr()) return toast(tr('visit.future'));
+    if ((a.done || []).includes(d)) return toast(tr('visit.exists'));
     try {
       await persist({
         ...a,
         done: [...(a.done || []), d].sort(),
         cancelled: (a.cancelled || []).filter((x) => x !== d),
       });
-      toast('Besuch eingetragen');
+      toast(tr('visit.added'));
     } catch {
-      toast('Eintragen fehlgeschlagen. Bitte erneut versuchen.');
+      toast(tr('visit.addFailed'));
     }
   },
   'del-visit': async (t) => {
@@ -474,15 +499,15 @@ Object.assign(H, {
     if (!a) return;
     try {
       await persist({ ...a, done: (a.done || []).filter((x) => x !== t.dataset.d) });
-      toast('Besuch entfernt');
+      toast(tr('visit.removed'));
     } catch {
-      toast('Entfernen fehlgeschlagen. Bitte erneut versuchen.');
+      toast(tr('visit.removeFailed'));
     }
   },
 });
 document.addEventListener('change', (e) => {
   if (e.target.id === 'ptype') {
     $('#planform').dataset.type = e.target.value;
-    setText($('#amountlbl'), PLAN_AMOUNT_LABEL[e.target.value]);
+    setText($('#amountlbl'), tr(PLAN_AMOUNT_LABEL[e.target.value]));
   }
 });

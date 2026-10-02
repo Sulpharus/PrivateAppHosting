@@ -44,8 +44,9 @@ function splitCoursePrice(course, dates, cancelled) {
   };
 }
 
-/* German money input: "1.200", "1.200,50", "12,5", "8.50" (a dot followed by exactly three digits
-   is a thousands separator). NaN for anything else, e.g. "12abc". */
+/* Money input in German or English notation: "1.200", "1.200,50", "12,5", "8.50", "1,200.50" (a
+   dot or comma followed by exactly three digits is a thousands separator). NaN for anything else,
+   e.g. "12abc". */
 function parseEuro(text) {
   const s = String(text ?? '')
     .replace(/\s|€/g, '')
@@ -54,5 +55,6 @@ function parseEuro(text) {
   if (/^\d{1,3}(\.\d{3})+(,\d{1,2})?$/.test(s)) return +s.replace(/\./g, '').replace(',', '.');
   if (/^\d+(,\d{1,2})?$/.test(s)) return +s.replace(',', '.');
   if (/^\d+\.\d{1,2}$/.test(s)) return +s;
+  if (/^\d{1,3}(,\d{3})+(\.\d{1,2})?$/.test(s)) return +s.replace(/,/g, '');
   return NaN;
 }

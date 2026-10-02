@@ -62,116 +62,123 @@ function openEditor(a) {
   const opt = (val, label, cur) =>
     `<option value="${esc(val)}"${val === cur ? ' selected' : ''}>${esc(label)}</option>`;
   openSheet(
-    `<div class="bar"><button class="btn ghost" data-action="cancel-edit">Abbrechen</button><h2 id="sheet-title">${a ? 'Aktivität bearbeiten' : 'Neue Aktivität'}</h2><span></span></div>
-  <nav class="steps" aria-label="Schritte">${STEPS.map((l, i) => `<button type="button" data-action="step" data-step="${i}"><i>${i + 1}</i>${l}</button>`).join('')}</nav>
+    `<div class="bar"><button class="btn ghost" data-action="cancel-edit">${esc(tr('action.cancel'))}</button><h2 id="sheet-title">${esc(tr(a ? 'ed.titleEdit' : 'ed.titleNew'))}</h2><span></span></div>
+  <nav class="steps" aria-label="${esc(tr('ed.stepsLabel'))}">${steps()
+    .map(
+      (l, i) =>
+        `<button type="button" data-action="step" data-step="${i}"><i>${i + 1}</i>${esc(l)}</button>`,
+    )
+    .join('')}</nav>
   <form class="form" id="form" novalidate>
     <div class="step" data-step="0">
-      <fieldset><legend>Grundlagen</legend>
-        <label class="f">Name<input name="name" value="${v('name')}" placeholder="z. B. Beachvolleyball" autocomplete="off" required></label>
-        <div class="two"><label class="f">Sportart<input name="category" value="${v('category')}" list="cats" placeholder="z. B. Klettern" autocomplete="off"></label>
-        <label class="f">Anbieter<input name="provider" value="${v('provider')}" list="provs" placeholder="z. B. ZHS" autocomplete="off"></label></div>
+      <fieldset><legend>${esc(tr('step.basics'))}</legend>
+        <label class="f">${esc(tr('ed.name'))}<input name="name" value="${v('name')}" placeholder="${esc(tr('ed.namePh'))}" autocomplete="off" required></label>
+        <div class="two"><label class="f">${esc(tr('plan.sport'))}<input name="category" value="${v('category')}" list="cats" placeholder="${esc(tr('ed.sportPh'))}" autocomplete="off"></label>
+        <label class="f">${esc(tr('plan.provider'))}<input name="provider" value="${v('provider')}" list="provs" placeholder="${esc(tr('ed.providerPh'))}" autocomplete="off"></label></div>
         <datalist id="provs">${[...new Set(S.acts.map((x) => x.provider).filter(Boolean))]
           .sort()
           .map((c) => `<option value="${esc(c)}">`)
           .join('')}</datalist>
         <datalist id="cats">${cats.map((c) => `<option value="${esc(c)}">`).join('')}</datalist>
-        <label class="f">Beschreibung<textarea name="description" rows="3" placeholder="Worum es geht, was dich erwartet">${v('description')}</textarea></label>
+        <label class="f">${esc(tr('ed.description'))}<textarea name="description" rows="3" placeholder="${esc(tr('ed.descriptionPh'))}">${v('description')}</textarea></label>
       </fieldset>
-      <fieldset><legend>Fotos</legend><div class="photos" id="photos"></div><p class="hint">Das erste Foto ist das Titelbild. Tippe auf ein anderes Foto, um es zum Titelbild zu machen.</p></fieldset>
+      <fieldset><legend>${esc(tr('ed.photos'))}</legend><div class="photos" id="photos"></div><p class="hint">${esc(tr('ed.photosHint'))}</p></fieldset>
     </div>
     <div class="step" data-step="1" hidden>
-      <fieldset><legend>Art des Angebots</legend>
-        <div class="seg offer-seg" role="group" aria-label="Art des Angebots">${[
-          ['open', 'Offene Zeiten'],
-          ['course', 'Kurs'],
+      <fieldset><legend>${esc(tr('ed.offerType'))}</legend>
+        <div class="seg offer-seg" role="group" aria-label="${esc(tr('ed.offerType'))}">${[
+          ['open', tr('ed.offerOpen')],
+          ['course', tr('ed.offerCourse')],
         ]
           .map(
             ([k, l]) =>
-              `<button type="button" data-action="offer-type" data-type="${k}" class="${(k === 'course') === !!draft.course ? 'on' : ''}" aria-pressed="${(k === 'course') === !!draft.course}">${l}</button>`,
+              `<button type="button" data-action="offer-type" data-type="${k}" class="${(k === 'course') === !!draft.course ? 'on' : ''}" aria-pressed="${(k === 'course') === !!draft.course}">${esc(l)}</button>`,
           )
           .join('')}</div>
-        <p class="hint">Bei einem Kurs gibst du nur Kurslänge, Trainingstage und Uhrzeit an. Du wirst dann automatisch für alle Termine eingeplant.</p>
+        <p class="hint">${esc(tr('ed.offerHint'))}</p>
       </fieldset>
       <div id="openbox"${draft.course ? ' hidden' : ''}>
-      <fieldset><legend>Öffnungszeiten</legend><div id="slots" class="blocks"></div></fieldset>
-      <fieldset><legend>Angebotszeitraum</legend><div id="availbox" class="blocks"></div>
-        <p class="hint">Gesamtzeitraum des Angebots, z. B. ein Freibad jedes Jahr von Mai bis September. Unterschiedliche Zeiten je Saison stellst du oben pro Block unter „Gilt“ ein.</p>
+      <fieldset><legend>${esc(tr('ed.openingHours'))}</legend><div id="slots" class="blocks"></div></fieldset>
+      <fieldset><legend>${esc(tr('ed.availPeriod'))}</legend><div id="availbox" class="blocks"></div>
+        <p class="hint">${esc(tr('ed.availHint'))}</p>
       </fieldset>
       </div>
-      <fieldset id="coursefs"${draft.course ? '' : ' hidden'}><legend>Kurs</legend><div id="coursebox" class="blocks"></div></fieldset>
+      <fieldset id="coursefs"${draft.course ? '' : ' hidden'}><legend>${esc(tr('ed.course'))}</legend><div id="coursebox" class="blocks"></div></fieldset>
     </div>
     <div class="step" data-step="2" hidden>
-      <fieldset><legend>Geplante Teilnahme</legend>
-        <p class="hint flat" id="coursenote"${draft.course ? '' : ' hidden'}>Kurs: Du bist automatisch für alle Termine eingeplant. Einzelne Termine trägst du in der Detailansicht aus oder markierst sie als „Ausgefallen“.</p>
+      <fieldset><legend>${esc(tr('ed.plannedAttendance'))}</legend>
+        <p class="hint flat" id="coursenote"${draft.course ? '' : ' hidden'}>${esc(tr('ed.courseNote'))}</p>
         <div id="pmodewrap"${draft.course ? ' hidden' : ''}>
-        <label class="f">Teilnahme planen<select id="pmode">${[
-          ['none', 'Nicht geplant'],
-          ['weekly', 'Regelmäßig'],
-          ['dates', 'An einzelnen Terminen'],
-          ['both', 'Regelmäßig und einzelne Termine'],
+        <label class="f">${esc(tr('ed.planAttendance'))}<select id="pmode">${[
+          ['none', tr('ed.pmodeNone')],
+          ['weekly', tr('ed.pmodeWeekly')],
+          ['dates', tr('ed.pmodeDates')],
+          ['both', tr('ed.pmodeBoth')],
         ]
           .map(([k, l]) => opt(k, l, (draft.planned && draft.planned.mode) || 'none'))
           .join('')}</select></label>
         <div id="plannedbox" class="blocks"></div>
         </div>
       </fieldset>
-      <fieldset><legend>Anmeldung</legend>
-        <label class="f">Anmeldung<select name="signup">${Object.entries(SIGNUP)
-          .map(([k, l]) => opt(k, l, draft.signup || 'none'))
+      <fieldset><legend>${esc(tr('fact.signup'))}</legend>
+        <label class="f">${esc(tr('fact.signup'))}<select name="signup">${Object.entries(SIGNUP)
+          .map(([k, l]) => opt(k, tr(l), draft.signup || 'none'))
           .join('')}</select></label>
-        <label class="f">Anmeldelink<input name="signupUrl" type="url" inputmode="url" value="${v('signupUrl')}" placeholder="https://"></label>
-        <label class="f">Hinweise zur Anmeldung<input name="signupNotes" value="${v('signupNotes')}" placeholder="z. B. 48 Stunden vorher per App buchen"></label>
+        <label class="f">${esc(tr('ed.signupLink'))}<input name="signupUrl" type="url" inputmode="url" value="${v('signupUrl')}" placeholder="https://"></label>
+        <label class="f">${esc(tr('ed.signupNotes'))}<input name="signupNotes" value="${v('signupNotes')}" placeholder="${esc(tr('ed.signupNotesPh'))}"></label>
       </fieldset>
-      <fieldset><legend>Zugang</legend>
+      <fieldset><legend>${esc(tr('fact.access'))}</legend>
         <div class="checks">
-          <label><input type="checkbox" name="acc_guest"${draft.access && draft.access.guest ? ' checked' : ''}><span>Gastzutritt möglich</span></label>
-          <label><input type="checkbox" name="acc_students"${draft.access && draft.access.students ? ' checked' : ''}><span>Für Studenten</span></label>
-          <label><input type="checkbox" name="acc_member" id="acc_member"${draft.access && draft.access.membership ? ' checked' : ''}><span>Erfordert Mitgliedschaft</span></label>
+          <label><input type="checkbox" name="acc_guest"${draft.access && draft.access.guest ? ' checked' : ''}><span>${esc(tr('detail.guest'))}</span></label>
+          <label><input type="checkbox" name="acc_students"${draft.access && draft.access.students ? ' checked' : ''}><span>${esc(tr('detail.students'))}</span></label>
+          <label><input type="checkbox" name="acc_member" id="acc_member"${draft.access && draft.access.membership ? ' checked' : ''}><span>${esc(tr('ed.requiresMembership'))}</span></label>
         </div>
         <div id="memberbox"${draft.access && draft.access.membership ? '' : ' hidden'}>
           ${
             S.plans.length
-              ? `<p class="hint indent">Zählt zu:</p><div class="checks sub">${[...S.plans]
+              ? `<p class="hint indent">${esc(tr('ed.countsTo'))}</p><div class="checks sub">${[
+                  ...S.plans,
+                ]
                   .sort(
                     (x, y) =>
                       (x.type === 'recurring' ? 0 : 1) - (y.type === 'recurring' ? 0 : 1) ||
-                      x.name.localeCompare(y.name, 'de'),
+                      x.name.localeCompare(y.name, loc()),
                   )
                   .map(
                     (p) =>
                       `<label><input type="checkbox" name="memberof" value="${esc(p.id)}"${(p.activities || []).includes(draft.id) ? ' checked' : ''}><span>${esc(p.name)}<small>${esc([planSummary(p), p.provider].filter(Boolean).join(', '))}</small></span></label>`,
                   )
                   .join('')}</div>
-            <p class="hint indent">Die Auswahl verknüpft die Aktivität auch mit dem Tarif, damit Besuche und Kosten pro Besuch in der Statistik stimmen.</p>`
-              : '<p class="hint indent">Lege deine Mitgliedschaften in der Statistik unter „Tarife und Mitgliedschaften“ an, um sie hier auszuwählen.</p>'
+            <p class="hint indent">${esc(tr('ed.memberLinkHint'))}</p>`
+              : `<p class="hint indent">${esc(tr('ed.noPlansHint'))}</p>`
           }
         </div>
       </fieldset>
     </div>
     <div class="step" data-step="3" hidden>
-      <fieldset><legend>Ort</legend>
-        <label class="f">Ort<input name="location" value="${v('location')}" placeholder="z. B. Olympiapark, Platz 3"></label>
-        <label class="f">Adresse<input name="address" value="${v('address')}" placeholder="Straße Hausnummer, PLZ Ort" autocomplete="street-address"></label>
+      <fieldset><legend>${esc(tr('ed.place'))}</legend>
+        <label class="f">${esc(tr('ed.place'))}<input name="location" value="${v('location')}" placeholder="${esc(tr('ed.placePh'))}"></label>
+        <label class="f">${esc(tr('ed.address'))}<input name="address" value="${v('address')}" placeholder="${esc(tr('ed.addressPh'))}" autocomplete="street-address"></label>
         <div id="geobox" class="geobox" aria-live="polite"></div>
       </fieldset>
-      <fieldset><legend>Kosten und Vorbereitung</legend>
-        <div class="two"><label class="f">Preis pro Besuch in €<input name="visitPrice" inputmode="decimal" value="${+draft.visitPrice > 0 ? esc(numF.format(draft.visitPrice)) : ''}" placeholder="0,00" autocomplete="off"></label>
-        <label class="f">Kostenhinweis<input name="cost" value="${v('cost')}" placeholder="z. B. ermäßigt 6 €"></label></div>
-        <p class="hint">Der Preis pro Besuch fließt in die Statistik ein. Leer lassen, wenn ein Tarif die Kosten abdeckt.</p>
-        <label class="f">Niveau<select name="level">${Object.entries(LEVELS)
-          .map(([k, l]) => opt(k, l, draft.level || ''))
+      <fieldset><legend>${esc(tr('ed.costsAndPrep'))}</legend>
+        <div class="two"><label class="f">${esc(tr('plan.amount.visit'))}<input name="visitPrice" inputmode="decimal" value="${+draft.visitPrice > 0 ? esc(numF.format(draft.visitPrice)) : ''}" placeholder="${esc(tr('plan.amountPlaceholder'))}" autocomplete="off"></label>
+        <label class="f">${esc(tr('ed.costNote'))}<input name="cost" value="${v('cost')}" placeholder="${esc(tr('ed.costNotePh'))}"></label></div>
+        <p class="hint">${esc(tr('ed.priceHint'))}</p>
+        <label class="f">${esc(tr('fact.level'))}<select name="level">${Object.entries(LEVELS)
+          .map(([k, l]) => opt(k, tr(l), draft.level || ''))
           .join('')}</select></label>
-        <label class="f">Ausrüstung zum Mitbringen<input name="equipment" value="${esc((draft.equipment || []).join(', '))}" placeholder="Mehrere Dinge mit Komma trennen"></label>
+        <label class="f">${esc(tr('ed.equipment'))}<input name="equipment" value="${esc((draft.equipment || []).join(', '))}" placeholder="${esc(tr('ed.equipmentPh'))}"></label>
       </fieldset>
-      <details class="more"${draft.contact || draft.website || draft.notes ? ' open' : ''}><summary>Kontakt, Webseite und Notizen</summary><div>
-        <label class="f">Kontakt<input name="contact" value="${v('contact')}" placeholder="Name, Telefon oder E-Mail"></label>
-        <label class="f">Webseite<input name="website" type="url" inputmode="url" value="${v('website')}" placeholder="https://"></label>
-        <label class="f">Notizen<textarea name="notes" rows="3">${v('notes')}</textarea></label>
+      <details class="more"${draft.contact || draft.website || draft.notes ? ' open' : ''}><summary>${esc(tr('ed.contactSummary'))}</summary><div>
+        <label class="f">${esc(tr('fact.contact'))}<input name="contact" value="${v('contact')}" placeholder="${esc(tr('ed.contactPh'))}"></label>
+        <label class="f">${esc(tr('fact.website'))}<input name="website" type="url" inputmode="url" value="${v('website')}" placeholder="https://"></label>
+        <label class="f">${esc(tr('plan.notes'))}<textarea name="notes" rows="3">${v('notes')}</textarea></label>
       </div></details>
     </div>
     <p class="err" id="err" role="alert" hidden></p>
   </form>
-  <div class="sheet-foot"><button type="button" class="btn ghost" data-action="step-prev" id="prevbtn">Zurück</button><span class="grow"></span><button type="button" class="btn" data-action="step-next" id="nextbtn">Weiter</button><button type="button" class="btn primary" data-action="save">${a ? 'Speichern' : 'Anlegen'}</button></div>`,
+  <div class="sheet-foot"><button type="button" class="btn ghost" data-action="step-prev" id="prevbtn">${esc(tr('ed.back'))}</button><span class="grow"></span><button type="button" class="btn" data-action="step-next" id="nextbtn">${esc(tr('ed.next'))}</button><button type="button" class="btn primary" data-action="save">${esc(tr(a ? 'ed.save' : 'ed.create'))}</button></div>`,
     true,
   );
   renderSlots();
@@ -184,7 +191,12 @@ function openEditor(a) {
   if (!a) setTimeout(() => document.querySelector('[name=name]')?.focus(), 300);
 }
 /* the editor is split into steps; all fields stay in one form, so saving works from any step */
-const STEPS = ['Grundlagen', 'Zeiten', 'Teilnahme', 'Details'];
+const steps = () => [
+  tr('step.basics'),
+  tr('step.times'),
+  tr('step.attendance'),
+  tr('step.details'),
+];
 function setStep(i) {
   if (!S.sheet || S.sheet.type !== 'edit') return;
   S.sheet.step = i;
@@ -195,11 +207,12 @@ function setStep(i) {
     b.classList.toggle('seen', k < i);
   });
   $('#prevbtn').hidden = i === 0;
-  $('#nextbtn').hidden = i === STEPS.length - 1;
+  $('#nextbtn').hidden = i === steps().length - 1;
   const sheet = $('.sheet');
   if (sheet) sheet.scrollTop = 0;
 }
-const MONTHS = [...Array(12)].map((_, m) => fmt(new Date(2000, m, 1), { month: 'short' }));
+const monthNames = () =>
+  [...Array(12)].map((_, m) => fmt(new Date(2000, m, 1), { month: 'short' }));
 /* shared editor for a period: open-ended, yearly (day + month) or a fixed date range */
 const toYearly = (p) => ({
   ...p,
@@ -213,34 +226,38 @@ function toRange(p) {
     u = p.until ? p.until.slice(-5) : '09-30';
   return { ...p, type: 'range', from: `${yr}-${f}`, until: `${u < f ? yr + 1 : yr}-${u}` };
 }
+// Stored period label of a course (kept for existing data); shown in the active language.
+const COURSE_LABEL = 'Kurs';
+const labelText = (label) => (label === COURSE_LABEL ? tr('period.course') : label || '');
 const yearlyCheck = (attr, on) =>
-  `<label class="yearly-check"><input type="checkbox" ${attr}${on ? ' checked' : ''}>Jedes Jahr wiederholen (ohne Jahreszahl)</label>`;
-const SEASON_OPTS = {
-  avail: [
-    ['all', 'Dauerhaft'],
-    ['period', 'Nur in einem Zeitraum'],
-  ],
-  plan: [
-    ['all', 'Ohne Zeitbegrenzung'],
-    ['period', 'Nur in einem Zeitraum'],
-  ],
-};
+  `<label class="yearly-check"><input type="checkbox" ${attr}${on ? ' checked' : ''}>${esc(tr('ed.repeatYearly'))}</label>`;
+const seasonOpts = (scope) => [
+  ['all', tr(scope === 'avail' ? 'ed.seasonAvailAll' : 'ed.seasonPlanAll')],
+  ['period', tr('ed.seasonPeriod')],
+];
 const seasonObj = (scope) => (scope === 'avail' ? draft.season : draft.planned.season);
 function mdSelects(scope, key, val) {
   const [m, d] = (val || '01-01').split('-').map(Number);
-  return `<span class="md"><select data-smd="${scope}" data-key="${key}" data-part="d" aria-label="Tag">${[...Array(31)].map((_, k) => `<option value="${k + 1}"${k + 1 === d ? ' selected' : ''}>${k + 1}.</option>`).join('')}</select><select data-smd="${scope}" data-key="${key}" data-part="m" aria-label="Monat">${MONTHS.map((l, k) => `<option value="${k + 1}"${k + 1 === m ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select></span>`;
+  return `<span class="md"><select data-smd="${scope}" data-key="${key}" data-part="d" aria-label="${esc(tr('ed.day'))}">${[...Array(31)].map((_, k) => `<option value="${k + 1}"${k + 1 === d ? ' selected' : ''}>${esc(tr('ed.dayOption', { n: k + 1 }))}</option>`).join('')}</select><select data-smd="${scope}" data-key="${key}" data-part="m" aria-label="${esc(tr('ed.month'))}">${monthNames()
+    .map((l, k) => `<option value="${k + 1}"${k + 1 === m ? ' selected' : ''}>${esc(l)}</option>`)
+    .join('')}</select></span>`;
 }
 function seasonEditor(scope, label) {
   const p = seasonObj(scope) || { type: 'all' },
     t = p.type || 'all';
-  return `<label class="f">${label}<select data-season="${scope}">${SEASON_OPTS[scope].map(([k, l]) => `<option value="${k}"${(k === 'all') === (t === 'all') ? ' selected' : ''}>${l}</option>`).join('')}</select></label>
+  return `<label class="f">${label}<select data-season="${scope}">${seasonOpts(scope)
+    .map(
+      ([k, l]) =>
+        `<option value="${k}"${(k === 'all') === (t === 'all') ? ' selected' : ''}>${esc(l)}</option>`,
+    )
+    .join('')}</select></label>
     ${t !== 'all' ? yearlyCheck(`data-syearly="${scope}"`, t === 'yearly') : ''}
-    ${t === 'yearly' ? `<div class="two"><label class="f">Von${mdSelects(scope, 'from', p.from)}</label><label class="f">Bis${mdSelects(scope, 'until', p.until)}</label></div>` : ''}
-    ${t === 'range' ? `<div class="two"><label class="f">${scope === 'plan' ? 'Ab' : 'Von'}<input type="date" data-sdate="${scope}" data-key="from" value="${esc(p.from || '')}"></label><label class="f">Bis<input type="date" data-sdate="${scope}" data-key="until" value="${esc(p.until || '')}"></label></div>` : ''}`;
+    ${t === 'yearly' ? `<div class="two"><label class="f">${esc(tr('ed.from'))}${mdSelects(scope, 'from', p.from)}</label><label class="f">${esc(tr('ed.until'))}${mdSelects(scope, 'until', p.until)}</label></div>` : ''}
+    ${t === 'range' ? `<div class="two"><label class="f">${esc(tr(scope === 'plan' ? 'ed.fromPlan' : 'ed.from'))}<input type="date" data-sdate="${scope}" data-key="from" value="${esc(p.from || '')}"></label><label class="f">${esc(tr('ed.until'))}<input type="date" data-sdate="${scope}" data-key="until" value="${esc(p.until || '')}"></label></div>` : ''}`;
 }
 const renderAvail = () => {
   const el = $('#availbox');
-  if (el) el.innerHTML = seasonEditor('avail', 'Angebot verfügbar');
+  if (el) el.innerHTML = seasonEditor('avail', tr('ed.availableLabel'));
 };
 function rerenderSeason(scope) {
   scope === 'avail' ? renderAvail() : renderPlanned();
@@ -290,18 +307,21 @@ function renderPlanned() {
   const reg = p.mode === 'weekly' || p.mode === 'both',
     dat = p.mode === 'dates' || p.mode === 'both';
   el.innerHTML =
-    (p.mode === 'none'
-      ? '<p class="hint flat">Optional. Geplante Teilnahmen erscheinen im Kalender unter „Geplante Teilnahmen“.</p>'
-      : '') +
+    (p.mode === 'none' ? `<p class="hint flat">${esc(tr('ed.plannedHint'))}</p>` : '') +
     (reg
-      ? `<div class="slot"><div class="daypick">${DAYS2.map((d, j) => `<button type="button" class="${(p.days || []).includes(j) ? 'on' : ''}" data-action="pday" data-j="${j}" aria-pressed="${(p.days || []).includes(j)}">${d}</button>`).join('')}</div>
-      <label class="f">Rhythmus<select data-pf="every">${[1, 2, 3, 4].map((n) => `<option value="${n}"${(+p.every || 1) === n ? ' selected' : ''}>${n === 1 ? 'Jede Woche' : `Alle ${n} Wochen`}</option>`).join('')}</select></label>
-      ${seasonEditor('plan', 'Zeitraum')}
-      <p class="hint flat">Eingeplant werden nur Tage, an denen das Angebot laut deinen Zeiten stattfindet. „Bis“ leer lassen, wenn es offen ist.</p></div>`
+      ? `<div class="slot"><div class="daypick">${DAYS()
+          .map(
+            (d, j) =>
+              `<button type="button" class="${(p.days || []).includes(j) ? 'on' : ''}" data-action="pday" data-j="${j}" aria-pressed="${(p.days || []).includes(j)}">${esc(d)}</button>`,
+          )
+          .join('')}</div>
+      <label class="f">${esc(tr('ed.rhythm'))}<select data-pf="every">${[1, 2, 3, 4].map((n) => `<option value="${n}"${(+p.every || 1) === n ? ' selected' : ''}>${esc(n === 1 ? tr('ed.everyWeek') : tr('ed.everyNWeeks', { n }))}</option>`).join('')}</select></label>
+      ${seasonEditor('plan', tr('ed.periodLabel'))}
+      <p class="hint flat">${esc(tr('ed.plannedDaysHint'))}</p></div>`
       : '') +
     (dat
-      ? `<div class="slot"><span class="f">Einzelne Termine</span>${(p.dates || []).length ? `<div class="pdates">${p.dates.map((d) => `<span class="tag">${fmt(parse(d), { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })}<button type="button" class="vx" data-action="pdate-del" data-d="${esc(d)}" aria-label="Termin entfernen">×</button></span>`).join('')}</div>` : ''}
-      <div class="padd-row"><input type="date" id="pdate" value="${esc(S.date >= todayStr() ? S.date : todayStr())}" aria-label="Termin"><button type="button" class="btn" data-action="pdate-add">Hinzufügen</button></div></div>`
+      ? `<div class="slot"><span class="f">${esc(tr('ed.singleDates'))}</span>${(p.dates || []).length ? `<div class="pdates">${p.dates.map((d) => `<span class="tag">${fmt(parse(d), { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })}<button type="button" class="vx" data-action="pdate-del" data-d="${esc(d)}" aria-label="${esc(tr('ed.removeDate'))}">×</button></span>`).join('')}</div>` : ''}
+      <div class="padd-row"><input type="date" id="pdate" value="${esc(S.date >= todayStr() ? S.date : todayStr())}" aria-label="${esc(tr('ed.date'))}"><button type="button" class="btn" data-action="pdate-add">${esc(tr('action.add'))}</button></div></div>`
       : '');
 }
 /* opening hours are edited as blocks: one block per period (whole year, a season, ...), each with its own weekly times */
@@ -333,9 +353,9 @@ function slotsToBlocks(slots) {
 const newRow = (days) => ({ days: days || [], start: '', end: '' });
 function blockTitle(b) {
   const p = b.period;
-  if (p.type === 'all') return '<b>Ganzjährig</b>';
+  if (p.type === 'all') return `<b>${esc(tr('when.allYear'))}</b>`;
   const r = periodLabel({ ...p, label: '' });
-  return `<span><b>${esc(p.label || 'Zeitraum')}</b><small>${esc(r)}</small></span>`;
+  return `<span><b>${esc(labelText(p.label) || tr('ed.periodDefault'))}</b><small>${esc(r)}</small></span>`;
 }
 function blockHead(b, i) {
   const p = b.period,
@@ -343,23 +363,28 @@ function blockHead(b, i) {
   const md = (key, part) => {
     const [m, d] = (p[key] || '01-01').split('-').map(Number);
     return part === 'd'
-      ? `<select data-bmd="${i}" data-key="${key}" data-part="d" aria-label="Tag">${[...Array(31)].map((_, k) => `<option value="${k + 1}"${k + 1 === d ? ' selected' : ''}>${k + 1}.</option>`).join('')}</select>`
-      : `<select data-bmd="${i}" data-key="${key}" data-part="m" aria-label="Monat">${MONTHS.map((l, k) => `<option value="${k + 1}"${k + 1 === m ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
+      ? `<select data-bmd="${i}" data-key="${key}" data-part="d" aria-label="${esc(tr('ed.day'))}">${[...Array(31)].map((_, k) => `<option value="${k + 1}"${k + 1 === d ? ' selected' : ''}>${esc(tr('ed.dayOption', { n: k + 1 }))}</option>`).join('')}</select>`
+      : `<select data-bmd="${i}" data-key="${key}" data-part="m" aria-label="${esc(tr('ed.month'))}">${monthNames()
+          .map(
+            (l, k) =>
+              `<option value="${k + 1}"${k + 1 === m ? ' selected' : ''}>${esc(l)}</option>`,
+          )
+          .join('')}</select>`;
   };
   return `<div class="blk-head">
-    <label class="f">Gilt<select data-bper="${i}">${[
-      ['all', 'Ganzjährig'],
-      ['period', 'Nur in einem Zeitraum'],
+    <label class="f">${esc(tr('ed.appliesTo'))}<select data-bper="${i}">${[
+      ['all', tr('when.allYear')],
+      ['period', tr('ed.seasonPeriod')],
     ]
       .map(
         ([k, l]) =>
-          `<option value="${k}"${(k === 'all') === (t === 'all') ? ' selected' : ''}>${l}</option>`,
+          `<option value="${k}"${(k === 'all') === (t === 'all') ? ' selected' : ''}>${esc(l)}</option>`,
       )
       .join('')}</select></label>
     ${t !== 'all' ? yearlyCheck(`data-byearly="${i}"`, t === 'yearly') : ''}
-    ${t === 'yearly' ? `<div class="two"><label class="f">Von<span class="md">${md('from', 'd')}${md('from', 'm')}</span></label><label class="f">Bis<span class="md">${md('until', 'd')}${md('until', 'm')}</span></label></div>` : ''}
-    ${t === 'range' ? `<div class="two"><label class="f">Von<input type="date" data-f="per" data-b="${i}" data-k="from" value="${esc(p.from || '')}"></label><label class="f">Bis<input type="date" data-f="per" data-b="${i}" data-k="until" value="${esc(p.until || '')}"></label></div>` : ''}
-    ${t !== 'all' ? `<label class="f">Bezeichnung<input data-f="per" data-b="${i}" data-k="label" value="${esc(p.label || '')}" placeholder="z. B. Sommer, Winter, Ferien"></label>` : ''}
+    ${t === 'yearly' ? `<div class="two"><label class="f">${esc(tr('ed.from'))}<span class="md">${md('from', 'd')}${md('from', 'm')}</span></label><label class="f">${esc(tr('ed.until'))}<span class="md">${md('until', 'd')}${md('until', 'm')}</span></label></div>` : ''}
+    ${t === 'range' ? `<div class="two"><label class="f">${esc(tr('ed.from'))}<input type="date" data-f="per" data-b="${i}" data-k="from" value="${esc(p.from || '')}"></label><label class="f">${esc(tr('ed.until'))}<input type="date" data-f="per" data-b="${i}" data-k="until" value="${esc(p.until || '')}"></label></div>` : ''}
+    ${t !== 'all' ? `<label class="f">${esc(tr('ed.label'))}<input data-f="per" data-b="${i}" data-k="label" value="${esc(labelText(p.label))}" placeholder="${esc(tr('ed.labelPh'))}"></label>` : ''}
   </div>`;
 }
 const DEL_ICON =
@@ -377,30 +402,35 @@ function renderSlots() {
       ${b.rows
         .map(
           (r, j) => `<div class="trow">
-        <div class="daypick">${DAYS2.map((d, k) => `<button type="button" class="${r.days.includes(k) ? 'on' : ''}" data-action="row-day" data-b="${i}" data-r="${j}" data-j="${k}" aria-pressed="${r.days.includes(k)}">${d}</button>`).join('')}</div>
-        <div class="ttimes"><label class="f">Beginn<input type="time" data-f="row" data-b="${i}" data-r="${j}" data-k="start" value="${esc(r.start)}"></label><label class="f">Ende<input type="time" data-f="row" data-b="${i}" data-r="${j}" data-k="end" value="${esc(r.end)}"></label>
-        ${b.rows.length > 1 ? `<button type="button" class="icon" data-action="row-del" data-b="${i}" data-r="${j}" aria-label="Zeit entfernen">${DEL_ICON}</button>` : '<span></span>'}</div>
+        <div class="daypick">${DAYS()
+          .map(
+            (d, k) =>
+              `<button type="button" class="${r.days.includes(k) ? 'on' : ''}" data-action="row-day" data-b="${i}" data-r="${j}" data-j="${k}" aria-pressed="${r.days.includes(k)}">${esc(d)}</button>`,
+          )
+          .join('')}</div>
+        <div class="ttimes"><label class="f">${esc(tr('ed.start'))}<input type="time" data-f="row" data-b="${i}" data-r="${j}" data-k="start" value="${esc(r.start)}"></label><label class="f">${esc(tr('ed.end'))}<input type="time" data-f="row" data-b="${i}" data-r="${j}" data-k="end" value="${esc(r.end)}"></label>
+        ${b.rows.length > 1 ? `<button type="button" class="icon" data-action="row-del" data-b="${i}" data-r="${j}" aria-label="${esc(tr('ed.removeTime'))}">${DEL_ICON}</button>` : '<span></span>'}</div>
       </div>`,
         )
         .join('')}
-      <div class="blk-actions"><button type="button" class="btn plus" data-action="row-add" data-b="${i}">+ Weitere Zeit${b.period.type === 'all' ? '' : ' in diesem Zeitraum'}</button>
-        <span>${b.period.type === 'all' ? `<button type="button" class="btn" data-action="blk-split" data-b="${i}">In Sommer/Winter aufteilen</button>` : ''}${B.length > 1 ? `<button type="button" class="btn danger" data-action="blk-del" data-b="${i}">Block entfernen</button>` : ''}</span></div>
+      <div class="blk-actions"><button type="button" class="btn plus" data-action="row-add" data-b="${i}">${esc(tr(b.period.type === 'all' ? 'ed.addTime' : 'ed.addTimeInPeriod'))}</button>
+        <span>${b.period.type === 'all' ? `<button type="button" class="btn" data-action="blk-split" data-b="${i}">${esc(tr('ed.splitSeasons'))}</button>` : ''}${B.length > 1 ? `<button type="button" class="btn danger" data-action="blk-del" data-b="${i}">${esc(tr('ed.removeBlock'))}</button>` : ''}</span></div>
     </div>`,
     ).join('') +
-    `<button type="button" class="btn" data-action="blk-add">+ Öffnungszeiten für einen weiteren Zeitraum</button>` +
-    `<div class="blk"><div class="blk-title"><b>Einzeltermine</b></div>
+    `<button type="button" class="btn" data-action="blk-add">${esc(tr('ed.addBlock'))}</button>` +
+    `<div class="blk"><div class="blk-title"><b>${esc(tr('when.singles'))}</b></div>
       ${
         S1.length
           ? S1.map(
               (
                 x,
                 k,
-              ) => `<div class="trow"><div class="ttimes single"><label class="f">Datum<input type="date" data-f="single" data-s="${k}" data-k="date" value="${esc(x.date)}"></label><button type="button" class="icon" data-action="single-del" data-s="${k}" aria-label="Termin entfernen">${DEL_ICON}</button></div>
-        <div class="two"><label class="f">Beginn<input type="time" data-f="single" data-s="${k}" data-k="start" value="${esc(x.start)}"></label><label class="f">Ende<input type="time" data-f="single" data-s="${k}" data-k="end" value="${esc(x.end)}"></label></div></div>`,
+              ) => `<div class="trow"><div class="ttimes single"><label class="f">${esc(tr('ed.dateLabel'))}<input type="date" data-f="single" data-s="${k}" data-k="date" value="${esc(x.date)}"></label><button type="button" class="icon" data-action="single-del" data-s="${k}" aria-label="${esc(tr('ed.removeDate'))}">${DEL_ICON}</button></div>
+        <div class="two"><label class="f">${esc(tr('ed.start'))}<input type="time" data-f="single" data-s="${k}" data-k="start" value="${esc(x.start)}"></label><label class="f">${esc(tr('ed.end'))}<input type="time" data-f="single" data-s="${k}" data-k="end" value="${esc(x.end)}"></label></div></div>`,
             ).join('')
-          : '<p class="hint flat">Für Termine, die nur einmal stattfinden, z. B. ein Turnier.</p>'
+          : `<p class="hint flat">${esc(tr('ed.singlesHint'))}</p>`
       }
-      <div class="blk-actions"><button type="button" class="btn plus" data-action="single-add">+ Einzeltermin</button></div></div>`;
+      <div class="blk-actions"><button type="button" class="btn plus" data-action="single-add">${esc(tr('ed.addSingle'))}</button></div></div>`;
 }
 function fieldSync(t) {
   if (!draft || !t.dataset || !t.dataset.f) return;
@@ -451,9 +481,8 @@ function blocksToSlots() {
       rows = b.rows.filter((r) => r.days.length);
     if (!rows.length) continue;
     if (p.type === 'range') {
-      if (!p.from && !p.until) return 'Gib für den Zeitraum mindestens ein Von- oder Bis-Datum an.';
-      if (p.from && p.until && p.until < p.from)
-        return 'Bei einem Zeitraum liegt das Bis-Datum vor dem Von-Datum.';
+      if (!p.from && !p.until) return tr('ed.errRangeNeeds');
+      if (p.from && p.until && p.until < p.from) return tr('ed.errRangeOrder');
     }
     const per =
       p.type === 'all'
@@ -507,18 +536,22 @@ function coursePriceNote() {
     new Set(draft.cancelled || []),
   );
   if (!cp) return '';
-  const span =
-    cp.type === 'month' ? ` für ${cp.months} ${cp.months === 1 ? 'Monat' : 'Monate'}` : '';
-  const off = cp.cancelled ? ` (${cp.cancelled} ausgefallene nicht mitgerechnet)` : '';
-  return ` Kosten: ${eur(cp.total)}${span}${cp.avg !== null ? `, im Schnitt ${eur(cp.avg)} pro Termin` : ''}${off}.`;
+  const span = cp.type === 'month' ? ` ${tr('ed.courseSpan', { n: cp.months })}` : '';
+  const off = cp.cancelled ? ` ${tr('ed.courseOff', { n: cp.cancelled })}` : '';
+  const avg = cp.avg !== null ? `, ${tr('detail.courseAvg', { price: eur(cp.avg) })}` : '';
+  return tr('ed.coursePriceNote', { total: eur(cp.total), span, avg, off });
 }
 function courseSummary() {
   const c = draft.course,
     n = courseSessions();
-  if (!c.from || !c.until) return 'Gib Kursbeginn und Kursende an.';
-  if (c.until < c.from) return 'Das Kursende liegt vor dem Kursbeginn.';
-  if (!n) return 'Wähle mindestens einen Trainingstag.';
-  return `${n} ${n === 1 ? 'Termin' : 'Termine'} vom ${dLabel(c.from)} bis ${dLabel(c.until)}. Du bist für alle eingeplant.${coursePriceNote()}`;
+  if (!c.from || !c.until) return tr('ed.courseNeedDates');
+  if (c.until < c.from) return tr('ed.courseEndBefore');
+  if (!n) return tr('ed.courseNeedDay');
+  const note = coursePriceNote();
+  return (
+    tr('ed.courseSummary', { n, from: dLabel(c.from), until: dLabel(c.until) }) +
+    (note ? ` ${note}` : '')
+  );
 }
 function renderCourse() {
   const el = $('#coursebox');
@@ -526,27 +559,32 @@ function renderCourse() {
   const c = draft.course,
     weeks = c.from && c.until && c.until >= c.from ? Math.ceil(dayCount(c.from, c.until) / 7) : '';
   el.innerHTML = `<div class="blk">
-      <div class="two"><label class="f">Kursbeginn<input type="date" data-cf="from" value="${esc(c.from || '')}"></label>
-      <label class="f">Kursende<input type="date" data-cf="until" value="${esc(c.until || '')}"></label></div>
-      <label class="f">Kurslänge in Wochen<input type="number" min="1" max="104" inputmode="numeric" data-cf="weeks" value="${weeks}" placeholder="z. B. 10"></label>
-      <p class="hint flat">Die Länge setzt das Kursende ab Kursbeginn.</p>
+      <div class="two"><label class="f">${esc(tr('ed.courseStart'))}<input type="date" data-cf="from" value="${esc(c.from || '')}"></label>
+      <label class="f">${esc(tr('ed.courseEnd'))}<input type="date" data-cf="until" value="${esc(c.until || '')}"></label></div>
+      <label class="f">${esc(tr('ed.courseWeeks'))}<input type="number" min="1" max="104" inputmode="numeric" data-cf="weeks" value="${weeks}" placeholder="${esc(tr('ed.courseWeeksPh'))}"></label>
+      <p class="hint flat">${esc(tr('ed.courseWeeksHint'))}</p>
     </div>
-    <div class="blk"><div class="blk-title"><b>Kurspreis</b></div>
-      <div class="two"><label class="f">Preis in €<input data-cf="priceText" inputmode="decimal" autocomplete="off" placeholder="z. B. 120,00" value="${esc(c.priceText || '')}"></label>
-      <label class="f">Gilt für<select data-cf="priceType"><option value="total"${c.priceType === 'month' ? '' : ' selected'}>den ganzen Kurs</option><option value="month"${c.priceType === 'month' ? ' selected' : ''}>jeden Monat (Monatsbeitrag)</option></select></label></div>
-      <p class="hint flat">Der Preis wird auf alle Termine verteilt, die stattfinden; ausgefallene Termine zählen nicht mit. Ein Monatsbeitrag gilt für jeden Monat mit Kursterminen, auch angebrochene, und wird auf dessen Termine verteilt. Ist ein Tarif mit dem Kurs verknüpft, zählt die Statistik nur den Tarif.</p>
+    <div class="blk"><div class="blk-title"><b>${esc(tr('ed.coursePrice'))}</b></div>
+      <div class="two"><label class="f">${esc(tr('ed.priceIn'))}<input data-cf="priceText" inputmode="decimal" autocomplete="off" placeholder="${esc(tr('ed.pricePh'))}" value="${esc(c.priceText || '')}"></label>
+      <label class="f">${esc(tr('ed.appliesToPrice'))}<select data-cf="priceType"><option value="total"${c.priceType === 'month' ? '' : ' selected'}>${esc(tr('ed.priceTotal'))}</option><option value="month"${c.priceType === 'month' ? ' selected' : ''}>${esc(tr('ed.priceMonth'))}</option></select></label></div>
+      <p class="hint flat">${esc(tr('ed.coursePriceHint'))}</p>
     </div>
-    <div class="blk"><div class="blk-title"><b>Trainingstage und Uhrzeit</b></div>
+    <div class="blk"><div class="blk-title"><b>${esc(tr('ed.trainingDays'))}</b></div>
       ${draft.courseRows
         .map(
           (r, j) => `<div class="trow">
-        <div class="daypick">${DAYS2.map((d, k) => `<button type="button" class="${r.days.includes(k) ? 'on' : ''}" data-action="crow-day" data-r="${j}" data-j="${k}" aria-pressed="${r.days.includes(k)}">${d}</button>`).join('')}</div>
-        <div class="ttimes"><label class="f">Beginn<input type="time" data-cf="row" data-r="${j}" data-k="start" value="${esc(r.start)}"></label><label class="f">Ende<input type="time" data-cf="row" data-r="${j}" data-k="end" value="${esc(r.end)}"></label>
-        ${draft.courseRows.length > 1 ? `<button type="button" class="icon" data-action="crow-del" data-r="${j}" aria-label="Trainingszeit entfernen">${DEL_ICON}</button>` : '<span></span>'}</div>
+        <div class="daypick">${DAYS()
+          .map(
+            (d, k) =>
+              `<button type="button" class="${r.days.includes(k) ? 'on' : ''}" data-action="crow-day" data-r="${j}" data-j="${k}" aria-pressed="${r.days.includes(k)}">${esc(d)}</button>`,
+          )
+          .join('')}</div>
+        <div class="ttimes"><label class="f">${esc(tr('ed.start'))}<input type="time" data-cf="row" data-r="${j}" data-k="start" value="${esc(r.start)}"></label><label class="f">${esc(tr('ed.end'))}<input type="time" data-cf="row" data-r="${j}" data-k="end" value="${esc(r.end)}"></label>
+        ${draft.courseRows.length > 1 ? `<button type="button" class="icon" data-action="crow-del" data-r="${j}" aria-label="${esc(tr('ed.removeTraining'))}">${DEL_ICON}</button>` : '<span></span>'}</div>
       </div>`,
         )
         .join('')}
-      <div class="blk-actions"><button type="button" class="btn plus" data-action="crow-add">+ Weitere Trainingszeit</button></div>
+      <div class="blk-actions"><button type="button" class="btn plus" data-action="crow-add">${esc(tr('ed.addTraining'))}</button></div>
     </div>
     <p class="hint flat" id="coursesum" role="status">${esc(courseSummary())}</p>`;
 }
@@ -594,14 +632,14 @@ function courseToSlots() {
     .forEach(courseFieldSync);
   const c = draft.course,
     rows = draft.courseRows.filter((r) => r.days.length);
-  if (!c.from || !c.until) return 'Gib Kursbeginn und Kursende an.';
-  if (c.until < c.from) return 'Das Kursende liegt vor dem Kursbeginn.';
+  if (!c.from || !c.until) return tr('ed.courseNeedDates');
+  if (c.until < c.from) return tr('ed.courseEndBefore');
   const priceText = String(c.priceText || '').trim();
   if (priceText && !(parseEuro(priceText) >= 0 && parseEuro(priceText) <= 100000))
-    return 'Gib einen gültigen Kurspreis ein, z. B. 120,00 oder 1.200.';
-  if (dayCount(c.from, c.until) > 104 * 7) return 'Ein Kurs dauert höchstens 104 Wochen.';
-  if (!rows.length) return 'Wähle mindestens einen Trainingstag für den Kurs.';
-  const period = { type: 'range', from: c.from, until: c.until, label: 'Kurs' };
+    return tr('ed.errCoursePrice');
+  if (dayCount(c.from, c.until) > 104 * 7) return tr('ed.errCourseLong');
+  if (!rows.length) return tr('ed.errCourseDay');
+  const period = { type: 'range', from: c.from, until: c.until, label: COURSE_LABEL };
   draft.slots = rows.map((r) => ({
     kind: 'weekly',
     days: [...r.days].sort(),
@@ -706,7 +744,7 @@ const BLOCK_HANDLERS = {
     $('[data-action=crow-add]')?.focus();
   },
   step: (t) => setStep(+t.dataset.step),
-  'step-next': () => setStep(Math.min(STEPS.length - 1, S.sheet.step + 1)),
+  'step-next': () => setStep(Math.min(steps().length - 1, S.sheet.step + 1)),
   'step-prev': () => setStep(Math.max(0, S.sheet.step - 1)),
   'row-day': (t) => {
     const r = draft.blocks[+t.dataset.b].rows[+t.dataset.r],
@@ -737,13 +775,13 @@ const BLOCK_HANDLERS = {
   'blk-split': (t) => {
     const b = draft.blocks[+t.dataset.b];
     const winter = {
-      period: { type: 'yearly', from: '10-01', until: '03-31', label: 'Winter' },
+      period: { type: 'yearly', from: '10-01', until: '03-31', label: tr('ed.blockWinter') },
       rows: b.rows.map((r) => ({ ...r, days: [...r.days] })),
     };
-    b.period = { type: 'yearly', from: '04-01', until: '09-30', label: 'Sommer' };
+    b.period = { type: 'yearly', from: '04-01', until: '09-30', label: tr('ed.blockSummer') };
     draft.blocks.splice(+t.dataset.b + 1, 0, winter);
     renderSlots();
-    toast('In Sommer und Winter aufgeteilt. Passe die Zeiten im Winter-Block an.');
+    toast(tr('ed.splitToast'));
   },
   'single-add': () => {
     draft.singles.push({ date: S.date, start: '', end: '' });
@@ -760,14 +798,14 @@ function renderPhotos() {
   patchList(el, [
     ...draft.photos.map((p, i) => ({
       key: 'p' + p.slice(-40) + i,
-      html: `<div class="pslot"><button type="button" data-action="photo-cover" data-i="${i}" aria-label="Als Titelbild festlegen"><img src="${esc(thumbSrc(draft, p))}" alt="" decoding="async"></button>${i === 0 ? '<span class="cover">Titelbild</span>' : ''}<button type="button" class="x" data-action="photo-del" data-i="${i}" aria-label="Foto entfernen">${ICON.close}</button></div>`,
+      html: `<div class="pslot"><button type="button" data-action="photo-cover" data-i="${i}" aria-label="${esc(tr('ed.setCover'))}"><img src="${esc(thumbSrc(draft, p))}" alt="" decoding="async"></button>${i === 0 ? `<span class="cover">${esc(tr('ed.cover'))}</span>` : ''}<button type="button" class="x" data-action="photo-del" data-i="${i}" aria-label="${esc(tr('ed.removePhoto'))}">${ICON.close}</button></div>`,
     })),
     ...(uploading
-      ? [{ key: 'busy', html: `<div class="pslot busy">Wird hinzugefügt …</div>` }]
+      ? [{ key: 'busy', html: `<div class="pslot busy">${esc(tr('ed.photoAdding'))}</div>` }]
       : []),
     {
       key: 'add',
-      html: `<label class="pslot padd">${ICON.camera}Foto hinzufügen<input type="file" accept="image/*" multiple id="file"></label>`,
+      html: `<label class="pslot padd">${ICON.camera}${esc(tr('ed.addPhoto'))}<input type="file" accept="image/*" multiple id="file"></label>`,
     },
   ]);
 }
@@ -817,10 +855,10 @@ async function addPhotos(files) {
     } catch (e) {
       toast(
         e && e.code === 'quota_or_state'
-          ? 'Der Fotospeicher ist voll. Entferne zuerst einige Fotos.'
+          ? tr('ed.photoFull')
           : e && e.code === 'too_large'
-            ? 'Dieses Foto ist zu groß.'
-            : 'Das Foto konnte nicht hinzugefügt werden.',
+            ? tr('ed.photoTooLarge')
+            : tr('ed.photoFailed'),
       );
     } finally {
       uploading--;
@@ -873,7 +911,7 @@ async function saveDraft() {
     label = btn ? btn.textContent : '';
   if (btn) {
     btn.disabled = true;
-    btn.textContent = 'Wird gespeichert …';
+    btn.textContent = tr('ed.saving');
   }
   try {
     await saveDraftNow();
@@ -894,27 +932,24 @@ async function saveDraftNow() {
     err.hidden = false;
     err.scrollIntoView({ behavior: 'smooth', block: 'center' });
   };
-  if (!draft.name) return fail('Gib der Aktivität einen Namen.', 0);
+  if (!draft.name) return fail(tr('ed.errName'), 0);
   if (
     String(new FormData($('#form')).get('visitPrice') || '').trim() &&
     !(parseMoney(new FormData($('#form')).get('visitPrice')) >= 0)
   )
-    return fail('Gib einen gültigen Preis pro Besuch ein, z. B. 8,50.', 3);
-  if (uploading) return fail('Warte, bis alle Fotos hinzugefügt sind.', 0);
+    return fail(tr('ed.errVisitPrice'), 3);
+  if (uploading) return fail(tr('ed.errUploading'), 0);
   if (draft.from && draft.until && draft.until < draft.from)
-    return fail('Das Enddatum liegt vor dem Startdatum.', 1);
+    return fail(tr('ed.errEndBeforeStart'), 1);
   const slotErr = draft.course ? courseToSlots() : blocksToSlots();
   if (slotErr) return fail(slotErr, 1);
   const pp = draft.planned;
   if (pp.mode === 'weekly' || pp.mode === 'both') {
-    if (!(pp.days || []).length)
-      return fail('Wähle für die regelmäßige Teilnahme mindestens einen Wochentag.', 2);
+    if (!(pp.days || []).length) return fail(tr('ed.errWeekday'), 2);
   }
   const badRange = (x) => x && x.type === 'range' && x.from && x.until && x.until < x.from;
-  if (badRange(draft.season))
-    return fail('Beim Zeitraum des Angebots liegt das Bis-Datum vor dem Von-Datum.', 1);
-  if (pp.mode !== 'none' && badRange(pp.season))
-    return fail('Bei der geplanten Teilnahme liegt das Bis-Datum vor dem Ab-Datum.', 2);
+  if (badRange(draft.season)) return fail(tr('ed.errAvailRange'), 1);
+  if (pp.mode !== 'none' && badRange(pp.season)) return fail(tr('ed.errPlanRange'), 2);
   const normSeason = (x) =>
     !x || x.type === 'all' || (x.type === 'range' && !x.from && !x.until)
       ? { type: 'all' }
@@ -922,8 +957,7 @@ async function saveDraftNow() {
   draft.season = normSeason(draft.season);
   draft.from = '';
   draft.until = '';
-  if (pp.mode === 'dates' && !(pp.dates || []).length)
-    return fail('Füge mindestens einen geplanten Termin hinzu oder wähle „Nicht geplant“.', 2);
+  if (pp.mode === 'dates' && !(pp.dates || []).length) return fail(tr('ed.errNoDates'), 2);
   draft.planned =
     pp.mode === 'none'
       ? { mode: 'none' }
@@ -978,10 +1012,7 @@ async function saveDraftNow() {
   const addrUnchanged = (draft.address || '').trim() === draft._addrAtOpen;
   if (geoProblem === 'offline' || (geoProblem && addrUnchanged)) {
     if (draft.geo && draft.geo.q !== (draft.address || '').trim()) draft.geo = null;
-    if (geoProblem === 'offline')
-      toast(
-        'Die Adresse konnte nicht geprüft werden. Prüfe sie später unter Karte → Adressen prüfen.',
-      );
+    if (geoProblem === 'offline') toast(tr('ed.addressUnchecked'));
   } else if (geoProblem) return fail(geoProblem, 3);
   const memberOf = draft._memberOf || [];
   delete draft._memberOf;
@@ -1007,22 +1038,22 @@ async function saveDraftNow() {
             activities: want
               ? [...(p.activities || []), act.id]
               : (p.activities || []).filter((x) => x !== act.id),
-          }).catch(() => toast('Ein Tarif konnte nicht aktualisiert werden.'));
+          }).catch(() => toast(tr('ed.planUpdateFailed')));
       }
     }
     removed.forEach(dropAsset);
     uploads = new Set();
     removed = new Set();
     closeSheet();
-    toast(isNew ? 'Aktivität hinzugefügt' : 'Änderungen gespeichert');
+    toast(tr(isNew ? 'ed.activityAdded' : 'ed.changesSaved'));
     openDetail(act.id, null);
   } catch (e) {
     fail(
       e && e.code === 'quota_exceeded'
-        ? 'Der Speicher ist voll. Lösche eine Aktivität, um neue hinzuzufügen.'
+        ? tr('ed.errQuota')
         : e && e.message === 'local-full'
-          ? 'Der Gerätespeicher für diese Seite ist voll. Entferne einige Fotos.'
-          : 'Speichern fehlgeschlagen. Prüfe deine Verbindung und versuche es erneut.',
+          ? tr('ed.errLocalFull')
+          : tr('ed.errSave'),
     );
   }
 }

@@ -2,6 +2,7 @@ import type React from 'react';
 import { useMemo, useState } from 'react';
 import { MediaRow } from '../components/MediaRow';
 import { MediaTile } from '../components/MediaTile';
+import { t } from '../i18n';
 import { executeSemanticSearch } from '../services/semanticSearch';
 import type { MediaItem } from '../types';
 
@@ -255,7 +256,7 @@ export const SammlungView: React.FC<SammlungViewProps> = ({
     <div className="grid gap-6">
       {/* TOP-LEVEL LIBRARY CATEGORIES (Clear Separation: Visuell vs Buch vs Audiobooks vs Spiele) */}
       <div className="mn-card p-2 bg-[var(--mn-surface)]">
-        <fieldset className="mn-seg grid-cols-2 sm:grid-cols-5" aria-label="Hauptbibliothek wählen">
+        <fieldset className="mn-seg grid-cols-2 sm:grid-cols-5" aria-label={t('lib.mainLibrary')}>
           <button
             type="button"
             aria-pressed={libraryCategory === 'buchmedien'}
@@ -264,7 +265,7 @@ export const SammlungView: React.FC<SammlungViewProps> = ({
               setSubtypeFilter('all');
             }}
           >
-            📚 Buchmedien ({countBooksAndAudio})
+            {t('lib.catBooks', { n: countBooksAndAudio })}
           </button>
           <button
             type="button"
@@ -274,7 +275,7 @@ export const SammlungView: React.FC<SammlungViewProps> = ({
               setSubtypeFilter('all');
             }}
           >
-            🎬 Visuelle Medien ({countVisual})
+            {t('lib.catVisual', { n: countVisual })}
           </button>
           <button
             type="button"
@@ -284,7 +285,7 @@ export const SammlungView: React.FC<SammlungViewProps> = ({
               setSubtypeFilter('all');
             }}
           >
-            🎧 Audiobooks ({countAudioOnly})
+            {t('lib.catAudio', { n: countAudioOnly })}
           </button>
           <button
             type="button"
@@ -295,7 +296,7 @@ export const SammlungView: React.FC<SammlungViewProps> = ({
               setConsoleFilter('all');
             }}
           >
-            🎮 Spiele ({countGames})
+            {t('lib.catGames', { n: countGames })}
           </button>
           <button
             type="button"
@@ -305,7 +306,7 @@ export const SammlungView: React.FC<SammlungViewProps> = ({
               setSubtypeFilter('all');
             }}
           >
-            Alle ({items.length})
+            {t('lib.catAll', { n: items.length })}
           </button>
         </fieldset>
       </div>
@@ -327,16 +328,16 @@ export const SammlungView: React.FC<SammlungViewProps> = ({
             type="search"
             placeholder={
               libraryCategory === 'buchmedien'
-                ? 'Bücher, Manga, Manhwa, Hörbücher durchsuchen ...'
+                ? t('lib.phBooks')
                 : libraryCategory === 'visuell'
-                  ? 'Filme und Serien durchsuchen ...'
+                  ? t('lib.phVisual')
                   : libraryCategory === 'audiobooks'
-                    ? 'Hörbücher nach Sprecher, Titel oder Autor durchsuchen ...'
+                    ? t('lib.phAudio')
                     : libraryCategory === 'spiele'
-                      ? 'Videospiele nach Titel, Entwickler oder Konsole durchsuchen ...'
-                      : 'Semantische Suche: Titel, Urheber, Genre, z. B. „Solo Leveling“, „Severance“, „10 Sterne“ ...'
+                      ? t('lib.phGames')
+                      : t('lib.phAll')
             }
-            aria-label="Medien durchsuchen"
+            aria-label={t('lib.searchLabel')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -345,7 +346,7 @@ export const SammlungView: React.FC<SammlungViewProps> = ({
               type="button"
               className="text-xs text-[var(--mn-muted)] hover:text-[var(--mn-ink)] px-2"
               onClick={() => setSearch('')}
-              title="Suche leeren"
+              title={t('lib.clearSearch')}
             >
               ✕
             </button>
@@ -358,7 +359,7 @@ export const SammlungView: React.FC<SammlungViewProps> = ({
             <div className="flex items-center gap-2">
               <span className="text-base">💡</span>
               <span className="text-[var(--mn-muted)]">
-                Titel <b>„{search.trim()}“</b> ist noch nicht in deiner Sammlung?
+                {t('lib.notInCollection', { query: search.trim() })}
               </span>
             </div>
             <button
@@ -378,7 +379,7 @@ export const SammlungView: React.FC<SammlungViewProps> = ({
                 })
               }
             >
-              + „{search.trim()}“ jetzt neu anlegen & online suchen
+              {t('lib.addAndSearch', { query: search.trim() })}
             </button>
           </div>
         )}
@@ -388,14 +389,14 @@ export const SammlungView: React.FC<SammlungViewProps> = ({
       <div className="grid gap-3">
         {/* Buchmedien Sub-Filters (Including Audiobooks!) */}
         {libraryCategory === 'buchmedien' && (
-          <fieldset className="mn-chips" aria-label="Buchformate filtern">
+          <fieldset className="mn-chips" aria-label={t('lib.filterBooks')}>
             <button
               type="button"
               className="mn-filter"
               aria-pressed={subtypeFilter === 'all'}
               onClick={() => setSubtypeFilter('all')}
             >
-              Alle Buchmedien ({countBooksAndAudio})
+              {t('lib.allBooks', { n: countBooksAndAudio })}
             </button>
             <button
               type="button"
@@ -403,7 +404,7 @@ export const SammlungView: React.FC<SammlungViewProps> = ({
               aria-pressed={subtypeFilter === 'Manga'}
               onClick={() => setSubtypeFilter(subtypeFilter === 'Manga' ? 'all' : 'Manga')}
             >
-              Manga ({items.filter((i) => i.bookSubtype === 'Manga').length})
+              {t('lib.chipManga', { n: items.filter((i) => i.bookSubtype === 'Manga').length })}
             </button>
             <button
               type="button"
@@ -411,7 +412,7 @@ export const SammlungView: React.FC<SammlungViewProps> = ({
               aria-pressed={subtypeFilter === 'Manhwa'}
               onClick={() => setSubtypeFilter(subtypeFilter === 'Manhwa' ? 'all' : 'Manhwa')}
             >
-              Manhwa ({items.filter((i) => i.bookSubtype === 'Manhwa').length})
+              {t('lib.chipManhwa', { n: items.filter((i) => i.bookSubtype === 'Manhwa').length })}
             </button>
             <button
               type="button"
@@ -419,7 +420,7 @@ export const SammlungView: React.FC<SammlungViewProps> = ({
               aria-pressed={subtypeFilter === 'Manhua'}
               onClick={() => setSubtypeFilter(subtypeFilter === 'Manhua' ? 'all' : 'Manhua')}
             >
-              Manhua ({items.filter((i) => i.bookSubtype === 'Manhua').length})
+              {t('lib.chipManhua', { n: items.filter((i) => i.bookSubtype === 'Manhua').length })}
             </button>
             <button
               type="button"
@@ -427,7 +428,7 @@ export const SammlungView: React.FC<SammlungViewProps> = ({
               aria-pressed={subtypeFilter === 'Roman'}
               onClick={() => setSubtypeFilter(subtypeFilter === 'Roman' ? 'all' : 'Roman')}
             >
-              Romane ({items.filter((i) => i.bookSubtype === 'Roman').length})
+              {t('lib.chipNovels', { n: items.filter((i) => i.bookSubtype === 'Roman').length })}
             </button>
             <button
               type="button"
@@ -435,7 +436,7 @@ export const SammlungView: React.FC<SammlungViewProps> = ({
               aria-pressed={subtypeFilter === 'Audiobook'}
               onClick={() => setSubtypeFilter(subtypeFilter === 'Audiobook' ? 'all' : 'Audiobook')}
             >
-              🎧 Audiobooks ({countAudioOnly})
+              {t('lib.chipAudio', { n: countAudioOnly })}
             </button>
             <button
               type="button"
@@ -445,7 +446,9 @@ export const SammlungView: React.FC<SammlungViewProps> = ({
                 setSubtypeFilter(subtypeFilter === 'Light Novel' ? 'all' : 'Light Novel')
               }
             >
-              Light Novels ({items.filter((i) => i.bookSubtype === 'Light Novel').length})
+              {t('lib.chipLightNovels', {
+                n: items.filter((i) => i.bookSubtype === 'Light Novel').length,
+              })}
             </button>
             <button
               type="button"
@@ -453,21 +456,21 @@ export const SammlungView: React.FC<SammlungViewProps> = ({
               aria-pressed={subtypeFilter === 'Comic'}
               onClick={() => setSubtypeFilter(subtypeFilter === 'Comic' ? 'all' : 'Comic')}
             >
-              Comics ({items.filter((i) => i.bookSubtype === 'Comic').length})
+              {t('lib.chipComics', { n: items.filter((i) => i.bookSubtype === 'Comic').length })}
             </button>
           </fieldset>
         )}
 
         {/* Visuelle Medien Sub-Filters */}
         {libraryCategory === 'visuell' && (
-          <fieldset className="mn-chips" aria-label="Visuelle Formate filtern">
+          <fieldset className="mn-chips" aria-label={t('lib.filterVisual')}>
             <button
               type="button"
               className="mn-filter"
               aria-pressed={subtypeFilter === 'all'}
               onClick={() => setSubtypeFilter('all')}
             >
-              Alle Visuellen ({countVisual})
+              {t('lib.allVisual', { n: countVisual })}
             </button>
             <button
               type="button"
@@ -475,7 +478,7 @@ export const SammlungView: React.FC<SammlungViewProps> = ({
               aria-pressed={subtypeFilter === 'film'}
               onClick={() => setSubtypeFilter(subtypeFilter === 'film' ? 'all' : 'film')}
             >
-              Filme ({items.filter((i) => i.kind === 'film').length})
+              {t('lib.chipFilms', { n: items.filter((i) => i.kind === 'film').length })}
             </button>
             <button
               type="button"
@@ -483,21 +486,21 @@ export const SammlungView: React.FC<SammlungViewProps> = ({
               aria-pressed={subtypeFilter === 'series'}
               onClick={() => setSubtypeFilter(subtypeFilter === 'series' ? 'all' : 'series')}
             >
-              Serien ({items.filter((i) => i.kind === 'series').length})
+              {t('lib.chipSeries', { n: items.filter((i) => i.kind === 'series').length })}
             </button>
           </fieldset>
         )}
 
         {/* Videospiele: Dedicated Console / Plattform Filters */}
         {libraryCategory === 'spiele' && (
-          <fieldset className="mn-chips" aria-label="Nach Konsole filtern">
+          <fieldset className="mn-chips" aria-label={t('lib.filterConsole')}>
             <button
               type="button"
               className="mn-filter"
               aria-pressed={consoleFilter === 'all'}
               onClick={() => setConsoleFilter('all')}
             >
-              🎮 Alle Konsolen ({countGames})
+              {t('lib.allConsoles', { n: countGames })}
             </button>
             {availableConsoles.map((cons) => (
               <button
@@ -507,21 +510,24 @@ export const SammlungView: React.FC<SammlungViewProps> = ({
                 aria-pressed={consoleFilter === cons}
                 onClick={() => setConsoleFilter(consoleFilter === cons ? 'all' : cons)}
               >
-                {cons} ({items.filter((i) => (i.console || i.platform) === cons).length})
+                {t('lib.consoleChip', {
+                  name: cons,
+                  n: items.filter((i) => (i.console || i.platform) === cons).length,
+                })}
               </button>
             ))}
           </fieldset>
         )}
 
         {/* Status & Rating Filters */}
-        <fieldset className="mn-chips" aria-label="Nach Status filtern">
+        <fieldset className="mn-chips" aria-label={t('lib.filterStatus')}>
           <button
             type="button"
             className="mn-filter"
             aria-pressed={statusFilter === 'all'}
             onClick={() => setStatusFilter('all')}
           >
-            Status: Alle
+            {t('lib.statusAll')}
           </button>
           <button
             type="button"
@@ -529,7 +535,7 @@ export const SammlungView: React.FC<SammlungViewProps> = ({
             aria-pressed={statusFilter === 'active'}
             onClick={() => setStatusFilter('active')}
           >
-            Im Gange (Aktiv)
+            {t('lib.statusActive')}
           </button>
           <button
             type="button"
@@ -537,7 +543,7 @@ export const SammlungView: React.FC<SammlungViewProps> = ({
             aria-pressed={statusFilter === 'done'}
             onClick={() => setStatusFilter('done')}
           >
-            Beendet
+            {t('lib.statusDone')}
           </button>
           <button
             type="button"
@@ -545,7 +551,7 @@ export const SammlungView: React.FC<SammlungViewProps> = ({
             aria-pressed={statusFilter === 'wishlist'}
             onClick={() => setStatusFilter('wishlist')}
           >
-            Wunschliste
+            {t('lib.statusWishlist')}
           </button>
           <button
             type="button"
@@ -553,7 +559,7 @@ export const SammlungView: React.FC<SammlungViewProps> = ({
             aria-pressed={ratingFilter === '8plus'}
             onClick={() => setRatingFilter(ratingFilter === '8plus' ? 'all' : '8plus')}
           >
-            ★ 8+ Sterne
+            {t('lib.rating8')}
           </button>
           <button
             type="button"
@@ -561,7 +567,7 @@ export const SammlungView: React.FC<SammlungViewProps> = ({
             aria-pressed={ratingFilter === '10only'}
             onClick={() => setRatingFilter(ratingFilter === '10only' ? 'all' : '10only')}
           >
-            ★ 10/10 Meisterwerke
+            {t('lib.rating10')}
           </button>
 
           {isFiltered && (
@@ -570,7 +576,7 @@ export const SammlungView: React.FC<SammlungViewProps> = ({
               className="mn-link text-xs ml-2 self-center"
               onClick={handleResetFilters}
             >
-              Filter zurücksetzen
+              {t('lib.resetFilters')}
             </button>
           )}
         </fieldset>
@@ -582,40 +588,37 @@ export const SammlungView: React.FC<SammlungViewProps> = ({
           className="text-sm font-semibold text-[var(--mn-muted)] flex items-center gap-2"
           aria-live="polite"
         >
-          <span>
-            {filteredAndSortedItems.length}{' '}
-            {filteredAndSortedItems.length === 1 ? 'Eintrag' : 'Einträge'}
-          </span>
+          <span>{t('lib.entries', { n: filteredAndSortedItems.length })}</span>
           {search.trim() && (
             <span className="mn-chip mn-chip--plain text-xs font-semibold">
-              🔍 Semantische Suche
+              {t('lib.semantic')}
             </span>
           )}
         </div>
 
         <div className="flex items-center gap-3">
           <label className="flex items-center gap-2 text-xs font-semibold text-[var(--mn-muted)]">
-            Sortieren:
+            {t('lib.sort')}
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
               className="text-xs py-1 px-2 border rounded"
             >
-              <option value="newest">Zuletzt aktualisiert</option>
-              <option value="title">Titel (A–Z)</option>
-              <option value="console">Konsole / Plattform (A–Z)</option>
-              <option value="rating">Höchste Bewertung</option>
-              <option value="year">Erscheinungsjahr</option>
-              <option value="progress">Fortschritt %</option>
+              <option value="newest">{t('lib.sortNewest')}</option>
+              <option value="title">{t('lib.sortTitle')}</option>
+              <option value="console">{t('lib.sortConsole')}</option>
+              <option value="rating">{t('lib.sortRating')}</option>
+              <option value="year">{t('lib.sortYear')}</option>
+              <option value="progress">{t('lib.sortProgress')}</option>
             </select>
           </label>
 
           {/* View mode toggle */}
-          <fieldset className="mn-seg mn-seg--icons" aria-label="Ansicht wechseln">
+          <fieldset className="mn-seg mn-seg--icons" aria-label={t('lib.switchView')}>
             <button
               type="button"
               aria-pressed={viewMode === 'tiles'}
-              aria-label="Kachelansicht"
+              aria-label={t('lib.tileView')}
               onClick={() => setViewMode('tiles')}
             >
               <svg
@@ -634,7 +637,7 @@ export const SammlungView: React.FC<SammlungViewProps> = ({
             <button
               type="button"
               aria-pressed={viewMode === 'list'}
-              aria-label="Listenansicht"
+              aria-label={t('lib.listView')}
               onClick={() => setViewMode('list')}
             >
               <svg
@@ -667,16 +670,16 @@ export const SammlungView: React.FC<SammlungViewProps> = ({
                 {item.isBookSeries && item.volumes && item.volumes.length > 0 && (
                   <div className="px-1 py-1 -mt-1 text-[11px] text-[var(--mn-muted)] flex flex-wrap gap-1">
                     <span className="font-bold text-[var(--mn-accent-text)]">
-                      📚 {item.volumes.length} Bände:
+                      {t('lib.volumesBadge', { n: item.volumes.length })}
                     </span>
                     {item.volumes.slice(0, 4).map((v) => (
                       <span key={v.id} className="mn-chip mn-chip--plain text-[10px] py-0 px-1">
-                        Bd. {v.volumeNumber} {v.status === 'done' ? '✓' : ''}
+                        {t('lib.volShort', { n: v.volumeNumber })} {v.status === 'done' ? '✓' : ''}
                       </span>
                     ))}
                     {item.volumes.length > 4 && (
                       <span className="text-[10px] text-[var(--mn-muted)] self-center">
-                        +{item.volumes.length - 4} weitere
+                        {t('lib.moreVolumes', { n: item.volumes.length - 4 })}
                       </span>
                     )}
                   </div>
@@ -697,13 +700,13 @@ export const SammlungView: React.FC<SammlungViewProps> = ({
                 {item.isBookSeries && item.volumes && item.volumes.length > 0 && (
                   <div className="text-[11px] text-[var(--mn-muted)] pl-16 pb-1 -mt-1 flex flex-wrap gap-1">
                     <span className="font-bold text-[var(--mn-accent-text)]">
-                      📚 Reihe mit {item.volumes.length} Bänden (Band 1 zuerst)
+                      {t('lib.seriesInfo', { n: item.volumes.length })}
                     </span>
                   </div>
                 )}
                 {semanticReason && search.trim() && (
                   <div className="text-[11px] text-[var(--mn-accent-text)] font-semibold pl-16 pb-2 -mt-1">
-                    💡 Treffer-Grund: {semanticReason}
+                    {t('lib.matchReason', { reason: semanticReason })}
                   </div>
                 )}
               </div>
@@ -726,15 +729,15 @@ export const SammlungView: React.FC<SammlungViewProps> = ({
           </div>
           <h3>
             {search.trim()
-              ? `„${search.trim()}“ nicht in deiner Sammlung`
-              : 'Keine Einträge in dieser Kategorie'}
+              ? t('lib.notInCollectionTitle', { query: search.trim() })
+              : t('lib.noEntriesCategory')}
           </h3>
           <p>
             {search.trim()
-              ? `Es wurde kein Eintrag für „${search.trim()}“ in deiner Bibliothek gefunden. Du kannst diesen Titel jetzt direkt als neues Medium anlegen und per Online-Suche anreichern.`
+              ? t('lib.noEntryFor', { query: search.trim() })
               : isFiltered
-                ? 'Für deine aktuellen Filtereinstellungen wurden keine passenden Werke gefunden.'
-                : 'In diesem Bereich befinden sich noch keine Einträge.'}
+                ? t('lib.noMatchFilters')
+                : t('lib.noEntriesHere')}
           </p>
           <div className="flex flex-wrap justify-center gap-3 mt-3">
             {search.trim() ? (
@@ -756,15 +759,15 @@ export const SammlungView: React.FC<SammlungViewProps> = ({
                     })
                   }
                 >
-                  + „{search.trim()}“ jetzt neu anlegen & online suchen
+                  {t('lib.addAndSearch', { query: search.trim() })}
                 </button>
                 <button type="button" className="mn-btn" onClick={handleResetFilters}>
-                  Suche zurücksetzen
+                  {t('lib.resetSearch')}
                 </button>
               </>
             ) : isFiltered ? (
               <button type="button" className="mn-btn" onClick={handleResetFilters}>
-                Filter zurücksetzen
+                {t('lib.resetFilters')}
               </button>
             ) : (
               <button
@@ -783,7 +786,7 @@ export const SammlungView: React.FC<SammlungViewProps> = ({
                   })
                 }
               >
-                Medium anlegen
+                {t('nav.addMedium')}
               </button>
             )}
           </div>

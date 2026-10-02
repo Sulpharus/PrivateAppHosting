@@ -101,5 +101,9 @@
       },
       "reason": "PC-Spiele mit deutschen Beschreibungen"
     }
-  ]
+  ],
+  "i18n": {
+    "languages": ["de", "en"],
+    "default": "de"
+  }
 }

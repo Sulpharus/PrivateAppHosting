@@ -109,7 +109,7 @@ export function usedKeys(source: string): string[] {
       const key = pair.slice(pair.indexOf(':') + 1).trim();
       if (key) keys.add(key);
     }
-  for (const m of source.matchAll(/\bt\(\s*['"`]([a-z][\w-]*(?:\.[\w-]+)+)['"`]/g))
+  for (const m of source.matchAll(/\b(?:t|tr)\(\s*['"`]([a-z][\w-]*(?:\.[\w-]+)+)['"`]/g))
     if (m[1]) keys.add(m[1]);
   return [...keys].filter((key) => KEY_PATTERN.test(key));
 }

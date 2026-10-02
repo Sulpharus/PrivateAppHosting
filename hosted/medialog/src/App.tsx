@@ -10,6 +10,7 @@ import { Header } from './components/Header';
 import { type AppTab, Navigation } from './components/Navigation';
 import { ShareModal } from './components/ShareModal';
 import { showToast, ToastContainer } from './components/Toast';
+import { t } from './i18n';
 import { pruneApiCache } from './services/mediaApis';
 import { type MiniNodeSDK, mininode, signedInUser, toJson } from './services/mininode';
 import {
@@ -77,7 +78,7 @@ export default function App() {
       }
     } catch (err) {
       console.error('Error loading data from mn.kv:', err);
-      showToast('Deine Sammlung konnte nicht geladen werden.');
+      showToast(t('app.loadFailed'));
     } finally {
       setIsLoading(false);
     }
@@ -109,9 +110,9 @@ export default function App() {
         unsubscribeOffline = mn.offline.onChange((online) => {
           setIsOffline(!online);
           if (online) {
-            showToast('Wieder online');
+            showToast(t('app.online'));
           } else {
-            showToast('Offline: Änderungen werden später übertragen');
+            showToast(t('app.offlineToast'));
           }
         });
         // Changes made offline reached the server; other devices' changes show on return.
@@ -141,7 +142,7 @@ export default function App() {
     if (!sdk || !list.sharedWith?.length) return;
     const listItems = allItems.filter((it) => list.itemIds.includes(it.id));
     await publishShare(sdk, currentUser, { list, items: listItems }).catch(() =>
-      showToast('Die geteilte Fassung konnte nicht aktualisiert werden.'),
+      showToast(t('app.shareUpdateFailed')),
     );
   };
 
@@ -152,7 +153,7 @@ export default function App() {
     await sdk.kv.set(`work:${savedItem.id}`, toJson(savedItem));
     if (savedItem.sharedWith?.length) {
       await publishShare(sdk, currentUser, { work: savedItem }).catch(() =>
-        showToast('Die geteilte Fassung konnte nicht aktualisiert werden.'),
+        showToast(t('app.shareUpdateFailed')),
       );
     }
 
@@ -215,7 +216,7 @@ export default function App() {
     await sdk.kv.delete(`list:${listId}`);
     unpublishShare(sdk, currentUser, 'list', listId).catch(() => undefined);
     await loadAllData(sdk, currentUser);
-    showToast('Liste gelöscht');
+    showToast(t('app.listDeleted'));
   };
 
   // Import items batch
@@ -256,7 +257,9 @@ export default function App() {
   // Share with other users of the app (ids; the names are kept for display)
   const handleUpdateSharedWith = async (ids: string[]) => {
     if (!sdk || !shareTarget) return;
-    const sharedWithNames = ids.map((id) => people.find((p) => p.id === id)?.name ?? 'Unbekannt');
+    const sharedWithNames = ids.map(
+      (id) => people.find((p) => p.id === id)?.name ?? t('common.unknown'),
+    );
     const changes = { sharedWith: ids, sharedWithNames, updatedAt: new Date().toISOString() };
     if (shareTarget.item) {
       const item = { ...shareTarget.item, ...changes };
@@ -295,7 +298,7 @@ export default function App() {
       updatedAt: new Date().toISOString(),
     };
     await handleSaveItem(copy);
-    showToast(`„${work.title}“ in deine Sammlung übernommen`);
+    showToast(t('app.copied', { title: work.title }));
   };
 
   // Navigation helpers
@@ -310,34 +313,37 @@ export default function App() {
   const getSubtitle = () => {
     switch (currentTab) {
       case 'start':
-        return `${items.filter((i) => i.status === 'active').length} aktiv im Gange · ${items.length} gesamt`;
+        return t('app.subStart', {
+          active: items.filter((i) => i.status === 'active').length,
+          total: items.length,
+        });
       case 'sammlung':
-        return `${items.length} Medien im Archiv verzeichnet`;
+        return t('app.subCollection', { n: items.length });
       case 'listen':
-        return `${lists.length} ${lists.length === 1 ? 'Liste' : 'Listen'} angelegt`;
+        return t('app.subLists', { n: lists.length });
       case 'statistik':
-        return 'Auswertung deiner Lese-, Seh- und Spielgewohnheiten';
+        return t('app.subStats');
       case 'einstellungen':
-        return 'Sicherung, CSV-Import & Multi-User-Freigaben';
+        return t('app.subOptions');
       default:
-        return 'Medialog';
+        return t('app.title');
     }
   };
 
   const getViewTitle = () => {
     switch (currentTab) {
       case 'start':
-        return 'Start';
+        return t('nav.start');
       case 'sammlung':
-        return 'Sammlung';
+        return t('nav.collection');
       case 'listen':
-        return 'Listen';
+        return t('nav.lists');
       case 'statistik':
-        return 'Statistik';
+        return t('nav.stats');
       case 'einstellungen':
-        return 'Optionen';
+        return t('nav.options');
       default:
-        return 'Medialog';
+        return t('app.title');
     }
   };
 
@@ -373,7 +379,7 @@ export default function App() {
                 type="button"
                 className="mn-btn mn-btn--ghost text-xs"
                 onClick={() => window.print()}
-                title="Drucken / Als PDF speichern"
+                title={t('app.printTitle')}
               >
                 <svg
                   viewBox="0 0 24 24"
@@ -387,14 +393,14 @@ export default function App() {
                   <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
                   <rect x="6" y="14" width="12" height="8" />
                 </svg>
-                <span className="hidden sm:inline">Drucken</span>
+                <span className="hidden sm:inline">{t('app.print')}</span>
               </button>
 
               <button
                 type="button"
                 className="mn-btn mn-btn--ghost text-xs"
                 onClick={() => setCurrentTab('einstellungen')}
-                title={`Angemeldet als ${currentUser.name}`}
+                title={t('app.signedInAs', { name: currentUser.name })}
               >
                 <span className="w-6 h-6 rounded-full bg-[var(--mn-accent-soft)] text-[var(--mn-accent-text)] font-bold text-xs flex items-center justify-center">
                   {currentUser.avatarInitials}

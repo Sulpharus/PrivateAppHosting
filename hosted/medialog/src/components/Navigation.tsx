@@ -1,4 +1,5 @@
 import type React from 'react';
+import { t } from '../i18n';
 
 export type AppTab = 'start' | 'sammlung' | 'listen' | 'statistik' | 'einstellungen';
 
@@ -15,7 +16,7 @@ export const Navigation: React.FC<NavigationProps> = ({
   onOpenAddModal,
 }) => {
   return (
-    <nav className="mn-nav" aria-label="Bereiche">
+    <nav className="mn-nav" aria-label={t('nav.sections')}>
       {/* Brand: only visible from 960px desktop */}
       <div className="mn-brand">
         <a className="mn-home" href="https://mininode.app">
@@ -28,7 +29,7 @@ export const Navigation: React.FC<NavigationProps> = ({
           >
             <polyline points="15 18 9 12 15 6" />
           </svg>
-          Alle Apps
+          {t('nav.allApps')}
         </a>
 
         <div className="mn-brand-name">
@@ -58,7 +59,7 @@ export const Navigation: React.FC<NavigationProps> = ({
             <line x1="12" y1="5" x2="12" y2="19" />
             <line x1="5" y1="12" x2="19" y2="12" />
           </svg>
-          <span>Medium anlegen</span>
+          <span>{t('nav.addMedium')}</span>
         </button>
       </div>
 
@@ -80,7 +81,7 @@ export const Navigation: React.FC<NavigationProps> = ({
             <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
             <polyline points="9 22 9 12 15 12 15 22" />
           </svg>
-          <span>Start</span>
+          <span>{t('nav.start')}</span>
         </button>
 
         <button
@@ -101,7 +102,7 @@ export const Navigation: React.FC<NavigationProps> = ({
             <rect x="14" y="14" width="7" height="7" />
             <rect x="3" y="14" width="7" height="7" />
           </svg>
-          <span>Sammlung</span>
+          <span>{t('nav.collection')}</span>
         </button>
 
         <button
@@ -124,7 +125,7 @@ export const Navigation: React.FC<NavigationProps> = ({
             <line x1="3" y1="12" x2="3.01" y2="12" />
             <line x1="3" y1="18" x2="3.01" y2="18" />
           </svg>
-          <span>Listen</span>
+          <span>{t('nav.lists')}</span>
         </button>
 
         <button
@@ -144,7 +145,7 @@ export const Navigation: React.FC<NavigationProps> = ({
             <line x1="12" y1="20" x2="12" y2="4" />
             <line x1="6" y1="20" x2="6" y2="14" />
           </svg>
-          <span>Statistik</span>
+          <span>{t('nav.stats')}</span>
         </button>
 
         <button
@@ -163,7 +164,7 @@ export const Navigation: React.FC<NavigationProps> = ({
             <circle cx="12" cy="12" r="3" />
             <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
           </svg>
-          <span>Optionen</span>
+          <span>{t('nav.options')}</span>
         </button>
       </div>
     </nav>

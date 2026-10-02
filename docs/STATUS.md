@@ -3,7 +3,7 @@
 Where things stand, what the owner still has to do, and what a new session should know.
 Update it at the end of every working session; history belongs in git, not here.
 
-Last updated: 2026-10-02 (third session).
+Last updated: 2026-10-02 (third session; language switch added).
 
 ## Start here
 
@@ -25,7 +25,7 @@ Where things are documented:
 | Topic | Read |
 | --- | --- |
 | Architecture, phases, data model | `PLAN.md` |
-| Decisions | `docs/adr/0001`–`0012` |
+| Decisions | `docs/adr/0001`–`0017` |
 | Operations: setup, NucBox, keys, Kalender, App-Bibliothek, app export, restore | `docs/runbooks/` (index in its README) |
 | Building apps with AI: spec, design system, prompt modules, playbooks | `docs/ai/` |
 | Shared data types (suite) | `docs/suite/data-types.md` |
@@ -55,6 +55,7 @@ Where things are documented:
 | Gemeinsame Daten | One aligned table (Datentyp, App, Grund, Angefragt, Freigabe); sort by open requests first, type or app; filter "Nur noch offene"; write priority below | `apps/portal/src/admin/Suite.tsx` |
 | Verwaltung menu | "Hochladen" is a button in Apps; Apps has a switch Apps / Gaming Hub and sorts by name, category, own drawer or status; "Hardware-Server" holds Auslastung (was NucBox), Remote-Apps and App-Bibliothek (old URLs redirect) | `apps/portal/src/admin/{Apps,Hardware,AdminLayout}.tsx` |
 | KI-Werkstatt | Features in 7 collapsible groups with search; 19 new feature modules (money, dates, editor, drag sort, AI chat/vision, roles, comments, accessibility, errors, testing, migration, game save/touch/generator/kit, container, remote program, library entry) and 2 new types (Server-Dienst, Programm) | `docs/ai/prompts/`, `apps/portal/src/admin/{Workshop,prompts}.ts(x)` |
+| Language switch | Per person in Konto → "Sprache / Language" (de/en, profile + `mn-lang` cookie); every hosted app has `i18n/de.json` + `en.json`; new apps must ship both; doctor checks them | ADR 0017, `docs/ai/LANGUAGE-PACKAGES.md`, `packages/ui/kit/i18n.js`, `e2e/language.spec.ts` |
 | German formats | Date, month and time inputs as German parts in every browser; full dates as "01. Okt. 2026"; German numbers | `packages/ui/kit/ui.js`, `docs/ai/DESIGN-SYSTEM.md` §8 |
 
 The Sportplaner map (tab "Karte") and course mode (editor step "Zeiten" → "Kurs") are live
@@ -62,7 +63,13 @@ since the PR #12 deploy. Earlier deploys stopped at medialog and never shipped t
 
 ## Conventions worth knowing
 
-- **German formats everywhere.** The owner wants this strictly.
+- **Every visible text is a language key.** Apps read their texts with `window.mnI18n.t(key)` or
+  `data-i18n` markup and ship `i18n/de.json` and `i18n/en.json` (Medialog: `public/i18n/`). The
+  person picks the language in Konto; `mininode doctor` checks that both packages agree. German
+  stays the default and the fallback. Details: ADR 0017, `docs/ai/LANGUAGE-PACKAGES.md`.
+- **German formats in German, British formats in English.** The owner wants this strictly:
+  numbers, dates and sorting follow `mnI18n.locale` (`de-DE`, `en-GB`).
+  The German rules:
   - A full date is "01. Okt. 2026": `mnui.date.format(iso)`, or `Intl.DateTimeFormat('de-DE',
     { day: '2-digit', month: 'short', year: 'numeric' })`.
   - Times use 24 hours. Amounts look like "1.234,50 €", and typed amounts are read the German

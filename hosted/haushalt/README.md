@@ -69,3 +69,7 @@ exports and imports a JSON backup (receipts are not included) and a CSV per year
 Import a bank CSV, assign a craftsman's invoice to *Handwerker* with the labour part as the
 deductible amount, then open *Steuer*: it appears under Haushaltsnahe Aufwendungen with the
 reduction.
+
+## Languages
+
+German and English (`i18n/de.json`, `i18n/en.json`, declared under `i18n` in `mininode.json`). The person's choice in Konto → Sprache applies; an unknown key falls back to German. New texts need a key in both files; `pnpm mininode doctor hosted/haushalt` checks them (ADR 0017). The starting categories are stored in German and shown through `defaultCat.<id>` keys, so they follow the language; names a person typed stay as typed. ELSTER terms in the tax export (`plain()`) stay German by design.

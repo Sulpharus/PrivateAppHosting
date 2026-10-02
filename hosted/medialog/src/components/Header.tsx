@@ -1,4 +1,5 @@
 import type React from 'react';
+import { t } from '../i18n';
 
 interface HeaderProps {
   title: string;
@@ -35,10 +36,7 @@ export const Header: React.FC<HeaderProps> = ({
             <path d="M8.53 16.11a6 6 0 0 1 6.95 0" />
             <line x1="12" y1="20" x2="12.01" y2="20" />
           </svg>
-          <span className="text-xs font-semibold">
-            Offline-Modus aktiv: Neue Einträge werden lokal gespeichert und synchronisiert, sobald
-            wieder Internet besteht.
-          </span>
+          <span className="text-xs font-semibold">{t('header.offline')}</span>
         </div>
       )}
 
@@ -54,7 +52,7 @@ export const Header: React.FC<HeaderProps> = ({
             >
               <polyline points="15 18 9 12 15 6" />
             </svg>
-            Alle Apps
+            {t('nav.allApps')}
           </a>
           <h1>{title}</h1>
           <p className="mn-sub">{subtitle}</p>
@@ -65,7 +63,7 @@ export const Header: React.FC<HeaderProps> = ({
         <button
           className="mn-fab"
           type="button"
-          aria-label="Medium anlegen"
+          aria-label={t('nav.addMedium')}
           onClick={onOpenAddModal}
         >
           <svg

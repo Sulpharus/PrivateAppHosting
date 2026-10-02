@@ -12,3 +12,7 @@
   "Neues Spiel" in a running game). The leaderboard is by score. Login, playtime, saving and
   leaderboard come from the kit helper `/_mininode/game.js`.
 - **Data:** none (`data.mode: none`). A running game is not saved.
+
+## Languages
+
+German and English (`i18n/de.json`, `i18n/en.json`, declared under `i18n` in `mininode.json`). The person's choice in Konto → Sprache applies; an unknown key falls back to German. New texts need a key in both files; `pnpm mininode doctor hosted/n2048` checks them (ADR 0017).

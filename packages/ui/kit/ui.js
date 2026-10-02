@@ -407,7 +407,8 @@
     fields.set(wrap, input);
     const relabel = () => {
       if (!wrap.isConnected) return relabelers.delete(relabel);
-      parts.forEach((el, i) => el.setAttribute('aria-label', words()[PARTS[kind][i][0]]));
+      for (const [i, el] of parts.entries())
+        el.setAttribute('aria-label', words()[PARTS[kind][i][0]]);
       if (month) {
         const chosen = month.value;
         month.replaceChildren(option('–', ''), ...months().map((m, i) => option(m, pad(i + 1))));

@@ -20,7 +20,7 @@ const PACKAGES: Record<string, object | null> = {
     'app.title': 'Haushalt',
     'only.de': 'Nur deutsch',
     hello: 'Hallo {name}',
-    items: { one: '{n} Eintrag', other: '{n} Einträge' },
+    items: { zero: 'Keine Einträge', one: '{n} Eintrag', other: '{n} Einträge' },
   },
   en: {
     'app.title': 'Household',
@@ -107,11 +107,13 @@ describe('texts', () => {
     const i18n = boot('mn-lang=en');
     await i18n.ready;
     expect(i18n.t('items', { n: 1 })).toBe('1 entry');
+    expect(i18n.t('items', { n: 0 })).toBe('0 entries');
     expect(i18n.t('items', { n: 2 })).toBe('2 entries');
     expect(i18n.t('items', { n: 1234 })).toBe('1,234 entries');
     const de = boot('');
     await de.ready;
     expect(de.t('items', { n: 1234 })).toBe('1.234 Einträge');
+    expect(de.t('items', { n: 0 })).toBe('Keine Einträge');
   });
 
   it('falls back to German, then to the key', async () => {

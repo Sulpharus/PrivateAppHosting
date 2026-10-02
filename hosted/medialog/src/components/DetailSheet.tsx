@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Overlay } from '../components/Overlay';
+import { t } from '../i18n';
 import { type ApiSearchResult, searchMediaApis, searchNextVolume } from '../services/mediaApis';
 import type {
   BookChapter,
@@ -11,11 +12,12 @@ import type {
   MediaList,
 } from '../types';
 import {
-  formatDateDe,
+  formatDate,
   formatMinutes,
   generateMediaShareText,
   getKindLabel,
   getStatusLabel,
+  getSubtypeLabel,
 } from '../utils/text';
 import { StarRating } from './StarRating';
 import { showToast } from './Toast';
@@ -141,8 +143,8 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
     const newVolTitle = cleanTitle
       ? cleanTitle.toLowerCase().startsWith('band') || cleanTitle.toLowerCase().startsWith('vol')
         ? cleanTitle
-        : `Band ${targetVolumeNumber}: ${cleanTitle}`
-      : `Band ${targetVolumeNumber}`;
+        : t('detail.volumeNTitle', { n: targetVolumeNumber, title: cleanTitle })
+      : t('detail.volumeN', { n: targetVolumeNumber });
 
     const existingIndex = existing.findIndex((v) => v.volumeNumber === targetVolumeNumber);
     const newVol: BookVolume = {
@@ -177,7 +179,7 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
     await onSave(updatedItem);
     setSelectedVolumeId(newVol.id);
     setShowVolumeSearchModal(false);
-    showToast(`Band ${targetVolumeNumber} (${newVol.title}) zur Reihe hinzugefügt!`);
+    showToast(t('detail.volumeAdded', { n: targetVolumeNumber, title: newVol.title }));
   };
 
   const handleAddAllRemainingVolumes = async () => {
@@ -192,7 +194,7 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
         newVols.push({
           id: `vol_${Date.now()}_${num}`,
           volumeNumber: num,
-          title: `Band ${num}`,
+          title: t('detail.volumeN', { n: num }),
           currentPage: 0,
           status: 'wishlist',
           cover: item.cover,
@@ -213,9 +215,7 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
     };
 
     await onSave(updatedItem);
-    showToast(
-      `Alle restlichen ${newVols.length} Bände (bis Band ${item.totalVolumes}) automatisch angelegt!`,
-    );
+    showToast(t('detail.allRemainingCreated', { n: newVols.length, last: item.totalVolumes ?? 0 }));
   };
 
   // Handle adding the next volume in a book/manga series
@@ -240,9 +240,9 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
 
       await onSave(updatedItem);
       setSelectedVolumeId(newVol.id);
-      showToast(`Band ${nextVolumeNumber} zur Reihe „${seriesName}“ hinzugefügt!`);
+      showToast(t('detail.volumeAddedToSeries', { n: nextVolumeNumber, series: seriesName }));
     } catch (_err) {
-      showToast(`Band ${nextVolumeNumber} konnte nicht geladen werden.`);
+      showToast(t('detail.volumeLoadFailed', { n: nextVolumeNumber }));
     } finally {
       setIsSearchingNextVolume(false);
     }
@@ -261,7 +261,7 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
     };
 
     await onSave(updatedItem);
-    showToast('Band aktualisiert');
+    showToast(t('detail.volumeUpdated'));
   };
 
   // Quick rating update
@@ -272,7 +272,7 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
       updatedAt: new Date().toISOString(),
     };
     await onSave(updated);
-    showToast(newRating ? `Bewertung auf ★ ${newRating}/10 gesetzt` : 'Bewertung entfernt');
+    showToast(newRating ? t('detail.ratingSet', { n: newRating }) : t('detail.ratingRemoved'));
   };
 
   // Quick page progress update
@@ -290,7 +290,11 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
       updatedAt: new Date().toISOString(),
     };
     await onSave(updated);
-    showToast(`Fortschritt: Seite ${next}${item.totalPages ? ` von ${item.totalPages}` : ''}`);
+    showToast(
+      item.totalPages
+        ? t('detail.progressPageOf', { page: next, total: item.totalPages })
+        : t('detail.progressPage', { page: next }),
+    );
   };
 
   // Quick chapter increment
@@ -298,7 +302,7 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
     const match = (item.currentChapter || '').match(/\d+/);
     const curNum = match ? parseInt(match[0], 10) : 0;
     const nextNum = Math.max(0, curNum + delta);
-    const newChapterText = `Kapitel ${nextNum}`;
+    const newChapterText = t('detail.chapterN', { n: nextNum });
 
     const updated: MediaItem = {
       ...item,
@@ -307,7 +311,7 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
       updatedAt: new Date().toISOString(),
     };
     await onSave(updated);
-    showToast(`Fortschritt: ${newChapterText}`);
+    showToast(t('detail.progressText', { text: newChapterText }));
   };
 
   // Quick volume increment
@@ -322,7 +326,7 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
       updatedAt: new Date().toISOString(),
     };
     await onSave(updated);
-    showToast(`Fortschritt: Band ${nextVol}`);
+    showToast(t('detail.progressVolume', { n: nextVol }));
   };
 
   // Audiobook runtime increment
@@ -340,7 +344,7 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
       updatedAt: new Date().toISOString(),
     };
     await onSave(updated);
-    showToast(`Hörfortschritt: ${formatMinutes(next)}`);
+    showToast(t('detail.audioProgress', { time: formatMinutes(next) }));
   };
 
   // Toggle chapter read
@@ -412,7 +416,7 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
         workTitle: item.title,
         kind: item.kind,
         date: today,
-        action: `Erfolg freigeschaltet: „${toggledAch.title}“`,
+        action: t('detail.logAchievement', { title: toggledAch.title }),
       };
       consumptionLogs = [newEntry, ...consumptionLogs];
     }
@@ -424,7 +428,7 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
       updatedAt: new Date().toISOString(),
     };
     await onSave(updated);
-    showToast('Erfolg aktualisiert');
+    showToast(t('detail.achievementUpdated'));
   };
 
   // Toggle episode watched
@@ -455,7 +459,11 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
         workTitle: item.title,
         kind: item.kind,
         date: today,
-        action: `Staffel ${toggledEp.season} Folge ${toggledEp.number}: „${toggledEp.title}“ geschaut`,
+        action: t('detail.logEpisode', {
+          season: toggledEp.season,
+          number: toggledEp.number,
+          title: toggledEp.title,
+        }),
       };
       consumptionLogs = [newEntry, ...consumptionLogs];
     }
@@ -487,7 +495,7 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
       updatedAt: new Date().toISOString(),
     };
     await onSave(updated);
-    showToast('Episoden-Bewertung gespeichert');
+    showToast(t('detail.episodeRatingSaved'));
   };
 
   // Add new episode
@@ -514,7 +522,7 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
     await onSave(updated);
     setNewEpTitle('');
     setNewEpNumber(episodes.length + 1);
-    showToast(`Folge „${newEp.title}“ hinzugefügt`);
+    showToast(t('detail.episodeAdded', { title: newEp.title }));
   };
 
   // Add consumption log entry with custom date
@@ -544,7 +552,7 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
     setLogAction('');
     setLogNote('');
     setShowLogModal(false);
-    showToast(`Aktivität für den ${formatDateDe(logDate)} geloggt`);
+    showToast(t('detail.logged', { date: formatDate(logDate) }));
   };
 
   // Native share or clipboard copy
@@ -557,7 +565,7 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
       } catch (_err) {}
     }
     await navigator.clipboard.writeText(text);
-    showToast('Eintragsdetails in die Zwischenablage kopiert');
+    showToast(t('detail.copiedDetails'));
   };
 
   const pctBook =
@@ -575,7 +583,12 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
       <Overlay onClose={onClose} labelledBy="detail-title" sheetClassName="mn-sheet">
         {/* Floating action bar */}
         <div className="mn-sheet-bar mn-sheet-bar--float">
-          <button type="button" className="mn-icon-btn" onClick={onClose} aria-label="Schließen">
+          <button
+            type="button"
+            className="mn-icon-btn"
+            onClick={onClose}
+            aria-label={t('detail.schliessen')}
+          >
             <svg
               viewBox="0 0 24 24"
               fill="none"
@@ -592,7 +605,7 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
               type="button"
               className="mn-btn mn-btn--ghost"
               onClick={() => onOpenShareModal(item)}
-              aria-label="Teilen & Drucken"
+              aria-label={t('detail.teilenDrucken')}
             >
               <svg
                 viewBox="0 0 24 24"
@@ -607,7 +620,7 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
                 <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
                 <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
               </svg>
-              <span>Teilen</span>
+              <span>{t('detail.teilen')}</span>
             </button>
             <button type="button" className="mn-btn" onClick={() => onEdit(item)}>
               <svg
@@ -620,7 +633,7 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
                 <path d="M12 20h9" />
                 <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
               </svg>
-              <span>Bearbeiten</span>
+              <span>{t('detail.bearbeiten')}</span>
             </button>
           </div>
         </div>
@@ -666,12 +679,12 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
               ))}
               {item.console && (
                 <span className="mn-chip mn-chip--plain bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 font-semibold">
-                  🎮 Konsole: {item.console}
+                  {t('detail.consoleChip', { name: item.console })}
                 </span>
               )}
               {item.isBookSeries && (
                 <span className="mn-chip mn-chip--plain bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 font-semibold">
-                  📚 Buchreihe ({item.volumes?.length || 1} Bände)
+                  {t('detail.seriesChip', { n: item.volumes?.length || 1 })}
                 </span>
               )}
             </div>
@@ -681,13 +694,16 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
             </h2>
             {item.originalTitle && item.englishTitle && item.title !== item.originalTitle && (
               <p className="text-xs text-[var(--mn-muted)] -mt-2">
-                Originaltitel: <b>{item.originalTitle}</b> · Übersetzt: {item.englishTitle}
+                {t('detail.originalAndTranslated', {
+                  original: item.originalTitle,
+                  english: item.englishTitle,
+                })}
               </p>
             )}
             <p className="text-lg font-medium text-[var(--mn-muted)] -mt-1" itemProp="author">
-              von {item.creator}
-              {item.narrator ? ` · Gelesen von ${item.narrator}` : ''}
-              {item.console ? ` · 🎮 Gespielt auf ${item.console}` : ''}
+              {t('detail.by', { creator: item.creator })}
+              {item.narrator ? ` · ${t('detail.readBy', { name: item.narrator })}` : ''}
+              {item.console ? ` · ${t('detail.playedOn', { name: item.console })}` : ''}
             </p>
           </header>
 
@@ -696,7 +712,7 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
           {/* 1-10 Star Rating Section */}
           <div className="mn-card mb-6">
             <h3 className="text-base font-bold mb-3 flex items-center justify-between">
-              <span>Deine Bewertung</span>
+              <span>{t('detail.deineBewertung')}</span>
               {item.rating ? (
                 <span className="mn-chip mn-chip--plain font-bold">★ {item.rating} / 10</span>
               ) : null}
@@ -708,9 +724,9 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
           <div className="mn-card mb-6 bg-[var(--mn-surface-2)]">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <b className="block text-sm">Konsum-Aktivität eintragen</b>
+                <b className="block text-sm">{t('detail.konsumAktivitaetEintragen')}</b>
                 <span className="text-xs text-[var(--mn-muted)]">
-                  Halte fest, an welchem Tag du welche Kapitel, Folgen oder Seiten gelesen hast.
+                  {t('detail.halteFestAnWelchem')}
                 </span>
               </div>
               <button
@@ -718,7 +734,7 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
                 className="mn-btn mn-btn--primary text-xs shrink-0"
                 onClick={() => setShowLogModal(true)}
               >
-                📅 Aktivität mit Datum loggen
+                {t('detail.aktivitaetDatumLoggen')}
               </button>
             </div>
           </div>
@@ -727,7 +743,7 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
           {item.kind === 'audiobook' && (
             <div className="mn-card mb-6">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-base font-bold">Hörbuch-Fortschritt</h3>
+                <h3 className="text-base font-bold">{t('detail.hoerbuchFortschritt')}</h3>
                 <span className="text-sm font-semibold mn-num text-[var(--mn-muted)]">
                   {formatMinutes(item.audioCurrentMinutes || 0)} von{' '}
                   {formatMinutes(item.audioTotalMinutes || 0)} ({pctAudio} %)
@@ -748,28 +764,28 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
                   onClick={() => handleAudioMinutesChange(-30)}
                   disabled={!item.audioCurrentMinutes || item.audioCurrentMinutes <= 0}
                 >
-                  −30 Min.
+                  {t('detail.30Min')}
                 </button>
                 <button
                   type="button"
                   className="mn-btn text-xs"
                   onClick={() => handleAudioMinutesChange(15)}
                 >
-                  +15 Min.
+                  {t('detail.15Min')}
                 </button>
                 <button
                   type="button"
                   className="mn-btn text-xs"
                   onClick={() => handleAudioMinutesChange(30)}
                 >
-                  +30 Min.
+                  {t('detail.30Min2')}
                 </button>
                 <button
                   type="button"
                   className="mn-btn mn-btn--primary text-xs"
                   onClick={() => handleAudioMinutesChange(60)}
                 >
-                  +1 Stunde
+                  {t('detail.1Stunde')}
                 </button>
               </div>
 
@@ -778,15 +794,17 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
                 <div>
                   <div className="flex items-center justify-between text-xs text-[var(--mn-muted)] mb-2">
                     <span className="font-bold">
-                      Kapitel & Tracks ({item.chapters.filter((c) => c.read).length}/
-                      {item.chapters.length} gehört)
+                      {t('detail.tracksOverview', {
+                        read: item.chapters.filter((c) => c.read).length,
+                        total: item.chapters.length,
+                      })}
                     </span>
                     <button
                       type="button"
                       className="mn-link text-xs"
                       onClick={() => setShowChapters(!showChapters)}
                     >
-                      {showChapters ? 'Einklappen' : 'Alle Kapitel anzeigen'}
+                      {showChapters ? t('detail.collapse') : t('detail.showAllChapters')}
                     </button>
                   </div>
 
@@ -837,14 +855,15 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
               <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
                 <div>
                   <h3 className="text-base font-bold flex items-center gap-2">
-                    <span>📚 Buchreihen-Manager: {item.seriesTitle || item.title}</span>
+                    <span>
+                      {t('detail.seriesManager', { title: item.seriesTitle || item.title })}
+                    </span>
                     <span className="mn-chip mn-chip--plain text-xs">
-                      {currentVolumeList.length} {currentVolumeList.length === 1 ? 'Band' : 'Bände'}
+                      {t('detail.volumeCount', { n: currentVolumeList.length })}
                     </span>
                   </h3>
                   <span className="text-xs text-[var(--mn-muted)]">
-                    Band 1 wird zuerst angezeigt. Wähle einen Band aus, um dafür Fortschritt
-                    einzutragen oder suche den nächsten Band per Knopfdruck online.
+                    {t('detail.band1ZuerstAngezeigt')}
                   </span>
                 </div>
 
@@ -853,7 +872,7 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
                   item.totalVolumes > 0 &&
                   currentVolumeList.length >= item.totalVolumes ? (
                     <span className="mn-chip mn-chip--plain text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300">
-                      ✓ Alle {item.totalVolumes} Bände der Reihe erfasst
+                      {t('detail.allVolumesRecorded', { n: item.totalVolumes })}
                     </span>
                   ) : (
                     <>
@@ -861,10 +880,14 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
                         type="button"
                         className="mn-btn mn-btn--primary text-xs"
                         onClick={() => handleOpenVolumeSearch()}
-                        title="Nächsten Band per Online-Suche gezielt suchen und auswählen"
+                        title={t('detail.naechstenBandPerOnline')}
                       >
-                        + Nächstes Volume (Band {currentVolumeList.length + 1}
-                        {item.totalVolumes ? ` von ${item.totalVolumes}` : ''}) online suchen
+                        {item.totalVolumes
+                          ? t('detail.nextVolumeSearchOf', {
+                              n: currentVolumeList.length + 1,
+                              total: item.totalVolumes,
+                            })
+                          : t('detail.nextVolumeSearch', { n: currentVolumeList.length + 1 })}
                       </button>
 
                       {item.totalVolumes && item.totalVolumes > currentVolumeList.length && (
@@ -872,9 +895,9 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
                           type="button"
                           className="mn-btn mn-btn--ghost text-xs"
                           onClick={handleAddAllRemainingVolumes}
-                          title={`Alle restlichen Bände bis Band ${item.totalVolumes} automatisch anlegen`}
+                          title={t('detail.createRemainingTitle', { n: item.totalVolumes })}
                         >
-                          ⚡ Restliche Bände bis {item.totalVolumes} anlegen
+                          {t('detail.createRemaining', { n: item.totalVolumes })}
                         </button>
                       )}
                     </>
@@ -888,7 +911,7 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
                       const newVol: BookVolume = {
                         id: `vol_${Date.now()}`,
                         volumeNumber: nextNum,
-                        title: `Band ${nextNum}`,
+                        title: t('detail.volumeN', { n: nextNum }),
                         currentPage: 0,
                         status: 'wishlist',
                       };
@@ -904,10 +927,10 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
                         updatedAt: new Date().toISOString(),
                       });
                       setSelectedVolumeId(newVol.id);
-                      showToast(`Band ${nextNum} manuell angelegt`);
+                      showToast(t('detail.volumeManual', { n: nextNum }));
                     }}
                   >
-                    + Manuell
+                    {t('detail.manuell')}
                   </button>
                 </div>
               </div>
@@ -937,14 +960,16 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
                         </span>
                         {isDone ? (
                           <span className="text-[10px] text-[var(--mn-ok)] font-bold">
-                            ✓ Gelesen
+                            {t('detail.gelesen')}
                           </span>
                         ) : vol.status === 'active' ? (
                           <span className="text-[10px] text-[var(--mn-accent-text)] font-semibold">
-                            Am Lesen
+                            {t('detail.amLesen')}
                           </span>
                         ) : (
-                          <span className="text-[10px] text-[var(--mn-muted)]">Wunschliste</span>
+                          <span className="text-[10px] text-[var(--mn-muted)]">
+                            {t('detail.wunschliste')}
+                          </span>
                         )}
                       </div>
                       <span className="block text-[11px] text-[var(--mn-muted)] truncate max-w-[125px]">
@@ -965,7 +990,7 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div>
                       <span className="text-[11px] text-[var(--mn-accent-text)] font-bold uppercase tracking-wider block">
-                        Ausgewählt für Eintrag:
+                        {t('detail.ausgewaehltEintrag')}
                       </span>
                       <h4 className="text-sm sm:text-base font-bold text-[var(--mn-ink)]">
                         Band {selectedVolume.volumeNumber}: {selectedVolume.title}
@@ -985,9 +1010,9 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
                         }
                         className="text-xs p-1.5 border rounded"
                       >
-                        <option value="wishlist">Wunschliste</option>
-                        <option value="active">Am Lesen</option>
-                        <option value="done">Gelesen (Beendet)</option>
+                        <option value="wishlist">{t('detail.wunschliste')}</option>
+                        <option value="active">{t('detail.amLesen')}</option>
+                        <option value="done">{t('detail.gelesenBeendet')}</option>
                       </select>
                       <select
                         value={selectedVolume.rating || ''}
@@ -998,7 +1023,7 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
                         }
                         className="text-xs p-1.5 border rounded"
                       >
-                        <option value="">Bewertung ...</option>
+                        <option value="">{t('detail.bewertung')}</option>
                         {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
                           <option key={n} value={n}>
                             ★ {n} / 10
@@ -1012,7 +1037,7 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
                   {selectedVolume.totalPages && (
                     <div>
                       <div className="flex justify-between text-xs text-[var(--mn-muted)] mb-1">
-                        <span>Seiten-Fortschritt</span>
+                        <span>{t('detail.seitenFortschritt')}</span>
                         <span className="font-mono">
                           {selectedVolume.currentPage || 0} von {selectedVolume.totalPages} Seiten (
                           {Math.round(
@@ -1040,7 +1065,7 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
                   {/* Quick actions for this volume */}
                   <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-[var(--mn-line)]">
                     <span className="text-xs font-semibold text-[var(--mn-muted)] mr-1">
-                      Aktionen für Band {selectedVolume.volumeNumber}:
+                      {t('detail.actionsForVolume', { n: selectedVolume.volumeNumber })}
                     </span>
                     <button
                       type="button"
@@ -1083,19 +1108,22 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
                         });
                       }}
                     >
-                      ✓ Band fertig gelesen
+                      {t('detail.bandFertigGelesen')}
                     </button>
                     <button
                       type="button"
                       className="mn-btn mn-btn--primary text-xs ml-auto"
                       onClick={() => {
                         setLogAction(
-                          `Band ${selectedVolume.volumeNumber} (${selectedVolume.title}) gelesen`,
+                          t('detail.logVolumeRead', {
+                            n: selectedVolume.volumeNumber,
+                            title: selectedVolume.title,
+                          }),
                         );
                         setShowLogModal(true);
                       }}
                     >
-                      📅 Eintrag für Band {selectedVolume.volumeNumber} loggen
+                      {t('detail.logForVolume', { n: selectedVolume.volumeNumber })}
                     </button>
                   </div>
                 </div>
@@ -1108,12 +1136,18 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
             <div className="mn-card mb-6">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="text-base font-bold">
-                  {item.bookSubtype ? `${item.bookSubtype}-Fortschritt` : 'Lesefortschritt'}
+                  {item.bookSubtype
+                    ? t('detail.subtypeProgress', { subtype: getSubtypeLabel(item.bookSubtype) })
+                    : t('detail.readingProgress')}
                 </h3>
                 <span className="text-sm font-semibold mn-num text-[var(--mn-muted)]">
                   {item.currentChapter ||
-                    (item.currentPage ? `Seite ${item.currentPage}` : 'Nicht begonnen')}
-                  {item.currentVolume ? ` · Band ${item.currentVolume}` : ''}
+                    (item.currentPage
+                      ? t('detail.pageN', { n: item.currentPage })
+                      : t('detail.notStarted'))}
+                  {item.currentVolume
+                    ? ` · ${t('detail.volumeSuffix', { n: item.currentVolume })}`
+                    : ''}
                 </span>
               </div>
 
@@ -1127,10 +1161,10 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
               <div className="p-3 bg-[var(--mn-surface-2)] rounded-xl mb-4 grid gap-2">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-[var(--mn-muted)]">
-                    Kapitel-Tracking:
+                    {t('detail.kapitelTracking')}
                   </span>
                   <span className="text-sm font-bold text-[var(--mn-ink)]">
-                    {item.currentChapter || 'Noch kein Kapitel eingetragen'}
+                    {item.currentChapter || t('detail.noChapterYet')}
                   </span>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
@@ -1139,28 +1173,28 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
                     className="mn-btn mn-btn--ghost text-xs"
                     onClick={() => handleChapterChange(-1)}
                   >
-                    −1 Kap.
+                    {t('detail.1Kap')}
                   </button>
                   <button
                     type="button"
                     className="mn-btn mn-btn--primary text-xs"
                     onClick={() => handleChapterChange(1)}
                   >
-                    +1 Kapitel
+                    {t('detail.1Kapitel')}
                   </button>
                   <button
                     type="button"
                     className="mn-btn text-xs"
                     onClick={() => handleChapterChange(5)}
                   >
-                    +5 Kap.
+                    {t('detail.5Kap')}
                   </button>
                   <button
                     type="button"
                     className="mn-btn text-xs"
                     onClick={() => handleChapterChange(10)}
                   >
-                    +10 Kap.
+                    {t('detail.10Kap')}
                   </button>
                 </div>
 
@@ -1169,7 +1203,9 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
                   item.bookSubtype || '',
                 ) && (
                   <div className="pt-2 mt-1 border-t border-[var(--mn-line)] flex items-center justify-between">
-                    <span className="text-xs font-bold text-[var(--mn-muted)]">Band / Volume:</span>
+                    <span className="text-xs font-bold text-[var(--mn-muted)]">
+                      {t('detail.bandVolume')}
+                    </span>
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-bold mr-1">
                         Band {item.currentVolume || 1}
@@ -1181,14 +1217,14 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
                         onClick={() => handleVolumeChange(-1)}
                         disabled={!item.currentVolume || item.currentVolume <= 1}
                       >
-                        −1 Bd.
+                        {t('detail.1Bd')}
                       </button>
                       <button
                         type="button"
                         className="mn-btn text-xs"
                         onClick={() => handleVolumeChange(1)}
                       >
-                        +1 Band
+                        {t('detail.1Band')}
                       </button>
                     </div>
                   </div>
@@ -1200,15 +1236,17 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
                 <div className="mb-4">
                   <div className="flex items-center justify-between text-xs text-[var(--mn-muted)] mb-2">
                     <span className="font-bold">
-                      Kapitelübersicht ({item.chapters.filter((c) => c.read).length}/
-                      {item.chapters.length} gelesen)
+                      {t('detail.chapterOverview', {
+                        read: item.chapters.filter((c) => c.read).length,
+                        total: item.chapters.length,
+                      })}
                     </span>
                     <button
                       type="button"
                       className="mn-link text-xs"
                       onClick={() => setShowChapters(!showChapters)}
                     >
-                      {showChapters ? 'Einklappen' : 'Alle Kapitel auflisten'}
+                      {showChapters ? t('detail.collapse') : t('detail.listAllChapters')}
                     </button>
                   </div>
 
@@ -1242,7 +1280,7 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
               {item.totalPages && (
                 <div>
                   <span className="block text-xs font-semibold text-[var(--mn-muted)] mb-2">
-                    Seitenzahlen:
+                    {t('detail.seitenzahlen')}
                   </span>
                   <div className="flex flex-wrap items-center gap-2">
                     <button
@@ -1293,7 +1331,7 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
             <div className="mn-card mb-6">
               <div className="flex items-center justify-between mb-2">
                 <div>
-                  <h3 className="text-base font-bold">Serien-Fortschritt & Staffeln</h3>
+                  <h3 className="text-base font-bold">{t('detail.serienFortschrittStaffeln')}</h3>
                   {item.seasonDetails && item.seasonDetails.length > 0 && (
                     <span className="text-xs text-[var(--mn-muted)]">
                       {item.seasonDetails
@@ -1311,17 +1349,17 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
                 <div>
                   <div className="flex items-center justify-between text-xs text-[var(--mn-muted)] mb-3">
                     <span>
-                      {item.episodes.filter((e) => e.watched).length} von {item.episodes.length}{' '}
-                      Folgen gesehen
+                      {t('detail.episodesSeen', {
+                        seen: item.episodes.filter((e) => e.watched).length,
+                        total: item.episodes.length,
+                      })}
                     </span>
                     <button
                       type="button"
                       className="mn-link text-xs"
                       onClick={() => setShowEpisodes(!showEpisodes)}
                     >
-                      {showEpisodes
-                        ? 'Episodenliste einklappen'
-                        : 'Alle Folgen mit Titeln anzeigen'}
+                      {showEpisodes ? t('detail.collapseEpisodes') : t('detail.showAllEpisodes')}
                     </button>
                   </div>
 
@@ -1359,7 +1397,7 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
                           {editingEpisodeId === ep.id ? (
                             <div className="mt-2 pl-8 pt-2 border-t border-[var(--mn-line)] grid gap-2">
                               <label className="text-xs font-semibold text-[var(--mn-muted)]">
-                                Episoden-Bewertung (1–10)
+                                {t('detail.episodenBewertung110')}
                                 <select
                                   value={ep.rating || ''}
                                   onChange={(e) =>
@@ -1371,7 +1409,7 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
                                   }
                                   className="mt-1 text-xs p-1"
                                 >
-                                  <option value="">Keine Bewertung</option>
+                                  <option value="">{t('detail.keineBewertung')}</option>
                                   {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
                                     <option key={n} value={n}>
                                       ★ {n} von 10
@@ -1381,11 +1419,11 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
                               </label>
 
                               <label className="text-xs font-semibold text-[var(--mn-muted)]">
-                                Episoden-Notiz
+                                {t('detail.episodenNotiz')}
                                 <input
                                   type="text"
                                   defaultValue={ep.notes || ''}
-                                  placeholder="Deine Notizen zu dieser Folge ..."
+                                  placeholder={t('detail.deineNotizenDieserFolge')}
                                   onBlur={(e) =>
                                     handleUpdateEpisodeDetails(ep.id, ep.rating, e.target.value)
                                   }
@@ -1397,7 +1435,7 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
                                 className="mn-btn mn-btn--ghost text-xs justify-self-start"
                                 onClick={() => setEditingEpisodeId(null)}
                               >
-                                Fertig
+                                {t('detail.fertig')}
                               </button>
                             </div>
                           ) : (
@@ -1406,7 +1444,7 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
                               className="mn-link text-xs ml-8 mt-1 block"
                               onClick={() => setEditingEpisodeId(ep.id)}
                             >
-                              Folge bewerten / Notiz schreiben
+                              {t('detail.folgeBewertenNotizSchreiben')}
                             </button>
                           )}
                         </div>
@@ -1416,7 +1454,7 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
                 </div>
               ) : (
                 <p className="text-xs text-[var(--mn-muted)] mb-3">
-                  Noch keine Einzelfolgen hinterlegt. Du kannst Folgen hinzufügen:
+                  {t('detail.nochKeineEinzelfolgenHinterlegt')}
                 </p>
               )}
 
@@ -1427,7 +1465,7 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
               >
                 <div className="grid grid-cols-4 gap-2">
                   <label className="mn-field">
-                    Staffel
+                    {t('detail.staffel')}
                     <input
                       type="number"
                       min="1"
@@ -1436,7 +1474,7 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
                     />
                   </label>
                   <label className="mn-field">
-                    Folge
+                    {t('detail.folge')}
                     <input
                       type="number"
                       min="1"
@@ -1445,10 +1483,10 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
                     />
                   </label>
                   <label className="mn-field col-span-2">
-                    Titel der Folge
+                    {t('detail.titelFolge')}
                     <input
                       type="text"
-                      placeholder="z. B. Der Anfang"
+                      placeholder={t('detail.anfang')}
                       value={newEpTitle}
                       onChange={(e) => setNewEpTitle(e.target.value)}
                     />
@@ -1459,7 +1497,7 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
                   className="mn-btn mn-btn--ghost text-xs justify-self-end mt-1"
                   disabled={!newEpTitle.trim()}
                 >
-                  + Folge anlegen
+                  {t('detail.folgeAnlegen')}
                 </button>
               </form>
             </div>
@@ -1471,16 +1509,16 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
               <div className="flex flex-wrap items-center justify-between gap-2 mb-3 pb-3 border-b border-[var(--mn-line)]">
                 <div>
                   <span className="text-xs text-[var(--mn-muted)] block">
-                    Gespielt auf Konsole / Plattform:
+                    {t('detail.gespieltKonsolePlattform')}
                   </span>
                   <span className="text-sm font-bold text-[var(--mn-ink)] flex items-center gap-1.5">
-                    🎮 {item.console || item.platform || 'Nicht angegeben'}
+                    🎮 {item.console || item.platform || t('detail.notSpecified')}
                   </span>
                 </div>
                 {item.hoursPlayed !== undefined && (
                   <div className="text-right">
                     <span className="text-xs text-[var(--mn-muted)] block">
-                      Erfasste Spielzeit:
+                      {t('detail.erfassteSpielzeit')}
                     </span>
                     <span className="text-sm font-bold text-[var(--mn-ink)]">
                       ⏱ {item.hoursPlayed} Stunden
@@ -1491,7 +1529,7 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
 
               <div className="flex items-center justify-between mb-2">
                 <div>
-                  <h3 className="text-base font-bold">Erfolge & Trophäen</h3>
+                  <h3 className="text-base font-bold">{t('detail.erfolgeTrophaeen')}</h3>
                   {item.achievements && (
                     <span className="text-xs text-[var(--mn-muted)]">
                       {item.achievements.filter((a) => a.unlocked).length} von{' '}
@@ -1504,7 +1542,7 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
                   className="mn-link text-xs"
                   onClick={() => setShowAchievements(!showAchievements)}
                 >
-                  {showAchievements ? 'Einklappen' : 'Achievements anzeigen'}
+                  {showAchievements ? t('detail.collapse') : t('detail.showAchievements')}
                 </button>
               </div>
 
@@ -1528,7 +1566,7 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
                           )}
                           {ach.unlockedAt && (
                             <span className="block text-[10px] text-[var(--mn-ok)] mt-0.5">
-                              Freigeschaltet am {formatDateDe(ach.unlockedAt)}
+                              Freigeschaltet am {formatDate(ach.unlockedAt)}
                             </span>
                           )}
                         </div>
@@ -1538,7 +1576,7 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
                         className={`mn-btn text-xs ${ach.unlocked ? 'mn-btn--primary' : 'mn-btn--ghost'}`}
                         onClick={() => handleToggleAchievement(ach.id)}
                       >
-                        {ach.unlocked ? '✓ Erreicht' : 'Freischalten'}
+                        {ach.unlocked ? t('detail.reached') : t('detail.unlock')}
                       </button>
                     </div>
                   ))}
@@ -1550,7 +1588,7 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
           {/* Consumption History Log List */}
           {item.consumptionLogs && item.consumptionLogs.length > 0 && (
             <div className="mn-card mb-6">
-              <h3 className="text-base font-bold mb-3">Protokollierte Konsum-Tage</h3>
+              <h3 className="text-base font-bold mb-3">{t('detail.protokollierteKonsumTage')}</h3>
               <div className="grid gap-2 text-xs">
                 {item.consumptionLogs.map((log) => (
                   <div
@@ -1558,7 +1596,7 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
                     className="p-2.5 bg-[var(--mn-surface-2)] rounded flex items-center justify-between"
                   >
                     <div>
-                      <b className="text-[var(--mn-accent-text)]">{formatDateDe(log.date)}</b>
+                      <b className="text-[var(--mn-accent-text)]">{formatDate(log.date)}</b>
                       <span className="ml-2 font-medium text-[var(--mn-ink)]">{log.action}</span>
                       {log.progressNote && (
                         <span className="block text-[var(--mn-muted)] mt-0.5">
@@ -1574,45 +1612,45 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
 
           {/* Notes and Facts */}
           <div className="mn-card mb-6">
-            <h3 className="text-base font-bold mb-3">Informationen & Notizen</h3>
+            <h3 className="text-base font-bold mb-3">{t('detail.informationenNotizen')}</h3>
             <dl className="mn-facts">
               <div>
-                <dt>Urheber</dt>
+                <dt>{t('detail.urheber')}</dt>
                 <dd>{item.creator}</dd>
               </div>
               {item.narrator && (
                 <div>
-                  <dt>Sprecher</dt>
+                  <dt>{t('detail.sprecher')}</dt>
                   <dd>{item.narrator}</dd>
                 </div>
               )}
               {item.year && (
                 <div>
-                  <dt>Erschienen</dt>
+                  <dt>{t('detail.erschienen')}</dt>
                   <dd>{item.year}</dd>
                 </div>
               )}
               {item.started && (
                 <div>
-                  <dt>Begonnen</dt>
-                  <dd>{formatDateDe(item.started)}</dd>
+                  <dt>{t('detail.begonnen')}</dt>
+                  <dd>{formatDate(item.started)}</dd>
                 </div>
               )}
               {item.finished && (
                 <div>
-                  <dt>Beendet</dt>
-                  <dd>{formatDateDe(item.finished)}</dd>
+                  <dt>{t('detail.beendet')}</dt>
+                  <dd>{formatDate(item.finished)}</dd>
                 </div>
               )}
               {item.notes && (
                 <div>
-                  <dt>Notizen</dt>
+                  <dt>{t('detail.notizen')}</dt>
                   <dd className="whitespace-pre-wrap">{item.notes}</dd>
                 </div>
               )}
               {item.sharedWith && item.sharedWith.length > 0 && (
                 <div>
-                  <dt>Geteilt mit</dt>
+                  <dt>{t('detail.geteilt')}</dt>
                   <dd>{(item.sharedWithNames ?? item.sharedWith).join(', ')}</dd>
                 </div>
               )}
@@ -1639,7 +1677,7 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
                 <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
                 <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
               </svg>
-              <span>Teilen & Drucken</span>
+              <span>{t('detail.teilenDrucken')}</span>
             </button>
             <button type="button" className="mn-btn" onClick={handleShareText}>
               <svg
@@ -1652,14 +1690,14 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
                 <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
                 <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
               </svg>
-              <span>Text kopieren</span>
+              <span>{t('detail.textKopieren')}</span>
             </button>
           </div>
 
           {/* Destructive Delete Button */}
           <div className="pt-4 border-t border-[var(--mn-line)] flex items-center justify-between">
             <span className="text-xs text-[var(--mn-muted)]">
-              Zuletzt aktualisiert: {formatDateDe(item.updatedAt)}
+              Zuletzt aktualisiert: {formatDate(item.updatedAt)}
             </span>
             <button
               type="button"
@@ -1671,7 +1709,7 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
                 } else {
                   await onDelete(item.id);
                   onClose();
-                  showToast('Medium gelöscht');
+                  showToast(t('detail.deleted'));
                 }
               }}
             >
@@ -1685,7 +1723,7 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
                 <polyline points="3 6 5 6 21 6" />
                 <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
               </svg>
-              <span>{deleteConfirm ? 'Zum Löschen erneut tippen' : 'Löschen'}</span>
+              <span>{deleteConfirm ? t('detail.tapAgain') : t('detail.deleteLabel')}</span>
             </button>
           </div>
         </div>
@@ -1700,16 +1738,16 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
               className="mn-btn mn-btn--ghost"
               onClick={() => setShowLogModal(false)}
             >
-              Abbrechen
+              {t('detail.abbrechen')}
             </button>
-            <h2 id="log-title">Konsum-Aktivität eintragen</h2>
+            <h2 id="log-title">{t('detail.konsumAktivitaetEintragen')}</h2>
             <span />
           </div>
 
           <form onSubmit={handleAddConsumptionLog} className="mn-sheet-body mn-form">
             <fieldset>
               <label className="mn-field">
-                Wann hast du dieses Werk konsumiert / gelesen? *
+                {t('detail.wannHastDuDieses')}
                 <input
                   type="date"
                   required
@@ -1719,21 +1757,21 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
               </label>
 
               <label className="mn-field">
-                Was hast du gemacht? *
+                {t('detail.wasHastDuGemacht')}
                 <input
                   type="text"
                   required
-                  placeholder="z. B. Kapitel 4 gelesen, Staffel 2 Folge 3 geschaut, 45 Min. gehört"
+                  placeholder={t('detail.kapitel4GelesenStaffel')}
                   value={logAction}
                   onChange={(e) => setLogAction(e.target.value)}
                 />
               </label>
 
               <label className="mn-field">
-                Eindrücke / Notizen zu dieser Sitzung (optional)
+                {t('detail.eindrueckeNotizenDieserSitzung')}
                 <textarea
                   rows={3}
-                  placeholder="Wichtige Szene, Gedanken oder Zitate ..."
+                  placeholder={t('detail.wichtigeSzeneGedankenZitate')}
                   value={logNote}
                   onChange={(e) => setLogNote(e.target.value)}
                 />
@@ -1741,7 +1779,7 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
             </fieldset>
 
             <button type="submit" className="mn-btn mn-btn--primary w-full mt-4">
-              Aktivität speichern
+              {t('detail.aktivitaetSpeichern')}
             </button>
           </form>
         </Overlay>
@@ -1760,16 +1798,20 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
               className="mn-btn mn-btn--ghost"
               onClick={() => setShowVolumeSearchModal(false)}
             >
-              Abbrechen
+              {t('detail.abbrechen')}
             </button>
-            <h2 id="volume-search-title">Band {targetVolumeNumber} online suchen</h2>
+            <h2 id="volume-search-title">
+              {t('detail.volumeSearchTitle', { n: targetVolumeNumber })}
+            </h2>
             <span />
           </div>
 
           <div className="mn-sheet-body grid gap-4 p-4">
             <p className="text-xs text-[var(--mn-muted)]">
-              Suche in Google Books, MangaDex, Open Library und Jikan nach Band {targetVolumeNumber}{' '}
-              der Reihe <b>„{item.seriesTitle || item.title}“</b>:
+              {t('detail.volumeSearchIntro', {
+                n: targetVolumeNumber,
+                series: item.seriesTitle || item.title,
+              })}
             </p>
 
             <form onSubmit={handlePerformVolumeModalSearch} className="flex gap-2">
@@ -1788,7 +1830,7 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
                   type="search"
                   value={volumeSearchQuery}
                   onChange={(e) => setVolumeSearchQuery(e.target.value)}
-                  placeholder="Suchbegriff für diesen Band ..."
+                  placeholder={t('detail.suchbegriffDiesenBand')}
                 />
               </div>
               <button
@@ -1796,7 +1838,7 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
                 className="mn-btn mn-btn--primary text-xs"
                 disabled={isSearchingVolumeModal || !volumeSearchQuery.trim()}
               >
-                {isSearchingVolumeModal ? 'Sucht ...' : 'Suchen'}
+                {isSearchingVolumeModal ? t('detail.searchBusy') : t('detail.search')}
               </button>
             </form>
 
@@ -1813,7 +1855,7 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
                   <circle cx="12" cy="12" r="10" strokeWidth="4" className="opacity-25" />
                   <path fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" className="opacity-75" />
                 </svg>
-                <span>Band-Datenbanken werden durchsucht ...</span>
+                <span>{t('detail.bandDatenbankenWerdenDurchsucht')}</span>
               </div>
             )}
 
@@ -1821,7 +1863,7 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
             {!isSearchingVolumeModal && volumeSearchResults.length > 0 && (
               <div className="grid gap-2 max-h-[360px] overflow-y-auto pr-1">
                 <span className="text-xs font-bold text-[var(--mn-muted)]">
-                  Gefundene Ausgaben & Bände:
+                  {t('detail.gefundeneAusgabenBaende')}
                 </span>
                 {volumeSearchResults.map((res) => (
                   // biome-ignore lint/a11y/useKeyWithClickEvents: the whole card is a mouse shortcut for its own button
@@ -1872,7 +1914,7 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
                         handleSelectVolumeSearchResult(res);
                       }}
                     >
-                      Übernehmen
+                      {t('detail.uebernehmen')}
                     </button>
                   </div>
                 ))}
@@ -1881,7 +1923,7 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
 
             {!isSearchingVolumeModal && volumeSearchResults.length === 0 && (
               <div className="p-4 bg-[var(--mn-surface-2)] rounded-xl text-center text-xs text-[var(--mn-muted)]">
-                <span>Keine genauen Online-Treffer für „{volumeSearchQuery}“ gefunden.</span>
+                <span>{t('detail.noExactMatches', { query: volumeSearchQuery })}</span>
               </div>
             )}
 
@@ -1896,7 +1938,7 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
                   const newVol: BookVolume = {
                     id: `vol_${Date.now()}_${targetVolumeNumber}`,
                     volumeNumber: targetVolumeNumber,
-                    title: `Band ${targetVolumeNumber}`,
+                    title: t('detail.volumeN', { n: targetVolumeNumber }),
                     currentPage: 0,
                     status: 'wishlist',
                     cover: item.cover,
@@ -1916,10 +1958,10 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
                   });
                   setSelectedVolumeId(newVol.id);
                   setShowVolumeSearchModal(false);
-                  showToast(`Band ${targetVolumeNumber} als Standard-Band angelegt`);
+                  showToast(t('detail.createdAsDefault', { n: targetVolumeNumber }));
                 }}
               >
-                + Als Standard Band {targetVolumeNumber} anlegen
+                {t('detail.createAsDefault', { n: targetVolumeNumber })}
               </button>
             </div>
           </div>
