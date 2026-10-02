@@ -14,7 +14,7 @@ password). Built for a handful of trusted people, not the public.
   hibernates when nobody uses it.
 - **AI** (`ai.mininode.app`): one proxy for Gemini and Claude with per-app model lists and
   monthly budgets; apps never see a provider key.
-- **Adding apps**: upload the ZIP in Verwaltung → Hochladen; a script integrates what it knows
+- **Adding apps**: upload the ZIP in Verwaltung → Apps → Hochladen; a script integrates what it knows
   and hands the rest to an AI review. Or drop it into `inbox/` and run `/integrate-app` in Claude
   Code; `git push` deploys it. Programs for the PC/server are uploaded the same way (`.exe`/`.msi`).
 

@@ -1,10 +1,12 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Link } from 'react-router';
 import { useStepUp } from '../auth/StepUp.tsx';
 import { Dialog } from '../components/Dialog.tsx';
 import { ApiError, api } from '../lib/api.ts';
 import { type AppRow, listApps, monogram, tileUrl, tintFor } from '../lib/apps.ts';
 import { type Category, listCategories } from '../lib/catalog.ts';
 import { platform } from '../lib/supabase.ts';
+import { useArrangement } from '../lib/useArrangement.ts';
 import { dateTime } from './AdminLayout.tsx';
 
 const STATUS: Record<string, [string, string]> = {
@@ -18,7 +20,7 @@ const STATUS: Record<string, [string, string]> = {
 const TARGET: Record<string, string> = {
   cloudflare: 'Cloudflare',
   vercel: 'Vercel',
-  nucbox: 'NucBox',
+  nucbox: 'Hardware-Server',
   remote: 'Remote',
   external: 'Externer Link',
 };
@@ -50,8 +52,21 @@ interface Person {
   role: string;
 }
 
+type AppSort = 'name' | 'category' | 'drawer' | 'status';
+const SORTS: [AppSort, string][] = [
+  ['name', 'Name'],
+  ['category', 'Kategorie'],
+  ['drawer', 'Schublade'],
+  ['status', 'Status'],
+];
+const STATUS_ORDER = ['degraded', 'down', 'pending', 'online', 'disabled'];
+
 export function Apps() {
   const { run } = useStepUp();
+  const arrange = useArrangement('apps');
+  const [view, setView] = useState<'apps' | 'games'>('apps');
+  const [sort, setSort] = useState<AppSort>('name');
+  const [drawerFilter, setDrawerFilter] = useState('');
   const [apps, setApps] = useState<AppRow[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -254,15 +269,86 @@ export function Apps() {
     );
   };
 
+  const gameCount = apps.filter((app) => app.game_genre).length;
+  const visible = useMemo(() => {
+    const text = (a: string, b: string) => a.localeCompare(b, 'de');
+    const drawerName = (app: AppRow) =>
+      arrange.drawers.find((d) => d.apps.includes(app.slug))?.name ?? '\uffff';
+    const categoryOf = (app: AppRow) =>
+      categories.find((c) => c.id === app.category_id)?.name ?? '\uffff';
+    const inDrawer = arrange.drawers.find((d) => d.id === drawerFilter);
+    return apps
+      .filter((app) => (view === 'games' ? Boolean(app.game_genre) : !app.game_genre))
+      .filter((app) => !inDrawer || inDrawer.apps.includes(app.slug))
+      .sort((a, b) => {
+        if (sort === 'category') return text(categoryOf(a), categoryOf(b)) || text(a.name, b.name);
+        if (sort === 'drawer') return text(drawerName(a), drawerName(b)) || text(a.name, b.name);
+        if (sort === 'status')
+          return (
+            STATUS_ORDER.indexOf(a.status) - STATUS_ORDER.indexOf(b.status) || text(a.name, b.name)
+          );
+        return text(a.name, b.name);
+      });
+  }, [apps, categories, arrange.drawers, drawerFilter, sort, view]);
+
   return (
     <>
-      <div className="stack" style={{ gap: 6 }}>
-        <h1 style={{ fontSize: 36 }}>Apps</h1>
-        <p className="muted">
-          Neue Apps kommen als ZIP in <code>inbox/</code>, werden mit <code>/integrate-app</code>{' '}
-          integriert und per Push veröffentlicht. Hier steuerst du Sichtbarkeit und
-          Standard-Freigabe.
-        </p>
+      <div className="row" style={{ alignItems: 'flex-start', flexWrap: 'wrap' }}>
+        <div className="stack" style={{ gap: 6, flex: 1, minWidth: 260 }}>
+          <h1 style={{ fontSize: 36 }}>Apps</h1>
+          <p className="muted" style={{ margin: 0 }}>
+            Hier steuerst du Sichtbarkeit und Standard-Freigabe. Neue Apps und Programme lädst du
+            über „Hochladen“ hoch.
+          </p>
+        </div>
+        <Link to="/admin/upload" className="button primary">
+          Hochladen
+        </Link>
+      </div>
+      <div className="row" style={{ flexWrap: 'wrap' }}>
+        <fieldset className="chip-scroll" style={{ border: 0, padding: 0, margin: 0 }}>
+          <legend className="sr-only">Ansicht</legend>
+          <button
+            type="button"
+            className="chip"
+            aria-pressed={view === 'apps'}
+            onClick={() => setView('apps')}
+          >
+            Apps <span className="count">{apps.length - gameCount}</span>
+          </button>
+          <button
+            type="button"
+            className="chip"
+            aria-pressed={view === 'games'}
+            onClick={() => setView('games')}
+          >
+            Gaming Hub <span className="count">{gameCount}</span>
+          </button>
+        </fieldset>
+        <span className="spacer" />
+        <label className="row" style={{ gap: 8 }}>
+          <span className="muted">Sortieren nach</span>
+          <select value={sort} onChange={(event) => setSort(event.target.value as AppSort)}>
+            {SORTS.map(([key, label]) => (
+              <option key={key} value={key}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </label>
+        {arrange.drawers.length > 0 && (
+          <label className="row" style={{ gap: 8 }}>
+            <span className="muted">Schublade</span>
+            <select value={drawerFilter} onChange={(event) => setDrawerFilter(event.target.value)}>
+              <option value="">Alle</option>
+              {arrange.drawers.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
       </div>
       {error && (
         <p className="error" role="alert">
@@ -283,7 +369,12 @@ export function Apps() {
         </p>
       )}
       {apps.length === 0 && <p className="empty">Noch keine Apps veröffentlicht.</p>}
-      {apps.length > 0 && (
+      {apps.length > 0 && visible.length === 0 && (
+        <p className="empty">
+          {view === 'games' ? 'Noch keine Spiele veröffentlicht.' : 'Keine Apps in dieser Auswahl.'}
+        </p>
+      )}
+      {visible.length > 0 && (
         <div className="table-wrap">
           <table className="table table--cards">
             <thead>
@@ -301,7 +392,7 @@ export function Apps() {
               </tr>
             </thead>
             <tbody>
-              {apps.map((app) => {
+              {visible.map((app) => {
                 const [label, tone] = STATUS[app.status] ?? [app.status, ''];
                 return (
                   <tr key={app.slug}>

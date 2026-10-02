@@ -26,7 +26,7 @@ Hono Worker for everything that needs the service role or a secret:
 | `DELETE /remote/sessions/:id` | owner or admin | Ends the session, promotes the next in queue |
 | `POST /remote/installs` | admin, recent | Starts an install of a remote app on the NucBox (snapshot → verify → install) |
 | `GET /remote/installs/:id` | admin | Install job status |
-| `GET /admin/nucbox/resources` | admin | NucBox resource report from nucbox-control (Verwaltung → NucBox) |
+| `GET /admin/nucbox/resources` | admin | NucBox resource report from nucbox-control (Verwaltung → Hardware-Server) |
 | `GET /admin/library` | admin | Whether App-Bibliothek installs can be started (`GITHUB_DISPATCH_TOKEN` set) |
 | `POST /admin/apps/:slug/export` | admin, recent | Starts `export-app.yml`: the app as its own GitHub repository (ADR 0012) |
 | `POST /admin/library` | admin, recent | Starts the `library.yml` workflow: install or remove a catalog program (ADR 0011) |

@@ -29,9 +29,14 @@ test('the admin browses the App-Bibliothek', async ({ page }) => {
   await page.goto('/admin');
   await page
     .getByRole('navigation', { name: 'Verwaltung' })
+    .getByRole('link', { name: 'Hardware-Server' })
+    .click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Hardware-Server' })).toBeVisible();
+  await page
+    .getByRole('navigation', { name: 'Hardware-Server' })
     .getByRole('link', { name: 'App-Bibliothek' })
     .click();
-  await expect(page.getByRole('heading', { level: 1, name: 'App-Bibliothek' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 2, name: 'App-Bibliothek' })).toBeVisible();
   // No API server in e2e: installing is blocked, and the page says why.
   await expect(page.getByRole('alert')).toContainText('API ist gerade nicht erreichbar');
 

@@ -191,7 +191,8 @@ code,
   cursor: pointer;
 }
 
-.chip[aria-pressed="true"] {
+.chip[aria-pressed="true"],
+.chip.active {
   background: var(--ink);
   color: var(--bg);
   border-color: var(--ink);

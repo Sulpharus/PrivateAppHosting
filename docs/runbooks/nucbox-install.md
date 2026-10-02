@@ -46,7 +46,7 @@ NVMe 1: Proxmox + VM disks      NVMe 2: /mnt/backup (restic, vzdump)
    ```
    On Proxmox VE 8 use `VM.Monitor` instead of the two `VM.GuestAgent.*` privileges.
 
-   Read-only access for Verwaltung → NucBox (host, all VMs and storage usage):
+   Read-only access for Verwaltung → Hardware-Server (host, all VMs and storage usage):
 
    ```bash
    pveum role add MininodeMonitor -privs "Sys.Audit VM.Audit Datastore.Audit"

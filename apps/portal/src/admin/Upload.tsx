@@ -153,6 +153,9 @@ export function Upload() {
   return (
     <>
       <div className="stack" style={{ gap: 6 }}>
+        <Link to="/admin/apps" className="muted">
+          ← Apps
+        </Link>
         <h1 style={{ fontSize: 36 }}>Hochladen</h1>
         <p className="muted">
           Eine ZIP-Datei ist eine Web-App: ein Skript baut sie ein, und nur was es nicht schafft,

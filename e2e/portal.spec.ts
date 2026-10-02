@@ -59,8 +59,7 @@ test('admins reach every Host Manager page', async ({ page }) => {
     ['Apps', 'Apps'],
     ['Kategorien & Pakete', 'Kategorien & Pakete'],
     ['Nutzer & Rollen', 'Nutzer & Rollen'],
-    ['Remote-Apps', 'Remote-Apps'],
-    ['NucBox', 'NucBox'],
+    ['Hardware-Server', 'Hardware-Server'],
     ['KI-Proxy', 'KI-Proxy'],
     ['KI-Werkstatt', 'KI-Werkstatt'],
   ]) {
@@ -70,6 +69,30 @@ test('admins reach every Host Manager page', async ({ page }) => {
       .click();
     await expect(page.getByRole('heading', { level: 1, name: heading })).toBeVisible();
   }
+  // Remote-Apps and the App-Bibliothek live under Hardware-Server; Hochladen is a button in Apps.
+  await page
+    .getByRole('navigation', { name: 'Verwaltung' })
+    .getByRole('link', { name: 'Hardware-Server', exact: true })
+    .click();
+  await page
+    .getByRole('navigation', { name: 'Hardware-Server' })
+    .getByRole('link', { name: 'Remote-Apps' })
+    .click();
+  await expect(page.getByRole('heading', { level: 2, name: 'Remote-Apps' })).toBeVisible();
+  await page
+    .getByRole('navigation', { name: 'Verwaltung' })
+    .getByRole('link', { name: 'Apps', exact: true })
+    .click();
+  // Apps and games are separate views; the list sorts by name, category, drawer or status.
+  await page.getByRole('button', { name: /^Gaming Hub/ }).click();
+  await expect(page.getByRole('button', { name: /^Gaming Hub/ })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  await page.getByLabel('Sortieren nach').selectOption('drawer');
+  await page.getByRole('button', { name: /^Apps/ }).click();
+  await page.getByRole('link', { name: 'Hochladen' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Hochladen' })).toBeVisible();
   await page
     .getByRole('navigation', { name: 'Verwaltung' })
     .getByRole('link', { name: 'Nutzer & Rollen' })

@@ -35,6 +35,7 @@ const Remote = lazy(() => import('./admin/Remote.tsx').then((m) => ({ default: m
 const Ai = lazy(() => import('./admin/Ai.tsx').then((m) => ({ default: m.Ai })));
 const ApiKeys = lazy(() => import('./admin/ApiKeys.tsx').then((m) => ({ default: m.ApiKeys })));
 const Catalog = lazy(() => import('./admin/Catalog.tsx').then((m) => ({ default: m.Catalog })));
+const Hardware = lazy(() => import('./admin/Hardware.tsx').then((m) => ({ default: m.Hardware })));
 const Library = lazy(() => import('./admin/Library.tsx').then((m) => ({ default: m.Library })));
 const NucBox = lazy(() => import('./admin/NucBox.tsx').then((m) => ({ default: m.NucBox })));
 const Upload = lazy(() => import('./admin/Upload.tsx').then((m) => ({ default: m.Upload })));
@@ -123,9 +124,18 @@ const router = createBrowserRouter([
           { path: 'upload', element: <Upload /> },
           { path: 'catalog', element: <Catalog /> },
           { path: 'users', element: <Users /> },
-          { path: 'remote', element: <Remote /> },
-          { path: 'nucbox', element: <NucBox /> },
-          { path: 'library', element: <Library /> },
+          {
+            path: 'hardware',
+            element: <Hardware />,
+            children: [
+              { index: true, element: <NucBox /> },
+              { path: 'remote', element: <Remote /> },
+              { path: 'library', element: <Library /> },
+            ],
+          },
+          { path: 'remote', element: <Navigate to="/admin/hardware/remote" replace /> },
+          { path: 'nucbox', element: <Navigate to="/admin/hardware" replace /> },
+          { path: 'library', element: <Navigate to="/admin/hardware/library" replace /> },
           { path: 'ai', element: <Ai /> },
           { path: 'api-keys', element: <ApiKeys /> },
           { path: 'suite', element: <Suite /> },

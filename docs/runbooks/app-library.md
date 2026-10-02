@@ -1,7 +1,7 @@
 # App-Bibliothek
 
 Install well-known programs (Jellyfin, n8n, Uptime Kuma, Stirling PDF) on the NucBox with one
-click from Verwaltung → App-Bibliothek. See ADR 0011 for the design.
+click from Verwaltung → Hardware-Server → App-Bibliothek. See ADR 0011 for the design.
 
 ## One-time setup
 
@@ -21,7 +21,7 @@ The NucBox must be running (`nucbox-install.md`) and `vars.NUCBOX_TUNNEL_ID` mus
      echo "CATALOG_TOKEN=github_pat_…" >> /etc/mininode/deploy.env
      ```
 
-3. Open Verwaltung → App-Bibliothek. The warning "noch nicht eingerichtet" is gone.
+3. Open Verwaltung → Hardware-Server → App-Bibliothek. The warning "noch nicht eingerichtet" is gone.
 
 ## Install, update, remove
 

@@ -53,6 +53,7 @@ Where things are documented:
 | Sportplaner course price | Whole course or monthly fee, split over the sessions that take place, booked per session in Statistik | `hosted/sportplaner/js/price.js`, README |
 | Medialog | "Sammlung" tab no longer shows the suggestion chips ("Vorschläge") under the search | `hosted/medialog/src/views/SammlungView.tsx` |
 | Gemeinsame Daten | One aligned table (Datentyp, App, Grund, Angefragt, Freigabe); sort by open requests first, type or app; filter "Nur noch offene"; write priority below | `apps/portal/src/admin/Suite.tsx` |
+| Verwaltung menu | "Hochladen" is a button in Apps; Apps has a switch Apps / Gaming Hub and sorts by name, category, own drawer or status; "Hardware-Server" holds Auslastung (was NucBox), Remote-Apps and App-Bibliothek (old URLs redirect) | `apps/portal/src/admin/{Apps,Hardware,AdminLayout}.tsx` |
 | German formats | Date, month and time inputs as German parts in every browser; full dates as "01. Okt. 2026"; German numbers | `packages/ui/kit/ui.js`, `docs/ai/DESIGN-SYSTEM.md` §8 |
 
 The Sportplaner map (tab "Karte") and course mode (editor step "Zeiten" → "Kurs") are live

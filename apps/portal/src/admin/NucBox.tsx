@@ -92,7 +92,7 @@ export function NucBox() {
   return (
     <>
       <div className="stack" style={{ gap: 6 }}>
-        <h1 style={{ fontSize: 36 }}>NucBox</h1>
+        <h2 style={{ fontSize: 24 }}>Auslastung</h2>
         <p className="muted">
           Auslastung von Host, VMs, Speicher und Container-Apps.
           {report && ` Stand ${dateTime(report.at)}, aktualisiert alle 15 Sekunden.`}
