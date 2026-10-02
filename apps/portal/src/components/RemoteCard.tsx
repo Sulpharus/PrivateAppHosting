@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { useStepUp } from '../auth/StepUp.tsx';
 import { ApiError, api } from '../lib/api.ts';
-import { type AppRow, monogram, type RemoteStatus, tintFor } from '../lib/apps.ts';
+import type { AppRow, RemoteStatus } from '../lib/apps.ts';
+import { AppIcon } from './AppIcon.tsx';
 
 type SessionResponse =
   | { status: 'queued'; sessionId: string }
@@ -88,13 +89,7 @@ export function RemoteCard(props: {
   return (
     <div className="card">
       <div className="row">
-        <div
-          className="monogram"
-          style={{ background: tintFor(props.app.slug), width: 40, height: 40 }}
-          aria-hidden="true"
-        >
-          {monogram(props.app.name)}
-        </div>
+        <AppIcon app={props.app} size={40} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <strong>{props.app.name}</strong>
           <p className="muted" style={{ fontSize: 13 }}>

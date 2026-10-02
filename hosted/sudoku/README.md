@@ -22,3 +22,7 @@ Leicht, Mittel, Schwer, Extrem. Every puzzle is made on the spot, never looked u
 - **Touch targets:** the 9×9 board scales with the screen (about 37 px per cell on a 360 px wide
   phone, up to 52 px); the number pad keys are at least 44 px. A board that fits nine columns
   cannot have 44 px cells on the narrowest phones.
+
+## Languages
+
+German and English (`i18n/de.json`, `i18n/en.json`, declared under `i18n` in `mininode.json`). The person's choice in Konto → Sprache applies; an unknown key falls back to German. New texts need a key in both files; `pnpm mininode doctor hosted/sudoku` checks them (ADR 0017).

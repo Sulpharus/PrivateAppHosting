@@ -1,5 +1,6 @@
 import { type Manifest, manifestSchema } from './schema.ts';
 
+export * from './i18n.ts';
 export * from './schema.ts';
 export { programName, slugify, type UploadKind, uploadKind } from './slug.ts';
 

@@ -395,6 +395,8 @@ Everyday apps and platform features that grew next to the phases, each with its 
 | Own drawers and own order (start page, Gaming Hub) | done | ADR 0015 |
 | API keys site-wide or personal, popup and instruction page | done | ADR 0014 |
 | Release editions: cloud, PC/server, complete per version | done | ADR 0016, `docs/runbooks/releases.md` |
+| App logos (upload in Verwaltung, deploy picks up `icon.svg`, prompt block) | done | ADR 0018 |
+| Language switch (de/en per person) and language packages for every app | done; portal UI itself still German | ADR 0017, `docs/ai/LANGUAGE-PACKAGES.md`, `packages/ui/kit/i18n.js` |
 
 ### 15.2 Sharing the platform (proposed, not started)
 

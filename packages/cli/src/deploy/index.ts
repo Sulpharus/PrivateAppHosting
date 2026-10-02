@@ -18,6 +18,7 @@ import { createClient } from '@supabase/supabase-js';
 import postgres from 'postgres';
 import { doctor } from '../doctor.ts';
 import { type DeployEnv, environmentSettings } from './environment.ts';
+import { syncIcon } from './icon.ts';
 import { exposeSchemas, migrateApp, migrationFiles } from './migrate.ts';
 import { registerApp } from './register.ts';
 import { appWranglerConfig } from './wrangler-config.ts';
@@ -100,6 +101,7 @@ export function stageAssets(appDir: string, manifest: Manifest): string {
   cpSync(join(KIT, 'ui.css'), join(platform, 'ui.css'));
   cpSync(join(KIT, 'ui.js'), join(platform, 'ui.js'));
   cpSync(join(KIT, 'game.js'), join(platform, 'game.js'));
+  cpSync(join(KIT, 'i18n.js'), join(platform, 'i18n.js'));
   // A new version per deploy: browsers reinstall the worker and drop the old caches.
   const version = `${manifest.slug}-${Date.now().toString(36)}`;
   writeFileSync(
@@ -261,6 +263,10 @@ export async function deployApp(appDir: string, options: DeployOptions): Promise
     options.origins ?? (env.name === 'local' ? [] : [`https://${manifest.slug}.${env.domain}`]);
   await registerApp(db, manifest, options.version, origins);
   log(`  registered ${manifest.slug} (${options.version})`);
+  // A logo is a nice-to-have: a failing upload must not undo a finished deploy.
+  await syncIcon(db, appDir, manifest.slug, log).catch((error: Error) =>
+    log(`  logo skipped: ${error.message}`),
+  );
 }
 
 /** Local preview: registers the app in the local database and serves it through the gate. */

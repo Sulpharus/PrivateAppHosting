@@ -1,4 +1,5 @@
 import type React from 'react';
+import { t } from '../i18n';
 import type { MediaItem } from '../types';
 import { getKindLabel, getProgressSummary, getStatusLabel } from '../utils/text';
 
@@ -17,7 +18,7 @@ export const MediaRow: React.FC<MediaRowProps> = ({ item, onClick }) => {
       type="button"
       className="mn-row"
       onClick={onClick}
-      aria-label={`${item.title} von ${item.creator} ansehen`}
+      aria-label={t('row.view', { title: item.title, creator: item.creator })}
     >
       <span className="mn-thumb" aria-hidden="true">
         {item.cover ? (
@@ -39,13 +40,13 @@ export const MediaRow: React.FC<MediaRowProps> = ({ item, onClick }) => {
           {item.title}
           {item.isBookSeries && (
             <span className="ml-2 mn-chip mn-chip--plain text-[10px] py-0 px-1 font-semibold">
-              📚 Reihe ({item.volumes?.length || 1} Bde.)
+              {t('item.series', { n: item.volumes?.length || 1 })}
             </span>
           )}
         </span>
         {item.originalTitle && item.englishTitle && item.title !== item.originalTitle && (
           <span className="block text-[10px] text-[var(--mn-muted)] truncate">
-            Orig.: {item.originalTitle}
+            {t('item.original', { title: item.originalTitle })}
           </span>
         )}
         <span className="mn-row-sub">

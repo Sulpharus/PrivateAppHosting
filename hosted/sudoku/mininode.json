@@ -57,5 +57,9 @@
         "max": 7200
       }
     ]
+  },
+  "i18n": {
+    "languages": ["de", "en"],
+    "default": "de"
   }
 }

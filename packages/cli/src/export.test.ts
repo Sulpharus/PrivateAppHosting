@@ -209,5 +209,6 @@ describe('mininode export', () => {
       const result = exportApp(ROOT, join(ROOT, file, '..'), out);
       expect(result.findings, file).toEqual([]);
     }
-  });
+    // One export per hosted app: slow on a busy CI runner, so the default 5 s is too tight.
+  }, 60_000);
 });

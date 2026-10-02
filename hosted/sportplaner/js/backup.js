@@ -7,15 +7,17 @@ function updBackup() {
   const last = S.lastBackup;
   const age = last ? Math.floor((Date.now() - +last) / 864e5) : null;
   const lastTxt = !last
-    ? 'Du hast noch nicht exportiert.'
+    ? tr('bk.never')
     : age === 0
-      ? 'Zuletzt heute exportiert.'
-      : `Zuletzt exportiert am ${fmt(new Date(+last), { day: '2-digit', month: 'short', year: 'numeric' })}.`;
+      ? tr('bk.today')
+      : tr('bk.lastOn', {
+          date: fmt(new Date(+last), { day: '2-digit', month: 'short', year: 'numeric' }),
+        });
   const off = BK.busy || (!S.acts.length && !S.plans.length);
   setHTML(
     el,
-    `<h3>Datensicherung</h3><p>${lastTxt} Beim Export werden alle Aktivitäten, Besuche, Tarife und Fotos in einer Datei gespeichert. Beim Import wird der Inhalt der Datei hinzugefügt und bereits Vorhandenes aktualisiert.</p>
-    <div class="two"><button class="btn" data-action="export"${off ? ' disabled' : ''}>Exportieren</button><label class="btn filebtn${BK.busy ? ' off' : ''}">Importieren<input type="file" accept=".json,application/json" id="importfile"></label></div>
+    `<h3>${esc(tr('bk.title'))}</h3><p>${esc(lastTxt)} ${esc(tr('bk.explain'))}</p>
+    <div class="two"><button class="btn" data-action="export"${off ? ' disabled' : ''}>${esc(tr('bk.export'))}</button><label class="btn filebtn${BK.busy ? ' off' : ''}">${esc(tr('bk.import'))}<input type="file" accept=".json,application/json" id="importfile"></label></div>
     <p class="status" role="status">${esc(BK.msg)}</p>`,
   );
 }
@@ -63,7 +65,7 @@ async function storeImage(blob) {
 }
 async function exportData() {
   if (BK.busy) return;
-  bkStatus('Export wird vorbereitet …', true);
+  bkStatus(tr('bk.preparing'), true);
   try {
     const refs = [
       ...new Set(S.acts.flatMap((a) => (a.photos || []).filter((r) => !r.startsWith('data:')))),
@@ -71,7 +73,7 @@ async function exportData() {
     const photos = {};
     let missing = 0;
     for (let i = 0; i < refs.length; i++) {
-      bkStatus(`Foto ${i + 1} von ${refs.length} wird verpackt …`);
+      bkStatus(tr('bk.packing', { i: i + 1, n: refs.length }));
       try {
         photos[refs[i]] = await blobToDataURL(await fetchBlob(refs[i]));
       } catch {
@@ -92,7 +94,7 @@ async function exportData() {
       ],
       { type: 'application/json' },
     );
-    const filename = `sportplaner-sicherung-${todayStr()}.json`;
+    const filename = tr('bk.fileName', { date: todayStr() });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
     link.download = filename;
@@ -102,19 +104,20 @@ async function exportData() {
     setTimeout(() => URL.revokeObjectURL(link.href), 10000);
     S.lastBackup = Date.now();
     ready.then((mn) => mn.kv.set(LAST_BACKUP, S.lastBackup)).catch(() => {});
+    const acts = tr('bk.acts', { n: activities.length });
     bkStatus(
       missing
-        ? `${activities.length} ${activities.length === 1 ? 'Aktivität' : 'Aktivitäten'} exportiert. ${missing} ${missing > 1 ? 'Fotos konnten' : 'Foto konnte'} nicht aufgenommen werden.`
-        : `${activities.length} ${activities.length === 1 ? 'Aktivität' : 'Aktivitäten'} mit ${refs.length} ${refs.length === 1 ? 'Foto' : 'Fotos'} exportiert.`,
+        ? `${tr('bk.exportedMissing', { acts })} ${tr('bk.photosMissing', { n: missing })}`
+        : tr('bk.exportedWithPhotos', { acts, photos: tr('bk.photos', { n: refs.length }) }),
       false,
     );
   } catch (e) {
     bkStatus(
       e && e.code === 'declined'
-        ? 'Export abgebrochen.'
+        ? tr('bk.declined')
         : e && e.code === 'rate_limited'
-          ? 'Ein Speicherdialog ist bereits geöffnet.'
-          : 'Die Sicherungsdatei konnte nicht erstellt werden. Bitte erneut versuchen.',
+          ? tr('bk.dialogOpen')
+          : tr('bk.exportFailed'),
       false,
     );
   }
@@ -266,11 +269,11 @@ async function importData(file) {
   try {
     data = JSON.parse(await file.text());
   } catch {
-    return bkStatus('Diese Datei ist keine Sportplaner-Sicherung.');
+    return bkStatus(tr('bk.notBackup'));
   }
   if (!data || data.app !== 'sport-planner' || !Array.isArray(data.activities))
-    return bkStatus('Diese Datei ist keine Sportplaner-Sicherung.');
-  bkStatus('Import läuft …', true);
+    return bkStatus(tr('bk.notBackup'));
+  bkStatus(tr('bk.importing'), true);
   const photos = data.photos || {};
   const known = new Map(); // photo ids still stored in this artifact
   for (const a of S.acts) for (const r of a.photos || []) known.set(r, (a.thumbs || {})[r]);
@@ -279,7 +282,7 @@ async function importData(file) {
     failed = 0;
   const list = data.activities.filter((a) => a && typeof a.id === 'string' && a.name);
   for (const raw of list) {
-    bkStatus(`Import ${count + failed + 1} von ${list.length} …`);
+    bkStatus(tr('bk.importProgress', { i: count + failed + 1, n: list.length }));
     const a = sanitizeAct(raw);
     for (const r of raw.photos || []) {
       try {
@@ -318,12 +321,13 @@ async function importData(file) {
       failed++;
     }
   }
+  const acts = tr('bk.acts', { n: count });
   bkStatus(
-    `${count} ${count === 1 ? 'Aktivität' : 'Aktivitäten'}${pcount ? ` und ${pcount} ${pcount === 1 ? 'Tarif' : 'Tarife'}` : ''} importiert.` +
-      (lost
-        ? ` ${lost} ${lost > 1 ? 'Fotos konnten' : 'Foto konnte'} nicht wiederhergestellt werden.`
-        : '') +
-      (failed ? ` ${failed} konnten nicht gespeichert werden.` : ''),
+    (pcount
+      ? tr('bk.importedBoth', { acts, plans: tr('bk.plans', { n: pcount }) })
+      : tr('bk.imported', { acts })) +
+      (lost ? ` ${tr('bk.photosLost', { n: lost })}` : '') +
+      (failed ? ` ${tr('bk.failedSave', { n: failed })}` : ''),
     false,
   );
 }

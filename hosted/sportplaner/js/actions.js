@@ -99,7 +99,7 @@ const H = {
         cancelled: (a.cancelled || []).filter((x) => !done.has(x)),
       });
     } catch {
-      toast('Aktualisierung fehlgeschlagen. Bitte erneut versuchen.');
+      toast(tr('error.update'));
     }
   },
   'toggle-cancel': async () => {
@@ -116,9 +116,9 @@ const H = {
         cancelled: [...off].sort(),
         done: was ? a.done || [] : (a.done || []).filter((x) => x !== ds),
       });
-      toast(was ? 'Termin findet statt' : 'Als ausgefallen markiert, zählt in keiner Statistik');
+      toast(tr(was ? 'toast.sessionOn' : 'toast.markedCancelled'));
     } catch {
-      toast('Aktualisierung fehlgeschlagen. Bitte erneut versuchen.');
+      toast(tr('error.update'));
     }
   },
   del: async (t) => {
@@ -126,11 +126,11 @@ const H = {
     if (!a) return;
     if (delArmed !== a.id) {
       delArmed = a.id;
-      t.textContent = 'Zum Löschen erneut tippen';
+      t.textContent = tr('confirm.tapAgain');
       setTimeout(() => {
         if (delArmed === a.id) {
           delArmed = null;
-          if (t.isConnected) t.textContent = 'Aktivität löschen';
+          if (t.isConnected) t.textContent = tr('detail.delete');
         }
       }, 3000);
       return;
@@ -139,9 +139,9 @@ const H = {
     closeSheet();
     try {
       await removeAct(a);
-      toast('Aktivität gelöscht');
+      toast(tr('toast.activityDeleted'));
     } catch {
-      toast('Löschen fehlgeschlagen. Bitte erneut versuchen.');
+      toast(tr('error.delete'));
     }
   },
   save: () => saveDraft(),
@@ -211,11 +211,13 @@ async function togglePlan(a, ds, announce) {
       if (announce)
         toast(
           was
-            ? 'Nicht mehr eingeplant'
-            : `Für ${fmt(parse(ds), { weekday: 'short', day: 'numeric', month: 'short' })} eingeplant`,
+            ? tr('toast.unplanned')
+            : tr('toast.planned', {
+                date: fmt(parse(ds), { weekday: 'short', day: 'numeric', month: 'short' }),
+              }),
         );
     } catch {
-      toast('Aktualisierung fehlgeschlagen. Bitte erneut versuchen.');
+      toast(tr('error.update'));
     }
   }
 }

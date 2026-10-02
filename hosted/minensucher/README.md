@@ -14,3 +14,7 @@ Minesweeper for the Gaming Hub (ADR 0009), in three levels: Leicht 9×9 with 10 
   better) get a win; a lost round is reported as `loss`. Login, playtime, saving and the
   leaderboard come from the kit helper `/_mininode/game.js`.
 - **Data:** none (`data.mode: none`).
+
+## Languages
+
+German and English (`i18n/de.json`, `i18n/en.json`, declared under `i18n` in `mininode.json`). The person's choice in Konto → Sprache applies; an unknown key falls back to German. New texts need a key in both files; `pnpm mininode doctor hosted/minensucher` checks them (ADR 0017).

@@ -1,0 +1,54 @@
+{
+  "app.title": "Memory",
+  "app.intro": "Find all eight pairs in as few moves as you can.",
+  "nav.allApps": "← All apps",
+  "nav.hub": "Gaming Hub",
+  "kpi.moves": "Moves",
+  "kpi.time": "Time",
+  "kpi.pairs": "Pairs",
+  "board.label": "Game board, 4 by 4 cards",
+  "action.restart": "New game",
+  "won.title": "You did it!",
+  "won.text": {
+    "one": "Found all {pairs} pairs in {n} move and {time}.",
+    "other": "Found all {pairs} pairs in {n} moves and {time}."
+  },
+  "leaders.title": "Leaderboard (fewest moves)",
+  "leaders.empty": "No entries yet. You set your player name in the Gaming Hub.",
+  "leaders.you": "{name} (you)",
+  "leaders.value": {
+    "one": "{n} move",
+    "other": "{n} moves"
+  },
+  "leaders.unreachable": "The leaderboard cannot be reached right now.",
+  "rules.title": "Rules",
+  "rules.text": "Turn over two cards. If they show the same shape, they stay open; otherwise they are turned back. Each pair you turn over counts as one move. The cards are shuffled for every game. Use the arrow keys to move between cards, and Enter or Space to turn one over.",
+  "shape.circle": "circle",
+  "shape.square": "square",
+  "shape.triangle": "triangle",
+  "shape.diamond": "diamond",
+  "shape.star": "star",
+  "shape.heart": "heart",
+  "shape.hexagon": "hexagon",
+  "shape.cross": "cross",
+  "card.hidden": "Card {n}, face down",
+  "card.open": "Card {n}: {shape}",
+  "card.found": "Card {n}: {shape}, matched",
+  "announce.new": "New game. All cards are face down.",
+  "announce.first": "{shape} turned over.",
+  "announce.match": "{shape}: pair found.",
+  "announce.miss": "{shape}: no match.",
+  "record.none": "No record yet.",
+  "record.moves": {
+    "one": "Your record: {n} move",
+    "other": "Your record: {n} moves"
+  },
+  "record.movesTime": {
+    "one": "Your record: {n} move, fastest time {time}",
+    "other": "Your record: {n} moves, fastest time {time}"
+  },
+  "player.as": "You are playing as {name}.",
+  "player.noName": "Without a player name you will not appear on the leaderboard.",
+  "player.setName": "Set a name",
+  "toast.notSaved": "The result could not be saved."
+}

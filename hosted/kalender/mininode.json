@@ -53,5 +53,9 @@
         "why": "Buchungen auf Wunsch im Kalender zeigen"
       }
     ]
+  },
+  "i18n": {
+    "languages": ["de", "en"],
+    "default": "de"
   }
 }

@@ -3,6 +3,7 @@ id: places
 title: Orte und Karte
 summary: Adressen, Orte, Links zu Karten, Entfernung
 order: 40
+group: anbindungen
 ---
 
 ## Feature: places and maps

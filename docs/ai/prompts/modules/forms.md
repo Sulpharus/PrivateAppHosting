@@ -3,6 +3,7 @@ id: forms
 title: Formulare und Eingaben
 summary: Validierung, deutsche Zahlen und Daten, Entwürfe, Pflichtfelder
 order: 12
+group: daten
 ---
 
 ## Feature: forms and input

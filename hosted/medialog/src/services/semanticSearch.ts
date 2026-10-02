@@ -4,7 +4,9 @@
  * intent extraction (kinds, book subcategories, statuses, ratings, years), and relevance ranking.
  */
 
+import { t } from '../i18n';
 import type { BookSubtype, MediaItem, MediaKind, MediaStatus } from '../types';
+import { getKindLabel, getStatusLabel, getSubtypeLabel } from '../utils/text';
 
 export interface SemanticMatchResult {
   item: MediaItem;
@@ -270,7 +272,7 @@ export function executeSemanticSearch(items: MediaItem[], rawQuery: string): Sem
         score += 10;
         tokenMatched = true;
         matchedTerms.push(token);
-        reasons.push(`Format: ${item.bookSubtype}`);
+        reasons.push(t('search.reasonFormat', { name: getSubtypeLabel(item.bookSubtype ?? '') }));
       }
 
       // Creator match (8 pts)
@@ -304,19 +306,19 @@ export function executeSemanticSearch(items: MediaItem[], rawQuery: string): Sem
       // Subtype match (e.g. Manga, Manhwa, Manhua, Roman)
       if (rule.subtypes && item.bookSubtype && rule.subtypes.includes(item.bookSubtype)) {
         score += 9;
-        reasons.push(`Buch-Kategorie „${item.bookSubtype}“`);
+        reasons.push(t('search.reasonBookCategory', { name: getSubtypeLabel(item.bookSubtype) }));
       }
 
       // Kind match
       if (rule.kinds?.includes(item.kind)) {
         score += 6;
-        reasons.push(`Kategorie „${item.kind}“`);
+        reasons.push(t('search.reasonCategory', { name: getKindLabel(item.kind) }));
       }
 
       // Status match
       if (rule.status?.includes(item.status)) {
         score += 6;
-        reasons.push(`Status „${item.status}“`);
+        reasons.push(t('search.reasonStatus', { name: getStatusLabel(item.status, item.kind) }));
       }
 
       // Genre synonym match
@@ -325,7 +327,7 @@ export function executeSemanticSearch(items: MediaItem[], rawQuery: string): Sem
           const normGenSyn = normalizeText(genSyn);
           if (normGenres.some((g) => g.includes(normGenSyn) || normGenSyn.includes(g))) {
             score += 8;
-            reasons.push(`Semantisches Genre „${genSyn}“`);
+            reasons.push(t('search.reasonGenre', { name: genSyn }));
             break;
           }
         }
@@ -334,7 +336,7 @@ export function executeSemanticSearch(items: MediaItem[], rawQuery: string): Sem
       // Rating semantics
       if (rule.minRating && item.rating && item.rating >= rule.minRating) {
         score += 5;
-        reasons.push(`Hohe Bewertung (★ ${item.rating}/10)`);
+        reasons.push(t('search.reasonRating', { n: item.rating }));
       }
     }
 
@@ -342,7 +344,7 @@ export function executeSemanticSearch(items: MediaItem[], rawQuery: string): Sem
     if (explicitMinRating !== undefined) {
       if (item.rating && item.rating >= explicitMinRating) {
         score += 8;
-        reasons.push(`★ ${item.rating} ≥ ${explicitMinRating}`);
+        reasons.push(t('search.reasonMinRating', { n: item.rating, min: explicitMinRating }));
       } else {
         score -= 10;
       }
@@ -351,7 +353,7 @@ export function executeSemanticSearch(items: MediaItem[], rawQuery: string): Sem
     // 4. Explicit year match
     if (explicitYear !== undefined && item.year === explicitYear) {
       score += 10;
-      reasons.push(`Jahr ${explicitYear}`);
+      reasons.push(t('search.reasonYear', { year: explicitYear }));
     }
 
     // Include if score passes threshold

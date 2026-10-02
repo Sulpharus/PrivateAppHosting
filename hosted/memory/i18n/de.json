@@ -1,0 +1,54 @@
+{
+  "app.title": "Memory",
+  "app.intro": "Finde alle acht Paare mit möglichst wenigen Zügen.",
+  "nav.allApps": "← Alle Apps",
+  "nav.hub": "Gaming Hub",
+  "kpi.moves": "Züge",
+  "kpi.time": "Zeit",
+  "kpi.pairs": "Paare",
+  "board.label": "Spielfeld, 4 mal 4 Karten",
+  "action.restart": "Neues Spiel",
+  "won.title": "Geschafft!",
+  "won.text": {
+    "one": "Alle {pairs} Paare in {n} Zug und {time} gefunden.",
+    "other": "Alle {pairs} Paare in {n} Zügen und {time} gefunden."
+  },
+  "leaders.title": "Bestenliste (wenigste Züge)",
+  "leaders.empty": "Noch keine Einträge. Spielernamen legst du im Gaming Hub fest.",
+  "leaders.you": "{name} (du)",
+  "leaders.value": {
+    "one": "{n} Zug",
+    "other": "{n} Züge"
+  },
+  "leaders.unreachable": "Die Bestenliste ist gerade nicht erreichbar.",
+  "rules.title": "Regeln",
+  "rules.text": "Decke zwei Karten auf. Zeigen sie dieselbe Form, bleiben sie offen. Sonst werden sie wieder umgedreht. Jedes aufgedeckte Paar ist ein Zug. Die Karten werden bei jedem Spiel zufällig gemischt. Mit den Pfeiltasten wechselst du die Karte, mit Enter oder Leertaste deckst du sie auf.",
+  "shape.circle": "Kreis",
+  "shape.square": "Quadrat",
+  "shape.triangle": "Dreieck",
+  "shape.diamond": "Raute",
+  "shape.star": "Stern",
+  "shape.heart": "Herz",
+  "shape.hexagon": "Sechseck",
+  "shape.cross": "Kreuz",
+  "card.hidden": "Karte {n}, verdeckt",
+  "card.open": "Karte {n}: {shape}",
+  "card.found": "Karte {n}: {shape}, gefunden",
+  "announce.new": "Neues Spiel. Alle Karten sind verdeckt.",
+  "announce.first": "{shape} aufgedeckt.",
+  "announce.match": "{shape}: Paar gefunden.",
+  "announce.miss": "{shape}: kein Paar.",
+  "record.none": "Noch kein Rekord.",
+  "record.moves": {
+    "one": "Dein Rekord: {n} Zug",
+    "other": "Dein Rekord: {n} Züge"
+  },
+  "record.movesTime": {
+    "one": "Dein Rekord: {n} Zug, schnellste Zeit {time}",
+    "other": "Dein Rekord: {n} Züge, schnellste Zeit {time}"
+  },
+  "player.as": "Du spielst als {name}.",
+  "player.noName": "Ohne Spielernamen erscheinst du nicht in der Bestenliste.",
+  "player.setName": "Namen festlegen",
+  "toast.notSaved": "Das Ergebnis konnte nicht gespeichert werden."
+}

@@ -191,22 +191,54 @@
   }
 
   // ---------------------------------------------------------------------------------------------
-  // Dates: German, day · abbreviated month · year, independent of the browser's language.
-  // The German abbreviations (CLDR de-DE), fixed so every browser shows the same.
-  const MONTHS = [
-    'Jan.',
-    'Feb.',
-    'März',
-    'Apr.',
-    'Mai',
-    'Juni',
-    'Juli',
-    'Aug.',
-    'Sept.',
-    'Okt.',
-    'Nov.',
-    'Dez.',
-  ];
+  // Dates: day · abbreviated month · year, independent of the browser's language. German by
+  // default (CLDR de-DE), English (en-GB) when the person chose English and the app has a package
+  // for it (kit/i18n.js). Fixed lists, so every browser shows the same.
+  const MONTHS_BY_LANG = {
+    de: [
+      'Jan.',
+      'Feb.',
+      'März',
+      'Apr.',
+      'Mai',
+      'Juni',
+      'Juli',
+      'Aug.',
+      'Sept.',
+      'Okt.',
+      'Nov.',
+      'Dez.',
+    ],
+    en: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+  };
+  const TEXT = {
+    de: {
+      day: 'Tag',
+      month: 'Monat',
+      year: 'Jahr',
+      hour: 'Stunde',
+      minute: 'Minute',
+      missing: (time) => `Bitte ${time ? 'eine Uhrzeit' : 'ein Datum'} angeben.`,
+      incomplete: (time) => `Bitte ${time ? 'eine Uhrzeit' : 'ein Datum'} vollständig angeben.`,
+      earliest: (time, v) => `Frühestens ${time ? 'um' : 'am'} ${v}.`,
+      latest: (time, v) => `Spätestens ${time ? 'um' : 'am'} ${v}.`,
+    },
+    en: {
+      day: 'Day',
+      month: 'Month',
+      year: 'Year',
+      hour: 'Hour',
+      minute: 'Minute',
+      missing: (time) => `Please enter a ${time ? 'time' : 'date'}.`,
+      incomplete: (time) => `Please enter a complete ${time ? 'time' : 'date'}.`,
+      earliest: (time, v) => `Earliest ${time ? 'at' : 'on'} ${v}.`,
+      latest: (time, v) => `Latest ${time ? 'at' : 'on'} ${v}.`,
+    },
+  };
+  /** The language in use: English only when kit/i18n.js found a package for it. */
+  const lang = () => (window.mnI18n?.lang === 'en' ? 'en' : 'de');
+  const months = () => MONTHS_BY_LANG[lang()];
+  const words = () => TEXT[lang()];
   const pad = (n) => String(n).padStart(2, '0');
   // Same signature as new Option(text, value), which some DOMs lack.
   const option = (text, value) => {
@@ -216,15 +248,17 @@
     return el;
   };
 
-  /** '2026-10-01' or a Date → '01. Okt. 2026'; '2026-10' → 'Okt. 2026'; anything else → ''. */
+  /** '2026-10-01' or a Date → '01. Okt. 2026' (English: '01 Oct 2026'); '2026-10' → 'Okt. 2026'. */
   function formatDate(value) {
+    const dot = lang() === 'en' ? '' : '.';
+    const names = months();
     if (value instanceof Date && !Number.isNaN(value.getTime()))
-      return `${pad(value.getDate())}. ${MONTHS[value.getMonth()]} ${value.getFullYear()}`;
+      return `${pad(value.getDate())}${dot} ${names[value.getMonth()]} ${value.getFullYear()}`;
     const m = /^(\d{4})-(\d{2})(?:-(\d{2}))?/.exec(String(value ?? ''));
     if (!m) return '';
-    const month = MONTHS[+m[2] - 1];
+    const month = names[+m[2] - 1];
     if (!month) return '';
-    return m[3] ? `${m[3]}. ${month} ${m[1]}` : `${month} ${m[1]}`;
+    return m[3] ? `${m[3]}${dot} ${month} ${m[1]}` : `${month} ${m[1]}`;
   }
 
   const proto = HTMLInputElement.prototype;
@@ -236,6 +270,8 @@
   /** Wraps of fields this copy of ui.js enhanced (a cloned wrap is not in here). */
   const fields = new WeakMap();
   let fieldIds = 0;
+  /** Per field: re-reads the part labels and month names after a language change. */
+  const relabelers = new Set();
 
   const shown = (el) =>
     !el.hidden &&
@@ -274,19 +310,20 @@
     return '';
   }
 
+  const CLASS = { day: 'tag', month: 'monat', year: 'jahr', hour: 'stunde', minute: 'minute' };
   const PARTS = {
     date: [
-      ['Tag', 'select'],
-      ['Monat', 'select'],
-      ['Jahr', 'input'],
+      ['day', 'select'],
+      ['month', 'select'],
+      ['year', 'input'],
     ],
     month: [
-      ['Monat', 'select'],
-      ['Jahr', 'input'],
+      ['month', 'select'],
+      ['year', 'input'],
     ],
     time: [
-      ['Stunde', 'select'],
-      ['Minute', 'select'],
+      ['hour', 'select'],
+      ['minute', 'select'],
     ],
   };
 
@@ -321,29 +358,30 @@
     message.hidden = true;
     message.setAttribute('role', 'alert');
 
-    const parts = PARTS[kind].map(([label, tag]) => {
+    const parts = PARTS[kind].map(([id, tag]) => {
       const el = document.createElement(tag);
-      el.className = `mn-date-${label.toLowerCase()}`;
-      el.setAttribute('aria-label', label);
+      // The class names stay German: they are used by stylesheets and tests.
+      el.className = `mn-date-${CLASS[id]}`;
+      el.setAttribute('aria-label', words()[id]);
       el.setAttribute('aria-describedby', `${name.id} ${message.id}`);
       return el;
     });
-    const part = (label) => parts[PARTS[kind].findIndex(([l]) => l === label)] ?? null;
-    const day = part('Tag');
-    const month = part('Monat');
-    const year = part('Jahr');
-    const hour = part('Stunde');
-    const minute = part('Minute');
+    const part = (id) => parts[PARTS[kind].findIndex(([i]) => i === id)] ?? null;
+    const day = part('day');
+    const month = part('month');
+    const year = part('year');
+    const hour = part('hour');
+    const minute = part('minute');
     if (day)
       day.append(
         option('–', ''),
         ...Array.from({ length: 31 }, (_, i) => option(pad(i + 1), pad(i + 1))),
       );
-    if (month) month.append(option('–', ''), ...MONTHS.map((m, i) => option(m, pad(i + 1))));
+    if (month) month.append(option('–', ''), ...months().map((m, i) => option(m, pad(i + 1))));
     if (year) {
       year.inputMode = 'numeric';
       year.maxLength = 4;
-      year.placeholder = 'Jahr';
+      year.placeholder = words().year;
       year.autocomplete = 'off';
     }
     if (hour)
@@ -367,6 +405,22 @@
     wrap.append(name, message);
     input.after(wrap);
     fields.set(wrap, input);
+    const relabel = () => {
+      if (!wrap.isConnected) return relabelers.delete(relabel);
+      for (const [i, el] of parts.entries())
+        el.setAttribute('aria-label', words()[PARTS[kind][i][0]]);
+      if (month) {
+        const chosen = month.value;
+        month.replaceChildren(option('–', ''), ...months().map((m, i) => option(m, pad(i + 1))));
+        month.value = chosen;
+      }
+      if (year) year.placeholder = words().year;
+      if (!message.hidden) {
+        checkRange();
+        input.dispatchEvent(new Event('invalid'));
+      }
+    };
+    relabelers.add(relabel);
     input.classList.add('mn-date-native');
     input.tabIndex = -1;
     input.setAttribute('aria-hidden', 'true');
@@ -468,9 +522,9 @@
       const fmt = (x) => (kind === 'time' ? x : formatDate(x));
       input.setCustomValidity(
         v && min && v < min
-          ? `Frühestens ${kind === 'time' ? 'um' : 'am'} ${fmt(min)}.`
+          ? words().earliest(kind === 'time', fmt(min))
           : v && max && v > max
-            ? `Spätestens ${kind === 'time' ? 'um' : 'am'} ${fmt(max)}.`
+            ? words().latest(kind === 'time', fmt(max))
             : '',
       );
     }
@@ -508,17 +562,17 @@
     input.addEventListener('invalid', (e) => {
       e.preventDefault();
       const v = input.validity;
-      const what = kind === 'time' ? 'eine Uhrzeit' : 'ein Datum';
+      const time = kind === 'time';
       const fmt = (x) => (kind === 'time' ? x : formatDate(x));
       message.textContent = v.valueMissing
-        ? `Bitte ${what} angeben.`
+        ? words().missing(time)
         : v.rangeUnderflow
-          ? `Frühestens ${kind === 'time' ? 'um' : 'am'} ${fmt(input.min)}.`
+          ? words().earliest(time, fmt(input.min))
           : v.rangeOverflow
-            ? `Spätestens ${kind === 'time' ? 'um' : 'am'} ${fmt(input.max)}.`
+            ? words().latest(time, fmt(input.max))
             : v.customError
               ? input.validationMessage
-              : `Bitte ${what} vollständig angeben.`;
+              : words().incomplete(time);
       message.hidden = false;
       const target = parts.find((el) => !el.value) || parts[0];
       target.setAttribute('aria-invalid', 'true');
@@ -572,11 +626,21 @@
   if (document.body) startFields();
   else document.addEventListener('DOMContentLoaded', startFields, { once: true });
 
+  // The language changed (kit/i18n.js): fields that were drawn before show their new labels.
+  window.addEventListener('mn:language', () => {
+    for (const relabel of [...relabelers]) relabel();
+  });
+
   window.mnui = {
     sheet: { open, close: () => closeCurrent() },
     toast,
     theme,
     select,
-    date: { format: formatDate, months: MONTHS },
+    date: {
+      format: formatDate,
+      get months() {
+        return months();
+      },
+    },
   };
 })();

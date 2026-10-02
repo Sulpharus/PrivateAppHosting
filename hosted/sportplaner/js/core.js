@@ -3,6 +3,9 @@
 // Helpers, DOM patching, state and the schedule index. Loaded in order by index.html; all files share one global scope.
 /* ---------- helpers ---------- */
 const $ = (s) => document.querySelector(s);
+// Texts come from the language packages (i18n/de.json, i18n/en.json); the page waits for them in boot.js.
+const tr = (key, params) => window.mnI18n.t(key, params);
+const loc = () => window.mnI18n.locale; // 'de-DE' or 'en-GB'
 const esc = (s) =>
   String(s ?? '').replace(
     /[&<>"']/g,
@@ -24,16 +27,16 @@ const todayStr = () => ymd(new Date());
 const fmtCache = new Map();
 const fmt = (d, o) => {
   if (Number.isNaN(+d)) return '?';
-  const k = JSON.stringify(o);
+  const k = loc() + JSON.stringify(o);
   let f = fmtCache.get(k);
   if (!f) {
-    f = new Intl.DateTimeFormat('de-DE', o);
+    f = new Intl.DateTimeFormat(loc(), o);
     fmtCache.set(k, f);
   }
   return f.format(d);
 };
-const DAYS = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
-const DAYS2 = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
+const dayShort = (i) => tr(`day.short.${i}`);
+const DAYS = () => [0, 1, 2, 3, 4, 5, 6].map(dayShort); // Monday first, in the active language
 const newId = () =>
   crypto.randomUUID
     ? crypto.randomUUID()
@@ -117,20 +120,21 @@ const EMPTY_ICON = {
   stats:
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 20v-7M12 20V5M19 20v-10"/></svg>',
 };
+// The stored values stay as they are; these maps give the language key of each label.
 const SIGNUP = {
-  none: 'Nicht nötig',
-  advance: 'Vorab anmelden',
-  checkin: 'Vor Ort einchecken',
-  membership: 'Mitgliedschaft erforderlich',
+  none: 'signup.none',
+  advance: 'signup.advance',
+  checkin: 'signup.checkin',
+  membership: 'signup.membership',
 };
 const LEVELS = {
-  '': 'Nicht angegeben',
-  'All levels': 'Alle Niveaus',
-  Beginner: 'Einsteiger',
-  Intermediate: 'Mittelstufe',
-  Advanced: 'Fortgeschritten',
+  '': 'level.unspecified',
+  'All levels': 'level.all',
+  Beginner: 'level.beginner',
+  Intermediate: 'level.intermediate',
+  Advanced: 'level.advanced',
 };
-const levelLabel = (v) => LEVELS[v] || v;
+const levelLabel = (v) => (LEVELS[v] ? tr(LEVELS[v]) : v);
 
 /* ---------- minimal DOM patching (keeps unchanged nodes and their decoded images) ---------- */
 function setHTML(el, html) {
@@ -248,7 +252,7 @@ function onDate(ds) {
   if (dated) dated.forEach(add);
   r = [...m.values()];
   for (const e of r) e.s.sort(byStart);
-  r.sort((x, y) => byStart(x.s[0], y.s[0]) || x.a.name.localeCompare(y.a.name, 'de'));
+  r.sort((x, y) => byStart(x.s[0], y.s[0]) || x.a.name.localeCompare(y.a.name, loc()));
   dayCache.set(ds, r);
   return r;
 }
@@ -278,7 +282,7 @@ function plannedOn(ds) {
   r = S.acts
     .filter((a) => isPlanned(a, ds))
     .map((a) => ({ a, s: slotsOn(a, ds) }))
-    .sort((x, y) => byStart(x.s[0] || {}, y.s[0] || {}) || x.a.name.localeCompare(y.a.name, 'de'));
+    .sort((x, y) => byStart(x.s[0] || {}, y.s[0] || {}) || x.a.name.localeCompare(y.a.name, loc()));
   plannedCache.set(ds, r);
   return r;
 }
@@ -320,13 +324,17 @@ function dataChanged() {
 }
 
 const timeLabel = (s) =>
-  s.start ? (s.end ? `${s.start}–${s.end}` : `ab ${s.start}`) : 'Jederzeit';
+  s.start
+    ? s.end
+      ? `${s.start}–${s.end}`
+      : tr('time.from', { time: s.start })
+    : tr('time.anytime');
 function daysLabel(days) {
   const d = [...days].sort();
-  if (d.length === 7) return 'Täglich';
-  if (d.join() === '0,1,2,3,4') return 'Werktags';
-  if (d.join() === '5,6') return 'Am Wochenende';
-  return d.map((i) => DAYS[i]).join(', ');
+  if (d.length === 7) return tr('days.daily');
+  if (d.join() === '0,1,2,3,4') return tr('days.weekdays');
+  if (d.join() === '5,6') return tr('days.weekend');
+  return d.map(dayShort).join(', ');
 }
 /* seasonal validity of a weekly slot: whole year, the same dates every year, or one fixed date range */
 const seasonOf = (a) =>
@@ -352,13 +360,13 @@ function periodLabel(p) {
   if (!p || !p.type || p.type === 'all') return '';
   const r =
     p.type === 'yearly'
-      ? `jedes Jahr ${mdLabel(p.from)} bis ${mdLabel(p.until)}`
+      ? tr('period.yearly', { from: mdLabel(p.from), until: mdLabel(p.until) })
       : p.from && p.until
-        ? `${dLabel(p.from)} bis ${dLabel(p.until)}`
+        ? tr('period.range', { from: dLabel(p.from), until: dLabel(p.until) })
         : p.from
-          ? `ab ${dLabel(p.from)}`
-          : `bis ${dLabel(p.until)}`;
-  return p.label ? `${p.label}: ${r}` : r;
+          ? tr('period.fromOnly', { from: dLabel(p.from) })
+          : tr('period.untilOnly', { until: dLabel(p.until) });
+  return p.label ? tr('period.labelled', { label: labelText(p.label), range: r }) : r;
 }
 function plannedSummary(a) {
   const p = a.planned;
@@ -367,20 +375,27 @@ function plannedSummary(a) {
     const all = courseDates(a),
       mine = all.filter((d) => isPlanned(a, d)).length,
       off = all.filter((d) => isCancelled(a, d)).length;
-    return `Kurs: ${mine === all.length ? `alle ${all.length}` : `${mine} von ${all.length}`} Termine${off ? `, ${off} ausgefallen` : ''}`;
+    const text =
+      mine === all.length
+        ? tr('plan.courseAll', { n: all.length })
+        : tr('plan.courseSome', { mine, all: all.length });
+    return off ? tr('plan.courseOff', { text, n: off }) : text;
   }
   const parts = [];
   if (p.mode === 'weekly' || p.mode === 'both') {
     const n = +p.every || 1;
+    const days = daysLabel(p.days || []);
+    const text = n === 1 ? tr('plan.everyWeek', { days }) : tr('plan.everyN', { n, days });
+    const season = planSeason(p);
     parts.push(
-      `${n === 1 ? 'Jede Woche' : `Alle ${n} Wochen`}: ${daysLabel(p.days || [])}${planSeason(p) && planSeason(p).type !== 'all' ? ', ' + periodLabel(planSeason(p)) : ''}`,
+      season && season.type !== 'all'
+        ? tr('plan.withPeriod', { text, period: periodLabel(season) })
+        : text,
     );
   }
   if ((p.mode === 'dates' || p.mode === 'both') && (p.dates || []).length)
-    parts.push(
-      `${p.dates.length} ${p.dates.length === 1 ? 'einzelner Termin' : 'einzelne Termine'}`,
-    );
-  return parts.join(', ') || 'Noch keine Termine';
+    parts.push(tr('plan.singleDates', { n: p.dates.length }));
+  return parts.join(', ') || tr('plan.none');
 }
 function groupedWhen(slots) {
   const { blocks, singles } = slotsToBlocks(slots),
@@ -392,12 +407,12 @@ function groupedWhen(slots) {
       .map(
         (b) =>
           (multi
-            ? `<p class="when-head">${esc(b.period.type === 'all' ? 'Ganzjährig' : periodLabel(b.period))}</p>`
+            ? `<p class="when-head">${esc(b.period.type === 'all' ? tr('when.allYear') : periodLabel(b.period))}</p>`
             : '') + b.rows.map(row).join(''),
       )
       .join('') +
     (singles.length
-      ? (blocks.length ? '<p class="when-head">Einzeltermine</p>' : '') +
+      ? (blocks.length ? `<p class="when-head">${esc(tr('when.singles'))}</p>` : '') +
         singles
           .map(
             (x) =>

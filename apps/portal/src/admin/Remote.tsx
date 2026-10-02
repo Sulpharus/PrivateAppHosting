@@ -99,7 +99,7 @@ export function Remote() {
   return (
     <>
       <div className="stack" style={{ gap: 6 }}>
-        <h1 style={{ fontSize: 36 }}>Remote-Apps</h1>
+        <h2 style={{ fontSize: 24 }}>Remote-Apps</h2>
         <p className="muted">
           Native Programme im Browser. Die Windows-VM und die Container schlafen, solange niemand
           verbunden ist; das Leerlauf-Limit liegt bei 15 Minuten.

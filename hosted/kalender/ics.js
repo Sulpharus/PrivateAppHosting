@@ -36,7 +36,7 @@ export function parseIcs(text) {
           cur.end = cur.allDay
             ? new Date(cur.start.getFullYear(), cur.start.getMonth(), cur.start.getDate() + 1)
             : new Date(cur.start.getTime() + 3600_000);
-        events.push({ title: '(ohne Titel)', ...cur });
+        events.push({ title: '', ...cur });
       }
       cur = null;
     } else if (cur) {
@@ -97,7 +97,7 @@ const day = (d) => `${d.getFullYear()}${two(d.getMonth() + 1)}${two(d.getDate())
 const fold = (line) => line.match(/.{1,74}/gu).join('\r\n ');
 
 /** An .ics file of events: { uid, title, start, end, allDay, description, location, url, rrule, exdates }. */
-export function toIcs(events, name = 'MiniNode Kalender') {
+export function toIcs(events, name = 'MiniNode Calendar') {
   const out = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',

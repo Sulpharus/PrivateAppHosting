@@ -1,6 +1,6 @@
 # Add an app
 
-The quick way: Verwaltung → Hochladen (`uploads.md`). A script integrates what it knows and
+The quick way: Verwaltung → Apps → Hochladen (`uploads.md`). A script integrates what it knows and
 hands the rest to the steps below. The steps below are the manual way and the AI review.
 
 1. Drop the ZIP (Claude artifact, AI Studio export, Vite/Next.js project, server app, installer

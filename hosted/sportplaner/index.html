@@ -3,13 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Sportplaner</title>
+<title data-i18n="app.title">Sportplaner</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231C6A4F'/%3E%3Cpath d='M9 21l5-10 4 7 2-3 3 6' fill='none' stroke='white' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 <link rel="preload" href="/fonts/bricolage-grotesque-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/fonts/instrument-sans-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/style.css">
 <!-- Only for the German date and time fields (mnui); the Sportplaner keeps its own styles and toast. -->
 <script src="/_mininode/ui.js"></script>
+<script src="/_mininode/i18n.js"></script>
 <script src="/_mininode/sdk.js" defer></script>
 <script src="/js/price.js" defer></script>
 <script src="/js/core.js" defer></script>
@@ -24,25 +25,25 @@
 <script src="/js/boot.js" defer></script>
 </head>
 <body>
-<nav class="nav" aria-label="Bereiche">
+<nav class="nav" aria-label="Bereiche" data-i18n-attr="aria-label:nav.sections">
   <div class="brand">
-    <a class="home" href="https://mininode.app"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>Alle Apps</a>
-    <span class="brand-name"><span class="brand-mark"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17l5-10 4 7 2-3 4 6"/></svg></span>Sportplaner</span>
-    <button type="button" class="btn primary side-add" data-action="new"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg><span class="side-add-label">Aktivität hinzufügen</span></button>
+    <a class="home" href="https://mininode.app"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg><span data-i18n="nav.allApps">Alle Apps</span></a>
+    <span class="brand-name"><span class="brand-mark"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17l5-10 4 7 2-3 4 6"/></svg></span><span data-i18n="app.title">Sportplaner</span></span>
+    <button type="button" class="btn primary side-add" data-action="new"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg><span class="side-add-label" data-i18n="action.addActivity">Aktivität hinzufügen</span></button>
   </div>
   <div class="tabs">
-    <button type="button" class="tab" data-action="tab" data-tab="day"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3.5" y="3.5" width="7" height="7" rx="1.8"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.8"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.8"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.8"/></svg>Tag</button>
-    <button type="button" class="tab" data-action="tab" data-tab="cal"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>Kalender</button>
-    <button type="button" class="tab" data-action="tab" data-tab="lib"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 5.5h16M4 12h16M4 18.5h10"/></svg>Bibliothek</button>
-    <button type="button" class="tab" data-action="tab" data-tab="stats"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 20v-7M12 20V5M19 20v-10"/></svg>Statistik</button>
-    <button type="button" class="tab" data-action="tab" data-tab="map"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.3"/></svg>Karte</button>
+    <button type="button" class="tab" data-action="tab" data-tab="day"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3.5" y="3.5" width="7" height="7" rx="1.8"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.8"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.8"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.8"/></svg><span data-i18n="tab.day">Tag</span></button>
+    <button type="button" class="tab" data-action="tab" data-tab="cal"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg><span data-i18n="tab.cal">Kalender</span></button>
+    <button type="button" class="tab" data-action="tab" data-tab="lib"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 5.5h16M4 12h16M4 18.5h10"/></svg><span data-i18n="tab.lib">Bibliothek</span></button>
+    <button type="button" class="tab" data-action="tab" data-tab="stats"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 20v-7M12 20V5M19 20v-10"/></svg><span data-i18n="tab.stats">Statistik</span></button>
+    <button type="button" class="tab" data-action="tab" data-tab="map"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.3"/></svg><span data-i18n="tab.map">Karte</span></button>
   </div>
 </nav>
 <div class="page">
   <header class="top"><div class="top-inner">
-    <div class="top-text"><a class="home home-top" href="https://mininode.app">← Alle Apps</a><h1 id="title">Heute</h1><p class="sub" id="subtitle"></p></div>
+    <div class="top-text"><a class="home home-top" href="https://mininode.app" data-i18n="nav.allAppsBack">← Alle Apps</a><h1 id="title" data-i18n="day.todayTitle">Heute</h1><p class="sub" id="subtitle"></p></div>
     <div class="top-tools" id="tools"></div>
-    <button type="button" class="add" data-action="new" aria-label="Aktivität hinzufügen"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+    <button type="button" class="add" data-action="new" aria-label="Aktivität hinzufügen" data-i18n-attr="aria-label:action.addActivity"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
   </div></header>
   <main id="view"></main>
 </div>

@@ -18,6 +18,10 @@ import {
 
 const $ = (s) => document.querySelector(s);
 const { format } = window.mnGame;
+const t = (key, params) => window.mnI18n.t(key, params);
+const levelName = (id) => t(`level.${id}`);
+// The packages must be there before the first text is made.
+await window.mnI18n.ready;
 const HINT_COST = 30;
 
 let mn = null;
@@ -101,18 +105,20 @@ function buildBoard() {
     key.className = 'su-key';
     key.dataset.d = String(d);
     key.textContent = String(d);
-    key.setAttribute('aria-label', `Ziffer ${d}`);
+    key.setAttribute('aria-label', t('pad.digit', { d }));
     pad.append(key);
   }
 }
 
 function label(i) {
-  const where = `Reihe ${row(i) + 1}, Spalte ${col(i) + 1}`;
-  const v = game.values[i];
-  if (game.givens[i]) return `${where}, vorgegeben ${v}`;
-  if (v) return `${where}, ${v}`;
+  const where = t('cell.where', { row: row(i) + 1, col: col(i) + 1 });
+  const value = game.values[i];
+  if (game.givens[i]) return t('cell.given', { where, value });
+  if (value) return t('cell.value', { where, value });
   const notes = noteDigits(game, i);
-  return notes.length ? `${where}, leer, Notizen ${notes.join(' ')}` : `${where}, leer`;
+  return notes.length
+    ? t('cell.notes', { where, notes: notes.join(' ') })
+    : t('cell.empty', { where });
 }
 
 function paint() {
@@ -159,7 +165,7 @@ function blank() {
   for (const cell of document.querySelectorAll('.su-cell')) {
     cell.replaceChildren();
     cell.className = 'su-cell';
-    cell.setAttribute('aria-label', 'wird erzeugt');
+    cell.setAttribute('aria-label', t('cell.generating'));
   }
   for (const key of document.querySelectorAll('.su-key')) key.disabled = true;
   $('#hints').textContent = '0';
@@ -184,18 +190,19 @@ async function newPuzzle() {
   selected = 40;
   noteMode = false;
   paint();
-  $('#announce').textContent = `Neues Rätsel, ${LEVELS[level].label}.`;
+  $('#announce').textContent = t('announce.new', { level: levelName(level) });
   prefetch(level);
 }
 
 async function finished() {
   const seconds = Math.max(1, clock.stop());
-  $('#end-text').textContent = `${LEVELS[level].label} in ${format.seconds(seconds)} gelöst${
-    game.hints ? `, mit ${game.hints} Tipp${game.hints > 1 ? 's' : ''} (je 30 s Aufschlag)` : ''
-  }.`;
+  const done = { level: levelName(level), time: format.seconds(seconds) };
+  $('#end-text').textContent = game.hints
+    ? t('end.textHints', { ...done, n: game.hints })
+    : t('end.text', done);
   $('#end').hidden = false;
   $('#end').focus();
-  $('#announce').textContent = `Geschafft! ${$('#end-text').textContent}`;
+  $('#announce').textContent = t('announce.won', { text: $('#end-text').textContent });
   paint();
   await window.mnGame.report(mn, 'win', { [`time_${level}`]: seconds }, seconds);
   void showRecords();
@@ -223,7 +230,9 @@ async function showRecords() {
     format: format.seconds,
   });
   $('#record').textContent =
-    best === undefined ? '' : `${LEVELS[level].label}: dein Rekord ${format.seconds(best)}.`;
+    best === undefined
+      ? ''
+      : t('record.best', { level: levelName(level), time: format.seconds(best) });
 }
 
 function chooseLevel(next) {
@@ -303,11 +312,19 @@ for (const [key, def] of Object.entries(LEVELS)) {
   b.type = 'button';
   b.dataset.level = key;
   b.setAttribute('aria-pressed', String(Number(key) === level));
-  b.textContent = def.label;
+  b.textContent = levelName(key);
   b.addEventListener('click', () => chooseLevel(Number(key)));
   levelsHost.append(b);
 }
 void newPuzzle();
+window.mnI18n.onChange(() => {
+  window.mnI18n.apply();
+  for (const b of levelsHost.querySelectorAll('button')) b.textContent = levelName(b.dataset.level);
+  for (const key of document.querySelectorAll('.su-key'))
+    key.setAttribute('aria-label', t('pad.digit', { d: key.dataset.d }));
+  if (game) paint();
+  void showRecords();
+});
 
 (async () => {
   mn = await window.mnGame.connect({ player: '#player', hub: '#hub' });

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Overlay } from '../components/Overlay';
+import { t } from '../i18n';
 import {
   type ApiSearchResult,
   type SearchCategoryTarget,
@@ -199,7 +200,7 @@ export const EditorSheet: React.FC<EditorSheetProps> = ({
       if (res.correctionSuggestion) setCorrectionSuggestion(res.correctionSuggestion);
       if (res.translatedQuery) setTranslatedQuery(res.translatedQuery);
       if (res.results.length === 0 && (!res.keyMissingApis || res.keyMissingApis.length === 0)) {
-        setSearchError('Keine passenden Treffer gefunden. Du kannst die Daten manuell eingeben.');
+        setSearchError(t('editor.noMatches'));
       }
     }
   };
@@ -267,7 +268,7 @@ export const EditorSheet: React.FC<EditorSheetProps> = ({
           {
             id: 'vol_1',
             volumeNumber: 1,
-            title: 'Band 1 (Volume 1)',
+            title: t('editor.volume1'),
             cover: res.cover,
             totalPages: res.totalPages,
             status: 'wishlist',
@@ -277,17 +278,17 @@ export const EditorSheet: React.FC<EditorSheetProps> = ({
     }
 
     const enrichedDetails: string[] = [];
-    if (res.isBookSeries) enrichedDetails.push('Buchreihe (Band 1 zuerst)');
+    if (res.isBookSeries) enrichedDetails.push(t('editor.detailSeries'));
     if (res.episodes && res.episodes.length > 0)
-      enrichedDetails.push(`${res.episodes.length} Folgen`);
+      enrichedDetails.push(t('editor.detailEpisodes', { n: res.episodes.length }));
     if (res.chapters && res.chapters.length > 0)
-      enrichedDetails.push(`${res.chapters.length} Kapitel`);
+      enrichedDetails.push(t('editor.detailChapters', { n: res.chapters.length }));
     if (res.achievements && res.achievements.length > 0)
-      enrichedDetails.push(`${res.achievements.length} Erfolge`);
-    if (res.totalPages) enrichedDetails.push(`${res.totalPages} Seiten`);
+      enrichedDetails.push(t('editor.detailAchievements', { n: res.achievements.length }));
+    if (res.totalPages) enrichedDetails.push(t('editor.detailPages', { n: res.totalPages }));
 
     const enrichmentText = enrichedDetails.length > 0 ? ` (${enrichedDetails.join(', ')})` : '';
-    showToast(`Daten für „${res.title}“ übernommen${enrichmentText}`);
+    showToast(t('editor.dataTaken', { title: res.title, details: enrichmentText }));
     setCurrentStep(2);
   };
 
@@ -297,7 +298,7 @@ export const EditorSheet: React.FC<EditorSheetProps> = ({
     if (!file) return;
 
     if (file.size > 20 * 1024 * 1024) {
-      alert('Dateien dürfen maximal 20 MB groß sein.');
+      alert(t('editor.fileTooBig'));
       return;
     }
 
@@ -311,9 +312,9 @@ export const EditorSheet: React.FC<EditorSheetProps> = ({
       canvas.getContext('2d')?.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
       bitmap.close();
       setCover(canvas.toDataURL('image/jpeg', 0.82));
-      showToast('Cover-Bild geladen');
+      showToast(t('editor.coverLoaded'));
     } catch (_err) {
-      showToast('Bild konnte nicht verarbeitet werden. Nutze JPG, PNG oder WebP.');
+      showToast(t('editor.coverFailed'));
     }
   };
 
@@ -321,7 +322,7 @@ export const EditorSheet: React.FC<EditorSheetProps> = ({
   const handleSave = async () => {
     if (!title.trim()) {
       setCurrentStep(2);
-      showToast('Bitte gib einen Titel an');
+      showToast(t('editor.needTitle'));
       return;
     }
 
@@ -339,7 +340,7 @@ export const EditorSheet: React.FC<EditorSheetProps> = ({
       title: title.trim(),
       originalTitle: originalTitle.trim() || undefined,
       englishTitle: englishTitle.trim() || undefined,
-      creator: creator.trim() || 'Unbekannt',
+      creator: creator.trim() || t('common.unknown'),
       narrator: narrator.trim() || undefined,
       year: year ? Number(year) : undefined,
       kind,
@@ -353,7 +354,7 @@ export const EditorSheet: React.FC<EditorSheetProps> = ({
               {
                 id: 'vol_1',
                 volumeNumber: 1,
-                title: 'Band 1',
+                title: t('editor.volume1Short'),
                 cover,
                 totalPages: totalPages || undefined,
                 currentPage,
@@ -402,7 +403,7 @@ export const EditorSheet: React.FC<EditorSheetProps> = ({
 
     await onSave(savedItem);
     onClose();
-    showToast(isEditing ? 'Änderungen gespeichert' : 'Medium angelegt');
+    showToast(t(isEditing ? 'editor.saved' : 'editor.created'));
   };
 
   return (
@@ -410,9 +411,9 @@ export const EditorSheet: React.FC<EditorSheetProps> = ({
       {/* Top Header Bar */}
       <div className="mn-sheet-bar">
         <button type="button" className="mn-btn mn-btn--ghost" onClick={onClose}>
-          Abbrechen
+          {t('editor.abbrechen')}
         </button>
-        <h2 id="editor-title">{isEditing ? 'Medium bearbeiten' : 'Neues Medium anlegen'}</h2>
+        <h2 id="editor-title">{t(isEditing ? 'editor.titleEdit' : 'editor.titleNew')}</h2>
         <span />
       </div>
 
@@ -425,7 +426,7 @@ export const EditorSheet: React.FC<EditorSheetProps> = ({
           onClick={() => setCurrentStep(1)}
         >
           <i>1</i>
-          <span>Suche</span>
+          <span>{t('editor.suche')}</span>
         </button>
         <button
           type="button"
@@ -434,7 +435,7 @@ export const EditorSheet: React.FC<EditorSheetProps> = ({
           onClick={() => setCurrentStep(2)}
         >
           <i>2</i>
-          <span>Basisdaten</span>
+          <span>{t('editor.basisdaten')}</span>
         </button>
         <button
           type="button"
@@ -443,7 +444,7 @@ export const EditorSheet: React.FC<EditorSheetProps> = ({
           onClick={() => setCurrentStep(3)}
         >
           <i>3</i>
-          <span>Fortschritt</span>
+          <span>{t('editor.fortschritt')}</span>
         </button>
         <button
           type="button"
@@ -452,7 +453,7 @@ export const EditorSheet: React.FC<EditorSheetProps> = ({
           onClick={() => setCurrentStep(4)}
         >
           <i>4</i>
-          <span>Listen</span>
+          <span>{t('editor.listen')}</span>
         </button>
       </div>
 
@@ -462,28 +463,24 @@ export const EditorSheet: React.FC<EditorSheetProps> = ({
         {currentStep === 1 && (
           <div className="grid gap-5">
             <div>
-              <h3 className="text-xl font-bold mb-1">Online-Mediensuche</h3>
-              <p className="text-sm text-[var(--mn-muted)]">
-                Suche über kostenlose Schnittstellen (Google Books, MangaDex, Open Library,
-                Gutendex, TMDB, TVMaze, Steam Store & iTunes), um Daten präzise zu übernehmen.
-              </p>
+              <h3 className="text-xl font-bold mb-1">{t('editor.onlineMediensuche')}</h3>
+              <p className="text-sm text-[var(--mn-muted)]">{t('editor.apiIntro')}</p>
             </div>
 
             {/* OFFLINE WARNING IF OFFLINE */}
             {isOfflineSearch && (
               <div className="mn-banner mn-banner--warn" role="alert">
                 <div className="flex-1">
-                  <b className="block mb-1">Offline: Online-Mediensuche nicht verfügbar</b>
+                  <b className="block mb-1">{t('editor.offlineOnlineMediensucheNicht')}</b>
                   <p className="text-xs text-[var(--mn-ink)] mb-2">
-                    Da du momentan offline bist, können externe Medien-Datenbanken nicht abgefragt
-                    werden. Du kannst Medien jederzeit manuell anlegen.
+                    {t('editor.daDuMomentanOffline')}
                   </p>
                   <button
                     type="button"
                     className="mn-btn mn-btn--primary text-xs"
                     onClick={() => setCurrentStep(2)}
                   >
-                    Jetzt manuell anlegen
+                    {t('editor.jetztManuellAnlegen')}
                   </button>
                 </div>
               </div>
@@ -492,11 +489,11 @@ export const EditorSheet: React.FC<EditorSheetProps> = ({
             {/* Medientyp-Vorfilter (genauere Suche & Ausblendung irrelevanter Medien) */}
             <div className="p-3 bg-[var(--mn-surface-2)] rounded-xl border border-[var(--mn-line)]">
               <span className="block text-xs font-bold text-[var(--mn-muted)] mb-2">
-                1. Wonach suchst du? (Filtert irrelevante Medien aus):
+                {t('editor.1WonachSuchstDu')}
               </span>
               <fieldset
                 className="flex flex-wrap gap-1.5"
-                aria-label="Medientyp für die Online-Suche wählen"
+                aria-label={t('editor.medientypOnlineSucheWaehlen')}
               >
                 <button
                   type="button"
@@ -510,7 +507,7 @@ export const EditorSheet: React.FC<EditorSheetProps> = ({
                     }
                   }}
                 >
-                  📚 Bücher, Manga & Romane
+                  {t('editor.buecherMangaRomane')}
                 </button>
                 <button
                   type="button"
@@ -524,7 +521,7 @@ export const EditorSheet: React.FC<EditorSheetProps> = ({
                     }
                   }}
                 >
-                  🎬 Filme & Serien
+                  {t('editor.filmeSerien')}
                 </button>
                 <button
                   type="button"
@@ -538,7 +535,7 @@ export const EditorSheet: React.FC<EditorSheetProps> = ({
                     }
                   }}
                 >
-                  🎧 Audiobooks (Hörbücher)
+                  {t('editor.audiobooksHoerbuecher')}
                 </button>
                 <button
                   type="button"
@@ -552,7 +549,7 @@ export const EditorSheet: React.FC<EditorSheetProps> = ({
                     }
                   }}
                 >
-                  🎮 Videospiele (Steam & Konsolen)
+                  {t('editor.videospieleSteamKonsolen')}
                 </button>
                 <button
                   type="button"
@@ -565,7 +562,7 @@ export const EditorSheet: React.FC<EditorSheetProps> = ({
                     }
                   }}
                 >
-                  ✨ Alle Medientypen
+                  {t('editor.alleMedientypen')}
                 </button>
               </fieldset>
             </div>
@@ -586,14 +583,14 @@ export const EditorSheet: React.FC<EditorSheetProps> = ({
                   type="search"
                   placeholder={
                     searchCategory === 'book'
-                      ? 'Buchtitel, Manga, Autor oder Band ...'
+                      ? t('editor.phBook')
                       : searchCategory === 'game'
-                        ? 'Spielname, z. B. Zelda, Elden Ring, Cyberpunk ...'
+                        ? t('editor.phGame')
                         : searchCategory === 'film_series'
-                          ? 'Film- oder Serientitel, z. B. Inception, Breaking Bad ...'
+                          ? t('editor.phFilm')
                           : searchCategory === 'audiobook'
-                            ? 'Hörbuchtitel oder Sprecher ...'
-                            : 'Titel, Urheber oder Serie eingeben ...'
+                            ? t('editor.phAudio')
+                            : t('editor.phAll')
                   }
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
@@ -607,21 +604,24 @@ export const EditorSheet: React.FC<EditorSheetProps> = ({
                     className="mn-btn mn-btn--primary"
                     disabled={isSearching || !searchQuery.trim()}
                   >
-                    {isSearching ? 'Wird gesucht ...' : 'Online suchen'}
+                    {isSearching ? t('editor.searching') : t('editor.searchOnline')}
                   </button>
                   <button
                     type="button"
                     className="mn-btn mn-btn--ghost"
                     onClick={() => setCurrentStep(2)}
                   >
-                    Ohne Suche manuell eingeben
+                    {t('editor.ohneSucheManuellEingeben')}
                   </button>
                 </div>
 
                 {/* Sortierung: Meiste Daten vs Höchste Relevanz */}
                 <div className="flex items-center gap-1.5 text-xs text-[var(--mn-muted)]">
-                  <span className="font-semibold">Sortieren:</span>
-                  <fieldset className="mn-seg text-xs" aria-label="Sortierung der Suchergebnisse">
+                  <span className="font-semibold">{t('editor.sortieren')}</span>
+                  <fieldset
+                    className="mn-seg text-xs"
+                    aria-label={t('editor.sortierungSuchergebnisse')}
+                  >
                     <button
                       type="button"
                       className="py-1 px-2.5 text-xs"
@@ -633,7 +633,7 @@ export const EditorSheet: React.FC<EditorSheetProps> = ({
                         }
                       }}
                     >
-                      🌟 Meiste Daten
+                      {t('editor.meisteDaten')}
                     </button>
                     <button
                       type="button"
@@ -646,7 +646,7 @@ export const EditorSheet: React.FC<EditorSheetProps> = ({
                         }
                       }}
                     >
-                      🎯 Höchste Relevanz
+                      {t('editor.hoechsteRelevanz')}
                     </button>
                   </fieldset>
                 </div>
@@ -671,8 +671,7 @@ export const EditorSheet: React.FC<EditorSheetProps> = ({
                         {api.name} wird eingerichtet
                       </div>
                       <p className="text-[var(--mn-muted)] leading-relaxed">
-                        Diese Funktion wird gerade eingerichtet. Sobald der Schlüssel hinterlegt
-                        ist, erscheinen hier die Daten.
+                        {t('editor.dieseFunktionGeradeEingerichtet')}
                       </p>
                     </div>
                   </div>
@@ -690,16 +689,14 @@ export const EditorSheet: React.FC<EditorSheetProps> = ({
                   >
                     <div className="flex items-center gap-2">
                       <span>⚠️</span>
-                      <span>
-                        <b>{api.name}:</b> Der Dienst ist gerade nicht erreichbar.
-                      </span>
+                      <span>{t('editor.apiUnavailable', { name: api.name })}</span>
                     </div>
                     <button
                       type="button"
                       className="mn-btn mn-btn--ghost text-xs cursor-pointer shrink-0"
                       onClick={() => handlePerformOnlineSearch(searchQuery)}
                     >
-                      Erneut versuchen
+                      {t('editor.erneutVersuchen')}
                     </button>
                   </div>
                 ))}
@@ -710,10 +707,7 @@ export const EditorSheet: React.FC<EditorSheetProps> = ({
             {isRateLimited && (
               <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-700/50 rounded-xl text-xs text-amber-900 dark:text-amber-200 flex items-center gap-2">
                 <span>⏳</span>
-                <span>
-                  Rate-Limit erreicht (max. 60 Aufrufe pro Minute). Es werden die bisherigen Daten
-                  angezeigt.
-                </span>
+                <span>{t('editor.rateLimitErreichtMax')}</span>
               </div>
             )}
 
@@ -722,9 +716,7 @@ export const EditorSheet: React.FC<EditorSheetProps> = ({
               <div className="p-3 bg-amber-50 dark:bg-amber-950/40 rounded-xl border border-amber-300 dark:border-amber-700/50 flex items-center justify-between text-xs text-amber-900 dark:text-amber-200">
                 <div className="flex items-center gap-1.5">
                   <span className="text-base">💡</span>
-                  <span>
-                    Meintest du: <b>„{correctionSuggestion}“</b>?
-                  </span>
+                  <span>{t('editor.didYouMean', { query: correctionSuggestion })}</span>
                 </div>
                 <button
                   type="button"
@@ -734,7 +726,7 @@ export const EditorSheet: React.FC<EditorSheetProps> = ({
                     handlePerformOnlineSearch(correctionSuggestion);
                   }}
                 >
-                  Jetzt suchen
+                  {t('editor.jetztSuchen')}
                 </button>
               </div>
             )}
@@ -744,7 +736,10 @@ export const EditorSheet: React.FC<EditorSheetProps> = ({
               <div className="p-2.5 bg-blue-50 dark:bg-blue-950/40 rounded-xl border border-blue-300 dark:border-blue-700/50 text-xs text-blue-900 dark:text-blue-200 flex items-center gap-1.5">
                 <span className="text-base">🌐</span>
                 <span>
-                  <b>Titel übersetzt:</b> Automatisch auf Englisch nach „{translatedQuery}“ gesucht
+                  {t('editor.translatedNote', {
+                    label: t('editor.titelUebersetzt'),
+                    query: translatedQuery,
+                  })}
                 </span>
               </div>
             )}
@@ -753,7 +748,7 @@ export const EditorSheet: React.FC<EditorSheetProps> = ({
             {searchResults.length > 0 && (
               <div className="grid gap-3 mt-2">
                 <h4 className="text-sm font-bold text-[var(--mn-muted)]">
-                  Gefundene Treffer (mit meisten Daten angereichert):
+                  {t('editor.gefundeneTrefferMeistenDaten')}
                 </h4>
                 <div className="grid gap-2">
                   {searchResults.map((res) => (
@@ -792,7 +787,9 @@ export const EditorSheet: React.FC<EditorSheetProps> = ({
                               .filter(Boolean)
                               .join(' · ')}
                             {res.germanTitle && (
-                              <span className="mn-chip ml-1 text-[10px]">Deutsch</span>
+                              <span className="mn-chip ml-1 text-[10px]">
+                                {t('editor.deutsch')}
+                              </span>
                             )}
                           </span>
                           {res.genres.length > 0 && (
@@ -803,32 +800,37 @@ export const EditorSheet: React.FC<EditorSheetProps> = ({
                           <div className="flex flex-wrap gap-1 mt-1">
                             {res.isBookSeries && (
                               <span className="mn-chip mn-chip--plain text-[10px] py-0 px-1.5 bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 font-semibold">
-                                📚 Reihe (Band 1)
+                                {t('editor.reiheBand1')}
                               </span>
                             )}
                             {res.episodes && res.episodes.length > 0 && (
                               <span className="mn-chip mn-chip--plain text-[10px] py-0 px-1.5 bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 font-semibold">
-                                📺 {res.totalSeasons || 1} Staffeln ({res.episodes.length} Folgen)
+                                {t('editor.chipSeasons', {
+                                  seasons: res.totalSeasons || 1,
+                                  episodes: res.episodes.length,
+                                })}
                               </span>
                             )}
                             {res.chapters && res.chapters.length > 0 && (
                               <span className="mn-chip mn-chip--plain text-[10px] py-0 px-1.5 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 font-semibold">
-                                📑 {res.chapters.length} Kapitel
+                                {t('editor.chipChapters', { n: res.chapters.length })}
                               </span>
                             )}
                             {res.achievements && res.achievements.length > 0 && (
                               <span className="mn-chip mn-chip--plain text-[10px] py-0 px-1.5 bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 font-semibold">
-                                🏆 {res.achievements.length} Erfolge
+                                {t('editor.chipAchievements', { n: res.achievements.length })}
                               </span>
                             )}
                             {res.totalPages && (
                               <span className="mn-chip mn-chip--plain text-[10px] py-0 px-1.5">
-                                📄 {res.totalPages} S.
+                                {t('editor.chipPages', { n: res.totalPages })}
                               </span>
                             )}
                             {res.audioTotalMinutes && (
                               <span className="mn-chip mn-chip--plain text-[10px] py-0 px-1.5">
-                                🎧 {Math.round(res.audioTotalMinutes / 60)} Std.
+                                {t('editor.chipHours', {
+                                  n: Math.round(res.audioTotalMinutes / 60),
+                                })}
                               </span>
                             )}
                             {res.console && (
@@ -853,7 +855,7 @@ export const EditorSheet: React.FC<EditorSheetProps> = ({
                           handleSelectApiResult(res);
                         }}
                       >
-                        Übernehmen
+                        {t('editor.uebernehmen')}
                       </button>
                     </div>
                   ))}
@@ -867,43 +869,45 @@ export const EditorSheet: React.FC<EditorSheetProps> = ({
         {currentStep === 2 && (
           <div className="mn-form">
             <fieldset>
-              <legend>Basisdaten des Mediums</legend>
+              <legend>{t('editor.basisdatenMediums')}</legend>
 
               <label className="mn-field">
-                Titel *
+                {t('editor.titel')}
                 <input
                   type="text"
                   required
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder="z. B. Der Graf von Monte Christo"
+                  placeholder={t('editor.grafMonteChristo')}
                 />
               </label>
 
               {originalTitle && (
                 <div className="p-2.5 bg-blue-50 dark:bg-blue-950/40 rounded-xl text-xs flex flex-wrap items-center justify-between gap-2 border border-blue-200 dark:border-blue-800">
                   <span>
-                    Originaltitel: <b>{originalTitle}</b>
+                    {t('editor.originalTitle')} <b>{originalTitle}</b>
                   </span>
                   {englishTitle && (
-                    <span className="text-[var(--mn-muted)]">Englischer Titel: {englishTitle}</span>
+                    <span className="text-[var(--mn-muted)]">
+                      {t('editor.englishTitle', { title: englishTitle })}
+                    </span>
                   )}
                 </div>
               )}
 
               <div className="mn-grid-2">
                 <label className="mn-field">
-                  Urheber / Autor / Regisseur *
+                  {t('editor.urheberAutorRegisseur')}
                   <input
                     type="text"
                     required
                     value={creator}
                     onChange={(e) => setCreator(e.target.value)}
-                    placeholder="z. B. Alexandre Dumas"
+                    placeholder={t('editor.alexandreDumas')}
                   />
                 </label>
                 <label className="mn-field">
-                  Erscheinungsjahr
+                  {t('editor.erscheinungsjahr')}
                   <input
                     type="number"
                     value={year || ''}
@@ -915,24 +919,24 @@ export const EditorSheet: React.FC<EditorSheetProps> = ({
 
               <div className="mn-grid-2">
                 <label className="mn-field">
-                  Medium-Typ
+                  {t('editor.mediumTyp')}
                   <select value={kind} onChange={(e) => setKind(e.target.value as MediaKind)}>
-                    <option value="book">Buch / Manga / Comic</option>
-                    <option value="audiobook">🎧 Hörbuch / Audiobook</option>
+                    <option value="book">{t('editor.buchMangaComic')}</option>
+                    <option value="audiobook">{t('editor.hoerbuchAudiobook')}</option>
                     <option value="film">Film</option>
-                    <option value="series">Serie</option>
-                    <option value="game">Videospiel</option>
-                    <option value="collection">Sammlung</option>
+                    <option value="series">{t('editor.serie')}</option>
+                    <option value="game">{t('editor.videospiel')}</option>
+                    <option value="collection">{t('editor.sammlung')}</option>
                   </select>
                 </label>
 
                 <label className="mn-field">
-                  Status
+                  {t('editor.statusLabel')}
                   <select value={status} onChange={(e) => setStatus(e.target.value as MediaStatus)}>
-                    <option value="active">Am Lesen / Schauen / Spielen</option>
-                    <option value="wishlist">Wunschliste / Gemerkt</option>
-                    <option value="done">Beendet / Gelesen / Gesehen</option>
-                    <option value="dropped">Pausiert / Abgebrochen</option>
+                    <option value="active">{t('editor.amLesenSchauenSpielen')}</option>
+                    <option value="wishlist">{t('editor.wunschlisteGemerkt')}</option>
+                    <option value="done">{t('editor.beendetGelesenGesehen')}</option>
+                    <option value="dropped">{t('editor.pausiertAbgebrochen')}</option>
                   </select>
                 </label>
               </div>
@@ -941,7 +945,7 @@ export const EditorSheet: React.FC<EditorSheetProps> = ({
               {kind === 'game' && (
                 <div className="mn-grid-2">
                   <label className="mn-field">
-                    Gespielt auf Konsole / Plattform *
+                    {t('editor.gespieltKonsolePlattform')}
                     <select
                       value={consoleName}
                       onChange={(e) => {
@@ -958,17 +962,19 @@ export const EditorSheet: React.FC<EditorSheetProps> = ({
                       <option value="Steam Deck">Steam Deck</option>
                       <option value="Nintendo 3DS / DS">Nintendo 3DS / DS</option>
                       <option value="PlayStation 2 / PS1">PlayStation 2 / PS1</option>
-                      <option value="Retro (SNES, N64, GameCube)">Retro-Konsole</option>
-                      <option value="Sonstige">Sonstige Plattform</option>
+                      <option value="Retro (SNES, N64, GameCube)">
+                        {t('editor.retroKonsole')}
+                      </option>
+                      <option value="Sonstige">{t('editor.sonstigePlattform')}</option>
                     </select>
                   </label>
                   <label className="mn-field">
-                    Plattform-Details / Edition
+                    {t('editor.plattformDetailsEdition')}
                     <input
                       type="text"
                       value={platform}
                       onChange={(e) => setPlatform(e.target.value)}
-                      placeholder="z. B. Digital Deluxe, Cartridge"
+                      placeholder={t('editor.digitalDeluxeCartridge')}
                     />
                   </label>
                 </div>
@@ -988,7 +994,7 @@ export const EditorSheet: React.FC<EditorSheetProps> = ({
                             {
                               id: 'vol_1',
                               volumeNumber: 1,
-                              title: 'Band 1 (Volume 1)',
+                              title: t('editor.volume1'),
                               totalPages: totalPages || undefined,
                               status: 'wishlist',
                             },
@@ -996,24 +1002,21 @@ export const EditorSheet: React.FC<EditorSheetProps> = ({
                         }
                       }}
                     />
-                    <span>
-                      📚 Dies ist eine Buchreihe / Manga-Serie (alle Bände unter einem Eintrag)
-                    </span>
+                    <span>{t('editor.diesBuchreiheMangaSerie')}</span>
                   </label>
                   {isBookSeries && (
                     <div className="pt-2 border-t border-[var(--mn-line)]">
                       <label className="mn-field text-xs">
-                        Name der Gesamtreihe
+                        {t('editor.nameGesamtreihe')}
                         <input
                           type="text"
                           value={seriesTitle}
                           onChange={(e) => setSeriesTitle(e.target.value)}
-                          placeholder="z. B. Berserk oder Solo Leveling"
+                          placeholder={t('editor.berserkSoloLeveling')}
                         />
                       </label>
                       <span className="text-[11px] text-[var(--mn-muted)] block mt-1">
-                        ✓ Volume 1 wird zuerst angezeigt. Weitere Bände können danach per Knopfdruck
-                        gesucht und hinzugefügt werden.
+                        {t('editor.volume1ZuerstAngezeigt')}
                       </span>
                     </div>
                   )}
@@ -1023,23 +1026,23 @@ export const EditorSheet: React.FC<EditorSheetProps> = ({
               {kind === 'audiobook' && (
                 <div className="mn-grid-2">
                   <label className="mn-field">
-                    Sprecher (Narrator)
+                    {t('editor.sprecherNarrator')}
                     <input
                       type="text"
                       value={narrator}
                       onChange={(e) => setNarrator(e.target.value)}
-                      placeholder="z. B. Achim Höppner, Rufus Beck"
+                      placeholder={t('editor.achimHoeppnerRufusBeck')}
                     />
                   </label>
                   <label className="mn-field">
-                    Gesamtlaufzeit in Minuten
+                    {t('editor.gesamtlaufzeitMinuten')}
                     <input
                       type="number"
                       value={audioTotalMinutes || ''}
                       onChange={(e) =>
                         setAudioTotalMinutes(e.target.value ? Number(e.target.value) : undefined)
                       }
-                      placeholder="z. B. 720 (für 12 Stunden)"
+                      placeholder={t('editor.72012Stunden')}
                     />
                   </label>
                 </div>
@@ -1047,46 +1050,46 @@ export const EditorSheet: React.FC<EditorSheetProps> = ({
 
               {kind === 'book' && (
                 <label className="mn-field">
-                  Buch-Kategorie (Format)
+                  {t('editor.buchKategorieFormat')}
                   <select
                     value={bookSubtype}
                     onChange={(e) => setBookSubtype(e.target.value as BookSubtype)}
                   >
-                    <option value="Roman">Roman / Klassiker</option>
-                    <option value="Manga">Manga (Japanisch)</option>
-                    <option value="Manhwa">Manhwa (Koreanisch / Webtoon)</option>
-                    <option value="Manhua">Manhua (Chinesisch)</option>
-                    <option value="Light Novel">Light Novel / Ranobe</option>
+                    <option value="Roman">{t('editor.romanKlassiker')}</option>
+                    <option value="Manga">{t('editor.mangaJapanisch')}</option>
+                    <option value="Manhwa">{t('editor.manhwaKoreanischWebtoon')}</option>
+                    <option value="Manhua">{t('editor.manhuaChinesisch')}</option>
+                    <option value="Light Novel">{t('editor.lightNovelRanobe')}</option>
                     <option value="Comic">Comic</option>
                     <option value="Graphic Novel">Graphic Novel</option>
-                    <option value="Sachbuch">Sachbuch / Fachbuch</option>
+                    <option value="Sachbuch">{t('editor.sachbuchFachbuch')}</option>
                   </select>
                 </label>
               )}
 
               <label className="mn-field">
-                Genres & Schlagwörter (kommagetrennt)
+                {t('editor.genresSchlagwoerterKommagetrennt')}
                 <input
                   type="text"
                   value={genresText}
                   onChange={(e) => setGenresText(e.target.value)}
-                  placeholder="z. B. Klassiker, Abenteuer, Historisch"
+                  placeholder={t('editor.klassikerAbenteuerHistorisch')}
                 />
               </label>
 
               <div className="mn-group">
                 <label className="mn-field">
-                  Cover-Bild URL oder Datei-Upload
+                  {t('editor.coverBildUrlDatei')}
                   <input
                     type="url"
                     value={cover}
                     onChange={(e) => setCover(e.target.value)}
-                    placeholder="https://... Bildlink"
+                    placeholder={t('editor.httpsBildlink')}
                   />
                 </label>
                 <div className="flex items-center gap-3">
                   <label className="mn-btn mn-btn--ghost text-xs cursor-pointer">
-                    <span>📁 Eigenes Bild hochladen</span>
+                    <span>{t('editor.eigenesBildHochladen')}</span>
                     <input
                       type="file"
                       accept="image/*"
@@ -1096,7 +1099,7 @@ export const EditorSheet: React.FC<EditorSheetProps> = ({
                   </label>
                   {cover && (
                     <span className="text-xs text-[var(--mn-ok)] font-semibold">
-                      ✓ Bild hinterlegt
+                      {t('editor.bildHinterlegt')}
                     </span>
                   )}
                 </div>
@@ -1109,7 +1112,7 @@ export const EditorSheet: React.FC<EditorSheetProps> = ({
         {currentStep === 3 && (
           <div className="mn-form">
             <fieldset>
-              <legend>Fortschritt & Bewertung</legend>
+              <legend>{t('editor.fortschrittBewertung')}</legend>
 
               {/* 1-10 Stars Rating */}
               <div className="mb-4">
@@ -1124,16 +1127,16 @@ export const EditorSheet: React.FC<EditorSheetProps> = ({
                   </span>
                   <div className="mn-grid-2">
                     <label className="mn-field">
-                      Aktuelles Kapitel
+                      {t('editor.aktuellesKapitel')}
                       <input
                         type="text"
                         value={currentChapter}
                         onChange={(e) => setCurrentChapter(e.target.value)}
-                        placeholder="z. B. Kapitel 142 oder Ch. 85"
+                        placeholder={t('editor.kapitel142Ch85')}
                       />
                     </label>
                     <label className="mn-field">
-                      Gesamtkapitel (falls bekannt)
+                      {t('editor.gesamtkapitelFallsBekannt')}
                       <input
                         type="text"
                         value={totalEpisodes ? String(totalEpisodes) : ''}
@@ -1150,7 +1153,7 @@ export const EditorSheet: React.FC<EditorSheetProps> = ({
                   ) && (
                     <div className="mn-grid-2">
                       <label className="mn-field">
-                        Aktueller Band / Volume
+                        {t('editor.aktuellerBandVolume')}
                         <input
                           type="number"
                           min="1"
@@ -1162,7 +1165,7 @@ export const EditorSheet: React.FC<EditorSheetProps> = ({
                         />
                       </label>
                       <label className="mn-field">
-                        Gesamtbände
+                        {t('editor.gesamtbaende')}
                         <input
                           type="number"
                           min="1"
@@ -1178,7 +1181,7 @@ export const EditorSheet: React.FC<EditorSheetProps> = ({
 
                   <div className="mn-grid-2">
                     <label className="mn-field">
-                      Aktuelle Seite (optional)
+                      {t('editor.aktuelleSeiteOptional')}
                       <input
                         type="number"
                         value={currentPage || ''}
@@ -1189,7 +1192,7 @@ export const EditorSheet: React.FC<EditorSheetProps> = ({
                       />
                     </label>
                     <label className="mn-field">
-                      Gesamtseiten (optional)
+                      {t('editor.gesamtseitenOptional')}
                       <input
                         type="number"
                         value={totalPages || ''}
@@ -1204,7 +1207,7 @@ export const EditorSheet: React.FC<EditorSheetProps> = ({
                   {chapters.length > 0 && (
                     <div className="p-2.5 bg-[var(--mn-surface)] rounded text-xs border border-[var(--mn-line)]">
                       <span className="font-bold text-[var(--mn-ok)]">
-                        ✓ {chapters.length} Kapitel / Inhaltsverzeichnis importiert
+                        {t('editor.importedChapters', { n: chapters.length })}
                       </span>
                     </div>
                   )}
@@ -1214,11 +1217,11 @@ export const EditorSheet: React.FC<EditorSheetProps> = ({
               {kind === 'audiobook' && (
                 <div className="mn-group">
                   <span className="text-sm font-bold text-[var(--mn-ink)]">
-                    Hörbuch-Fortschritt & Laufzeit
+                    {t('editor.hoerbuchFortschrittLaufzeit')}
                   </span>
                   <div className="mn-grid-2">
                     <label className="mn-field">
-                      Gehörte Minuten
+                      {t('editor.gehoerteMinuten')}
                       <input
                         type="number"
                         value={audioCurrentMinutes || ''}
@@ -1231,7 +1234,7 @@ export const EditorSheet: React.FC<EditorSheetProps> = ({
                       />
                     </label>
                     <label className="mn-field">
-                      Gesamtlaufzeit (Minuten)
+                      {t('editor.gesamtlaufzeitMinuten2')}
                       <input
                         type="number"
                         value={audioTotalMinutes || ''}
@@ -1245,7 +1248,7 @@ export const EditorSheet: React.FC<EditorSheetProps> = ({
                   {chapters.length > 0 && (
                     <div className="p-2.5 bg-[var(--mn-surface)] rounded text-xs border border-[var(--mn-line)]">
                       <span className="font-bold text-[var(--mn-ok)]">
-                        ✓ {chapters.length} Audio-Tracks / Abschnitte hinterlegt
+                        {t('editor.importedTracks', { n: chapters.length })}
                       </span>
                     </div>
                   )}
@@ -1255,11 +1258,11 @@ export const EditorSheet: React.FC<EditorSheetProps> = ({
               {kind === 'series' && (
                 <div className="mn-group">
                   <span className="text-sm font-bold text-[var(--mn-ink)]">
-                    Serien-Fortschritt & Staffeln
+                    {t('editor.serienFortschrittStaffeln')}
                   </span>
                   <div className="mn-grid-2">
                     <label className="mn-field">
-                      Aktuelle Staffel
+                      {t('editor.aktuelleStaffel')}
                       <input
                         type="number"
                         value={currentSeason || ''}
@@ -1269,7 +1272,7 @@ export const EditorSheet: React.FC<EditorSheetProps> = ({
                       />
                     </label>
                     <label className="mn-field">
-                      Aktuelle Folge
+                      {t('editor.aktuelleFolge')}
                       <input
                         type="number"
                         value={currentEpisode || ''}
@@ -1280,7 +1283,7 @@ export const EditorSheet: React.FC<EditorSheetProps> = ({
                     </label>
                   </div>
                   <label className="mn-field">
-                    Gesamtzahl Folgen
+                    {t('editor.gesamtzahlFolgen')}
                     <input
                       type="number"
                       value={totalEpisodes || ''}
@@ -1293,7 +1296,9 @@ export const EditorSheet: React.FC<EditorSheetProps> = ({
 
                   {seasonDetails.length > 0 && (
                     <div className="p-2.5 bg-[var(--mn-surface)] rounded text-xs border border-[var(--mn-line)]">
-                      <span className="font-bold block mb-1">Staffel-Aufschlüsselung (API):</span>
+                      <span className="font-bold block mb-1">
+                        {t('editor.staffelAufschluesselungApi')}
+                      </span>
                       <div className="flex flex-wrap gap-1.5 text-[var(--mn-muted)]">
                         {seasonDetails.map((s) => (
                           <span key={s.season} className="mn-chip mn-chip--plain text-[11px]">
@@ -1307,7 +1312,7 @@ export const EditorSheet: React.FC<EditorSheetProps> = ({
                   {episodes.length > 0 && (
                     <div className="p-2.5 bg-[var(--mn-surface)] rounded text-xs border border-[var(--mn-line)]">
                       <span className="font-bold text-[var(--mn-ok)]">
-                        ✓ {episodes.length} Einzelfolgen mit Titeln importiert
+                        {t('editor.importedEpisodes', { n: episodes.length })}
                       </span>
                     </div>
                   )}
@@ -1317,11 +1322,11 @@ export const EditorSheet: React.FC<EditorSheetProps> = ({
               {kind === 'game' && (
                 <div className="mn-group">
                   <span className="text-sm font-bold text-[var(--mn-ink)]">
-                    Spiel-Fortschritt & Erfolge
+                    {t('editor.spielFortschrittErfolge')}
                   </span>
                   <div className="mn-grid-2">
                     <label className="mn-field">
-                      Gespielte Stunden
+                      {t('editor.gespielteStunden')}
                       <input
                         type="number"
                         value={hoursPlayed || ''}
@@ -1332,12 +1337,12 @@ export const EditorSheet: React.FC<EditorSheetProps> = ({
                       />
                     </label>
                     <label className="mn-field">
-                      Plattform
+                      {t('editor.plattform')}
                       <input
                         type="text"
                         value={platform}
                         onChange={(e) => setPlatform(e.target.value)}
-                        placeholder="z. B. PC, PS5, Switch"
+                        placeholder={t('editor.pcPs5Switch')}
                       />
                     </label>
                   </div>
@@ -1345,7 +1350,7 @@ export const EditorSheet: React.FC<EditorSheetProps> = ({
                   {achievements.length > 0 && (
                     <div className="p-2.5 bg-[var(--mn-surface)] rounded text-xs border border-[var(--mn-line)]">
                       <span className="font-bold text-[var(--mn-ok)]">
-                        ✓ {achievements.length} Erfolge & Trophäen importiert
+                        {t('editor.importedAchievements', { n: achievements.length })}
                       </span>
                     </div>
                   )}
@@ -1353,12 +1358,12 @@ export const EditorSheet: React.FC<EditorSheetProps> = ({
               )}
 
               <label className="mn-field">
-                Persönliche Notizen & Eindrücke
+                {t('editor.persoenlicheNotizenEindruecke')}
                 <textarea
                   rows={4}
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Gedanken, Zitate, warum es gefallen hat ..."
+                  placeholder={t('editor.gedankenZitateWarumEs')}
                 />
               </label>
             </fieldset>
@@ -1369,10 +1374,8 @@ export const EditorSheet: React.FC<EditorSheetProps> = ({
         {currentStep === 4 && (
           <div className="mn-form">
             <fieldset>
-              <legend>Zu Lese- & Schaulisten hinzufügen</legend>
-              <p className="mn-hint">
-                Ordne diesen Eintrag deinen persönlichen Listen oder geteilten Sammlungen zu.
-              </p>
+              <legend>{t('editor.leseSchaulistenHinzufuegen')}</legend>
+              <p className="mn-hint">{t('editor.ordneDiesenEintragDeinen')}</p>
 
               {lists.length > 0 ? (
                 <div className="mn-checks">
@@ -1401,8 +1404,7 @@ export const EditorSheet: React.FC<EditorSheetProps> = ({
                 </div>
               ) : (
                 <p className="text-sm text-[var(--mn-muted)]">
-                  Noch keine benutzerdefinierten Listen vorhanden. Du kannst im Bereich „Listen“
-                  neue erstellen.
+                  {t('editor.nochKeineBenutzerdefiniertenListen')}
                 </p>
               )}
             </fieldset>
@@ -1418,7 +1420,7 @@ export const EditorSheet: React.FC<EditorSheetProps> = ({
             className="mn-btn mn-btn--ghost"
             onClick={() => setCurrentStep(currentStep - 1)}
           >
-            Zurück
+            {t('editor.zurueck')}
           </button>
         )}
 
@@ -1430,18 +1432,18 @@ export const EditorSheet: React.FC<EditorSheetProps> = ({
             className="mn-btn"
             onClick={() => {
               if (currentStep === 2 && !title.trim()) {
-                showToast('Bitte gib zuerst einen Titel an');
+                showToast(t('editor.needTitleFirst'));
                 return;
               }
               setCurrentStep(currentStep + 1);
             }}
           >
-            Weiter
+            {t('editor.weiter')}
           </button>
         ) : null}
 
         <button type="button" className="mn-btn mn-btn--primary" onClick={handleSave}>
-          {isEditing ? 'Änderungen speichern' : 'Medium anlegen'}
+          {t(isEditing ? 'editor.saveChanges' : 'editor.createMedium')}
         </button>
       </div>
     </Overlay>

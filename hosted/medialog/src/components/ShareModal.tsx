@@ -1,5 +1,6 @@
 import type React from 'react';
 import { useState } from 'react';
+import { t } from '../i18n';
 import { initials } from '../services/mininode';
 import type { Person } from '../services/sharing';
 import type { MediaItem, MediaList } from '../types';
@@ -25,7 +26,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
   onClose,
   onUpdateSharedWith,
 }) => {
-  const title = item ? item.title : list ? list.title : 'Eintrag';
+  const title = item ? item.title : list ? list.title : t('share.entry');
   const initialShared = item?.sharedWith || list?.sharedWith || [];
   const [sharedUsers, setSharedUsers] = useState<string[]>(initialShared);
   const [busy, setBusy] = useState(false);
@@ -39,11 +40,11 @@ export const ShareModal: React.FC<ShareModalProps> = ({
       setSharedUsers(next);
       showToast(
         next.includes(person.id)
-          ? `Mit ${person.name} geteilt`
-          : `Freigabe für ${person.name} entfernt`,
+          ? t('share.sharedWith', { name: person.name })
+          : t('share.unshared', { name: person.name }),
       );
     } catch {
-      showToast('Teilen hat nicht geklappt. Prüfe deine Verbindung.');
+      showToast(t('share.failed'));
     } finally {
       setBusy(false);
     }
@@ -70,9 +71,9 @@ export const ShareModal: React.FC<ShareModalProps> = ({
 
     try {
       await navigator.clipboard.writeText(text);
-      showToast('In die Zwischenablage kopiert');
+      showToast(t('share.copied'));
     } catch {
-      showToast('Kopieren ist hier nicht erlaubt. Markiere den Text und kopiere ihn selbst.');
+      showToast(t('share.copyDenied'));
     }
   };
 
@@ -84,23 +85,19 @@ export const ShareModal: React.FC<ShareModalProps> = ({
     <Overlay onClose={onClose} labelledBy="share-title">
       <div className="mn-sheet-bar">
         <button type="button" className="mn-btn mn-btn--ghost" onClick={onClose}>
-          Schließen
+          {t('common.close')}
         </button>
-        <h2 id="share-title">Teilen: {title}</h2>
+        <h2 id="share-title">{t('share.title', { title })}</h2>
         <span />
       </div>
 
       <div className="mn-sheet-body grid gap-6">
         {/* Section 1: Direktes Teilen mit MiniNode-Nutzern */}
         <div className="mn-card">
-          <h3 className="text-base font-bold mb-1">Direkt mit MiniNode-Nutzern teilen</h3>
-          <p className="text-xs text-[var(--mn-muted)] mb-3">
-            Die ausgewählten Personen sehen den aktuellen Stand unter Listen → „Mit dir geteilt“.
-            Änderungen, die du später machst, werden mitgeteilt. Deine Notizen und Fotos bleiben
-            privat.
-          </p>
+          <h3 className="text-base font-bold mb-1">{t('share.direct')}</h3>
+          <p className="text-xs text-[var(--mn-muted)] mb-3">{t('share.directHint')}</p>
 
-          {people.length === 0 && <p className="mn-note">Noch niemand sonst nutzt Medialog.</p>}
+          {people.length === 0 && <p className="mn-note">{t('share.nobody')}</p>}
           <div className="mn-checks">
             {people.map((person) => {
               const isShared = sharedUsers.includes(person.id);
@@ -120,11 +117,11 @@ export const ShareModal: React.FC<ShareModalProps> = ({
                     type="button"
                     className={`mn-btn text-xs ${isShared ? 'mn-btn--primary' : 'mn-btn--ghost'}`}
                     aria-pressed={isShared}
-                    aria-label={`Mit ${person.name} teilen`}
+                    aria-label={t('share.shareWith', { name: person.name })}
                     disabled={busy}
                     onClick={() => toggleUserShare(person)}
                   >
-                    {isShared ? '✓ Geteilt' : 'Teilen'}
+                    {t(isShared ? 'share.isShared' : 'share.share')}
                   </button>
                 </div>
               );
@@ -134,11 +131,8 @@ export const ShareModal: React.FC<ShareModalProps> = ({
 
         {/* Section 2: PDF / Drucken */}
         <div className="mn-card">
-          <h3 className="text-base font-bold mb-1">Als schönes PDF drucken</h3>
-          <p className="text-xs text-[var(--mn-muted)] mb-3">
-            Erzeugt eine saubere, druckoptimierte Ansicht über den Browser (DIN A4, ohne
-            Navigationsleisten).
-          </p>
+          <h3 className="text-base font-bold mb-1">{t('share.pdfTitle')}</h3>
+          <p className="text-xs text-[var(--mn-muted)] mb-3">{t('share.pdfHint')}</p>
           <button type="button" className="mn-btn mn-btn--primary w-full" onClick={handlePrint}>
             <svg
               viewBox="0 0 24 24"
@@ -151,16 +145,14 @@ export const ShareModal: React.FC<ShareModalProps> = ({
               <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
               <rect x="6" y="14" width="12" height="8" />
             </svg>
-            <span>Drucken oder als PDF sichern</span>
+            <span>{t('share.printOrPdf')}</span>
           </button>
         </div>
 
         {/* Section 3: Weitergeben nach außen */}
         <div className="mn-card">
-          <h3 className="text-base font-bold mb-1">Nach außen weitergeben</h3>
-          <p className="text-xs text-[var(--mn-muted)] mb-3">
-            Teile die formatierten Einträge per Messenger, E-Mail oder kopiere den Text direkt.
-          </p>
+          <h3 className="text-base font-bold mb-1">{t('share.outside')}</h3>
+          <p className="text-xs text-[var(--mn-muted)] mb-3">{t('share.outsideHint')}</p>
           <button type="button" className="mn-btn w-full" onClick={handleNativeShare}>
             <svg
               viewBox="0 0 24 24"
@@ -175,7 +167,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
               <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
               <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
             </svg>
-            <span>Per Messenger teilen / Text kopieren</span>
+            <span>{t('share.messenger')}</span>
           </button>
         </div>
       </div>

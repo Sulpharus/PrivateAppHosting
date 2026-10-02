@@ -3,7 +3,7 @@
 Programs run on the NucBox: Windows programs in the Windows 11 VM (RemoteApp over Guacamole) or
 `.exe` programs under Wine in a container. Background: PLAN §10, ADR 0013.
 
-## Install from Verwaltung → Hochladen
+## Install from Verwaltung → Apps → Hochladen
 
 1. Choose the `.exe` or `.msi`. Under "Einstellungen für das Programm" you can set the runtime,
    the address, the path of the program after installation and the silent arguments. Leave them

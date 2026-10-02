@@ -3,7 +3,17 @@
 
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
-import { appSchemaName, MANIFEST_FILENAME, type Manifest, parseManifest } from '@mininode/manifest';
+import {
+  appSchemaName,
+  checkPackage,
+  compareLanguagePackages,
+  type I18nIssue,
+  type LanguagePackage,
+  MANIFEST_FILENAME,
+  type Manifest,
+  parseManifest,
+  usedKeys,
+} from '@mininode/manifest';
 
 export type Severity = 'error' | 'warning';
 
@@ -55,7 +65,12 @@ function* walk(dir: string): Generator<string> {
   }
 }
 
-function checkSources(dir: string, manifest: Manifest, findings: Finding[]): void {
+function checkSources(
+  dir: string,
+  manifest: Manifest,
+  findings: Finding[],
+  keysUsed: Set<string>,
+): void {
   const clientSide = manifest.target === 'cloudflare' || manifest.target === 'vercel';
   let usesSdk = false;
 
@@ -79,6 +94,7 @@ function checkSources(dir: string, manifest: Manifest, findings: Finding[]): voi
     const code = file.endsWith('.html') ? text : stripComments(text);
 
     if (/@mininode\/sdk|window\.mininode|\/_mininode\/sdk\.js/.test(code)) usesSdk = true;
+    for (const key of usedKeys(code)) keysUsed.add(key);
 
     if (clientSide) {
       if (/process\.env\.(API_KEY|GEMINI_API_KEY|ANTHROPIC_API_KEY|OPENAI_API_KEY)/.test(code)) {
@@ -216,6 +232,63 @@ function checkMigrations(dir: string, manifest: Manifest, findings: Finding[]): 
   }
 }
 
+/** Language packages (ADR 0017): present, well-formed, the same keys in both, all used keys exist. */
+function checkI18n(dir: string, manifest: Manifest, keysUsed: Set<string>, findings: Finding[]) {
+  const add = (issue: I18nIssue, file?: string) =>
+    findings.push({
+      severity: issue.severity,
+      rule: issue.rule,
+      message: issue.message,
+      ...(file ? { file } : {}),
+    });
+  if (!manifest.i18n) {
+    findings.push({
+      severity: 'warning',
+      rule: 'i18n-missing',
+      message:
+        'no language package: the language switch in the portal has no effect on this app. Add i18n/de.json and i18n/en.json and an "i18n" block to mininode.json',
+    });
+    return;
+  }
+  const folder = ['i18n', 'public/i18n'].find((candidate) => existsSync(join(dir, candidate)));
+  const packs = new Map<string, LanguagePackage>();
+  for (const code of manifest.i18n.languages) {
+    const file = `${folder ?? 'i18n'}/${code}.json`;
+    if (!folder || !existsSync(join(dir, file))) {
+      findings.push({
+        severity: 'error',
+        rule: 'i18n-missing',
+        file,
+        message: `listed under "i18n" but ${file} does not exist`,
+      });
+      continue;
+    }
+    let data: unknown;
+    try {
+      data = JSON.parse(readFileSync(join(dir, file), 'utf8'));
+    } catch (error) {
+      findings.push({ severity: 'error', rule: 'i18n-format', file, message: String(error) });
+      continue;
+    }
+    const structural = checkPackage(code, data);
+    for (const issue of structural) add(issue, file);
+    if (!structural.some((i) => i.severity === 'error')) packs.set(code, data as LanguagePackage);
+  }
+  const de = packs.get('de');
+  const en = packs.get('en');
+  if (de && en) for (const issue of compareLanguagePackages(de, en)) add(issue, folder);
+  for (const [code, pack] of packs) {
+    for (const key of keysUsed)
+      if (!(key in pack))
+        findings.push({
+          severity: 'error',
+          rule: 'i18n-key-missing',
+          file: `${folder}/${code}.json`,
+          message: `the app uses "${key}" but ${code}.json has no such key`,
+        });
+  }
+}
+
 function checkLayout(dir: string, manifest: Manifest, findings: Finding[]): void {
   const hasPackageJson = existsSync(join(dir, 'package.json'));
   if (manifest.build?.command && !hasPackageJson && manifest.kind !== 'container') {
@@ -296,7 +369,9 @@ export function doctor(dir: string): DoctorReport {
     });
   }
   checkLayout(dir, manifest, findings);
-  checkSources(dir, manifest, findings);
+  const keysUsed = new Set<string>();
+  checkSources(dir, manifest, findings, keysUsed);
+  checkI18n(dir, manifest, keysUsed, findings);
   checkMigrations(dir, manifest, findings);
   return { app: manifest.slug, manifest, findings };
 }

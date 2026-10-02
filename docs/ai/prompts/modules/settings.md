@@ -3,6 +3,7 @@ id: settings
 title: Einstellungen und Kategorien
 summary: Einstellungsseite, eigene Kategorien und Listen pflegen, Standardwerte
 order: 56
+group: daten
 ---
 
 ## Feature: settings and editable lists

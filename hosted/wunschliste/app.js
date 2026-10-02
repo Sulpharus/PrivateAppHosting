@@ -6,6 +6,8 @@ import { euro, parseLink, parsePrice } from './amazon.js';
 
 // ---------- helpers ----------
 const $ = (s) => document.querySelector(s);
+const t = (key, params) => window.mnI18n.t(key, params);
+const locale = () => window.mnI18n.locale;
 
 /** Builds elements with textContent only: user data never goes through innerHTML. */
 function h(tag, props, ...children) {
@@ -61,11 +63,8 @@ const shop = (url) => {
     return '';
   }
 };
-const PRIORITY = { 1: 'Sehr gern', 2: 'Gern', 3: 'Nur eine Idee' };
-const dateLabel = (iso) =>
-  new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: 'short', year: 'numeric' }).format(
-    new Date(iso),
-  );
+const priorityLabel = (p) => t(`priority.${p}`);
+const dateLabel = (iso) => window.mnui.date.format(new Date(iso));
 
 // ---------- state ----------
 const params = new URLSearchParams(location.search);
@@ -112,7 +111,7 @@ async function load() {
     S.reservations = reservations.data;
     if (S.person) await loadPerson();
   } catch {
-    S.error = 'Die Wunschlisten konnten nicht geladen werden. Prüfe deine Verbindung.';
+    S.error = t('error.load');
   }
   S.loading = false;
   render();
@@ -150,13 +149,13 @@ function render() {
 function header(title, subtitle) {
   $('#title').textContent = title;
   $('#subtitle').textContent = subtitle;
-  document.title = `${title} · Wunschliste`;
+  document.title = `${title} · ${t('app.title')}`;
 }
 
 function skeleton() {
   return h(
     'div',
-    { class: 'mn-list', 'aria-busy': 'true', 'aria-label': 'Wird geladen' },
+    { class: 'mn-list', 'aria-busy': 'true', 'aria-label': t('state.loading') },
     [0, 1, 2].map(() => h('span', { class: 'mn-sk wish-sk' })),
   );
 }
@@ -184,7 +183,7 @@ function details(item) {
   const parts = [];
   if (item.price_cents !== null && item.price_cents !== undefined)
     parts.push(euro(item.price_cents));
-  if (item.priority && item.priority !== 2) parts.push(PRIORITY[item.priority]);
+  if (item.priority && item.priority !== 2) parts.push(priorityLabel(item.priority));
   if (item.url) parts.push(shop(item.url));
   return parts.join(' · ');
 }
@@ -198,18 +197,23 @@ function shopLink(item) {
       href: item.url,
       target: '_blank',
       rel: 'noopener noreferrer',
-      'aria-label': `${item.title} im Shop ansehen (neues Fenster)`,
+      'aria-label': t('wish.viewShop', { title: item.title }),
     },
     icon('link'),
-    'Ansehen',
+    t('wish.view'),
   );
 }
 
 function renderMine(main, tools) {
-  header('Meine Liste', S.wishes.length === 1 ? '1 Wunsch' : `${S.wishes.length} Wünsche`);
+  header(t('tab.mine'), t('wishes.count', { n: S.wishes.length }));
   if (S.wishes.length > 0)
     tools.append(
-      h('button', { type: 'button', class: 'mn-btn', onclick: share }, icon('share'), 'Teilen'),
+      h(
+        'button',
+        { type: 'button', class: 'mn-btn', onclick: share },
+        icon('share'),
+        t('mine.share'),
+      ),
     );
   if (S.wishes.length === 0) {
     main.append(
@@ -217,27 +221,19 @@ function renderMine(main, tools) {
         'div',
         { class: 'mn-empty' },
         h('div', { class: 'mn-empty-icon' }, icon('gift')),
-        h('h3', {}, 'Noch keine Wünsche'),
-        h(
-          'p',
-          {},
-          'Trag ein, was du dir wünschst, von Hand oder mit einem Amazon-Link. Alle anderen sehen deine Liste.',
-        ),
+        h('h3', {}, t('mine.emptyTitle')),
+        h('p', {}, t('mine.emptyText')),
         h(
           'button',
           { type: 'button', class: 'mn-btn mn-btn--primary', onclick: () => openEditor() },
-          'Wunsch hinzufügen',
+          t('action.add'),
         ),
       ),
     );
     return;
   }
   main.append(
-    h(
-      'p',
-      { class: 'mn-note' },
-      'Ob und von wem dir etwas geschenkt wird, siehst du hier nicht, damit die Überraschung bleibt. Ein Wunsch bleibt, bis du ihn löschst.',
-    ),
+    h('p', { class: 'mn-note' }, t('mine.note')),
     h(
       'div',
       { class: 'mn-list' },
@@ -262,10 +258,10 @@ function renderMine(main, tools) {
               {
                 type: 'button',
                 class: 'mn-btn',
-                'aria-label': `${wish.title} bearbeiten`,
+                'aria-label': t('wish.editAria', { title: wish.title }),
                 onclick: () => openEditor(wish),
               },
-              'Bearbeiten',
+              t('wish.edit'),
             ),
           ),
         ),
@@ -276,15 +272,15 @@ function renderMine(main, tools) {
 
 function renderOthers(main, tools) {
   if (S.person) return renderPerson(main, tools);
-  header('Andere', 'Wunschlisten der anderen');
+  header(t('tab.others'), t('others.subtitle'));
   if (S.people.length === 0) {
     main.append(
       h(
         'div',
         { class: 'mn-empty' },
         h('div', { class: 'mn-empty-icon' }, icon('people')),
-        h('h3', {}, 'Noch keine anderen Wunschlisten'),
-        h('p', {}, 'Sobald jemand einen Wunsch einträgt, erscheint die Liste hier.'),
+        h('h3', {}, t('others.emptyTitle')),
+        h('p', {}, t('others.emptyText')),
       ),
     );
     return;
@@ -302,13 +298,9 @@ function renderOthers(main, tools) {
             'span',
             {},
             h('span', { class: 'mn-row-title' }, person.display_name),
-            h(
-              'span',
-              { class: 'mn-row-sub' },
-              Number(person.wishes) === 1 ? '1 Wunsch' : `${person.wishes} Wünsche`,
-            ),
+            h('span', { class: 'mn-row-sub' }, t('wishes.count', { n: Number(person.wishes) })),
           ),
-          h('span', { class: 'mn-row-side' }, 'Ansehen'),
+          h('span', { class: 'mn-row-side' }, t('wish.view')),
         ),
       ),
     ),
@@ -317,15 +309,18 @@ function renderOthers(main, tools) {
 
 function renderPerson(main, tools) {
   const person = S.people.find((p) => p.user_id === S.person);
-  const name = person?.display_name ?? 'Wunschliste';
+  const name = person?.display_name ?? t('app.title');
   const open = S.personWishes.filter((w) => w.status === 'frei').length;
-  header(name, S.personWishes.length ? `${open} von ${S.personWishes.length} noch frei` : '');
+  header(
+    name,
+    S.personWishes.length ? t('person.free', { open, total: S.personWishes.length }) : '',
+  );
   tools.append(
     h(
       'button',
       { type: 'button', class: 'mn-btn', onclick: () => openPerson(null) },
       icon('left'),
-      'Alle Listen',
+      t('person.allLists'),
     ),
   );
   if (S.personWishes.length === 0) {
@@ -334,8 +329,8 @@ function renderPerson(main, tools) {
         'div',
         { class: 'mn-empty' },
         h('div', { class: 'mn-empty-icon' }, icon('gift')),
-        h('h3', {}, person ? 'Gerade nichts auf der Liste' : 'Diese Liste gibt es nicht mehr'),
-        h('p', {}, 'Schau später wieder vorbei.'),
+        h('h3', {}, t(person ? 'person.nothing' : 'person.gone')),
+        h('p', {}, t('person.later')),
       ),
     );
     return;
@@ -358,13 +353,18 @@ function renderPerson(main, tools) {
             details(wish) && h('span', { class: 'mn-row-sub' }, details(wish)),
             wish.note && h('span', { class: 'wish-note' }, wish.note),
             given &&
-              h('span', { class: 'mn-chip mn-chip--plain wish-chip' }, icon('check'), 'Geschenkt'),
+              h(
+                'span',
+                { class: 'mn-chip mn-chip--plain wish-chip' },
+                icon('check'),
+                t('person.given'),
+              ),
             mine &&
               h(
                 'span',
                 { class: 'mn-chip mn-chip--ok wish-chip' },
                 icon('gift'),
-                'Du schenkst das',
+                t('person.yours'),
               ),
           ),
           h(
@@ -377,10 +377,10 @@ function renderPerson(main, tools) {
                 {
                   type: 'button',
                   class: 'mn-btn mn-btn--primary',
-                  'aria-label': `${wish.title} schenken`,
+                  'aria-label': t('person.giveAria', { title: wish.title }),
                   onclick: (e) => reserve(wish, e.currentTarget),
                 },
-                'Ich schenke das',
+                t('person.give'),
               ),
             mine &&
               h(
@@ -393,7 +393,7 @@ function renderPerson(main, tools) {
                     if (r) cancel(r);
                   },
                 },
-                'Doch nicht',
+                t('person.cancel'),
               ),
           ),
         );
@@ -405,23 +405,22 @@ function renderPerson(main, tools) {
 function renderShopping(main) {
   const open = S.reservations.filter((r) => !r.purchased_at);
   const done = S.reservations.filter((r) => r.purchased_at);
-  header('Einkaufsliste', open.length ? `${open.length} noch zu besorgen` : 'Alles besorgt');
+  header(
+    t('tab.shopping'),
+    open.length ? t('shopping.open', { n: open.length }) : t('shopping.allDone'),
+  );
   if (S.reservations.length === 0) {
     main.append(
       h(
         'div',
         { class: 'mn-empty' },
         h('div', { class: 'mn-empty-icon' }, icon('cart')),
-        h('h3', {}, 'Noch nichts zu besorgen'),
-        h(
-          'p',
-          {},
-          'Wenn du bei jemandem „Ich schenke das“ wählst, landet der Wunsch hier, bis du ihn als gekauft abhakst.',
-        ),
+        h('h3', {}, t('shopping.emptyTitle')),
+        h('p', {}, t('shopping.emptyText')),
         h(
           'button',
           { type: 'button', class: 'mn-btn mn-btn--primary', onclick: () => switchTab('others') },
-          'Wunschlisten ansehen',
+          t('shopping.browse'),
         ),
       ),
     );
@@ -435,7 +434,11 @@ function renderShopping(main) {
   }
   for (const [name, list] of byRecipient) {
     main.append(
-      h('div', { class: 'mn-sect' }, h('h2', {}, `Für ${name}`, h('small', {}, list.length))),
+      h(
+        'div',
+        { class: 'mn-sect' },
+        h('h2', {}, t('shopping.for', { name }), h('small', {}, list.length)),
+      ),
       h(
         'div',
         { class: 'mn-list' },
@@ -445,7 +448,11 @@ function renderShopping(main) {
   }
   if (done.length > 0) {
     main.append(
-      h('div', { class: 'mn-sect' }, h('h2', {}, 'Gekauft', h('small', {}, done.length))),
+      h(
+        'div',
+        { class: 'mn-sect' },
+        h('h2', {}, t('shopping.bought'), h('small', {}, done.length)),
+      ),
       h(
         'div',
         { class: 'mn-list' },
@@ -469,9 +476,9 @@ function reservationRow(r) {
         'span',
         { class: 'mn-row-sub' },
         [
-          bought ? `Für ${r.recipient_name}` : null,
+          bought ? t('shopping.for', { name: r.recipient_name }) : null,
           r.price_cents !== null ? euro(r.price_cents) : null,
-          `seit ${dateLabel(r.reserved_at)}`,
+          t('shopping.since', { date: dateLabel(r.reserved_at) }),
         ]
           .filter(Boolean)
           .join(' · '),
@@ -481,7 +488,7 @@ function reservationRow(r) {
         h(
           'span',
           { class: 'mn-chip mn-chip--warn wish-chip' },
-          `Nicht mehr auf der Liste von ${r.recipient_name}`,
+          t('shopping.gone', { name: r.recipient_name }),
         ),
     ),
     h(
@@ -494,17 +501,17 @@ function reservationRow(r) {
           type: 'button',
           class: bought ? 'mn-btn' : 'mn-btn mn-btn--primary',
           'aria-pressed': bought ? 'true' : 'false',
-          'aria-label': `${r.title} gekauft`,
+          'aria-label': t('shopping.boughtAria', { title: r.title }),
           onclick: () => setPurchased(r, !bought),
         },
         icon('check'),
-        'Gekauft',
+        t('shopping.bought'),
       ),
       (!bought || !r.wish_id) &&
         h(
           'button',
           { type: 'button', class: 'mn-btn mn-btn--ghost', onclick: () => cancel(r) },
-          bought ? 'Entfernen' : 'Doch nicht',
+          t(bought ? 'shopping.remove' : 'person.cancel'),
         ),
     ),
   );
@@ -536,7 +543,7 @@ async function openPerson(id) {
     try {
       await loadPerson();
     } catch {
-      S.error = 'Diese Wunschliste konnte nicht geladen werden.';
+      S.error = t('error.loadPerson');
     }
     S.loading = false;
   }
@@ -550,12 +557,10 @@ async function reserve(wish, button) {
   const { error } = await mn.db.rpc('reserve', { p_wish: wish.id });
   if (error) {
     toast(
-      /already_reserved/.test(error.message)
-        ? 'Das schenkt schon jemand anderes.'
-        : 'Reservieren hat nicht geklappt. Versuch es noch einmal.',
+      /already_reserved/.test(error.message) ? t('toast.alreadyTaken') : t('toast.reserveFailed'),
     );
   } else {
-    toast('Auf deine Einkaufsliste gesetzt');
+    toast(t('toast.reserved'));
   }
   await load();
 }
@@ -563,7 +568,7 @@ async function reserve(wish, button) {
 async function cancel(r) {
   const mn = await ready;
   const { error } = await mn.db.from('reservations').delete().eq('id', r.id);
-  toast(error ? 'Das hat nicht geklappt.' : r.purchased_at ? 'Entfernt' : 'Nicht mehr reserviert');
+  toast(error ? t('toast.failed') : t(r.purchased_at ? 'toast.removed' : 'toast.unreserved'));
   await load();
 }
 
@@ -573,7 +578,7 @@ async function setPurchased(r, bought) {
     .from('reservations')
     .update({ purchased_at: bought ? new Date().toISOString() : null })
     .eq('id', r.id);
-  toast(error ? 'Das hat nicht geklappt.' : bought ? 'Als gekauft abgehakt' : 'Wieder offen');
+  toast(error ? t('toast.failed') : t(bought ? 'toast.markedBought' : 'toast.reopened'));
   await load();
 }
 
@@ -581,12 +586,12 @@ async function share() {
   await ready;
   const url = new URL(location.origin);
   url.searchParams.set('person', S.me ?? '');
-  const text = 'Meine Wunschliste auf MiniNode';
+  const text = t('share.title');
   try {
     if (navigator.share) await navigator.share({ title: text, url: url.toString() });
     else {
       await navigator.clipboard.writeText(url.toString());
-      toast('Link kopiert');
+      toast(t('toast.linkCopied'));
     }
   } catch {
     // Sharing cancelled by the user.
@@ -611,7 +616,7 @@ function openEditor(wish) {
     type: 'url',
     inputmode: 'url',
     autocomplete: 'off',
-    placeholder: 'https://www.amazon.de/…',
+    placeholder: t('editor.urlPlaceholder'),
     value: wish?.url ?? '',
   });
   const title = h('input', {
@@ -623,10 +628,10 @@ function openEditor(wish) {
   const price = h('input', {
     name: 'price',
     inputmode: 'decimal',
-    placeholder: 'z. B. 24,99',
+    placeholder: t('editor.pricePlaceholder'),
     value:
       wish?.price_cents !== null && wish?.price_cents !== undefined
-        ? (wish.price_cents / 100).toLocaleString('de-DE', { minimumFractionDigits: 2 })
+        ? (wish.price_cents / 100).toLocaleString(locale(), { minimumFractionDigits: 2 })
         : '',
   });
   const image = h('input', {
@@ -640,7 +645,7 @@ function openEditor(wish) {
   let priority = wish?.priority ?? 2;
   const seg = h(
     'div',
-    { class: 'mn-seg', role: 'group', 'aria-label': 'Wie sehr wünschst du dir das?' },
+    { class: 'mn-seg', role: 'group', 'aria-label': t('priority.question') },
     [1, 2, 3].map((p) =>
       h(
         'button',
@@ -653,7 +658,7 @@ function openEditor(wish) {
               b.setAttribute('aria-pressed', b === e.currentTarget ? 'true' : 'false');
           },
         },
-        PRIORITY[p],
+        priorityLabel(p),
       ),
     ),
   );
@@ -667,9 +672,7 @@ function openEditor(wish) {
     if (parsed.amazon && parsed.asin) {
       link.value = parsed.url;
       if (!title.value.trim() && parsed.title) title.value = parsed.title;
-      status.textContent = parsed.title
-        ? 'Amazon-Artikel erkannt, Titel übernommen. Prüf ihn kurz und ergänze den Preis.'
-        : 'Amazon-Artikel erkannt. Gib noch einen Titel ein.';
+      status.textContent = parsed.title ? t('editor.amazonTitle') : t('editor.amazonNoTitle');
     } else status.textContent = '';
   };
   link.addEventListener('change', onLink);
@@ -679,34 +682,22 @@ function openEditor(wish) {
     h(
       'fieldset',
       {},
-      h('legend', {}, 'Wunsch'),
-      field(
-        'Link zum Artikel (optional)',
-        link,
-        'Amazon-Link einfügen: Titel und Link werden übernommen.',
-      ),
+      h('legend', {}, t('editor.legend')),
+      field(t('editor.url'), link, t('editor.urlHint')),
       status,
-      field('Was wünschst du dir?', title),
-      h('div', { class: 'mn-grid-2' }, field('Preis in € (ungefähr)', price)),
-      h('div', { class: 'mn-field' }, h('span', {}, 'Wie sehr?'), seg),
+      field(t('editor.title'), title),
+      h('div', { class: 'mn-grid-2' }, field(t('editor.price'), price)),
+      h('div', { class: 'mn-field' }, h('span', {}, t('priority.short')), seg),
     ),
     h(
       'details',
       { class: 'mn-more', open: wish?.note || wish?.image_url ? true : null },
-      h('summary', {}, 'Bild und Notiz'),
+      h('summary', {}, t('editor.more')),
       h(
         'div',
         {},
-        field(
-          'Notiz für die Schenkenden',
-          note,
-          'Zum Beispiel Größe, Farbe oder „gern auch gebraucht“.',
-        ),
-        field(
-          'Bildadresse (optional)',
-          image,
-          'Bei Amazon: Produktbild mit rechts anklicken und „Bildadresse kopieren“.',
-        ),
+        field(t('editor.note'), note, t('editor.noteHint')),
+        field(t('editor.image'), image, t('editor.imageHint')),
       ),
     ),
     error,
@@ -722,13 +713,12 @@ function openEditor(wish) {
     for (const input of form.querySelectorAll('[aria-invalid]'))
       input.removeAttribute('aria-invalid');
     const parsedLink = link.value.trim() ? parseLink(link.value) : { url: null };
-    if (!parsedLink)
-      return fail('Gib einen vollständigen Link ein, der mit https:// beginnt.', link);
-    if (!title.value.trim()) return fail('Gib an, was du dir wünschst.', title);
-    const cents = parsePrice(price.value);
-    if (Number.isNaN(cents)) return fail('Gib den Preis als Zahl an, z. B. 24,99.', price);
+    if (!parsedLink) return fail(t('editor.errUrl'), link);
+    if (!title.value.trim()) return fail(t('editor.errTitle'), title);
+    const cents = parsePrice(price.value, locale());
+    if (Number.isNaN(cents)) return fail(t('editor.errPrice'), price);
     const parsedImage = image.value.trim() ? parseLink(image.value) : { url: null };
-    if (!parsedImage) return fail('Die Bildadresse muss mit https:// beginnen.', image);
+    if (!parsedImage) return fail(t('editor.errImage'), image);
     const row = {
       title: title.value.trim().slice(0, 200),
       url: parsedLink.url,
@@ -741,9 +731,9 @@ function openEditor(wish) {
     const result = wish
       ? await mn.db.from('wishes').update(row).eq('id', wish.id)
       : await mn.db.from('wishes').insert(row);
-    if (result.error) return fail('Speichern hat nicht geklappt. Versuch es noch einmal.');
+    if (result.error) return fail(t('editor.errSave'));
     window.mnui.sheet.close();
-    toast(wish ? 'Wunsch gespeichert' : 'Wunsch hinzugefügt');
+    toast(t(wish ? 'toast.saved' : 'toast.added'));
     await load();
   };
   form.addEventListener('submit', (e) => {
@@ -760,18 +750,18 @@ function openEditor(wish) {
           onclick: async (e) => {
             if (!armed) {
               armed = true;
-              e.currentTarget.textContent = 'Zum Löschen erneut tippen';
+              e.currentTarget.textContent = t('editor.deleteConfirm');
               return;
             }
             const mn = await ready;
             const { error: deleteError } = await mn.db.from('wishes').delete().eq('id', wish.id);
-            if (deleteError) return fail('Löschen hat nicht geklappt.');
+            if (deleteError) return fail(t('editor.errDelete'));
             window.mnui.sheet.close();
-            toast('Wunsch gelöscht');
+            toast(t('toast.deleted'));
             await load();
           },
         },
-        'Löschen',
+        t('editor.delete'),
       )
     : null;
   const content = document.createDocumentFragment();
@@ -782,9 +772,9 @@ function openEditor(wish) {
       h(
         'button',
         { type: 'button', class: 'mn-btn mn-btn--ghost', 'data-mn-close': true },
-        'Abbrechen',
+        t('editor.cancel'),
       ),
-      h('h2', {}, wish ? 'Wunsch bearbeiten' : 'Neuer Wunsch'),
+      h('h2', {}, t(wish ? 'editor.edit' : 'editor.new')),
       h('span', {}),
     ),
     form,
@@ -796,7 +786,7 @@ function openEditor(wish) {
       h(
         'button',
         { type: 'button', class: 'mn-btn mn-btn--primary', onclick: () => void save() },
-        'Speichern',
+        t('editor.save'),
       ),
     ),
   );
@@ -815,5 +805,8 @@ for (const button of document.querySelectorAll('[data-add]'))
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible' && !document.querySelector('.mn-sheet')) void load();
 });
+// The packages must be there before the first text is made; a language change redraws.
+await window.mnI18n.ready;
+window.mnI18n.onChange(() => render());
 render();
 void load();

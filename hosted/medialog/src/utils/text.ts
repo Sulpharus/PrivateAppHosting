@@ -3,7 +3,25 @@
  * accent-insensitive search, and share text generation.
  */
 
+import { locale, t } from '../i18n';
 import type { MediaItem, MediaList } from '../types';
+
+/** Language key of each book subtype (the stored value stays as it is). */
+const SUBTYPE_KEYS: Record<string, string> = {
+  Roman: 'subtype.roman',
+  Manga: 'subtype.manga',
+  Manhwa: 'subtype.manhwa',
+  Manhua: 'subtype.manhua',
+  'Light Novel': 'subtype.lightNovel',
+  Comic: 'subtype.comic',
+  'Graphic Novel': 'subtype.graphicNovel',
+  Sachbuch: 'subtype.nonfiction',
+};
+/** A book subtype in the active language. */
+export const getSubtypeLabel = (subtype: string): string => {
+  const key = SUBTYPE_KEYS[subtype];
+  return key ? t(key) : subtype;
+};
 
 /**
  * Normalizes text for accent-insensitive and case-insensitive comparison
@@ -13,7 +31,7 @@ export function normalizeSearchString(str: string): string {
   return str
     .normalize('NFKD')
     .replace(/[\u0300-\u036f]/g, '')
-    .toLocaleLowerCase('de')
+    .toLocaleLowerCase(locale())
     .trim();
 }
 
@@ -53,67 +71,67 @@ export function matchesSearch(item: MediaItem, query: string): boolean {
 }
 
 /**
- * German label for MediaKind and BookSubtype
+ * Label for MediaKind and BookSubtype in the active language
  */
 export function getKindLabel(kind: string, subtype?: string): string {
   if (kind === 'audiobook') {
-    return 'Hörbuch';
+    return t('kind.audiobook');
   }
   if (kind === 'book') {
     if (subtype && subtype !== 'Roman') {
-      return `${subtype}`;
+      return getSubtypeLabel(subtype);
     }
-    return subtype || 'Buch';
+    return subtype ? getSubtypeLabel(subtype) : t('kind.book');
   }
   switch (kind) {
     case 'film':
-      return 'Film';
+      return t('kind.film');
     case 'series':
-      return 'Serie';
+      return t('kind.series');
     case 'game':
-      return 'Spiel';
+      return t('kind.game');
     case 'collection':
-      return 'Sammlung';
+      return t('kind.collection');
     default:
-      return 'Medium';
+      return t('kind.other');
   }
 }
 
 /**
- * German label for MediaStatus
+ * Label for MediaStatus in the active language
  */
 export function getStatusLabel(status: string, kind = 'book'): string {
   switch (status) {
     case 'active':
-      if (kind === 'book') return 'Am Lesen';
-      if (kind === 'audiobook') return 'Am Hören';
-      if (kind === 'film' || kind === 'series') return 'Am Schauen';
-      if (kind === 'game') return 'Am Spielen';
-      return 'Aktiv';
+      if (kind === 'book') return t('status.activeBook');
+      if (kind === 'audiobook') return t('status.activeAudiobook');
+      if (kind === 'film' || kind === 'series') return t('status.activeWatch');
+      if (kind === 'game') return t('status.activeGame');
+      return t('status.active');
     case 'wishlist':
-      return 'Wunschliste';
+      return t('status.wishlist');
     case 'done':
-      if (kind === 'book') return 'Gelesen';
-      if (kind === 'audiobook') return 'Gehört';
-      if (kind === 'film' || kind === 'series') return 'Gesehen';
-      if (kind === 'game') return 'Durchgespielt';
-      return 'Beendet';
+      if (kind === 'book') return t('status.doneBook');
+      if (kind === 'audiobook') return t('status.doneAudiobook');
+      if (kind === 'film' || kind === 'series') return t('status.doneWatch');
+      if (kind === 'game') return t('status.doneGame');
+      return t('status.done');
     case 'dropped':
-      return 'Pausiert';
+      return t('status.dropped');
     default:
       return status;
   }
 }
 
 /**
- * German date formatting
+ * Date formatting in the language of the page
  */
-export function formatDateDe(isoString?: string): string {
+export function formatDate(isoString?: string): string {
   if (!isoString) return '';
   try {
     const d = new Date(isoString);
     if (Number.isNaN(d.getTime())) return isoString;
-    return d.toLocaleDateString('de-DE', {
+    return d.toLocaleDateString(locale(), {
       day: '2-digit',
       month: 'short',
       year: 'numeric',
@@ -124,15 +142,15 @@ export function formatDateDe(isoString?: string): string {
 }
 
 /**
- * Format minutes into readable German duration (e.g. 14 Std. 20 Min.)
+ * Format minutes into a readable duration (e.g. 14 Std. 20 Min. / 14 h 20 min)
  */
 export function formatMinutes(totalMinutes?: number): string {
-  if (!totalMinutes || totalMinutes <= 0) return '0 Min.';
+  if (!totalMinutes || totalMinutes <= 0) return t('duration.m', { m: 0 });
   const h = Math.floor(totalMinutes / 60);
   const m = totalMinutes % 60;
-  if (h > 0 && m > 0) return `${h} Std. ${m} Min.`;
-  if (h > 0) return `${h} Std.`;
-  return `${m} Min.`;
+  if (h > 0 && m > 0) return t('duration.hm', { h, m });
+  if (h > 0) return t('duration.h', { h });
+  return t('duration.m', { m });
 }
 
 /**
@@ -147,7 +165,7 @@ export function getProgressSummary(item: MediaItem): string {
       return `${formatMinutes(cur)} / ${formatMinutes(item.audioTotalMinutes)}${ch} · ${pct} %`;
     }
     if (item.currentChapter) return item.currentChapter;
-    return 'Hörbuch';
+    return t('progress.audiobook');
   }
 
   if (item.kind === 'book') {
@@ -157,9 +175,9 @@ export function getProgressSummary(item: MediaItem): string {
     if (isComicOrManga) {
       const parts: string[] = [];
       if (item.currentChapter) parts.push(item.currentChapter);
-      if (item.currentVolume) parts.push(`Band ${item.currentVolume}`);
+      if (item.currentVolume) parts.push(t('progress.volume', { n: item.currentVolume }));
       if (item.currentPage && item.totalPages) {
-        parts.push(`S. ${item.currentPage}/${item.totalPages}`);
+        parts.push(t('progress.pages', { current: item.currentPage, total: item.totalPages }));
       }
       if (parts.length > 0) return parts.join(' · ');
     }
@@ -167,11 +185,11 @@ export function getProgressSummary(item: MediaItem): string {
     if (item.currentPage && item.totalPages) {
       const pct = Math.round((item.currentPage / item.totalPages) * 100);
       const ch = item.currentChapter ? ` (${item.currentChapter})` : '';
-      return `S. ${item.currentPage}/${item.totalPages}${ch} · ${pct} %`;
+      return `${t('progress.pages', { current: item.currentPage, total: item.totalPages })}${ch} · ${pct} %`;
     }
     if (item.currentChapter) return item.currentChapter;
-    if (item.currentPage) return `Seite ${item.currentPage}`;
-    if (item.currentVolume) return `Band ${item.currentVolume}`;
+    if (item.currentPage) return t('progress.page', { n: item.currentPage });
+    if (item.currentVolume) return t('progress.volume', { n: item.currentVolume });
   }
 
   if (item.kind === 'series') {
@@ -180,21 +198,21 @@ export function getProgressSummary(item: MediaItem): string {
     const epCount = item.episodes
       ? ` (${item.episodes.filter((e) => e.watched).length}/${item.episodes.length})`
       : '';
-    return `Staffel ${s}, Folge ${ep}${epCount}`;
+    return `${t('progress.season', { s, e: ep })}${epCount}`;
   }
 
   if (item.kind === 'game') {
     const parts: string[] = [];
-    if (item.hoursPlayed) parts.push(`${item.hoursPlayed} Std. gespielt`);
+    if (item.hoursPlayed) parts.push(t('progress.hoursPlayed', { n: item.hoursPlayed }));
     if (item.achievements && item.achievements.length > 0) {
       const unlocked = item.achievements.filter((a) => a.unlocked).length;
-      parts.push(`${unlocked}/${item.achievements.length} Erfolge`);
+      parts.push(t('progress.achievements', { done: unlocked, total: item.achievements.length }));
     }
     return parts.join(' · ');
   }
 
   if (item.status === 'done' && item.finished) {
-    return `Beendet: ${formatDateDe(item.finished)}`;
+    return t('progress.finished', { date: formatDate(item.finished) });
   }
   return '';
 }
@@ -204,26 +222,30 @@ export function getProgressSummary(item: MediaItem): string {
  */
 export function generateMediaShareText(item: MediaItem): string {
   const parts: string[] = [];
-  const typeLabel = item.bookSubtype ? `${item.bookSubtype} (Buch)` : getKindLabel(item.kind);
+  const typeLabel = item.bookSubtype
+    ? t('share.bookType', { subtype: getSubtypeLabel(item.bookSubtype) })
+    : getKindLabel(item.kind);
   parts.push(`📖 ${item.title}`);
-  parts.push(`Urheber: ${item.creator}${item.year ? ` (${item.year})` : ''}`);
-  if (item.narrator) parts.push(`Sprecher: ${item.narrator}`);
-  parts.push(`Typ: ${typeLabel} · Status: ${getStatusLabel(item.status, item.kind)}`);
+  parts.push(t('share.creator', { creator: item.creator }) + (item.year ? ` (${item.year})` : ''));
+  if (item.narrator) parts.push(t('share.narrator', { name: item.narrator }));
+  parts.push(
+    t('share.typeStatus', { type: typeLabel, status: getStatusLabel(item.status, item.kind) }),
+  );
 
   if (item.rating) {
-    parts.push(`Bewertung: ★ ${item.rating}/10`);
+    parts.push(t('share.rating', { n: item.rating }));
   }
 
   const prog = getProgressSummary(item);
   if (prog) {
-    parts.push(`Fortschritt: ${prog}`);
+    parts.push(t('share.progress', { text: prog }));
   }
 
   if (item.notes) {
-    parts.push(`\nNotiz:\n${item.notes}`);
+    parts.push(`\n${t('share.note')}\n${item.notes}`);
   }
 
-  parts.push(`\nGeteilt aus Medialog (MiniNode)`);
+  parts.push(`\n${t('share.footer')}`);
   return parts.join('\n');
 }
 
@@ -238,7 +260,7 @@ export function generateListShareText(list: MediaList, items: MediaItem[]): stri
 
   const linked = items.filter((it) => list.itemIds.includes(it.id));
   if (linked.length > 0) {
-    parts.push('Medien in dieser Liste:');
+    parts.push(t('share.listMedia'));
     linked.forEach((it, idx) => {
       const star = it.rating ? ` [★ ${it.rating}/10]` : '';
       const stat = ` (${getStatusLabel(it.status, it.kind)})`;
@@ -248,7 +270,7 @@ export function generateListShareText(list: MediaList, items: MediaItem[]): stri
   }
 
   if (list.customItems && list.customItems.length > 0) {
-    parts.push('Aufgaben / Einträge:');
+    parts.push(t('share.listTasks'));
     list.customItems.forEach((ci) => {
       const mark = ci.done ? '[x]' : '[ ]';
       parts.push(`${mark} ${ci.title}`);
@@ -260,6 +282,6 @@ export function generateListShareText(list: MediaList, items: MediaItem[]): stri
     });
   }
 
-  parts.push(`\nGeteilt aus Medialog (MiniNode)`);
+  parts.push(`\n${t('share.footer')}`);
   return parts.join('\n');
 }

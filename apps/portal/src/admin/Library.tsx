@@ -207,7 +207,7 @@ export function Library() {
   return (
     <>
       <div className="stack" style={{ gap: 6 }}>
-        <h1 style={{ fontSize: 36 }}>App-Bibliothek</h1>
+        <h2 style={{ fontSize: 24 }}>App-Bibliothek</h2>
         <p className="muted">
           Bekannte Programme zum Selbsthosten, mit einem Klick auf der NucBox. Sie laufen hinter dem
           MiniNode-Login und sind von jedem Gerät im Browser erreichbar. Nach der Installation gibst

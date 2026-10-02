@@ -3,6 +3,7 @@ id: api-keys
 title: Externe APIs mit Schlüssel
 summary: Wetter, Karten & Co. über Host-Schlüssel, die der Admin einmal einträgt
 order: 36
+group: anbindungen
 ---
 
 ## Feature: External APIs with host-level keys

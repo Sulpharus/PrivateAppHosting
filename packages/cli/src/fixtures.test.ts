@@ -27,6 +27,11 @@ describe.each(cases)('fixture $name', ({ name, slug, expectedRules }) => {
   });
 
   it('integrated app passes doctor cleanly', () => {
-    expect(doctor(join(FIXTURES, name, 'expected', slug)).findings).toEqual([]);
+    // Imported exports carry their own texts; a language package is added by hand afterwards, so
+    // its absence is only a hint here.
+    const findings = doctor(join(FIXTURES, name, 'expected', slug)).findings.filter(
+      (f) => f.rule !== 'i18n-missing',
+    );
+    expect(findings).toEqual([]);
   });
 });

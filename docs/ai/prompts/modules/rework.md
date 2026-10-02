@@ -3,6 +3,7 @@ id: rework
 title: Bestehende App übernehmen
 summary: Vorhandene App, Export oder Tabelle auf MiniNode und das App Kit umbauen
 order: 5
+group: qualitaet
 ---
 
 ## Situation: rebuilding an existing app

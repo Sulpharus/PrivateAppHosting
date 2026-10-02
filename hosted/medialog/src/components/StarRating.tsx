@@ -1,4 +1,5 @@
 import type React from 'react';
+import { t } from '../i18n';
 
 interface StarRatingProps {
   value?: number; // 1 to 10
@@ -12,11 +13,11 @@ export const StarRating: React.FC<StarRatingProps> = ({ value, onChange, readOnl
 
   if (readOnly) {
     if (!value) {
-      return <span className="mn-muted mn-fs-sm">Keine Bewertung</span>;
+      return <span className="mn-muted mn-fs-sm">{t('stars.none')}</span>;
     }
     return (
       <div className="flex items-center gap-1.5">
-        <span className="sr-only">Bewertung: {value} von 10 Sternen</span>
+        <span className="sr-only">{t('stars.srRating', { n: value })}</span>
         <span className="font-bold text-[var(--mn-ink)] mn-num" aria-hidden="true">
           ★ {value}/10
         </span>
@@ -41,19 +42,21 @@ export const StarRating: React.FC<StarRatingProps> = ({ value, onChange, readOnl
       <div className="flex items-center justify-between">
         <span className="text-sm font-semibold text-[var(--mn-muted)]">
           {currentRating > 0 ? (
-            <span className="text-[var(--mn-ink)] font-bold">★ {currentRating} von 10 Sternen</span>
+            <span className="text-[var(--mn-ink)] font-bold">
+              {t('stars.current', { n: currentRating })}
+            </span>
           ) : (
-            'Noch nicht bewertet'
+            t('stars.unrated')
           )}
         </span>
         {currentRating > 0 && onChange && (
           <button type="button" className="mn-link text-xs" onClick={() => onChange(undefined)}>
-            Bewertung löschen
+            {t('stars.clear')}
           </button>
         )}
       </div>
 
-      <fieldset className="mn-rating-strip" aria-label="Bewertung in 1 bis 10 Sternen">
+      <fieldset className="mn-rating-strip" aria-label={t('stars.group')}>
         {Array.from({ length: 10 }).map((_, i) => {
           const starVal = i + 1;
           const isSelected = starVal === currentRating;
@@ -65,7 +68,7 @@ export const StarRating: React.FC<StarRatingProps> = ({ value, onChange, readOnl
               type="button"
               className="mn-star-btn"
               aria-pressed={isSelected}
-              aria-label={`${starVal} von 10 Sternen`}
+              aria-label={t('stars.one', { n: starVal })}
               onClick={() => onChange?.(starVal === currentRating ? undefined : starVal)}
             >
               <svg

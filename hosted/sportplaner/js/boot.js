@@ -1,8 +1,6 @@
 // Loads the data and renders the first view. Loaded in order by index.html; all files share one global scope.
 /* ---------- boot ---------- */
 S.lastBackup = null;
-buildIndex();
-render();
 let loading = null;
 function load() {
   loading ??= (async () => {
@@ -30,7 +28,7 @@ function load() {
       dataChanged();
       plansChanged();
     } catch {
-      toast('Deine Daten konnten nicht geladen werden. Lade die Seite neu.');
+      toast(tr('error.load'));
     } finally {
       loading = null;
       if (retry) setTimeout(load, 300);
@@ -42,7 +40,17 @@ function load() {
   })();
   return loading;
 }
-load();
+// The packages must be there before the first text is made; a language change redraws everything.
+window.mnI18n.ready.then(() => {
+  buildIndex();
+  render();
+  load();
+  window.mnI18n.onChange(() => {
+    mounted = null; // the skeleton carries texts too
+    buildIndex();
+    if (!S.sheet) render();
+  });
+});
 // Other devices may have changed something while this tab was in the background.
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden) {

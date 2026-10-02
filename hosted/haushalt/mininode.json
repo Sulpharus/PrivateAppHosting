@@ -20,5 +20,9 @@
         "why": "Fällige Fixkosten (Miete, Abos, Versicherungen) im Kalender zeigen"
       }
     ]
+  },
+  "i18n": {
+    "languages": ["de", "en"],
+    "default": "de"
   }
 }

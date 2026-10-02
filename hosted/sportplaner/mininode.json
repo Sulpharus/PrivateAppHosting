@@ -32,5 +32,9 @@
         "why": "Geplante Einheiten im Kalender zeigen"
       }
     ]
+  },
+  "i18n": {
+    "languages": ["de", "en"],
+    "default": "de"
   }
 }

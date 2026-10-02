@@ -10,6 +10,10 @@ feature they describe.
   (rebuilding an existing app, large data, sensitive data, keyboard-heavy use). Adds the SDK
   calls, patterns and pitfalls for it.
 
+Modules are listed in collapsible groups (`daten`, `anbindungen`, `teilen`, `offline`,
+`qualitaet`, `spiele`, `server`); a new group is added to `MODULE_GROUPS` in
+`apps/portal/src/admin/prompts.ts`. A test fails for a module with an unknown group.
+
 Every file starts with front matter:
 
 ```yaml
@@ -19,6 +23,7 @@ title: Fotos und Dateien   # shown in the composer (German)
 summary: Belege, Fotos und Anhänge in mn.files   # one line under the title (German)
 accent: green      # types only: the suggested data-accent
 order: 10          # sort order in the composer
+group: daten       # modules only: the collapsible group (see MODULE_GROUPS in prompts.ts)
 ---
 ```
 

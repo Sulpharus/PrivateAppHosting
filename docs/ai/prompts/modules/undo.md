@@ -3,6 +3,7 @@ id: undo
 title: Rückgängig und Papierkorb
 summary: Löschen mit Rückgängig, Papierkorb, Änderungsverlauf
 order: 54
+group: daten
 ---
 
 ## Feature: undo, trash and history

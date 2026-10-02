@@ -9,15 +9,15 @@ import {
   isRed,
   move,
   newDeal,
-  RANK_NAMES,
-  RANKS,
-  SUIT_NAMES,
   SUITS,
   tableauMove,
   undo,
 } from './logic.js';
 
 const $ = (s) => document.querySelector(s);
+const t = (key, params) => window.mnI18n.t(key, params);
+// The packages must be there before the first text is made.
+await window.mnI18n.ready;
 const { format } = window.mnGame;
 const TEXT = '︎'; // keeps the suit signs as text, never as colour emoji
 
@@ -36,7 +36,8 @@ const clock = window.mnGame.timer({
   mn: () => mn,
 });
 
-const cardName = (card) => `${SUIT_NAMES[card.s]} ${RANK_NAMES[card.r]}`;
+const suitName = (s) => t(`suit.${s}`);
+const cardName = (card) => t('card.name', { suit: suitName(card.s), rank: t(`rank.${card.r}`) });
 const sameSrc = (a, b) => a && b && a.pile === b.pile && a.i === b.i && a.from === b.from;
 
 // ---- drawing ------------------------------------------------------------------------------
@@ -52,7 +53,7 @@ function cardEl(card, attrs, y) {
   }
   el.type = 'button';
   const rank = document.createElement('span');
-  rank.textContent = `${RANKS[card.r]}${SUITS[card.s]}${TEXT}`;
+  rank.textContent = `${t(`rank.short.${card.r}`)}${SUITS[card.s]}${TEXT}`;
   const big = document.createElement('span');
   big.className = 'big';
   big.setAttribute('aria-hidden', 'true');
@@ -87,15 +88,15 @@ function render() {
   table.append(
     pile(
       game.stock.length
-        ? Object.assign(slotEl(`Stapel, ${game.stock.length} Karten, ziehen`, { pile: 's' }), {
+        ? Object.assign(slotEl(t('slot.stock', { n: game.stock.length }), { pile: 's' }), {
             textContent: String(game.stock.length),
           })
-        : slotEl('Stapel leer, Ablagestapel zurücklegen', { pile: 's' }, '↺'),
+        : slotEl(t('slot.stockEmpty'), { pile: 's' }, '↺'),
     ),
   );
   const waste = game.waste[game.waste.length - 1];
   table.append(
-    pile(waste ? cardEl(waste, { pile: 'w' }, 0) : slotEl('Ablagestapel leer', { pile: 'w' })),
+    pile(waste ? cardEl(waste, { pile: 'w' }, 0) : slotEl(t('slot.waste'), { pile: 'w' })),
   );
   const spacer = document.createElement('div');
   spacer.className = 'sol-spacer';
@@ -106,7 +107,11 @@ function render() {
       pile(
         top
           ? cardEl(top, { pile: 'f', i: String(i) }, 0)
-          : slotEl(`Ablage ${SUIT_NAMES[i]}, leer`, { pile: 'f', i: String(i) }, SUITS[i] + TEXT),
+          : slotEl(
+              t('slot.foundation', { suit: suitName(i) }),
+              { pile: 'f', i: String(i) },
+              SUITS[i] + TEXT,
+            ),
       ),
     );
   });
@@ -114,7 +119,7 @@ function render() {
     const host = pile();
     let y = 0;
     if (!cards.length)
-      host.append(slotEl(`Spalte ${i + 1}, leer`, { pile: 't', i: String(i), from: '0' }));
+      host.append(slotEl(t('slot.column', { n: i + 1 }), { pile: 't', i: String(i), from: '0' }));
     cards.forEach((card, from) => {
       host.append(cardEl(card, { pile: 't', i: String(i), from: String(from) }, y));
       y += card.up ? 0.5 : 0.22;
@@ -218,12 +223,15 @@ async function won() {
   const seconds = Math.max(1, clock.stop());
   clearInterval(finishing);
   finishing = 0;
-  $('#end-title').textContent = 'Geschafft!';
-  $('#end-text').textContent =
-    `Alle Karten abgelegt in ${format.seconds(seconds)}, ${game.moves} Zügen und ${game.score} Punkten.`;
+  $('#end-title').textContent = t('end.won');
+  $('#end-text').textContent = t('end.wonText', {
+    time: format.seconds(seconds),
+    n: game.moves,
+    score: game.score,
+  });
   $('#end').hidden = false;
   $('#end').focus();
-  say(`Geschafft! ${$('#end-text').textContent}`);
+  say(t('say.won', { text: $('#end-text').textContent }));
   render();
   if (!reported) {
     reported = true;
@@ -245,8 +253,8 @@ function act(src) {
     if (draw(game))
       say(
         game.waste.length
-          ? `${cardName(game.waste[game.waste.length - 1])} aufgedeckt`
-          : 'Stapel neu gemischt',
+          ? t('say.drawn', { card: cardName(game.waste[game.waste.length - 1]) })
+          : t('say.reshuffled'),
       );
     return void afterMove();
   }
@@ -272,12 +280,12 @@ function act(src) {
     }
     // Not legal: pick up the tapped card instead, or let go.
     held = cardsAt(game, src) && src.pile !== 'f' ? src : null;
-    if (!held) say('Das passt dort nicht hin.');
+    if (!held) say(t('say.nope'));
     return render();
   }
   if (cardsAt(game, src) && src.pile !== 'f') {
     held = src;
-    say('Karte aufgenommen. Tippe das Ziel.');
+    say(t('say.picked'));
   }
   render();
 }
@@ -348,9 +356,11 @@ $('#giveup').addEventListener('click', async () => {
   if (game.status !== 'playing' || !game.moves) return;
   const seconds = Math.max(1, clock.stop());
   game.status = 'lost';
-  $('#end-title').textContent = 'Aufgegeben';
-  $('#end-text').textContent =
-    `Nach ${format.seconds(seconds)} und ${game.moves} Zügen. Neues Spiel?`;
+  $('#end-title').textContent = t('end.gaveUp');
+  $('#end-text').textContent = t('end.gaveUpText', {
+    time: format.seconds(seconds),
+    n: game.moves,
+  });
   $('#end').hidden = false;
   $('#end').focus();
   render();
@@ -366,7 +376,7 @@ function newGame() {
   reported = false;
   cursor = { zone: 'tab', c: 0, depth: 0 };
   $('#end').hidden = true;
-  say('Neues Spiel.');
+  say(t('say.new'));
   render();
 }
 $('#restart').addEventListener('click', newGame);
@@ -374,14 +384,17 @@ $('#restart').addEventListener('click', newGame);
 async function showRecords() {
   const best = await window.mnGame.leaders(mn, '#leaders', {
     stat: 'score',
-    format: format.number,
-    unit: ' Punkte',
+    format: (n) => t('unit.points', { n }),
   });
-  $('#record').textContent =
-    best === undefined ? '' : `Dein Rekord: ${format.number(best)} Punkte.`;
+  $('#record').textContent = best === undefined ? '' : t('record.best', { n: best });
 }
 
 newGame();
+window.mnI18n.onChange(() => {
+  window.mnI18n.apply();
+  render();
+  void showRecords();
+});
 (async () => {
   mn = await window.mnGame.connect({ player: '#player', hub: '#hub' });
   clock.attach();

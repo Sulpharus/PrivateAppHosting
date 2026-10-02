@@ -2,80 +2,111 @@
 // return (Einkommensteuererklärung), plus the flat rates and caps per tax year. Pure functions,
 // amounts in cents. The app prepares values for ELSTER; it never files anything.
 
+/** Forms of the return; title and sub are language keys (tax.form.<id>.title / .sub). */
 export const FORMS = [
-  { id: 'N', title: 'Anlage N', sub: 'Werbungskosten aus nichtselbständiger Arbeit' },
-  { id: 'SA', title: 'Anlage Sonderausgaben', sub: 'Kirchensteuer, Spenden, Erstausbildung' },
-  { id: 'VA', title: 'Anlage Vorsorgeaufwand', sub: 'Selbst gezahlte Versicherungsbeiträge' },
-  { id: 'KIND', title: 'Anlage Kind', sub: 'Kinderbetreuung und Schulgeld' },
-  { id: 'HH', title: 'Anlage Haushaltsnahe Aufwendungen', sub: 'Steuerermäßigung nach § 35a EStG' },
-  { id: 'AB', title: 'Anlage Außergewöhnliche Belastungen', sub: 'Krankheits- und Pflegekosten' },
+  { id: 'N', title: 'tax.form.N.title', sub: 'tax.form.N.sub' },
+  { id: 'SA', title: 'tax.form.SA.title', sub: 'tax.form.SA.sub' },
+  { id: 'VA', title: 'tax.form.VA.title', sub: 'tax.form.VA.sub' },
+  { id: 'KIND', title: 'tax.form.KIND.title', sub: 'tax.form.KIND.sub' },
+  { id: 'HH', title: 'tax.form.HH.title', sub: 'tax.form.HH.sub' },
+  { id: 'AB', title: 'tax.form.AB.title', sub: 'tax.form.AB.sub' },
 ];
 
-/** Fields a category or a single booking can be mapped to. */
+/** Fields a category or a single booking can be mapped to; label and hint are language keys. */
 export const FIELDS = {
   wk_arbeitsmittel: {
     form: 'N',
-    label: 'Arbeitsmittel',
-    hint: 'Laptop, Fachliteratur, Berufskleidung. Über 800 € netto über die Nutzungsdauer verteilen (Computer: 1 Jahr).',
+    label: 'tax.field.wk_arbeitsmittel.label',
+    hint: 'tax.field.wk_arbeitsmittel.hint',
   },
-  wk_fortbildung: { form: 'N', label: 'Fortbildungskosten' },
+  wk_fortbildung: {
+    form: 'N',
+    label: 'tax.field.wk_fortbildung.label',
+  },
   wk_arbeitszimmer: {
     form: 'N',
-    label: 'Häusliches Arbeitszimmer',
-    hint: 'Nur wenn es der Mittelpunkt der Tätigkeit ist; dann statt der Homeoffice-Pauschale.',
+    label: 'tax.field.wk_arbeitszimmer.label',
+    hint: 'tax.field.wk_arbeitszimmer.hint',
   },
-  wk_bewerbung: { form: 'N', label: 'Bewerbungskosten' },
-  wk_kontofuehrung: { form: 'N', label: 'Kontoführungsgebühren' },
-  wk_weitere: { form: 'N', label: 'Weitere Werbungskosten' },
+  wk_bewerbung: {
+    form: 'N',
+    label: 'tax.field.wk_bewerbung.label',
+  },
+  wk_kontofuehrung: {
+    form: 'N',
+    label: 'tax.field.wk_kontofuehrung.label',
+  },
+  wk_weitere: {
+    form: 'N',
+    label: 'tax.field.wk_weitere.label',
+  },
   sa_kirchensteuer: {
     form: 'SA',
-    label: 'Gezahlte Kirchensteuer',
-    hint: 'Nur was nicht schon über den Lohn einbehalten wurde (Nachzahlungen, Kirchgeld).',
+    label: 'tax.field.sa_kirchensteuer.label',
+    hint: 'tax.field.sa_kirchensteuer.hint',
   },
   sa_spenden: {
     form: 'SA',
-    label: 'Spenden und Mitgliedsbeiträge an gemeinnützige Organisationen',
+    label: 'tax.field.sa_spenden.label',
   },
-  sa_parteien: { form: 'SA', label: 'Spenden und Beiträge an politische Parteien' },
-  sa_ausbildung: { form: 'SA', label: 'Kosten der eigenen Erstausbildung' },
+  sa_parteien: {
+    form: 'SA',
+    label: 'tax.field.sa_parteien.label',
+  },
+  sa_ausbildung: {
+    form: 'SA',
+    label: 'tax.field.sa_ausbildung.label',
+  },
   va_kv: {
     form: 'VA',
-    label: 'Kranken- und Pflegeversicherung (selbst gezahlt)',
-    hint: 'Beiträge, die nicht schon über den Lohn laufen, z. B. private Zusatzbeiträge.',
+    label: 'tax.field.va_kv.label',
+    hint: 'tax.field.va_kv.hint',
   },
-  va_ruerup: { form: 'VA', label: 'Beiträge zur Basisrente (Rürup)' },
+  va_ruerup: {
+    form: 'VA',
+    label: 'tax.field.va_ruerup.label',
+  },
   va_weitere: {
     form: 'VA',
-    label: 'Haftpflicht-, Unfall-, Berufsunfähigkeits- und Risikolebensversicherungen',
+    label: 'tax.field.va_weitere.label',
   },
   kind_betreuung: {
     form: 'KIND',
-    label: 'Kinderbetreuungskosten',
-    hint: 'Kita, Tagesmutter, Hort. Nur unbar bezahlt; Verpflegung zählt nicht.',
+    label: 'tax.field.kind_betreuung.label',
+    hint: 'tax.field.kind_betreuung.hint',
   },
   kind_schulgeld: {
     form: 'KIND',
-    label: 'Schulgeld',
-    hint: 'Privatschule, ohne Beherbergung, Betreuung und Verpflegung.',
+    label: 'tax.field.kind_schulgeld.label',
+    hint: 'tax.field.kind_schulgeld.hint',
   },
-  hh_minijob: { form: 'HH', label: 'Minijob im Privathaushalt' },
+  hh_minijob: {
+    form: 'HH',
+    label: 'tax.field.hh_minijob.label',
+  },
   hh_dienstleistungen: {
     form: 'HH',
-    label: 'Haushaltsnahe Dienstleistungen',
-    hint: 'Reinigung, Gartenpflege, Hausmeister, Treppenhaus (auch aus der Nebenkostenabrechnung).',
+    label: 'tax.field.hh_dienstleistungen.label',
+    hint: 'tax.field.hh_dienstleistungen.hint',
   },
   hh_handwerker: {
     form: 'HH',
-    label: 'Handwerkerleistungen',
-    hint: 'Nur Arbeits-, Fahrt- und Maschinenkosten, kein Material. Gib bei der Buchung den Lohnanteil an.',
+    label: 'tax.field.hh_handwerker.label',
+    hint: 'tax.field.hh_handwerker.hint',
   },
   ab_krankheit: {
     form: 'AB',
-    label: 'Krankheitskosten',
-    hint: 'Zuzahlungen, Brille, Zahnersatz, verordnete Medikamente.',
+    label: 'tax.field.ab_krankheit.label',
+    hint: 'tax.field.ab_krankheit.hint',
   },
-  ab_pflege: { form: 'AB', label: 'Pflegekosten' },
-  ab_sonstige: { form: 'AB', label: 'Sonstige außergewöhnliche Belastungen' },
+  ab_pflege: {
+    form: 'AB',
+    label: 'tax.field.ab_pflege.label',
+  },
+  ab_sonstige: {
+    form: 'AB',
+    label: 'tax.field.ab_sonstige.label',
+  },
 };
 
 /** Flat rates and caps of the tax year. */
@@ -144,9 +175,10 @@ export function zumutbareBelastung(income, married, children) {
  * Builds the filled forms for one year.
  * bookings: [{ id, date, cents, kind, text, taxField, taxCents }] where taxField is already
  * resolved (booking override, else category default) and taxCents the eligible amount.
+ * `t(key, params)` turns the language keys of labels, hints and summaries into text.
  * Income bookings on a tax field (e.g. a refund) reduce that field.
  */
-export function buildReturn(year, bookings, profile = {}) {
+export function buildReturn(year, bookings, profile = {}, t = (key) => key) {
   const p = params(year);
   const sums = new Map();
   const items = new Map();
@@ -159,8 +191,8 @@ export function buildReturn(year, bookings, profile = {}) {
   }
   const field = (key) => ({
     key,
-    label: FIELDS[key].label,
-    hint: FIELDS[key].hint,
+    label: t(FIELDS[key].label),
+    hint: FIELDS[key].hint ? t(FIELDS[key].hint) : undefined,
     cents: Math.max(0, sums.get(key) ?? 0),
     items: items.get(key) ?? [],
   });
@@ -178,8 +210,8 @@ export function buildReturn(year, bookings, profile = {}) {
     if (profile.commuteKm && profile.commuteDays)
       rows.push({
         key: 'wk_entfernung',
-        label: 'Wege zur ersten Tätigkeitsstätte (Entfernungspauschale)',
-        hint: `${profile.commuteDays} Tage × ${profile.commuteKm} km einfache Strecke`,
+        label: t('tax.row.commute'),
+        hint: t('tax.row.commuteHint', { days: profile.commuteDays, km: profile.commuteKm }),
         cents: km,
         computed: true,
       });
@@ -190,8 +222,11 @@ export function buildReturn(year, bookings, profile = {}) {
     if (profile.homeofficeDays && ho > 0 && !room?.cents)
       rows.push({
         key: 'wk_homeoffice',
-        label: 'Tagespauschale für Tätigkeit in der häuslichen Wohnung',
-        hint: `${Math.min(profile.homeofficeDays, p.homeofficeMaxDays)} Tage × ${euro(p.homeofficeRate)}`,
+        label: t('tax.row.homeoffice'),
+        hint: t('tax.row.homeofficeHint', {
+          days: Math.min(profile.homeofficeDays, p.homeofficeMaxDays),
+          rate: euro(p.homeofficeRate),
+        }),
         cents: ho,
         computed: true,
       });
@@ -199,7 +234,7 @@ export function buildReturn(year, bookings, profile = {}) {
     // The flat 16 € is an alternative to the booked fees: take whichever is higher.
     if (konto && konto.cents < p.kontofuehrungPauschale && profile.employee !== false) {
       konto.cents = p.kontofuehrungPauschale;
-      konto.hint = 'Pauschale, wird ohne Nachweis üblicherweise anerkannt.';
+      konto.hint = t('tax.row.flatRate');
       konto.computed = true;
     }
     rows.push(...own);
@@ -211,8 +246,12 @@ export function buildReturn(year, bookings, profile = {}) {
       total,
       summary:
         over > 0
-          ? `${euro(total)} Werbungskosten, ${euro(over)} mehr als der Arbeitnehmer-Pauschbetrag von ${euro(p.arbeitnehmerPauschbetrag)}.`
-          : `${euro(total)} Werbungskosten. Das Finanzamt setzt ohnehin den Pauschbetrag von ${euro(p.arbeitnehmerPauschbetrag)} an; Einzelnachweise lohnen sich erst darüber.`,
+          ? t('tax.summary.nOver', {
+              total: euro(total),
+              over: euro(over),
+              flat: euro(p.arbeitnehmerPauschbetrag),
+            })
+          : t('tax.summary.nUnder', { total: euro(total), flat: euro(p.arbeitnehmerPauschbetrag) }),
     });
   }
 
@@ -221,7 +260,7 @@ export function buildReturn(year, bookings, profile = {}) {
     const rows = fieldsOf('SA');
     const aus = rows.find((row) => row.key === 'sa_ausbildung');
     if (aus && aus.cents > p.ausbildungMax) {
-      aus.hint = `Abziehbar höchstens ${euro(p.ausbildungMax)}.`;
+      aus.hint = t('tax.row.trainingMax', { max: euro(p.ausbildungMax) });
       aus.deductible = p.ausbildungMax;
     }
     forms.push({ ...FORMS[1], rows, total: rows.reduce((s, r) => s + r.cents, 0) });
@@ -234,8 +273,7 @@ export function buildReturn(year, bookings, profile = {}) {
       ...FORMS[2],
       rows,
       total: rows.reduce((s, r) => s + r.cents, 0),
-      summary:
-        'Pflichtbeiträge über den Arbeitgeber stehen auf der Lohnsteuerbescheinigung und werden automatisch übernommen.',
+      summary: t('tax.summary.va'),
     });
   }
 
@@ -249,12 +287,16 @@ export function buildReturn(year, bookings, profile = {}) {
     const school = rows.find((row) => row.key === 'kind_schulgeld');
     if (school?.cents)
       school.deductible = Math.min(Math.round(school.cents * p.schulgeldQuote), p.schulgeldMax * n);
-    const quote = p.betreuungQuote === 0.8 ? '80 %' : 'zwei Drittel';
+    const quote = t(p.betreuungQuote === 0.8 ? 'tax.quote.80' : 'tax.quote.twoThirds');
     forms.push({
       ...FORMS[3],
       rows,
       total: rows.reduce((s, r) => s + r.cents, 0),
-      summary: `Abziehbar: ${quote} der Betreuungskosten, höchstens ${euro(p.betreuungMax)} je Kind; 30 % des Schulgelds, höchstens ${euro(p.schulgeldMax)} je Kind. Trage die Kosten je Kind in der Anlage Kind ein.`,
+      summary: t('tax.summary.kind', {
+        quote,
+        careMax: euro(p.betreuungMax),
+        schoolMax: euro(p.schulgeldMax),
+      }),
     });
   }
 
@@ -271,7 +313,7 @@ export function buildReturn(year, bookings, profile = {}) {
       rows,
       total: rows.reduce((s, r) => s + r.cents, 0),
       reduction,
-      summary: `20 % der Kosten werden direkt von der Steuer abgezogen: voraussichtlich ${euro(reduction)}. Nur unbar bezahlte Rechnungen zählen.`,
+      summary: t('tax.summary.hh', { reduction: euro(reduction) }),
     });
   }
 
@@ -279,13 +321,12 @@ export function buildReturn(year, bookings, profile = {}) {
   {
     const rows = fieldsOf('AB');
     const total = rows.reduce((s, r) => s + r.cents, 0);
-    let summary =
-      'Das Finanzamt zieht eine zumutbare Belastung ab. Trage unter „Angaben“ den Gesamtbetrag der Einkünfte ein, dann rechnet die App sie aus.';
+    let summary = t('tax.summary.abNoIncome');
     let deductible;
     if (profile.income) {
       const own = zumutbareBelastung(Math.round(profile.income), !!profile.married, children);
       deductible = Math.max(0, total - own);
-      summary = `Zumutbare Belastung ${euro(own)}: voraussichtlich wirken sich ${euro(deductible)} aus.`;
+      summary = t('tax.summary.ab', { own: euro(own), deductible: euro(deductible) });
     }
     forms.push({ ...FORMS[5], rows, total, deductible, summary });
   }
@@ -293,6 +334,10 @@ export function buildReturn(year, bookings, profile = {}) {
   return forms;
 }
 
-const euroFormat = new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' });
-/** Formats cents as euros, e.g. 123456 → "1.234,56 €". */
-export const euro = (cents) => euroFormat.format((cents || 0) / 100);
+/** The language of the page (kit/i18n.js); German where it is not there (tests, other hosts). */
+const locale = () => globalThis.window?.mnI18n?.locale ?? 'de-DE';
+/** Formats cents as euros in the page's language: 123456 → "1.234,56 €" or "€1,234.56". */
+export const euro = (cents) =>
+  new Intl.NumberFormat(locale(), { style: 'currency', currency: 'EUR' }).format(
+    (cents || 0) / 100,
+  );

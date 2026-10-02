@@ -3,6 +3,7 @@ id: suite
 title: Gemeinsame Daten
 summary: Termine, Aufgaben und Co. mit anderen Apps teilen, etwa für den Kalender
 order: 81
+group: anbindungen
 ---
 
 ## Feature: shared suite data (ADR 0002)

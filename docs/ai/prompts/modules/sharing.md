@@ -3,6 +3,7 @@ id: sharing
 title: Weitergeben und Teilen nach außen
 summary: Text, Links oder Dateien per Messenger teilen, Einträge kopieren
 order: 82
+group: teilen
 ---
 
 ## Feature: sharing outside MiniNode

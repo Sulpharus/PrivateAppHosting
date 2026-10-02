@@ -1,7 +1,14 @@
 // Unit tests for the pure modules: CSV import/export, bookings and standing orders, tax rules.
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { analyse, parseAmount, parseDate, toBookings, toCsv } from '../csv.js';
-import { cleanBooking, cleanProfile, dueRecurring, matchRule } from '../data.js';
+import {
+  cleanBooking,
+  cleanProfile,
+  DEFAULT_CATEGORIES,
+  dueRecurring,
+  matchRule,
+} from '../data.js';
 import {
   buildReturn,
   entfernungspauschale,
@@ -169,5 +176,16 @@ describe('tax rules', () => {
       children: 2,
       car: true,
     });
+  });
+});
+
+describe('language packages', () => {
+  const pack = (code) => JSON.parse(readFileSync(new URL(`../i18n/${code}.json`, import.meta.url)));
+
+  it('names the starting categories like the German package, so they follow the language', () => {
+    const de = pack('de');
+    for (const c of DEFAULT_CATEGORIES) expect(de[`defaultCat.${c.id}`], c.id).toBe(c.name);
+    const en = pack('en');
+    for (const c of DEFAULT_CATEGORIES) expect(en[`defaultCat.${c.id}`], c.id).toBeTruthy();
   });
 });

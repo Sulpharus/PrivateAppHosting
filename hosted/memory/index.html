@@ -3,44 +3,45 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Memory</title>
+  <title data-i18n="app.title">Memory</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%236a45b8'/%3E%3Crect x='7' y='7' width='8' height='8' rx='2' fill='white'/%3E%3Crect x='17' y='17' width='8' height='8' rx='2' fill='white'/%3E%3Crect x='17' y='7' width='8' height='8' rx='2' fill='none' stroke='white' stroke-width='2'/%3E%3Crect x='7' y='17' width='8' height='8' rx='2' fill='none' stroke='white' stroke-width='2'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="/_mininode/ui.css">
   <link rel="stylesheet" href="/style.css">
   <script src="/_mininode/ui.js"></script>
+  <script src="/_mininode/i18n.js"></script>
   <script src="/_mininode/sdk.js" defer></script>
   <script type="module" src="/app.js"></script>
 </head>
 <body class="mn-app">
   <div class="mn-page mem-page">
     <header class="mn-top"><div class="mn-top-inner">
-      <div class="mn-top-text"><a class="mn-home" href="https://mininode.app">← Alle Apps</a><h1 id="title">Memory</h1><p class="mn-sub" id="player">Finde alle acht Paare mit möglichst wenigen Zügen.</p></div>
-      <div class="mn-top-tools"><a class="mn-btn" id="hub" href="https://mininode.app/games/memory">Gaming Hub</a></div>
+      <div class="mn-top-text"><a class="mn-home" href="https://mininode.app" data-i18n="nav.allApps">← Alle Apps</a><h1 id="title" data-i18n="app.title">Memory</h1><p class="mn-sub" id="player" data-i18n="app.intro">Finde alle acht Paare mit möglichst wenigen Zügen.</p></div>
+      <div class="mn-top-tools"><a class="mn-btn" id="hub" href="https://mininode.app/games/memory" data-i18n="nav.hub">Gaming Hub</a></div>
     </div></header>
     <main class="mn-main mem-main">
       <div class="mn-kpis" aria-live="off">
-        <div class="mn-kpi"><b id="moves">0</b><span>Züge</span></div>
-        <div class="mn-kpi"><b id="time">0:00</b><span>Zeit</span></div>
-        <div class="mn-kpi"><b id="pairs">0 / 8</b><span>Paare</span></div>
+        <div class="mn-kpi"><b id="moves">0</b><span data-i18n="kpi.moves">Züge</span></div>
+        <div class="mn-kpi"><b id="time">0:00</b><span data-i18n="kpi.time">Zeit</span></div>
+        <div class="mn-kpi"><b id="pairs">0 / 8</b><span data-i18n="kpi.pairs">Paare</span></div>
       </div>
-      <h2 class="mn-sr-only" id="board-label">Spielfeld, 4 mal 4 Karten</h2>
+      <h2 class="mn-sr-only" id="board-label" data-i18n="board.label">Spielfeld, 4 mal 4 Karten</h2>
       <div class="mem-board" id="board"></div>
       <p class="mn-sr-only" id="announce" aria-live="polite"></p>
       <div class="mem-actions">
-        <button type="button" class="mn-btn mn-btn--primary" id="restart">Neues Spiel</button>
+        <button type="button" class="mn-btn mn-btn--primary" id="restart" data-i18n="action.restart">Neues Spiel</button>
         <span class="mn-muted" id="record"></span>
       </div>
       <section class="mn-card mem-won" id="won" hidden aria-labelledby="won-title" tabindex="-1">
-        <h2 id="won-title">Geschafft!</h2>
+        <h2 id="won-title" data-i18n="won.title">Geschafft!</h2>
         <p id="won-text"></p>
       </section>
       <section aria-labelledby="board-title" class="mem-leaders">
-        <div class="mn-sect"><h2 id="board-title">Bestenliste (wenigste Züge)</h2></div>
+        <div class="mn-sect"><h2 id="board-title" data-i18n="leaders.title">Bestenliste (wenigste Züge)</h2></div>
         <div id="leaders"></div>
       </section>
       <section class="mem-rules" aria-labelledby="rules-title">
-        <h2 id="rules-title">Regeln</h2>
-        <p>Decke zwei Karten auf. Zeigen sie dieselbe Form, bleiben sie offen. Sonst werden sie wieder umgedreht. Jedes aufgedeckte Paar ist ein Zug. Die Karten werden bei jedem Spiel zufällig gemischt. Mit den Pfeiltasten wechselst du die Karte, mit Enter oder Leertaste deckst du sie auf.</p>
+        <h2 id="rules-title" data-i18n="rules.title">Regeln</h2>
+        <p data-i18n="rules.text">Decke zwei Karten auf. Zeigen sie dieselbe Form, bleiben sie offen. Sonst werden sie wieder umgedreht. Jedes aufgedeckte Paar ist ein Zug. Die Karten werden bei jedem Spiel zufällig gemischt. Mit den Pfeiltasten wechselst du die Karte, mit Enter oder Leertaste deckst du sie auf.</p>
       </section>
     </main>
   </div>

@@ -3,6 +3,7 @@ id: search
 title: Suche, Filter und Sortierung
 summary: Schnellsuche, Filter-Chips, Sortierung, gemerkte Ansicht
 order: 14
+group: daten
 ---
 
 ## Feature: search, filters and sorting

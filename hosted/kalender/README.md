@@ -49,3 +49,7 @@ pnpm e2e kalender                                # end to end
 
 Reminders for a series are refreshed when the app is opened; a series reminded only on closed
 devices fires for its next occurrence and then waits for the next start.
+
+## Languages
+
+German and English (`i18n/de.json`, `i18n/en.json`, declared under `i18n` in `mininode.json`). The person's choice in Konto → Sprache applies; an unknown key falls back to German. New texts need a key in both files; `pnpm mininode doctor hosted/kalender` checks them (ADR 0017). Month and weekday names, the repeat summary (`describeRule(rule, t, locale)`) and all texts follow the language; `test/rrule.test.js` checks both.

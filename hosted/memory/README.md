@@ -13,3 +13,7 @@ Find the eight pairs with as few moves as possible. A small real game for the Ga
 - **Access:** keyboard play with arrow keys, Enter and Space. Every card has a label ("Karte 3:
   Stern, gefunden"), moves are announced, and the flip animation is off with reduced motion.
 - **Data:** none of its own (`data.mode: none`); everything is in the platform's game tables.
+
+## Languages
+
+German and English (`i18n/de.json`, `i18n/en.json`, declared under `i18n` in `mininode.json`). The person's choice in Konto → Sprache applies; an unknown key falls back to German. New texts need a key in both files; `pnpm mininode doctor hosted/memory` checks them (ADR 0017).

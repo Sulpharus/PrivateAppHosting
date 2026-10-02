@@ -7,12 +7,9 @@ import { platform } from '../lib/supabase.ts';
 const LINKS: [string, string][] = [
   ['/admin', 'Übersicht'],
   ['/admin/apps', 'Apps'],
-  ['/admin/upload', 'Hochladen'],
   ['/admin/catalog', 'Kategorien & Pakete'],
   ['/admin/users', 'Nutzer & Rollen'],
-  ['/admin/remote', 'Remote-Apps'],
-  ['/admin/nucbox', 'NucBox'],
-  ['/admin/library', 'App-Bibliothek'],
+  ['/admin/hardware', 'Hardware-Server'],
   ['/admin/ai', 'KI-Proxy'],
   ['/admin/api-keys', 'API-Schlüssel'],
   ['/admin/suite', 'Gemeinsame Daten'],

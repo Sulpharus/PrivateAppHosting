@@ -2,9 +2,9 @@
 // what happened, the board holds the state.
 
 export const LEVELS = {
-  leicht: { label: 'Leicht', cols: 9, rows: 9, mines: 10 },
-  mittel: { label: 'Mittel', cols: 16, rows: 16, mines: 40 },
-  schwer: { label: 'Schwer', cols: 30, rows: 16, mines: 99 },
+  leicht: { cols: 9, rows: 9, mines: 10 },
+  mittel: { cols: 16, rows: 16, mines: 40 },
+  schwer: { cols: 30, rows: 16, mines: 99 },
 };
 
 export function cryptoRandom() {

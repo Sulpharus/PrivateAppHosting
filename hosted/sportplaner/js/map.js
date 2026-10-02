@@ -18,7 +18,7 @@ let geoLast = 0;
 const geoCache = new Map();
 /** Up to five matches for an address, best first. Throws when the service is unreachable. */
 function geocode(q) {
-  const key = q.trim().toLowerCase();
+  const key = `${window.mnI18n.lang}:${q.trim().toLowerCase()}`;
   if (geoCache.has(key)) return Promise.resolve(geoCache.get(key));
   const run = geoQueue.then(async () => {
     const wait = geoLast + 1100 - Date.now();
@@ -35,7 +35,9 @@ async function geocodeNow(q) {
   const mn = await ready;
   const rows = await mn
     .api('nominatim')
-    .json(`/search?format=jsonv2&limit=5&accept-language=de&q=${encodeURIComponent(q.trim())}`);
+    .json(
+      `/search?format=jsonv2&limit=5&accept-language=${window.mnI18n.lang}&q=${encodeURIComponent(q.trim())}`,
+    );
   return (Array.isArray(rows) ? rows : [])
     .map((r) => ({ lat: +r.lat, lon: +r.lon, label: String(r.display_name || '').slice(0, 200) }))
     .filter(validGeo);
@@ -47,11 +49,11 @@ function renderGeo(matches) {
   if (!el || !draft) return;
   const addr = String($('[name=address]')?.value || '').trim();
   if (!addr) {
-    el.innerHTML = '<p class="hint flat">Mit Adresse erscheint das Angebot auf der Karte.</p>';
+    el.innerHTML = `<p class="hint flat">${esc(tr('geo.withAddress'))}</p>`;
     return;
   }
   if (matches && matches.length > 1) {
-    el.innerHTML = `<p class="hint flat">Mehrere Treffer. Welche Adresse ist gemeint?</p><div class="geo-picks">${matches
+    el.innerHTML = `<p class="hint flat">${esc(tr('geo.several'))}</p><div class="geo-picks">${matches
       .map(
         (m, i) =>
           `<button type="button" class="btn geo-pick" data-action="geo-pick" data-i="${i}">${esc(m.label)}</button>`,
@@ -61,8 +63,8 @@ function renderGeo(matches) {
   }
   el.innerHTML =
     draft.geo && draft.geo.q === addr
-      ? `<p class="geo-ok">${ICON.check}<span>Gefunden: ${esc(draft.geo.label)}</span></p>`
-      : '<p class="hint flat">Wird beim Speichern geprüft.</p><button type="button" class="btn" data-action="geo-check">Adresse jetzt prüfen</button>';
+      ? `<p class="geo-ok">${ICON.check}<span>${esc(tr('geo.found', { label: draft.geo.label }))}</span></p>`
+      : `<p class="hint flat">${esc(tr('geo.checkOnSave'))}</p><button type="button" class="btn" data-action="geo-check">${esc(tr('geo.checkNow'))}</button>`;
 }
 let geoMatches = [];
 /** Checks the address in the editor. Returns null when it fits, otherwise the problem. */
@@ -82,11 +84,11 @@ async function checkDraftAddress() {
   geoMatches = found;
   if (!found.length) {
     renderGeo();
-    return 'Diese Adresse wurde nicht gefunden. Prüfe Straße, Hausnummer und Ort.';
+    return tr('geo.notFound');
   }
   if (found.length > 1 && !sameSpot(found)) {
     renderGeo(found);
-    return 'Die Adresse ist nicht eindeutig. Wähle unten den passenden Treffer.';
+    return tr('geo.ambiguous');
   }
   draft.geo = { ...found[0], q: addr };
   renderGeo();
@@ -104,10 +106,10 @@ document.addEventListener('input', (e) => {
 Object.assign(H, {
   'geo-check': async (t) => {
     t.disabled = true;
-    t.textContent = 'Wird geprüft …';
+    t.textContent = tr('geo.checking');
     const problem = await checkDraftAddress();
     if (problem === 'offline') {
-      toast('Die Adresse konnte gerade nicht geprüft werden. Versuche es später.');
+      toast(tr('geo.offlineNow'));
       renderGeo();
     } else if (problem) {
       const err = $('#err');
@@ -151,12 +153,14 @@ function loadLeaflet() {
   return leafletLoad;
 }
 
-SKELETON.map = `<div class="map-layout"><div class="card map-card"><div id="map" class="map" role="region" aria-label="Karte der Sportangebote"></div></div><div><div class="seg map-seg" id="mapseg" role="group" aria-label="Angebote auf der Karte"></div><div id="maplist"></div><div id="mapmissing"></div></div></div>`;
+SKELETON_EXTRA.push(() => ({
+  map: `<div class="map-layout"><div class="card map-card"><div id="map" class="map" role="region" aria-label="${esc(tr('map.region'))}"></div></div><div><div class="seg map-seg" id="mapseg" role="group" aria-label="${esc(tr('map.filterLabel'))}"></div><div id="maplist"></div><div id="mapmissing"></div></div></div>`,
+}));
 
-const MAP_FILTERS = [
-  ['all', 'Alle'],
-  ['today', 'Heute'],
-  ['planned', 'Eingeplant'],
+const mapFilters = () => [
+  ['all', tr('map.filterAll')],
+  ['today', tr('map.filterToday')],
+  ['planned', tr('map.filterPlanned')],
 ];
 function mapActs() {
   const td = todayStr(),
@@ -166,32 +170,34 @@ function mapActs() {
     .filter((a) =>
       S.mapFilter === 'today' ? today.has(a.id) : S.mapFilter === 'planned' ? hasPlan(a) : true,
     )
-    .sort((x, y) => x.name.localeCompare(y.name, 'de'));
+    .sort((x, y) => x.name.localeCompare(y.name, loc()));
 }
 function nextLabel(a) {
   const n = nextMap().get(a.id);
-  if (!n) return 'Keine Termine in den nächsten Monaten';
+  if (!n) return tr('map.noDates');
   const when =
     n.i === 0
-      ? 'Heute'
+      ? tr('agenda.today')
       : n.i === 1
-        ? 'Morgen'
+        ? tr('agenda.tomorrow')
         : fmt(parse(n.ds), { weekday: 'short', day: 'numeric', month: 'short' });
   return `${when}${n.s?.start ? `, ${timeLabel(n.s)}` : ''}`;
 }
 function popupHTML(a) {
-  return `<div class="map-pop"><b>${esc(a.name)}</b>${a.category ? `<span>${esc(a.category)}</span>` : ''}<span>${esc(a.address)}</span><span>${esc(nextLabel(a))}</span><button type="button" class="btn" data-action="open" data-id="${esc(a.id)}">Details</button></div>`;
+  return `<div class="map-pop"><b>${esc(a.name)}</b>${a.category ? `<span>${esc(a.category)}</span>` : ''}<span>${esc(a.address)}</span><span>${esc(nextLabel(a))}</span><button type="button" class="btn" data-action="open" data-id="${esc(a.id)}">${esc(tr('map.details'))}</button></div>`;
 }
 function updMap() {
   const list = mapActs(),
     missing = S.acts.filter((a) => (a.address || '').trim() && !geoFits(a));
-  setHeader('Karte', `${list.length} ${list.length === 1 ? 'Angebot' : 'Angebote'} mit Adresse`);
+  setHeader(tr('map.title'), tr('map.subtitle', { n: list.length }));
   setHTML(
     $('#mapseg'),
-    MAP_FILTERS.map(
-      ([k, l]) =>
-        `<button type="button" class="${S.mapFilter === k ? 'on' : ''}" data-action="mapfilter" data-f="${k}" aria-pressed="${S.mapFilter === k}">${l}</button>`,
-    ).join(''),
+    mapFilters()
+      .map(
+        ([k, l]) =>
+          `<button type="button" class="${S.mapFilter === k ? 'on' : ''}" data-action="mapfilter" data-f="${k}" aria-pressed="${S.mapFilter === k}">${esc(l)}</button>`,
+      )
+      .join(''),
   );
   listOrEmpty(
     $('#maplist'),
@@ -200,28 +206,20 @@ function updMap() {
       key: a.id,
       html: rowHTML(a, {
         below: `<p>${esc(a.address)}</p>`,
-        side: `<span class="next map-go"><b>Zeigen</b></span>`,
+        side: `<span class="next map-go"><b>${esc(tr('map.show'))}</b></span>`,
       }).replace('data-action="open"', 'data-action="map-focus"'),
     })),
-    `<p class="note">${
-      S.acts.some(geoFits)
-        ? 'Keine Angebote für diesen Filter.'
-        : 'Noch kein Angebot mit geprüfter Adresse. Trage beim Bearbeiten unter „Details“ eine Adresse ein.'
-    }</p>`,
+    `<p class="note">${esc(tr(S.acts.some(geoFits) ? 'map.emptyFilter' : 'map.emptyNone'))}</p>`,
   );
   setHTML(
     $('#mapmissing'),
     missing.length
-      ? `<div class="card pad map-missing"><p>${missing.length} ${missing.length === 1 ? 'Angebot hat' : 'Angebote haben'} eine Adresse, die noch nicht geprüft ist.</p><button type="button" class="btn" data-action="geo-fill">Adressen prüfen</button></div>`
+      ? `<div class="card pad map-missing"><p>${esc(tr('map.missing', { n: missing.length }))}</p><button type="button" class="btn" data-action="geo-fill">${esc(tr('map.checkAddresses'))}</button></div>`
       : '',
   );
   loadLeaflet().then(
     () => drawMap(list),
-    () =>
-      setHTML(
-        $('#map'),
-        '<p class="note map-fail">Die Karte konnte nicht geladen werden. Prüfe deine Verbindung.</p>',
-      ),
+    () => setHTML($('#map'), `<p class="note map-fail">${esc(tr('map.loadFailed'))}</p>`),
   );
 }
 UPD.map = updMap;
@@ -309,7 +307,7 @@ Object.assign(H, {
         drawMap(mapActs());
         H['map-focus']({ dataset: { id } });
       },
-      () => toast('Die Karte konnte nicht geladen werden.'),
+      () => toast(tr('map.loadFailedToast')),
     );
   },
   /* checks the addresses of older entries, one per second (the service's usage policy) */
@@ -319,7 +317,7 @@ Object.assign(H, {
     let ok = 0;
     const failed = [];
     for (const [i, a] of todo.entries()) {
-      t.textContent = `Prüfe ${i + 1} von ${todo.length} …`;
+      t.textContent = tr('geo.progress', { i: i + 1, n: todo.length });
       try {
         const found = await geocode(a.address);
         const hit = found.length && sameSpot(found) ? found[0] : null;
@@ -331,16 +329,13 @@ Object.assign(H, {
         await persist({ ...cur, geo: { ...hit, q: a.address.trim() } });
         ok++;
       } catch {
-        toast('Die Adressen konnten gerade nicht geprüft werden. Versuche es später.');
+        toast(tr('geo.fillOffline'));
         break;
       }
     }
     lfitted = false;
-    if (failed.length)
-      toast(
-        `${ok} eingetragen. Nicht gefunden oder nicht eindeutig: ${failed.join(', ')}. Prüfe die Adresse beim Bearbeiten.`,
-      );
-    else if (ok) toast(`${ok} ${ok === 1 ? 'Angebot' : 'Angebote'} auf der Karte eingetragen`);
+    if (failed.length) toast(tr('geo.fillFailed', { ok, names: failed.join(', ') }));
+    else if (ok) toast(tr('geo.fillDone', { n: ok }));
     render();
   },
 });

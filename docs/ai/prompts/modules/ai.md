@@ -3,6 +3,7 @@ id: ai
 title: KI-Funktionen
 summary: Zusammenfassen, Vorschläge, Extraktion über mn.ai
 order: 20
+group: anbindungen
 ---
 
 ## Feature: AI

@@ -14,6 +14,7 @@
  * - Deduplication & Richness scoring
  */
 
+import { language, locale, t } from '../i18n';
 import type {
   BookChapter,
   BookSubtype,
@@ -26,6 +27,10 @@ import type {
 import { ExternalApiError, mininode, toJson } from './mininode';
 import { currentSettings } from './settings';
 
+/** The iTunes store and language of the page. */
+const itunesLocale = () =>
+  language() === 'en' ? 'country=gb&lang=en_gb' : 'country=de&lang=de_de';
+
 /**
  * Public APIs without a key also go through the platform proxy (mininode.json → apis): the page
  * itself may only talk to MiniNode. Null when the API answers with an error.
@@ -33,7 +38,11 @@ import { currentSettings } from './settings';
 async function apiJson<T = any>(id: string, path: string, timeoutMs = 8000): Promise<T | null> {
   const mn = await mininode();
   const res = await mn.api(id).fetch(path, {
-    headers: { Accept: 'application/json', 'Accept-Language': 'de-DE,de;q=0.9,en;q=0.6' },
+    headers: {
+      Accept: 'application/json',
+      'Accept-Language':
+        language() === 'en' ? 'en-GB,en;q=0.9,de;q=0.4' : 'de-DE,de;q=0.9,en;q=0.6',
+    },
     signal: AbortSignal.timeout(timeoutMs),
   });
   if (!res.ok) return null;
@@ -632,7 +641,7 @@ function cleanHtml(raw: string): string {
 function calculateRichnessScore(item: Partial<ApiSearchResult>): number {
   let score = 0;
   if (item.title) score += 2;
-  if (item.creator && item.creator !== 'Unbekannt') score += 2;
+  if (item.creator && item.creator !== 'Unbekannt' && item.creator !== t('api.unknown')) score += 2;
   if (item.year) score += 1;
   if (item.cover) score += 3;
   if (item.notes && item.notes.length > 20) score += 3;
@@ -717,8 +726,12 @@ async function searchGoogleBooks(query: string): Promise<{
         info.imageLinks?.smallThumbnail?.replace('http:', 'https:');
 
       const year = info.publishedDate ? parseInt(info.publishedDate.slice(0, 4), 10) : undefined;
-      const creator = Array.isArray(info.authors) ? info.authors.join(', ') : 'Unbekannter Autor';
-      const genres = Array.isArray(info.categories) ? info.categories.slice(0, 3) : ['Buch'];
+      const creator = Array.isArray(info.authors)
+        ? info.authors.join(', ')
+        : t('api.unknownAuthor');
+      const genres = Array.isArray(info.categories)
+        ? info.categories.slice(0, 3)
+        : [t('api.genreBook')];
 
       // Subtype detection
       let bookSubtype: BookSubtype = 'Roman';
@@ -802,7 +815,7 @@ async function searchTMDB(
     const mn = await mininode();
     const qParams = new URLSearchParams({
       query,
-      language: 'de-DE',
+      language: locale(),
       include_adult: 'false',
     }).toString();
 
@@ -854,7 +867,7 @@ async function searchTMDB(
           sourceApi: 'tmdb',
           attribution: 'Daten: The Movie Database (TMDB)',
           title,
-          // language=de-DE: TMDB answers with the German title where one exists.
+          // language=<page language>: TMDB answers with the title in that language where one exists.
           germanTitle:
             originalTitle && originalTitle !== title
               ? title
@@ -866,7 +879,7 @@ async function searchTMDB(
           creator: '',
           year,
           kind: isTv ? 'series' : 'film',
-          genres: isTv ? ['Serie'] : ['Film'],
+          genres: isTv ? [t('api.genreSeries')] : [t('api.genreFilm')],
           cover,
           notes: cleanHtml(row.overview),
           rating,
@@ -909,11 +922,13 @@ async function searchJikanManga(query: string): Promise<ApiSearchResult[]> {
       const creator =
         Array.isArray(item.authors) && item.authors.length > 0
           ? item.authors.map((a: any) => a.name).join(', ')
-          : 'Unbekannt';
+          : t('api.unknown');
 
       const year = item.published?.from ? parseInt(item.published.from.slice(0, 4), 10) : undefined;
       const cover = item.images?.webp?.large_image_url || item.images?.jpg?.large_image_url;
-      const genres = Array.isArray(item.genres) ? item.genres.map((g: any) => g.name) : ['Manga'];
+      const genres = Array.isArray(item.genres)
+        ? item.genres.map((g: any) => g.name)
+        : [t('api.genreManga')];
 
       // Volumes & Chapters
       const totalVolumes = item.volumes || undefined;
@@ -989,7 +1004,7 @@ async function searchMangaDex(query: string): Promise<ApiSearchResult[]> {
       const authorRel = (entry.relationships || []).find(
         (r: any) => r.type === 'author' || r.type === 'artist',
       );
-      const creator = authorRel?.attributes?.name || 'Unbekannt';
+      const creator = authorRel?.attributes?.name || t('api.unknown');
 
       const coverRel = (entry.relationships || []).find((r: any) => r.type === 'cover_art');
       const coverFile = coverRel?.attributes?.fileName;
@@ -1040,7 +1055,7 @@ async function searchMangaDex(query: string): Promise<ApiSearchResult[]> {
         year,
         kind: 'book',
         bookSubtype,
-        genres: genres.length > 0 ? genres : ['Manga'],
+        genres: genres.length > 0 ? genres : [t('api.genreManga')],
         cover,
         totalPages: undefined,
         notes: cleanHtml(notes),
@@ -1075,7 +1090,9 @@ async function searchOpenLibrary(query: string): Promise<ApiSearchResult[]> {
       const cover = doc.cover_i
         ? `https://covers.openlibrary.org/b/id/${doc.cover_i}-L.jpg`
         : undefined;
-      const genres = Array.isArray(doc.subject) ? doc.subject.slice(0, 3) : ['Literatur'];
+      const genres = Array.isArray(doc.subject)
+        ? doc.subject.slice(0, 3)
+        : [t('api.genreLiterature')];
 
       let chapters: BookChapter[] = [];
       if (Array.isArray(doc.toc) && doc.toc.length > 0) {
@@ -1092,7 +1109,9 @@ async function searchOpenLibrary(query: string): Promise<ApiSearchResult[]> {
         sourceApi: 'openlibrary',
         attribution: 'Daten: Open Library',
         title: doc.title || query,
-        creator: Array.isArray(doc.author_name) ? doc.author_name.join(', ') : 'Unbekannter Autor',
+        creator: Array.isArray(doc.author_name)
+          ? doc.author_name.join(', ')
+          : t('api.unknownAuthor'),
         year: doc.first_publish_year || (doc.publish_year ? doc.publish_year[0] : undefined),
         kind: 'book',
         bookSubtype: (doc.title || '').toLowerCase().includes('manga') ? 'Manga' : 'Roman',
@@ -1100,7 +1119,9 @@ async function searchOpenLibrary(query: string): Promise<ApiSearchResult[]> {
         cover,
         totalPages: doc.number_of_pages_median || undefined,
         chapters,
-        notes: doc.first_sentence ? `Erster Satz: „${doc.first_sentence[0]}“` : undefined,
+        notes: doc.first_sentence
+          ? t('api.firstSentence', { text: doc.first_sentence[0] })
+          : undefined,
       };
 
       return {
@@ -1128,10 +1149,10 @@ async function searchGutendex(query: string): Promise<ApiSearchResult[]> {
       const author =
         Array.isArray(doc.authors) && doc.authors.length > 0
           ? doc.authors.map((a: any) => a.name).join(', ')
-          : 'Unbekannt';
+          : t('api.unknown');
       const genres = Array.isArray(doc.subjects)
         ? doc.subjects.slice(0, 3).map((s: string) => s.split(' -- ')[0])
-        : ['Klassiker'];
+        : [t('api.genreClassic')];
 
       const item: Partial<ApiSearchResult> = {
         id: `guten_${doc.id}`,
@@ -1143,7 +1164,7 @@ async function searchGutendex(query: string): Promise<ApiSearchResult[]> {
         bookSubtype: 'Roman',
         genres,
         cover,
-        notes: `Klassisches Werk aus dem Project Gutenberg. Sprachen: ${(doc.languages || []).join(', ')}.`,
+        notes: t('api.gutenbergNote', { languages: (doc.languages || []).join(', ') }),
       };
 
       return {
@@ -1240,7 +1261,7 @@ async function searchItunesMovies(query: string): Promise<ApiSearchResult[]> {
   try {
     const data = await apiJson<any>(
       'itunes',
-      `/search?term=${encodeURIComponent(query)}&entity=movie&limit=4&country=de&lang=de_de`,
+      `/search?term=${encodeURIComponent(query)}&entity=movie&limit=4&${itunesLocale()}`,
     );
     if (!data) return [];
     if (!data.results) return [];
@@ -1259,10 +1280,10 @@ async function searchItunesMovies(query: string): Promise<ApiSearchResult[]> {
         sourceApi: 'itunes_movie',
         attribution: 'Daten: iTunes Store',
         title: row.trackName || row.collectionName,
-        creator: row.artistName || 'Filmstudio',
+        creator: row.artistName || t('api.filmStudio'),
         year,
         kind: 'film',
-        genres: row.primaryGenreName ? [row.primaryGenreName] : ['Film'],
+        genres: row.primaryGenreName ? [row.primaryGenreName] : [t('api.genreFilm')],
         cover,
         runtimeMinutes,
         notes: row.longDescription || row.shortDescription,
@@ -1282,7 +1303,7 @@ async function searchItunesAudiobooks(query: string): Promise<ApiSearchResult[]>
   try {
     const data = await apiJson<any>(
       'itunes',
-      `/search?term=${encodeURIComponent(query)}&entity=audiobook&limit=4&country=de&lang=de_de`,
+      `/search?term=${encodeURIComponent(query)}&entity=audiobook&limit=4&${itunesLocale()}`,
     );
     if (!data) return [];
     if (!data.results) return [];
@@ -1308,11 +1329,11 @@ async function searchItunesAudiobooks(query: string): Promise<ApiSearchResult[]>
         sourceApi: 'itunes_audiobook',
         attribution: 'Daten: iTunes Store',
         title: row.collectionName || row.trackName,
-        creator: row.artistName || 'Unbekannter Autor',
-        narrator: row.authorName || 'Hörbuchsprecher',
+        creator: row.artistName || t('api.unknownAuthor'),
+        narrator: row.authorName || t('api.audioNarrator'),
         year,
         kind: 'audiobook',
-        genres: row.primaryGenreName ? [row.primaryGenreName] : ['Hörbuch'],
+        genres: row.primaryGenreName ? [row.primaryGenreName] : [t('api.genreAudiobook')],
         cover,
         audioTotalMinutes,
         chapters,
@@ -1335,7 +1356,7 @@ async function searchGames(query: string): Promise<ApiSearchResult[]> {
     // Query iTunes Software/Games first
     const data = await apiJson<any>(
       'itunes',
-      `/search?term=${encodeURIComponent(query)}&entity=software&limit=4&country=de&lang=de_de`,
+      `/search?term=${encodeURIComponent(query)}&entity=software&limit=4&${itunesLocale()}`,
     );
     if (!data) return [];
     if (!data.results || data.results.length === 0) return [];
@@ -1352,10 +1373,10 @@ async function searchGames(query: string): Promise<ApiSearchResult[]> {
         sourceApi: 'itunes_game',
         attribution: 'Daten: Apple Games',
         title: row.trackName,
-        creator: row.sellerName || row.artistName || 'Spieleentwickler',
+        creator: row.sellerName || row.artistName || t('api.gameDeveloper'),
         year,
         kind: 'game',
-        genres: row.genres ? row.genres.slice(0, 2) : ['Videospiel'],
+        genres: row.genres ? row.genres.slice(0, 2) : [t('api.genreGame')],
         cover,
         platform: detectedConsole,
         console: detectedConsole,
@@ -1391,13 +1412,13 @@ async function searchSteamGames(query: string): Promise<ApiSearchResult[]> {
         sourceApi: 'steam',
         attribution: 'Daten: Steam Store',
         title,
-        creator: 'Steam Publisher / Entwickler',
+        creator: t('api.gameDeveloper'),
         kind: 'game',
-        genres: ['Videospiel', 'PC / Steam'],
+        genres: [t('api.genreGame'), 'PC / Steam'],
         cover,
         platform: 'PC / Steam',
         console: 'PC / Steam',
-        notes: `Offizielles PC-Spiel auf Steam (App-ID: ${entry.id}). Unterstützt Controller & Steam Deck.`,
+        notes: t('api.steamNote', { id: entry.id }),
       };
 
       return {
@@ -1605,7 +1626,7 @@ export async function searchMediaApis(
 
   // 1. Economical Caching in mn.kv (reused for 2 hours)
   const mn = await mininode();
-  const cacheKey = `apicache:${german ? 'de' : 'xx'}:${effectiveCategory}:${sortBy}:${trimmed.toLowerCase()}`;
+  const cacheKey = `apicache:${language()}:${german ? 'de' : 'xx'}:${effectiveCategory}:${sortBy}:${trimmed.toLowerCase()}`;
   try {
     const cached = (await mn.kv.get(cacheKey)) as unknown as {
       timestamp: number;
@@ -1644,8 +1665,7 @@ export async function searchMediaApis(
             keyMissingApis.push({
               id: 'google-books',
               name: 'Google Books',
-              message:
-                'Diese Funktion wird gerade eingerichtet. Sobald der Schlüssel hinterlegt ist, erscheinen hier die Daten.',
+              message: t('api.settingUp'),
               docs: 'https://developers.google.com/books/docs/v1/using#APIKey',
             });
           }
@@ -1654,7 +1674,7 @@ export async function searchMediaApis(
             unavailableApis.push({
               id: 'google-books',
               name: 'Google Books',
-              message: 'Der Dienst ist gerade nicht erreichbar.',
+              message: t('api.unavailable'),
             });
           }
           return res.results;
@@ -1681,8 +1701,7 @@ export async function searchMediaApis(
             keyMissingApis.push({
               id: 'tmdb',
               name: 'The Movie Database (TMDB)',
-              message:
-                'Diese Funktion wird gerade eingerichtet. Sobald der Schlüssel hinterlegt ist, erscheinen hier die Daten.',
+              message: t('api.settingUp'),
               docs: 'https://www.themoviedb.org/settings/api',
             });
           }
@@ -1691,7 +1710,7 @@ export async function searchMediaApis(
             unavailableApis.push({
               id: 'tmdb',
               name: 'The Movie Database (TMDB)',
-              message: 'Der Dienst ist gerade nicht erreichbar.',
+              message: t('api.unavailable'),
             });
           }
           return res.results;
@@ -1827,7 +1846,7 @@ export async function searchMediaApis(
     return {
       results: [],
       isOffline: false,
-      error: 'Mediensuche konnte nicht geladen werden.',
+      error: t('api.searchFailed'),
       keyMissingApis: keyMissingApis.length > 0 ? keyMissingApis : undefined,
       unavailableApis: unavailableApis.length > 0 ? unavailableApis : undefined,
       isRateLimited: isRateLimited ? true : undefined,

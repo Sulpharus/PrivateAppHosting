@@ -19,6 +19,7 @@ every app next to the SDK:
 | File | Served as | Content |
 |---|---|---|
 | `kit/ui.css` | `/_mininode/ui.css` | `--mn-*` tokens (light, dark, six accents, seven `data-cat` category colours), fonts, all `mn-*` components |
+| `kit/i18n.js` | `/_mininode/i18n.js` | `window.mnI18n`: the person's language (cookie `mn-lang`), the app's `i18n/<code>.json`, `t(key, params)`, `lang`, `locale`, `apply`, `onChange` (ADR 0017) |
 | `kit/ui.js` | `/_mininode/ui.js` | `window.mnui`: dialogs with focus trap, toasts, theme switch, selection, German date and time fields (Tag · Monat · Jahr, 24 h) and `mnui.date.format` |
 | `kit/game.js` | `/_mininode/game.js` | `window.mnGame` for Gaming Hub games: `connect` (login, hub link, player name), `timer` (clock, playtime, hint penalty), `report`, `leaders` (leaderboard list), `format`, `random` |
 | fonts from `@fontsource-variable/*` | `/_mininode/fonts/*.woff2` | Bricolage Grotesque, Instrument Sans, JetBrains Mono |

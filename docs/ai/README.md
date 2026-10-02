@@ -4,6 +4,7 @@
 |---|---|---|
 | [`NEW-APP-SPEC.md`](NEW-APP-SPEC.md) | any AI that builds an app | Paste-ready spec: stack, SDK, data, manifest |
 | [`NEW-APP-SPEC.short.md`](NEW-APP-SPEC.short.md) | tools with small prompt limits | Generated from the long spec (`pnpm spec:short`) |
+| [`LANGUAGE-PACKAGES.md`](LANGUAGE-PACKAGES.md) | any AI that builds an app | German and English language packages: files, use, style rules, glossary, checks |
 | [`DESIGN-SYSTEM.md`](DESIGN-SYSTEM.md) | any AI that builds an app | The MiniNode App Kit: tokens (light and dark), shell, components, copy rules |
 | [`prompts/`](prompts/) | the prompt composer | App types and feature modules, composed into one full prompt in *Verwaltung → KI-Werkstatt* |
 | [`playbooks/`](playbooks/) | the integration agent | Step-by-step conversion per source type |

@@ -22,6 +22,9 @@ import { buildRule, describeRule, occurrenceKey, parseRule } from './rrule.js';
 
 // ---------- helpers ----------
 const $ = (s) => document.querySelector(s);
+const t = (key, params) => window.mnI18n.t(key, params);
+/** The language of the page: 'de-DE' or 'en-GB' (kit/i18n.js). */
+const loc = () => window.mnI18n.locale;
 
 /** Builds elements with textContent only: user data never goes through innerHTML. */
 function h(tag, props, ...children) {
@@ -76,7 +79,8 @@ const frag = (...nodes) => {
 // ---------- dates ----------
 const DAY = 86_400_000;
 const HOUR_PX = 48;
-const WD = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
+/** Short weekday names, Monday first. */
+const weekdays = () => [0, 1, 2, 3, 4, 5, 6].map((i) => t(`weekday.${i}`));
 const addDays = (d, n) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
 const shiftDays = (d, n) =>
   new Date(d.getFullYear(), d.getMonth(), d.getDate() + n, d.getHours(), d.getMinutes());
@@ -85,7 +89,20 @@ const sameDay = (a, b) =>
   a.getFullYear() === b.getFullYear() &&
   a.getMonth() === b.getMonth() &&
   a.getDate() === b.getDate();
-const fmt = (options) => new Intl.DateTimeFormat('de-DE', options);
+/** A date format in the page's language; the formatter is made again when the language changes. */
+const fmt = (options) => {
+  let formatter;
+  let made;
+  return {
+    format(date) {
+      if (made !== loc()) {
+        made = loc();
+        formatter = new Intl.DateTimeFormat(made, options);
+      }
+      return formatter.format(date);
+    },
+  };
+};
 const F = {
   time: fmt({ hour: '2-digit', minute: '2-digit' }),
   day: fmt({ weekday: 'short', day: 'numeric', month: 'short' }),
@@ -94,7 +111,7 @@ const F = {
   dm: fmt({ day: 'numeric', month: 'short' }),
 };
 const euro = (cents, currency = 'EUR') =>
-  new Intl.NumberFormat('de-DE', { style: 'currency', currency }).format(cents / 100);
+  new Intl.NumberFormat(loc(), { style: 'currency', currency }).format(cents / 100);
 function nextHalfHour() {
   const d = new Date(Date.now() + 30 * 60_000);
   d.setMinutes(d.getMinutes() < 30 ? 30 : 60, 0, 0);
@@ -111,39 +128,41 @@ function whenText(item) {
   if (item.allDay) {
     const last = addDays(end, -1);
     return last > start
-      ? `${F.day.format(start)} bis ${F.day.format(last)}`
-      : `${F.day.format(start)}, ganztägig`;
+      ? t('when.range', { from: F.day.format(start), to: F.day.format(last) })
+      : t('when.allDay', { day: F.day.format(start) });
   }
-  if (item.due) return `${F.day.format(start)}, fällig um ${F.time.format(start)}`;
+  if (item.due) return t('when.due', { day: F.day.format(start), time: F.time.format(start) });
   if (sameDay(start, end) || end - start < DAY)
-    return `${F.day.format(start)}, ${F.time.format(start)}–${F.time.format(end)}`;
-  return `${F.day.format(start)} ${F.time.format(start)} bis ${F.day.format(end)} ${F.time.format(end)}`;
+    return t('when.sameDay', {
+      day: F.day.format(start),
+      from: F.time.format(start),
+      to: F.time.format(end),
+    });
+  return t('when.span', {
+    from: `${F.day.format(start)} ${F.time.format(start)}`,
+    to: `${F.day.format(end)} ${F.time.format(end)}`,
+  });
 }
 
-const COLOR_NAMES = {
-  blue: 'Blau',
-  green: 'Grün',
-  violet: 'Violett',
-  amber: 'Bernstein',
-  rose: 'Rosa',
-  teal: 'Türkis',
-  gray: 'Grau',
-};
+const colorName = (id) => t(`color.${id}`);
+/** Reminder offsets (ISO durations) with the language key of their label. */
 const REMINDERS_TIMED = [
-  ['', 'Keine'],
-  ['PT0M', 'Zum Beginn'],
-  ['-PT10M', '10 Minuten vorher'],
-  ['-PT30M', '30 Minuten vorher'],
-  ['-PT1H', '1 Stunde vorher'],
-  ['-P1D', '1 Tag vorher'],
+  ['', 'reminder.none'],
+  ['PT0M', 'reminder.atStart'],
+  ['-PT10M', 'reminder.10m'],
+  ['-PT30M', 'reminder.30m'],
+  ['-PT1H', 'reminder.1h'],
+  ['-P1D', 'reminder.1d'],
 ];
 const REMINDERS_ALL_DAY = [
-  ['', 'Keine'],
-  ['PT9H', 'Am Tag um 9:00'],
-  ['-PT6H', 'Am Vortag um 18:00'],
+  ['', 'reminder.none'],
+  ['PT9H', 'reminder.sameDay9'],
+  ['-PT6H', 'reminder.dayBefore18'],
 ];
-const reminderLabel = (offset) =>
-  [...REMINDERS_TIMED, ...REMINDERS_ALL_DAY].find(([v]) => v === offset)?.[1] ?? offset;
+const reminderLabel = (offset) => {
+  const found = [...REMINDERS_TIMED, ...REMINDERS_ALL_DAY].find(([v]) => v === offset);
+  return found ? t(found[1]) : offset;
+};
 
 // ---------- state ----------
 const params = new URLSearchParams(location.search);
@@ -179,10 +198,10 @@ const ready = (async () => {
 })();
 
 function errorText(err) {
-  if (err?.code === '42501') return 'Dafür fehlt dir die Berechtigung.';
-  if (err?.code === 'P0002') return 'Den Termin gibt es nicht mehr.';
-  if (err?.code === '22023') return 'Der Termin enthält ungültige Angaben.';
-  return 'Das hat nicht geklappt. Prüf deine Verbindung und versuch es noch einmal.';
+  if (err?.code === '42501') return t('error.forbidden');
+  if (err?.code === 'P0002') return t('error.gone');
+  if (err?.code === '22023') return t('error.invalid');
+  return t('error.generic');
 }
 
 function rangeOf(view, anchor) {
@@ -233,7 +252,7 @@ async function load({ meta = false } = {}) {
     S.error = null;
   } catch {
     if (token !== loadToken) return;
-    S.error = 'Der Kalender konnte nicht geladen werden. Prüf deine Verbindung und lade neu.';
+    S.error = t('error.load');
   }
   S.loading = false;
   refresh();
@@ -242,21 +261,33 @@ async function load({ meta = false } = {}) {
     const item = S.items.find((i) => i.record.id === S.openEvent);
     S.openEvent = null;
     if (item) openDetail(item);
-    else toast('Den Termin gibt es nicht mehr.');
+    else toast(t('error.gone'));
   }
 }
 
 /** Sources and visible items from the loaded records. */
 function refresh() {
-  S.sources = sourcesFrom(S.records, S.collections, S.types, S.prefs.sources ?? {});
+  S.sources = sourcesFrom(
+    S.records,
+    S.collections,
+    S.types,
+    S.prefs.sources ?? {},
+    t('calendar.sharedName'),
+  );
   // calendars that come from Google get their own group
   const fromGoogle = new Set((S.google?.calendars ?? []).map((c) => `col:${c.collectionId}`));
-  for (const source of S.sources) if (fromGoogle.has(source.id)) source.group = 'Google';
+  for (const source of S.sources) if (fromGoogle.has(source.id)) source.group = 'google';
   const hidden = new Set(S.sources.filter((s) => !s.visible).map((s) => s.id));
   S.items = S.range
     ? itemsFor(
         S.records.filter((r) => S.projections[r.type]),
-        { ...S.range, projections: S.projections, sources: S.sources, roles: S.roles },
+        {
+          ...S.range,
+          projections: S.projections,
+          sources: S.sources,
+          roles: S.roles,
+          untitled: t('event.untitled'),
+        },
       ).filter((i) => !hidden.has(i.sourceId))
     : [];
 }
@@ -269,7 +300,7 @@ function setSource(id, patch) {
     ...(S.prefs.sources[id] ?? {}),
     color: source?.color,
     visible: source?.visible,
-    ...(source?.group === 'Apps' ? { name: source.name } : {}),
+    ...(source?.group === 'apps' ? { name: source.name } : {}),
     ...patch,
   };
   refresh();
@@ -280,14 +311,14 @@ function setSource(id, patch) {
       const mn = await ready;
       await mn.kv.set('prefs', S.prefs);
     } catch {
-      toast('Die Auswahl konnte nicht gespeichert werden.');
+      toast(t('error.prefsSave'));
     }
   }, 400);
 }
 
 const sourceName = (item) => S.sources.find((s) => s.id === item.sourceId)?.name ?? '';
 const itemLabel = (item) =>
-  [item.title, whenText(item), item.cancelled ? 'abgesagt' : null, sourceName(item)]
+  [item.title, whenText(item), item.cancelled ? t('event.cancelled') : null, sourceName(item)]
     .filter(Boolean)
     .join(', ');
 const writableCalendars = () =>
@@ -327,18 +358,19 @@ function titleFor() {
   const { from, to } = rangeOf(S.view, S.anchor);
   if (S.view === 'month') return F.month.format(S.anchor);
   if (S.view === 'week') return `${F.dm.format(from)} – ${F.dm.format(addDays(to, -1))}`;
-  if (S.view === 'day') return sameDay(S.anchor, new Date()) ? 'Heute' : F.dayLong.format(S.anchor);
-  return 'Demnächst';
+  if (S.view === 'day')
+    return sameDay(S.anchor, new Date()) ? t('nav.today') : F.dayLong.format(S.anchor);
+  return t('nav.upcoming');
 }
 function subtitleFor() {
   if (S.loading) return '';
   const { from, to } = rangeOf(S.view, S.anchor);
   const count = S.items.filter((i) => i.start < to && i.end >= from).length;
-  const n = count === 1 ? '1 Termin' : `${count || 'Keine'} Termine`;
-  if (S.view === 'week') return `KW ${isoWeek(from)} · ${n}`;
+  const n = t('events.count', { n: count });
+  if (S.view === 'week') return t('subtitle.week', { week: isoWeek(from), n });
   if (S.view === 'day')
     return sameDay(S.anchor, new Date()) ? `${F.dayLong.format(S.anchor)} · ${n}` : n;
-  if (S.view === 'list') return `Ab ${F.day.format(from)}, sechs Wochen · ${n}`;
+  if (S.view === 'list') return t('subtitle.list', { from: F.day.format(from), n });
   return n;
 }
 
@@ -371,29 +403,29 @@ function render() {
 }
 
 function renderTools() {
-  const prev = { month: 'Vorheriger Monat', week: 'Vorherige Woche', day: 'Vorheriger Tag' };
-  const next = { month: 'Nächster Monat', week: 'Nächste Woche', day: 'Nächster Tag' };
+  const prev = { month: t('nav.prevMonth'), week: t('nav.prevWeek'), day: t('nav.prevDay') };
+  const next = { month: t('nav.nextMonth'), week: t('nav.nextWeek'), day: t('nav.nextDay') };
   $('#tools').replaceChildren(
     h(
       'div',
-      { class: 'mn-stepper cal-stepper', role: 'group', 'aria-label': 'Zeitraum' },
+      { class: 'mn-stepper cal-stepper', role: 'group', 'aria-label': t('nav.period') },
       h(
         'button',
         {
           type: 'button',
           class: 'mn-icon-btn',
-          'aria-label': prev[S.view] ?? 'Früher',
+          'aria-label': prev[S.view] ?? t('nav.earlier'),
           onclick: () => step(-1),
         },
         icon('left'),
       ),
-      h('button', { type: 'button', class: 'mn-btn cal-today', onclick: goToday }, 'Heute'),
+      h('button', { type: 'button', class: 'mn-btn cal-today', onclick: goToday }, t('nav.today')),
       h(
         'button',
         {
           type: 'button',
           class: 'mn-icon-btn',
-          'aria-label': next[S.view] ?? 'Später',
+          'aria-label': next[S.view] ?? t('nav.later'),
           onclick: () => step(1),
         },
         icon('right'),
@@ -402,7 +434,7 @@ function renderTools() {
     googleButton(),
     h(
       'button',
-      { type: 'button', class: 'mn-icon-btn', 'aria-label': 'Suchen', onclick: openSearch },
+      { type: 'button', class: 'mn-icon-btn', 'aria-label': t('nav.search'), onclick: openSearch },
       icon('search'),
     ),
     h(
@@ -410,7 +442,7 @@ function renderTools() {
       {
         type: 'button',
         class: 'mn-icon-btn cal-sources-btn',
-        'aria-label': 'Kalender und Apps',
+        'aria-label': t('nav.sources'),
         onclick: openSources,
       },
       icon('layers'),
@@ -424,7 +456,7 @@ function layout() {
     { class: 'cal-layout' },
     h(
       'aside',
-      { class: 'cal-side', 'aria-label': 'Monatsübersicht und Quellen' },
+      { class: 'cal-side', 'aria-label': t('nav.sideLabel') },
       miniMonth(),
       sourceToggles(),
     ),
@@ -480,6 +512,10 @@ function chip(item, { drag = false, time = true } = {}) {
   return el;
 }
 
+/** A day for screen readers: its date and, when there are any, how many events it holds. */
+const dayLabel = (day, n) =>
+  n ? t('day.withEvents', { day: F.dayLong.format(day), n }) : F.dayLong.format(day);
+
 let dragKey = null;
 function monthFull() {
   const days = monthGrid(S.anchor.getFullYear(), S.anchor.getMonth());
@@ -493,7 +529,7 @@ function monthFull() {
     h(
       'div',
       { class: 'cal-dows', role: 'row' },
-      WD.map((d) => h('span', { role: 'columnheader' }, d)),
+      weekdays().map((d) => h('span', { role: 'columnheader' }, d)),
     ),
   );
   for (let w = 0; w < 6; w++) {
@@ -509,7 +545,7 @@ function monthFull() {
           h(
             'button',
             { type: 'button', class: 'cal-more', onclick: () => openDay(day) },
-            `+${its.length - (max - 1)} weitere`,
+            t('month.more', { n: its.length - (max - 1) }),
           ),
         );
       const cell = h(
@@ -523,7 +559,7 @@ function monthFull() {
           {
             type: 'button',
             class: 'cal-mnum',
-            'aria-label': `${F.dayLong.format(day)}${its.length ? `, ${its.length} ${its.length === 1 ? 'Termin' : 'Termine'}` : ''}`,
+            'aria-label': dayLabel(day, its.length),
             onclick: () => openDay(day),
           },
           h('span', {}, String(day.getDate())),
@@ -571,7 +607,7 @@ function monthCompact() {
       h(
         'div',
         { class: 'mn-cal' },
-        WD.map((d) => h('span', { class: 'mn-dow' }, d)),
+        weekdays().map((d) => h('span', { class: 'mn-dow' }, d)),
       ),
       h(
         'div',
@@ -584,7 +620,7 @@ function monthCompact() {
               type: 'button',
               class: `mn-cell${day.getMonth() !== S.anchor.getMonth() ? ' out' : ''}${sameDay(day, today) ? ' today' : ''}`,
               'aria-pressed': sameDay(day, S.anchor) ? 'true' : 'false',
-              'aria-label': `${F.dayLong.format(day)}${its.length ? `, ${its.length} ${its.length === 1 ? 'Termin' : 'Termine'}` : ''}`,
+              'aria-label': dayLabel(day, its.length),
               onclick: () => {
                 const otherMonth = day.getMonth() !== S.anchor.getMonth();
                 S.anchor = day;
@@ -609,7 +645,7 @@ function monthCompact() {
 }
 
 function row(item) {
-  const sub = [item.recurring ? 'Serie' : null, sourceName(item), item.record.place_name]
+  const sub = [item.recurring ? t('event.series') : null, sourceName(item), item.record.place_name]
     .filter(Boolean)
     .join(' · ');
   return h(
@@ -625,13 +661,17 @@ function row(item) {
       'span',
       {},
       h('span', { class: 'mn-row-title' }, item.title),
-      h('span', { class: 'mn-row-sub' }, item.cancelled ? `Abgesagt · ${sub}` : sub),
+      h('span', { class: 'mn-row-sub' }, item.cancelled ? t('event.cancelledSub', { sub }) : sub),
     ),
     h(
       'span',
       { class: 'mn-row-side' },
-      h('b', {}, item.allDay ? 'Ganztägig' : F.time.format(item.start)),
-      item.allDay || item.due ? (item.due ? 'fällig' : '') : `bis ${F.time.format(item.end)}`,
+      h('b', {}, item.allDay ? t('event.allDay') : F.time.format(item.start)),
+      item.allDay || item.due
+        ? item.due
+          ? t('event.due')
+          : ''
+        : t('event.until', { time: F.time.format(item.end) }),
     ),
   );
 }
@@ -655,12 +695,12 @@ function dayList(day) {
               start: new Date(day.getFullYear(), day.getMonth(), day.getDate(), 9),
             }),
         },
-        'Termin anlegen',
+        t('event.add'),
       ),
     ),
     its.length
       ? h('div', { class: 'mn-list' }, its.map(row))
-      : h('p', { class: 'mn-note' }, 'An diesem Tag ist nichts geplant.'),
+      : h('p', { class: 'mn-note' }, t('day.empty')),
   );
 }
 
@@ -681,7 +721,9 @@ function agenda() {
           h(
             'h2',
             {},
-            sameDay(d, today) ? `Heute, ${F.dayLong.format(d)}` : F.dayLong.format(d),
+            sameDay(d, today)
+              ? t('agenda.today', { day: F.dayLong.format(d) })
+              : F.dayLong.format(d),
             h('small', {}, String(its.length)),
           ),
         ),
@@ -695,16 +737,12 @@ function agenda() {
         'div',
         { class: 'mn-empty' },
         h('div', { class: 'mn-empty-icon' }, icon('calendar')),
-        h('h3', {}, 'In den nächsten sechs Wochen ist nichts geplant'),
-        h(
-          'p',
-          {},
-          'Lege einen Termin an oder blende unter „Kalender und Apps“ weitere Quellen ein.',
-        ),
+        h('h3', {}, t('agenda.emptyTitle')),
+        h('p', {}, t('agenda.emptyText')),
         h(
           'button',
           { type: 'button', class: 'mn-btn mn-btn--primary', onclick: () => openEditor(null) },
-          'Termin anlegen',
+          t('event.add'),
         ),
       ),
     );
@@ -731,7 +769,7 @@ function timeGrid(days) {
           'aria-label': F.dayLong.format(d),
           onclick: () => openDay(d),
         },
-        h('small', {}, WD[(d.getDay() + 6) % 7]),
+        h('small', {}, weekdays()[(d.getDay() + 6) % 7]),
         h('b', {}, String(d.getDate())),
       ),
     ),
@@ -739,7 +777,7 @@ function timeGrid(days) {
   const allDay = h(
     'div',
     { class: 'cal-allday' },
-    h('span', { class: 'cal-gutter' }, h('span', { class: 'cal-gutter-label' }, 'Ganztägig')),
+    h('span', { class: 'cal-gutter' }, h('span', { class: 'cal-gutter-label' }, t('event.allDay'))),
     days.map((d) =>
       h(
         'div',
@@ -792,7 +830,7 @@ function timeGrid(days) {
               'span',
               { class: 'cal-ev-time' },
               p.orig.due
-                ? `fällig ${F.time.format(p.orig.start)}`
+                ? t('event.dueAt', { time: F.time.format(p.orig.start) })
                 : `${F.time.format(p.orig.start)}–${F.time.format(p.orig.end)}`,
             )
           : null,
@@ -902,7 +940,7 @@ function miniMonth() {
         {
           type: 'button',
           class: 'mn-icon-btn',
-          'aria-label': 'Vorheriger Monat',
+          'aria-label': t('nav.prevMonth'),
           onclick: () => move(-1),
         },
         icon('left'),
@@ -913,7 +951,7 @@ function miniMonth() {
         {
           type: 'button',
           class: 'mn-icon-btn',
-          'aria-label': 'Nächster Monat',
+          'aria-label': t('nav.nextMonth'),
           onclick: () => move(1),
         },
         icon('right'),
@@ -922,7 +960,7 @@ function miniMonth() {
     h(
       'div',
       { class: 'mn-cal' },
-      WD.map((d) => h('span', { class: 'mn-dow' }, d)),
+      weekdays().map((d) => h('span', { class: 'mn-dow' }, d)),
     ),
     h(
       'div',
@@ -978,9 +1016,9 @@ function sourceToggle(source, sub) {
 
 function sourceToggles() {
   const groups = [
-    ['Meine Kalender', S.sources.filter((s) => s.group === 'Kalender')],
-    ['Google Kalender', S.sources.filter((s) => s.group === 'Google')],
-    ['Aus anderen Apps', S.sources.filter((s) => s.group === 'Apps')],
+    [t('sources.mine'), S.sources.filter((s) => s.group === 'calendars')],
+    [t('sources.google'), S.sources.filter((s) => s.group === 'google')],
+    [t('sources.apps'), S.sources.filter((s) => s.group === 'apps')],
   ];
   return h(
     'div',
@@ -995,7 +1033,7 @@ function sourceToggles() {
           )
         : null,
     ),
-    h('button', { type: 'button', class: 'mn-link', onclick: openSources }, 'Kalender verwalten'),
+    h('button', { type: 'button', class: 'mn-link', onclick: openSources }, t('sources.manage')),
   );
 }
 
@@ -1006,23 +1044,28 @@ function openDetail(item) {
   const app = r.created_by_app ?? r.source_app;
   const foreign = app && app !== SELF;
   const facts = [];
-  if (r.place_name) facts.push(['Ort', r.place_name]);
-  if (rule) facts.push(['Wiederholung', describeRule(rule)]);
+  if (r.place_name) facts.push([t('fact.place'), r.place_name]);
+  if (rule) facts.push([t('fact.repeat'), describeRule(rule, t, loc())]);
   if (r.data?.reminders?.length)
-    facts.push(['Erinnerung', r.data.reminders.map((x) => reminderLabel(x.offset)).join(', ')]);
+    facts.push([
+      t('fact.reminder'),
+      r.data.reminders.map((x) => reminderLabel(x.offset)).join(', '),
+    ]);
   if (r.amount_cents !== null && r.amount_cents !== undefined)
-    facts.push(['Betrag', euro(r.amount_cents, r.currency ?? 'EUR')]);
-  facts.push([foreign ? 'Aus' : 'Kalender', sourceName(item)]);
-  if (r.data?.description) facts.push(['Beschreibung', r.data.description]);
+    facts.push([t('fact.amount'), euro(r.amount_cents, r.currency ?? 'EUR')]);
+  facts.push([t(foreign ? 'fact.from' : 'fact.calendar'), sourceName(item)]);
+  if (r.data?.description) facts.push([t('fact.description'), r.data.description]);
   const link = safeUrl(r.data?.url);
   const chips = [
-    item.cancelled ? h('span', { class: 'mn-chip mn-chip--bad' }, 'Abgesagt') : null,
+    item.cancelled ? h('span', { class: 'mn-chip mn-chip--bad' }, t('chip.cancelled')) : null,
     r.data?.status === 'tentative'
-      ? h('span', { class: 'mn-chip mn-chip--warn' }, 'Vorläufig')
+      ? h('span', { class: 'mn-chip mn-chip--warn' }, t('chip.tentative'))
       : null,
-    item.due ? h('span', { class: 'mn-chip mn-chip--plain' }, 'Fällig') : null,
-    r.status === 'done' ? h('span', { class: 'mn-chip mn-chip--ok' }, 'Erledigt') : null,
-    item.recurring ? h('span', { class: 'mn-chip mn-chip--plain' }, icon('repeat'), 'Serie') : null,
+    item.due ? h('span', { class: 'mn-chip mn-chip--plain' }, t('chip.due')) : null,
+    r.status === 'done' ? h('span', { class: 'mn-chip mn-chip--ok' }, t('chip.done')) : null,
+    item.recurring
+      ? h('span', { class: 'mn-chip mn-chip--plain' }, icon('repeat'), t('event.series'))
+      : null,
   ].filter(Boolean);
   let armed = false;
   const remove = item.editable
@@ -1034,18 +1077,18 @@ function openDetail(item) {
           onclick: async (e) => {
             if (!armed) {
               armed = true;
-              e.currentTarget.textContent = 'Zum Löschen erneut tippen';
+              e.currentTarget.textContent = t('common.deleteConfirm');
               return;
             }
             const scope = item.recurring
-              ? await askScope('Serientermin löschen', ['one', 'following', 'all'])
+              ? await askScope(t('scope.deleteTitle'), ['one', 'following', 'all'])
               : 'all';
             if (!scope) return;
             window.mnui.sheet.close();
-            await run(() => deleteItem(item, scope), 'Termin gelöscht');
+            await run(() => deleteItem(item, scope), t('toast.deleted'));
           },
         },
-        'Löschen',
+        t('common.delete'),
       )
     : null;
   window.mnui.sheet.open(
@@ -1056,14 +1099,14 @@ function openDetail(item) {
         h(
           'button',
           { type: 'button', class: 'mn-btn mn-btn--ghost', 'data-mn-close': true },
-          'Schließen',
+          t('common.close'),
         ),
         h('span', {}),
         item.editable
           ? h(
               'button',
               { type: 'button', class: 'mn-btn', onclick: () => void editItem(item) },
-              'Bearbeiten',
+              t('common.edit'),
             )
           : h('span', {}),
       ),
@@ -1083,15 +1126,17 @@ function openDetail(item) {
           ? h(
               'a',
               { class: 'mn-link', href: link, target: '_blank', rel: 'noopener noreferrer' },
-              'Link öffnen',
+              t('detail.openLink'),
             )
           : null,
         foreign
-          ? h('a', { class: 'mn-btn', href: appUrl(app) }, `In ${appName(app)} öffnen`)
+          ? h(
+              'a',
+              { class: 'mn-btn', href: appUrl(app) },
+              t('detail.openIn', { app: appName(app) }),
+            )
           : null,
-        !item.editable && !foreign
-          ? h('p', { class: 'mn-note' }, 'Diesen Kalender kannst du nur ansehen.')
-          : null,
+        !item.editable && !foreign ? h('p', { class: 'mn-note' }, t('detail.readOnly')) : null,
       ),
       item.editable
         ? h(
@@ -1106,7 +1151,7 @@ function openDetail(item) {
                 class: 'mn-btn',
                 onclick: () => openEditor(null, { copy: item }),
               },
-              'Duplizieren',
+              t('detail.duplicate'),
             ),
           )
         : null,
@@ -1115,11 +1160,7 @@ function openDetail(item) {
   );
 }
 
-const SCOPES = {
-  one: 'Nur dieser Termin',
-  following: 'Dieser und alle folgenden',
-  all: 'Alle Termine der Serie',
-};
+const scopeLabel = (scope) => t(`scope.${scope}`);
 /** Asks which occurrences a change applies to; resolves with the scope or null. */
 function askScope(title, scopes) {
   return new Promise((resolve) => {
@@ -1128,7 +1169,7 @@ function askScope(title, scopes) {
       'div',
       { class: 'mn-sheet-body cal-scope' },
       h('h2', { class: 'cal-sheet-h' }, title),
-      h('p', { class: 'mn-muted' }, 'Das ist ein Serientermin. Wofür gilt die Änderung?'),
+      h('p', { class: 'mn-muted' }, t('scope.question')),
       scopes.map((s) =>
         h(
           'button',
@@ -1140,13 +1181,13 @@ function askScope(title, scopes) {
               window.mnui.sheet.close();
             },
           },
-          SCOPES[s],
+          scopeLabel(s),
         ),
       ),
       h(
         'button',
         { type: 'button', class: 'mn-btn mn-btn--ghost mn-btn--block', 'data-mn-close': true },
-        'Abbrechen',
+        t('common.cancel'),
       ),
     );
     window.mnui.sheet.open(body, { label: title, onClose: () => resolve(chosen) });
@@ -1156,7 +1197,7 @@ function askScope(title, scopes) {
 
 async function editItem(item) {
   const scope = item.recurring
-    ? await askScope('Serientermin bearbeiten', ['one', 'following', 'all'])
+    ? await askScope(t('scope.editTitle'), ['one', 'following', 'all'])
     : 'all';
   if (scope) openEditor(item, { scope });
 }
@@ -1282,7 +1323,7 @@ async function deleteItem(item, scope) {
 
 async function moveItem(item, start, end) {
   const scope = item.recurring
-    ? await askScope('Serientermin verschieben', ['one', 'following', 'all'])
+    ? await askScope(t('scope.moveTitle'), ['one', 'following', 'all'])
     : 'all';
   if (!scope) return render();
   await run(async () => {
@@ -1292,7 +1333,7 @@ async function moveItem(item, start, end) {
       scope,
     );
     void scheduleReminders(saved.record);
-  }, 'Termin verschoben');
+  }, t('toast.moved'));
 }
 
 /** Runs a write, confirms it and reloads; errors become a toast. */
@@ -1345,7 +1386,7 @@ async function scheduleReminders(record, existing = null) {
       await mn.push.schedule({
         key,
         at,
-        title: record.title ?? 'Termin',
+        title: record.title ?? t('event.default'),
         body: whenText({ start: hit.occurrence, end, allDay: span.allDay, due: false }),
         path: `/?view=day&date=${dateInput(hit.occurrence)}&event=${record.id}`,
       });
@@ -1417,7 +1458,7 @@ async function openEditor(item, opts = {}) {
     type: 'time',
     name: 'start_time',
     step: 300,
-    'aria-label': 'Uhrzeit Beginn',
+    'aria-label': t('editor.startTime'),
     value: timeInput(start0),
   });
   const ed = h('input', {
@@ -1429,7 +1470,7 @@ async function openEditor(item, opts = {}) {
     type: 'time',
     name: 'end_time',
     step: 300,
-    'aria-label': 'Uhrzeit Ende',
+    'aria-label': t('editor.endTime'),
     value: timeInput(end0),
   });
   // moving the start keeps the length
@@ -1460,12 +1501,12 @@ async function openEditor(item, opts = {}) {
   const freq = h(
     'select',
     { name: 'freq' },
-    option('', 'Nie'),
-    option('DAILY', 'Täglich'),
-    option('WEEKLY', 'Wöchentlich'),
-    option('MONTHLY', 'Monatlich'),
-    option('YEARLY', 'Jährlich'),
-    custom ? option('CUSTOM', describeRule(rule0)) : null,
+    option('', t('repeat.never')),
+    option('DAILY', t('repeat.daily')),
+    option('WEEKLY', t('repeat.weekly')),
+    option('MONTHLY', t('repeat.monthly')),
+    option('YEARLY', t('repeat.yearly')),
+    custom ? option('CUSTOM', describeRule(rule0, t, loc())) : null,
   );
   freq.value = custom ? 'CUSTOM' : (rule0?.freq ?? '');
   const interval = h('input', {
@@ -1481,22 +1522,14 @@ async function openEditor(item, opts = {}) {
   let daysTouched = Boolean(rule0?.byday.length);
   const daypick = h(
     'div',
-    { class: 'mn-daypick', role: 'group', 'aria-label': 'Wochentage' },
+    { class: 'mn-daypick', role: 'group', 'aria-label': t('editor.weekdays') },
     [1, 2, 3, 4, 5, 6, 0].map((wd) =>
       h(
         'button',
         {
           type: 'button',
           'aria-pressed': picked.has(wd) ? 'true' : 'false',
-          'aria-label': [
-            'Sonntag',
-            'Montag',
-            'Dienstag',
-            'Mittwoch',
-            'Donnerstag',
-            'Freitag',
-            'Samstag',
-          ][wd],
+          'aria-label': t(`weekdayLong.${wd}`),
           'data-wd': wd,
           onclick: (e) => {
             daysTouched = true;
@@ -1505,16 +1538,16 @@ async function openEditor(item, opts = {}) {
             e.currentTarget.setAttribute('aria-pressed', picked.has(wd) ? 'true' : 'false');
           },
         },
-        WD[(wd + 6) % 7],
+        weekdays()[(wd + 6) % 7],
       ),
     ),
   );
   const endKind = h(
     'select',
     { name: 'repeat_end' },
-    option('never', 'Nie'),
-    option('count', 'Nach Anzahl'),
-    option('until', 'Am Datum'),
+    option('never', t('repeat.never')),
+    option('count', t('repeat.afterCount')),
+    option('until', t('repeat.onDate')),
   );
   endKind.value = rule0?.count ? 'count' : rule0?.until ? 'until' : 'never';
   const count = h('input', {
@@ -1531,22 +1564,22 @@ async function openEditor(item, opts = {}) {
     value: dateInput(rule0?.until ?? addDays(start0, 90)),
   });
   const intervalUnit = h('span', { class: 'cal-unit' });
-  const countLabel = h('label', { class: 'mn-field' }, 'Anzahl', count);
-  const untilLabel = h('label', { class: 'mn-field' }, 'Letzter Tag', until);
+  const countLabel = h('label', { class: 'mn-field' }, t('repeat.count'), count);
+  const untilLabel = h('label', { class: 'mn-field' }, t('repeat.lastDay'), until);
   const repeatGroup = h(
     'div',
     { class: 'mn-group cal-repeat' },
     h(
       'label',
       { class: 'mn-field cal-interval' },
-      'Alle',
+      t('repeat.every'),
       h('span', { class: 'cal-inline' }, interval, intervalUnit),
     ),
     daypick,
     h(
       'div',
       { class: 'mn-grid-2' },
-      h('label', { class: 'mn-field' }, 'Endet', endKind),
+      h('label', { class: 'mn-field' }, t('repeat.ends'), endKind),
       countLabel,
       untilLabel,
     ),
@@ -1556,7 +1589,12 @@ async function openEditor(item, opts = {}) {
     repeatGroup.hidden = !f || f === 'CUSTOM';
     daypick.hidden = f !== 'WEEKLY';
     intervalUnit.textContent =
-      { DAILY: 'Tage', WEEKLY: 'Wochen', MONTHLY: 'Monate', YEARLY: 'Jahre' }[f] ?? '';
+      {
+        DAILY: t('unit.days'),
+        WEEKLY: t('unit.weeks'),
+        MONTHLY: t('unit.months'),
+        YEARLY: t('unit.years'),
+      }[f] ?? '';
     countLabel.hidden = endKind.value !== 'count';
     untilLabel.hidden = endKind.value !== 'until';
   };
@@ -1576,7 +1614,7 @@ async function openEditor(item, opts = {}) {
   const fillReminders = () => {
     const current = reminder.value || src?.data?.reminders?.[0]?.offset || '';
     const list = allDay.checked ? REMINDERS_ALL_DAY : REMINDERS_TIMED;
-    reminder.replaceChildren(...list.map(([v, l]) => option(v, l)));
+    reminder.replaceChildren(...list.map(([v, l]) => option(v, t(l))));
     reminder.value = list.some(([v]) => v === current) ? current : '';
   };
 
@@ -1590,8 +1628,8 @@ async function openEditor(item, opts = {}) {
         c.personal
           ? c.name
           : googleCollections().has(c.id)
-            ? `${c.name} (Google)`
-            : `${c.name} (geteilt)`,
+            ? t('calendar.google', { name: c.name })
+            : t('calendar.shared', { name: c.name }),
       ),
     ),
   );
@@ -1604,7 +1642,7 @@ async function openEditor(item, opts = {}) {
   let color = src?.data?.color ?? null;
   const swatches = h(
     'div',
-    { class: 'cal-swatches', role: 'group', 'aria-label': 'Farbe' },
+    { class: 'cal-swatches', role: 'group', 'aria-label': t('editor.colour') },
     [null, ...COLORS].map((c) =>
       h(
         'button',
@@ -1613,24 +1651,24 @@ async function openEditor(item, opts = {}) {
           class: 'cal-swatch-btn',
           'data-cat': c ?? 'none',
           'aria-pressed': c === color ? 'true' : 'false',
-          'aria-label': c ? COLOR_NAMES[c] : 'Farbe des Kalenders',
-          title: c ? COLOR_NAMES[c] : 'Farbe des Kalenders',
+          'aria-label': c ? colorName(c) : t('editor.calendarColour'),
+          title: c ? colorName(c) : t('editor.calendarColour'),
           onclick: (e) => {
             color = c;
             for (const b of swatches.children)
               b.setAttribute('aria-pressed', b === e.currentTarget ? 'true' : 'false');
           },
         },
-        c ? null : 'Auto',
+        c ? null : t('editor.auto'),
       ),
     ),
   );
   const status = h(
     'select',
     { name: 'status' },
-    option('confirmed', 'Findet statt'),
-    option('tentative', 'Vorläufig'),
-    option('cancelled', 'Abgesagt'),
+    option('confirmed', t('status.confirmed')),
+    option('tentative', t('chip.tentative')),
+    option('cancelled', t('chip.cancelled')),
   );
   status.value = src?.data?.status ?? 'confirmed';
   const place = h('input', {
@@ -1665,8 +1703,8 @@ async function openEditor(item, opts = {}) {
     }
   };
 
-  const startTimeLabel = h('label', { class: 'mn-field' }, 'Uhrzeit', st);
-  const endTimeLabel = h('label', { class: 'mn-field' }, 'Uhrzeit', et);
+  const startTimeLabel = h('label', { class: 'mn-field' }, t('editor.time'), st);
+  const endTimeLabel = h('label', { class: 'mn-field' }, t('editor.time'), et);
   const syncAllDay = () => {
     startTimeLabel.hidden = allDay.checked;
     endTimeLabel.hidden = allDay.checked;
@@ -1680,13 +1718,13 @@ async function openEditor(item, opts = {}) {
       class: 'mn-more',
       open: Boolean(src?.place_name || src?.data?.description || src?.data?.url),
     },
-    h('summary', {}, 'Ort, Beschreibung und Link'),
+    h('summary', {}, t('editor.more')),
     h(
       'div',
       {},
-      h('label', { class: 'mn-field' }, 'Ort', place),
-      h('label', { class: 'mn-field' }, 'Beschreibung', description),
-      h('label', { class: 'mn-field' }, 'Link', url),
+      h('label', { class: 'mn-field' }, t('fact.place'), place),
+      h('label', { class: 'mn-field' }, t('fact.description'), description),
+      h('label', { class: 'mn-field' }, t('editor.link'), url),
     ),
   );
 
@@ -1696,38 +1734,43 @@ async function openEditor(item, opts = {}) {
     h(
       'fieldset',
       {},
-      h('legend', {}, 'Termin'),
-      h('label', { class: 'mn-field' }, 'Titel', title),
-      h('div', { class: 'mn-checks' }, h('label', {}, allDay, 'Ganztägig')),
+      h('legend', {}, t('event.default')),
+      h('label', { class: 'mn-field' }, t('editor.title'), title),
+      h('div', { class: 'mn-checks' }, h('label', {}, allDay, t('event.allDay'))),
       h(
         'div',
         { class: 'mn-grid-2' },
-        h('label', { class: 'mn-field' }, 'Beginn', sd),
+        h('label', { class: 'mn-field' }, t('editor.start'), sd),
         startTimeLabel,
       ),
-      h('div', { class: 'mn-grid-2' }, h('label', { class: 'mn-field' }, 'Ende', ed), endTimeLabel),
+      h(
+        'div',
+        { class: 'mn-grid-2' },
+        h('label', { class: 'mn-field' }, t('editor.end'), ed),
+        endTimeLabel,
+      ),
     ),
     scope === 'one'
-      ? h('p', { class: 'mn-note' }, 'Du änderst nur diesen einen Termin der Serie.')
+      ? h('p', { class: 'mn-note' }, t('editor.onlyOne'))
       : h(
           'fieldset',
           {},
-          h('legend', {}, 'Wiederholung'),
-          h('label', { class: 'mn-field' }, 'Wiederholen', freq),
+          h('legend', {}, t('fact.repeat')),
+          h('label', { class: 'mn-field' }, t('editor.repeatLabel'), freq),
           repeatGroup,
         ),
     h(
       'fieldset',
       {},
-      h('legend', {}, 'Kalender und Erinnerung'),
+      h('legend', {}, t('editor.calendarAndReminder')),
       h(
         'div',
         { class: 'mn-grid-2' },
-        h('label', { class: 'mn-field' }, 'Kalender', calendar),
-        h('label', { class: 'mn-field' }, 'Erinnerung', reminder),
+        h('label', { class: 'mn-field' }, t('fact.calendar'), calendar),
+        h('label', { class: 'mn-field' }, t('fact.reminder'), reminder),
       ),
-      h('div', { class: 'mn-field' }, h('span', {}, 'Farbe'), swatches),
-      h('label', { class: 'mn-field' }, 'Status', status),
+      h('div', { class: 'mn-field' }, h('span', {}, t('editor.colour')), swatches),
+      h('label', { class: 'mn-field' }, t('editor.status'), status),
     ),
     more,
     error,
@@ -1750,7 +1793,7 @@ async function openEditor(item, opts = {}) {
   const save = async () => {
     if (saving) return;
     const text = title.value.trim();
-    if (!text) return fail('Gib dem Termin einen Titel.', title);
+    if (!text) return fail(t('editor.errTitle'), title);
     let s;
     let e;
     if (allDay.checked) {
@@ -1761,14 +1804,13 @@ async function openEditor(item, opts = {}) {
       s = fromInputs(sd.value, st.value);
       e = fromInputs(ed.value || sd.value, et.value || st.value);
     }
-    if (!s) return fail('Gib einen gültigen Beginn an, z. B. 05. Okt. 2026 um 18:00.', sd);
-    if (!e || e < s) return fail('Das Ende muss nach dem Beginn liegen.', ed);
+    if (!s) return fail(t('editor.errStart'), sd);
+    if (!e || e < s) return fail(t('editor.errEnd'), ed);
     const link = url.value.trim();
-    if (link && !safeUrl(link)) return fail('Der Link muss mit https:// beginnen.', url);
+    if (link && !safeUrl(link)) return fail(t('editor.errLink'), url);
     if (endKind.value === 'until' && freq.value && freq.value !== 'CUSTOM') {
       const u = fromInputs(until.value);
-      if (!u || addDays(u, 1) <= s)
-        return fail('Der letzte Tag der Serie liegt vor dem Beginn.', until);
+      if (!u || addDays(u, 1) <= s) return fail(t('editor.errUntil'), until);
     }
     const data = {
       all_day: allDay.checked || null,
@@ -1790,13 +1832,7 @@ async function openEditor(item, opts = {}) {
     try {
       const result = await applyEdit(item, fields, scope, calendar.value || undefined);
       window.mnui.sheet.close();
-      toast(
-        result.merged
-          ? 'Mit einem gleichen Termin zusammengeführt'
-          : item
-            ? 'Termin gespeichert'
-            : 'Termin angelegt',
-      );
+      toast(t(result.merged ? 'toast.merged' : item ? 'toast.saved' : 'toast.created'));
       void scheduleReminders(result.record);
       googleSoon();
       const { from, to } = rangeOf(S.view, S.anchor);
@@ -1824,9 +1860,9 @@ async function openEditor(item, opts = {}) {
         h(
           'button',
           { type: 'button', class: 'mn-btn mn-btn--ghost', 'data-mn-close': true },
-          'Abbrechen',
+          t('common.cancel'),
         ),
-        h('h2', {}, item ? 'Termin bearbeiten' : 'Neuer Termin'),
+        h('h2', {}, t(item ? 'editor.edit' : 'editor.new')),
         h('span', {}),
       ),
       form,
@@ -1837,15 +1873,14 @@ async function openEditor(item, opts = {}) {
         h(
           'button',
           { type: 'button', class: 'mn-btn mn-btn--primary', onclick: () => void save() },
-          'Speichern',
+          t('common.save'),
         ),
       ),
     ),
-    { tall: true, modal: true, label: item ? 'Termin bearbeiten' : 'Neuer Termin' },
+    { tall: true, modal: true, label: t(item ? 'editor.edit' : 'editor.new') },
   );
   title.focus();
-  if (!calendars.length)
-    fail('Du hast keinen Kalender, in den du schreiben darfst. Lade die Seite neu.');
+  if (!calendars.length) fail(t('editor.errNoCalendar'));
 }
 
 // ---------- calendars and sources ----------
@@ -1870,16 +1905,16 @@ function openSources() {
         h(
           'button',
           { type: 'button', class: 'mn-btn mn-btn--ghost', 'data-mn-close': true },
-          'Fertig',
+          t('common.done'),
         ),
-        h('h2', {}, 'Kalender und Apps'),
+        h('h2', {}, t('nav.sources')),
         h('span', {}),
       ),
       body,
     ),
     {
       tall: true,
-      label: 'Kalender und Apps',
+      label: t('nav.sources'),
       onClose: () => {
         sheetRedraw = null;
       },
@@ -1890,15 +1925,19 @@ function openSources() {
 function colorPicker(source, redraw) {
   return h(
     'div',
-    { class: 'cal-swatches', role: 'group', 'aria-label': `Farbe für ${source.name}` },
+    {
+      class: 'cal-swatches',
+      role: 'group',
+      'aria-label': t('manage.colourFor', { name: source.name }),
+    },
     COLORS.map((c) =>
       h('button', {
         type: 'button',
         class: 'cal-swatch-btn',
         'data-cat': c,
         'aria-pressed': source.color === c ? 'true' : 'false',
-        'aria-label': COLOR_NAMES[c],
-        title: COLOR_NAMES[c],
+        'aria-label': colorName(c),
+        title: colorName(c),
         'data-key': `c:${source.id}:${c}`,
         onclick: () => {
           setSource(source.id, { color: c });
@@ -1930,9 +1969,9 @@ function confirmButton(label, confirmLabel, action) {
 }
 
 function manageContent(redraw) {
-  const calendars = S.sources.filter((s) => s.group === 'Kalender');
-  const fromGoogle = S.sources.filter((s) => s.group === 'Google');
-  const apps = S.sources.filter((s) => s.group === 'Apps');
+  const calendars = S.sources.filter((s) => s.group === 'calendars');
+  const fromGoogle = S.sources.filter((s) => s.group === 'google');
+  const apps = S.sources.filter((s) => s.group === 'apps');
   const withToggle = (source, sub, extra = []) => {
     const wrap = h('div', { class: 'cal-src' }, sourceToggle(source, sub));
     wrap.querySelector('button')?.setAttribute('data-key', `t:${source.id}`);
@@ -1940,7 +1979,7 @@ function manageContent(redraw) {
       h(
         'details',
         { class: 'cal-src-more', 'data-key': `d:${source.id}` },
-        h('summary', {}, 'Anpassen'),
+        h('summary', {}, t('manage.customise')),
         h('div', {}, colorPicker(source, redraw), ...extra),
       ),
     );
@@ -1948,15 +1987,17 @@ function manageContent(redraw) {
   };
   const calendarRow = (source) => {
     const c = source.collection;
-    if (!c) return withToggle(source, 'Geteilter Kalender');
+    if (!c) return withToggle(source, t('calendar.sharedName'));
     const others = c.members.filter((m) => m.userId !== S.me);
     const sub = c.personal
-      ? 'Persönlich'
+      ? t('calendar.personal')
       : c.role === 'owner'
         ? others.length
-          ? `Geteilt mit ${others.map((m) => m.name).join(', ')}`
-          : 'Noch mit niemandem geteilt'
-        : `Von ${c.ownerName}, ${c.role === 'viewer' ? 'nur ansehen' : 'bearbeiten'}`;
+          ? t('manage.sharedWith', { names: others.map((m) => m.name).join(', ') })
+          : t('manage.sharedNobody')
+        : t(c.role === 'viewer' ? 'manage.fromViewOnly' : 'manage.fromEdit', {
+            owner: c.ownerName,
+          });
     const extra = [];
     if (c.role !== 'viewer')
       extra.push(
@@ -1969,11 +2010,11 @@ function manageContent(redraw) {
             onclick: () => {
               S.prefs.defaultCalendar = c.id;
               setSource(source.id, {});
-              toast(`Neue Termine landen in „${c.name}“`);
+              toast(t('manage.defaultSet', { name: c.name }));
               redraw();
             },
           },
-          'Für neue Termine verwenden',
+          t('manage.useDefault'),
         ),
       );
     if (!c.personal && c.role === 'owner')
@@ -1982,24 +2023,20 @@ function manageContent(redraw) {
           'button',
           { type: 'button', class: 'mn-btn', onclick: () => void openMembers(c) },
           icon('people'),
-          'Mitglieder',
+          t('manage.members'),
         ),
-        confirmButton(
-          'Kalender löschen',
-          'Löschen bestätigen: alle Termine darin gehen in den Papierkorb',
-          async () => {
-            window.mnui.sheet.close();
-            const mn = await ready;
-            await runMeta(() => mn.suite.leave(c.id), 'Kalender gelöscht');
-          },
-        ),
+        confirmButton(t('manage.deleteCalendar'), t('manage.deleteConfirm'), async () => {
+          window.mnui.sheet.close();
+          const mn = await ready;
+          await runMeta(() => mn.suite.leave(c.id), t('toast.calendarDeleted'));
+        }),
       );
     if (!c.personal && c.role !== 'owner')
       extra.push(
-        confirmButton('Kalender verlassen', 'Zum Verlassen erneut tippen', async () => {
+        confirmButton(t('manage.leave'), t('manage.leaveConfirm'), async () => {
           window.mnui.sheet.close();
           const mn = await ready;
-          await runMeta(() => mn.suite.leave(c.id), 'Kalender verlassen');
+          await runMeta(() => mn.suite.leave(c.id), t('toast.calendarLeft'));
         }),
       );
     return withToggle(source, sub, extra);
@@ -2024,11 +2061,11 @@ function manageContent(redraw) {
       h(
         'div',
         { class: 'mn-sect' },
-        h('h2', {}, 'Meine Kalender', h('small', {}, String(calendars.length))),
+        h('h2', {}, t('sources.mine'), h('small', {}, String(calendars.length))),
         h(
           'button',
           { type: 'button', class: 'mn-link', onclick: openNewCalendar },
-          'Neuer Kalender',
+          t('calendar.new'),
         ),
       ),
       calendars.map(calendarRow),
@@ -2037,53 +2074,39 @@ function manageContent(redraw) {
       ? h(
           'section',
           { class: 'cal-manage-sect' },
-          h('div', { class: 'mn-sect' }, h('h2', {}, 'Google Kalender')),
+          h('div', { class: 'mn-sect' }, h('h2', {}, t('sources.google'))),
           fromGoogle.map((s) =>
-            withToggle(s, null, [
-              h(
-                'p',
-                { class: 'mn-note' },
-                'Aus Google. Welche Google-Kalender hier erscheinen, stellst du unter „Google Kalender“ oben ein.',
-              ),
-            ]),
+            withToggle(s, null, [h('p', { class: 'mn-note' }, t('manage.googleNote'))]),
           ),
         )
       : null,
     h(
       'section',
       { class: 'cal-manage-sect' },
-      h('div', { class: 'mn-sect' }, h('h2', {}, 'Aus anderen Apps')),
+      h('div', { class: 'mn-sect' }, h('h2', {}, t('sources.apps'))),
       apps.length
         ? apps.map((s) =>
-            withToggle(s, s.hiddenByDefault && !s.visible ? 'Standardmäßig ausgeblendet' : null),
+            withToggle(s, s.hiddenByDefault && !s.visible ? t('manage.hiddenByDefault') : null),
           )
-        : h(
-            'p',
-            { class: 'mn-note' },
-            'Noch nichts aus anderen Apps. Sobald etwa der Sportplaner Einheiten mit Datum speichert und die Verwaltung das freigegeben hat, erscheinen sie hier.',
-          ),
+        : h('p', { class: 'mn-note' }, t('manage.appsEmpty')),
     ),
     h(
       'section',
       { class: 'cal-manage-sect' },
-      h('div', { class: 'mn-sect' }, h('h2', {}, 'Importieren und exportieren')),
-      h(
-        'p',
-        { class: 'mn-note' },
-        'ICS-Dateien kommen aus fast jedem Kalender (Outlook, Apple, Google). Importierte Termine landen im Kalender für neue Termine.',
-      ),
+      h('div', { class: 'mn-sect' }, h('h2', {}, t('manage.importExport'))),
+      h('p', { class: 'mn-note' }, t('manage.icsNote')),
       h(
         'div',
         { class: 'cal-actions' },
         h(
           'button',
           { type: 'button', class: 'mn-btn', onclick: () => file.click() },
-          'ICS-Datei importieren',
+          t('manage.icsImport'),
         ),
         h(
           'button',
           { type: 'button', class: 'mn-btn', onclick: () => void exportIcs() },
-          'Als ICS exportieren',
+          t('manage.icsExport'),
         ),
         file,
       ),
@@ -2091,7 +2114,7 @@ function manageContent(redraw) {
     h(
       'section',
       { class: 'cal-manage-sect' },
-      h('div', { class: 'mn-sect' }, h('h2', {}, 'Tastenkürzel')),
+      h('div', { class: 'mn-sect' }, h('h2', {}, t('manage.shortcuts'))),
       shortcutList(),
     ),
   ];
@@ -2113,19 +2136,19 @@ function openNewCalendar() {
     required: true,
     maxlength: 100,
     autocomplete: 'off',
-    placeholder: 'z. B. Familie',
+    placeholder: t('calendar.namePlaceholder'),
   });
   let color = COLORS[S.collections.length % COLORS.length];
   const swatches = h(
     'div',
-    { class: 'cal-swatches', role: 'group', 'aria-label': 'Farbe' },
+    { class: 'cal-swatches', role: 'group', 'aria-label': t('editor.colour') },
     COLORS.map((c) =>
       h('button', {
         type: 'button',
         class: 'cal-swatch-btn',
         'data-cat': c,
         'aria-pressed': c === color ? 'true' : 'false',
-        'aria-label': COLOR_NAMES[c],
+        'aria-label': colorName(c),
         onclick: (e) => {
           color = c;
           for (const b of swatches.children)
@@ -2138,7 +2161,7 @@ function openNewCalendar() {
   const save = async () => {
     const text = name.value.trim();
     if (!text) {
-      error.textContent = 'Gib dem Kalender einen Namen.';
+      error.textContent = t('calendar.errName');
       error.hidden = false;
       name.setAttribute('aria-invalid', 'true');
       name.focus();
@@ -2146,7 +2169,10 @@ function openNewCalendar() {
     }
     const mn = await ready;
     window.mnui.sheet.close();
-    await runMeta(() => mn.suite.createCollection(text, 'kalender', color), 'Kalender angelegt');
+    await runMeta(
+      () => mn.suite.createCollection(text, 'kalender', color),
+      t('toast.calendarCreated'),
+    );
   };
   const form = h(
     'form',
@@ -2154,14 +2180,10 @@ function openNewCalendar() {
     h(
       'fieldset',
       {},
-      h('legend', {}, 'Neuer Kalender'),
-      h('label', { class: 'mn-field' }, 'Name', name),
-      h('div', { class: 'mn-field' }, h('span', {}, 'Farbe'), swatches),
-      h(
-        'p',
-        { class: 'mn-hint' },
-        'Danach kannst du unter „Mitglieder“ Leute einladen, die ihn sehen oder bearbeiten.',
-      ),
+      h('legend', {}, t('calendar.new')),
+      h('label', { class: 'mn-field' }, t('editor.name'), name),
+      h('div', { class: 'mn-field' }, h('span', {}, t('editor.colour')), swatches),
+      h('p', { class: 'mn-hint' }, t('calendar.hint')),
     ),
     error,
   );
@@ -2177,9 +2199,9 @@ function openNewCalendar() {
         h(
           'button',
           { type: 'button', class: 'mn-btn mn-btn--ghost', 'data-mn-close': true },
-          'Abbrechen',
+          t('common.cancel'),
         ),
-        h('h2', {}, 'Neuer Kalender'),
+        h('h2', {}, t('calendar.new')),
         h('span', {}),
       ),
       form,
@@ -2190,11 +2212,11 @@ function openNewCalendar() {
         h(
           'button',
           { type: 'button', class: 'mn-btn mn-btn--primary', onclick: () => void save() },
-          'Anlegen',
+          t('calendar.create'),
         ),
       ),
     ),
-    { modal: true, label: 'Neuer Kalender' },
+    { modal: true, label: t('calendar.new') },
   );
   name.focus();
 }
@@ -2205,7 +2227,7 @@ async function openMembers(collection) {
   try {
     people = (await mn.people()).filter((p) => p.id !== S.me);
   } catch {
-    toast('Die Personenliste konnte nicht geladen werden.');
+    toast(t('members.errLoad'));
     return;
   }
   const roles = new Map(collection.members.map((m) => [m.userId, m.role]));
@@ -2215,10 +2237,10 @@ async function openMembers(collection) {
     people.map((p) => {
       const select = h(
         'select',
-        { 'aria-label': `Zugriff für ${p.name}` },
-        option('', 'Kein Zugriff'),
-        option('viewer', 'Kann ansehen'),
-        option('editor', 'Kann bearbeiten'),
+        { 'aria-label': t('members.accessFor', { name: p.name }) },
+        option('', t('members.none')),
+        option('viewer', t('members.viewer')),
+        option('editor', t('members.editor')),
       );
       select.value = roles.get(p.id) ?? '';
       select.addEventListener('change', async () => {
@@ -2226,7 +2248,7 @@ async function openMembers(collection) {
           await mn.suite.setMember(collection.id, p.id, select.value || null);
           if (select.value) roles.set(p.id, select.value);
           else roles.delete(p.id);
-          toast(select.value ? `${p.name} hinzugefügt` : `${p.name} entfernt`);
+          toast(t(select.value ? 'members.added' : 'members.removed', { name: p.name }));
           await loadMeta(mn);
           refresh();
           render();
@@ -2252,7 +2274,7 @@ async function openMembers(collection) {
         h(
           'button',
           { type: 'button', class: 'mn-btn mn-btn--ghost', 'data-mn-close': true },
-          'Fertig',
+          t('common.done'),
         ),
         h('h2', {}, collection.name),
         h('span', {}),
@@ -2260,38 +2282,28 @@ async function openMembers(collection) {
       h(
         'div',
         { class: 'mn-sheet-body' },
-        h(
-          'p',
-          { class: 'mn-muted' },
-          'Wer diesen Kalender sieht oder bearbeitet. Personen, die den Kalender nutzen dürfen, stehen hier.',
-        ),
-        people.length
-          ? list
-          : h(
-              'p',
-              { class: 'mn-note' },
-              'Noch niemand sonst nutzt den Kalender. Die Verwaltung gibt ihn im Portal frei.',
-            ),
+        h('p', { class: 'mn-muted' }, t('members.intro')),
+        people.length ? list : h('p', { class: 'mn-note' }, t('members.empty')),
       ),
     ),
-    { tall: true, label: `Mitglieder von ${collection.name}` },
+    { tall: true, label: t('members.label', { name: collection.name }) },
   );
 }
 
 // ---------- ICS ----------
 async function importIcs(file) {
-  if (file.size > 5_000_000) return toast('Die Datei ist zu groß (höchstens 5 MB).');
+  if (file.size > 5_000_000) return toast(t('ics.tooBig'));
   const parsed = parseIcs(await file.text()).slice(0, 2000);
-  if (!parsed.length) return toast('In der Datei sind keine Termine.');
+  if (!parsed.length) return toast(t('ics.empty'));
   const calendars = writableCalendars();
   const target =
     calendars.find((c) => c.id === S.prefs.defaultCalendar) ??
     calendars.find((c) => c.personal) ??
     calendars[0];
-  if (!target) return toast('Du hast keinen Kalender, in den du importieren darfst.');
+  if (!target) return toast(t('ics.noTarget'));
   const ev = await events();
   window.mnui.sheet.close();
-  toast(`${parsed.length} Termine werden importiert …`);
+  toast(t('ics.importing', { n: parsed.length }));
   let done = 0;
   let failed = 0;
   const queue = [...parsed];
@@ -2301,7 +2313,7 @@ async function importIcs(file) {
       try {
         await ev.upsert(
           {
-            title: e.title,
+            title: e.title || t('event.untitled'),
             starts_at: e.start.toISOString(),
             ends_at: e.end.toISOString(),
             place_name: e.location || null,
@@ -2328,15 +2340,13 @@ async function importIcs(file) {
     }
   };
   await Promise.all([worker(), worker(), worker(), worker()]);
-  toast(
-    failed ? `${done} Termine importiert, ${failed} übersprungen` : `${done} Termine importiert`,
-  );
+  toast(failed ? t('ics.importedSkipped', { done, failed }) : t('ics.imported', { n: done }));
   await load();
 }
 
 async function exportIcs() {
-  const own = S.sources.filter((s) => s.group === 'Kalender' && s.visible && s.collection);
-  if (!own.length) return toast('Blende mindestens einen deiner Kalender ein.');
+  const own = S.sources.filter((s) => s.group === 'calendars' && s.visible && s.collection);
+  if (!own.length) return toast(t('ics.showOne'));
   try {
     const ev = await events();
     const lists = await Promise.all(
@@ -2359,18 +2369,18 @@ async function exportIcs() {
         exdates: r.data?.recurrence?.exdates,
       });
     }
-    const blob = new Blob([toIcs(out, own.length === 1 ? own[0].name : 'MiniNode Kalender')], {
+    const blob = new Blob([toIcs(out, own.length === 1 ? own[0].name : t('ics.calendarName'))], {
       type: 'text/calendar',
     });
     const a = h('a', {
       href: URL.createObjectURL(blob),
-      download: `kalender-${dateInput(new Date())}.ics`,
+      download: t('ics.fileName', { date: dateInput(new Date()) }),
     });
     document.body.append(a);
     a.click();
     a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 10_000);
-    toast(`${out.length} Termine exportiert`);
+    toast(t('ics.exported', { n: out.length }));
   } catch (err) {
     toast(errorText(err));
   }
@@ -2380,8 +2390,8 @@ async function exportIcs() {
 function openSearch() {
   const input = h('input', {
     type: 'search',
-    placeholder: 'Titel eines Termins',
-    'aria-label': 'Termine durchsuchen',
+    placeholder: t('search.placeholder'),
+    'aria-label': t('search.label'),
     autocomplete: 'off',
   });
   const results = h('div', { class: 'cal-results', 'aria-live': 'polite' });
@@ -2391,7 +2401,7 @@ function openSearch() {
     const q = input.value.trim();
     const mine = ++token;
     if (q.length < 2) {
-      results.replaceChildren(h('p', { class: 'mn-note' }, 'Mindestens zwei Zeichen eingeben.'));
+      results.replaceChildren(h('p', { class: 'mn-note' }, t('search.minLength')));
       return;
     }
     try {
@@ -2441,23 +2451,22 @@ function openSearch() {
                   h(
                     'span',
                     {},
-                    h('span', { class: 'mn-row-title' }, r.title || '(ohne Titel)'),
+                    h('span', { class: 'mn-row-title' }, r.title || t('event.untitled')),
                     h(
                       'span',
                       { class: 'mn-row-sub' },
                       r.data?.recurrence
-                        ? `Serie seit ${F.day.format(span.start)}`
+                        ? t('search.series', { day: F.day.format(span.start) })
                         : whenText({ ...span, due: S.projections[r.type] === 'due' }),
                     ),
                   ),
                 );
               }),
             )
-          : h('p', { class: 'mn-note' }, `Nichts gefunden für „${q}“.`),
+          : h('p', { class: 'mn-note' }, t('search.none', { q })),
       );
     } catch {
-      if (mine === token)
-        results.replaceChildren(h('p', { class: 'mn-note' }, 'Die Suche hat nicht geklappt.'));
+      if (mine === token) results.replaceChildren(h('p', { class: 'mn-note' }, t('search.failed')));
     }
   };
   input.addEventListener('input', () => {
@@ -2472,9 +2481,9 @@ function openSearch() {
         h(
           'button',
           { type: 'button', class: 'mn-btn mn-btn--ghost', 'data-mn-close': true },
-          'Schließen',
+          t('common.close'),
         ),
-        h('h2', {}, 'Suchen'),
+        h('h2', {}, t('search.title')),
         h('span', {}),
       ),
       h(
@@ -2484,21 +2493,19 @@ function openSearch() {
         results,
       ),
     ),
-    { tall: true, label: 'Termine suchen' },
+    { tall: true, label: t('search.sheet') },
   );
   input.focus();
 }
 
 // ---------- Google Calendar (ADR 0010) ----------
 const GOOGLE_ERRORS = {
-  google_not_connected: 'Verbinde zuerst dein Google-Konto unter „Dein Konto“.',
-  google_scope_missing: 'Gib MiniNode unter „Dein Konto“ Zugriff auf deinen Google Kalender.',
-  google_token_invalid: 'Google hat den Zugang beendet. Verbinde Google unter „Dein Konto“ neu.',
-  google_not_configured: 'Google ist auf MiniNode noch nicht eingerichtet.',
+  google_not_connected: 'google.notConnected',
+  google_scope_missing: 'google.scopeMissing',
+  google_token_invalid: 'google.tokenInvalid',
+  google_not_configured: 'google.notConfigured',
 };
-const googleErrorText = (code) =>
-  GOOGLE_ERRORS[code] ??
-  'Der letzte Abgleich hat nicht geklappt. Er wird in ein paar Minuten wiederholt.';
+const googleErrorText = (code) => t(GOOGLE_ERRORS[code] ?? 'google.syncFailed');
 const googleCollections = () =>
   new Set((S.google?.calendars ?? []).map((c) => c.collectionId).filter(Boolean));
 
@@ -2544,15 +2551,15 @@ function googleButton() {
       type: 'button',
       class: `mn-btn cal-google${on ? ' is-on' : ''}`,
       'aria-haspopup': 'dialog',
-      'aria-label': `Google Kalender: ${failing ? 'Fehler beim Abgleich' : on ? 'Abgleich an' : 'aus'}`,
+      'aria-label': t(failing ? 'google.ariaError' : on ? 'google.ariaOn' : 'google.ariaOff'),
       onclick: openGoogle,
     },
     h('span', { class: `cal-google-dot${failing ? ' is-error' : ''}`, 'aria-hidden': 'true' }),
     h(
       'span',
       { class: 'cal-google-label' },
-      'Google',
-      h('span', { class: 'cal-google-word' }, ' Kalender'),
+      t('google.word'),
+      h('span', { class: 'cal-google-word' }, ` ${t('google.wordCalendar')}`),
     ),
   );
 }
@@ -2584,16 +2591,16 @@ function openGoogle() {
         {},
         googleErrorText(state.connected ? 'google_scope_missing' : 'google_not_connected'),
       ),
-      h('a', { class: 'mn-btn mn-btn--primary', href: state.connectUrl }, 'Google verbinden'),
+      h('a', { class: 'mn-btn mn-btn--primary', href: state.connectUrl }, t('google.connect')),
     );
   } else {
-    const own = S.sources.filter((s) => s.group === 'Kalender' || s.group === 'Apps');
+    const own = S.sources.filter((s) => s.group === 'calendars' || s.group === 'apps');
     const master = h(
       'div',
       { class: 'mn-checks' },
       check(
-        'Mit Google Kalender abgleichen',
-        state.email ? `Konto ${state.email}` : null,
+        t('google.syncWith'),
+        state.email ? t('google.account', { email: state.email }) : null,
         enabled,
         (v) => {
           enabled = v;
@@ -2607,12 +2614,8 @@ function openGoogle() {
       h(
         'section',
         { class: 'cal-manage-sect' },
-        h('div', { class: 'mn-sect' }, h('h2', {}, 'In Google zeigen')),
-        h(
-          'p',
-          { class: 'mn-note' },
-          'Diese Quellen erscheinen in Google im Kalender „MiniNode“. Deine eigenen Termine kannst du dort auch ändern; Termine anderer Apps änderst du in der App.',
-        ),
+        h('div', { class: 'mn-sect' }, h('h2', {}, t('google.pushTitle'))),
+        h('p', { class: 'mn-note' }, t('google.pushNote')),
         own.length
           ? h(
               'div',
@@ -2620,7 +2623,7 @@ function openGoogle() {
               own.map((source) =>
                 check(
                   source.name,
-                  source.group === 'Apps' ? 'aus einer App' : null,
+                  source.group === 'apps' ? t('google.fromApp') : null,
                   pushed.has(source.id),
                   (v) => {
                     if (v) pushed.add(source.id);
@@ -2629,27 +2632,23 @@ function openGoogle() {
                 ),
               ),
             )
-          : h('p', { class: 'mn-note' }, 'Noch keine Quellen.'),
+          : h('p', { class: 'mn-note' }, t('google.noSources')),
       ),
       h(
         'section',
         { class: 'cal-manage-sect' },
-        h('div', { class: 'mn-sect' }, h('h2', {}, 'Aus Google zeigen')),
+        h('div', { class: 'mn-sect' }, h('h2', {}, t('google.pullTitle'))),
         state.calendars.length
           ? h(
               'div',
               { class: 'mn-checks' },
               state.calendars.map((c) =>
-                check(c.name, c.writable ? null : 'nur ansehen', c.enabled, (v) => {
+                check(c.name, c.writable ? null : t('google.viewOnly'), c.enabled, (v) => {
                   calendarsOn[c.id] = v;
                 }),
               ),
             )
-          : h(
-              'p',
-              { class: 'mn-note' },
-              'Nach dem ersten Abgleich stehen hier deine Google-Kalender. Sie erscheinen in MiniNode, Änderungen gehen in beide Richtungen.',
-            ),
+          : h('p', { class: 'mn-note' }, t('google.pullNote')),
       ),
     );
     choices.hidden = !enabled;
@@ -2664,8 +2663,11 @@ function openGoogle() {
             'p',
             { class: 'mn-note' },
             state.lastSyncAt
-              ? `Zuletzt abgeglichen ${F.day.format(new Date(state.lastSyncAt))} um ${F.time.format(new Date(state.lastSyncAt))}. Danach alle fünf Minuten und nach jeder Änderung.`
-              : 'Der erste Abgleich läuft.',
+              ? t('google.lastSync', {
+                  day: F.day.format(new Date(state.lastSyncAt)),
+                  time: F.time.format(new Date(state.lastSyncAt)),
+                })
+              : t('google.firstSync'),
           )
       : null;
     body.append(master, status, choices);
@@ -2681,12 +2683,12 @@ function openGoogle() {
           calendars: calendarsOn,
         });
         window.mnui.sheet.close();
-        toast(enabled ? 'Google-Abgleich eingeschaltet' : 'Google-Abgleich ausgeschaltet');
+        toast(t(enabled ? 'google.on' : 'google.off'));
         await loadGoogle();
         if (enabled) setTimeout(() => void loadGoogle({ sync: true }), 1500);
         else await load({ meta: true });
       } catch (err) {
-        toast(err?.message || 'Speichern hat nicht geklappt.');
+        toast(err?.message || t('google.saveFailed'));
       } finally {
         saving = false;
       }
@@ -2696,7 +2698,7 @@ function openGoogle() {
       h(
         'button',
         { type: 'button', class: 'mn-btn mn-btn--primary', onclick: () => void save() },
-        'Speichern',
+        t('common.save'),
       ),
     );
   }
@@ -2708,32 +2710,36 @@ function openGoogle() {
         h(
           'button',
           { type: 'button', class: 'mn-btn mn-btn--ghost', 'data-mn-close': true },
-          'Schließen',
+          t('common.close'),
         ),
-        h('h2', {}, 'Google Kalender'),
+        h('h2', {}, t('google.sheet')),
         h('span', {}),
       ),
       body,
       foot.children.length ? foot : null,
     ),
-    { tall: true, modal: true, label: 'Google Kalender' },
+    { tall: true, modal: true, label: t('google.sheet') },
   );
 }
 
 // ---------- keyboard ----------
+// The letters are the keys of the German layout; the descriptions follow the language.
 const SHORTCUTS = [
-  ['T', 'Heute'],
-  ['J oder N', 'Weiter'],
-  ['K oder P', 'Zurück'],
-  ['M, W, D, L', 'Monat, Woche, Tag, Liste'],
-  ['C', 'Termin anlegen'],
-  ['/', 'Suchen'],
+  ['T', 'keys.today'],
+  [['J', 'N'], 'keys.next'],
+  [['K', 'P'], 'keys.prev'],
+  ['M, W, D, L', 'keys.views'],
+  ['C', 'keys.add'],
+  ['/', 'keys.search'],
 ];
+const keyLabel = (k) => (Array.isArray(k) ? t('keys.or', { a: k[0], b: k[1] }) : k);
 function shortcutList() {
   return h(
     'dl',
     { class: 'mn-facts cal-keys' },
-    SHORTCUTS.map(([k, v]) => h('div', {}, h('dt', {}, h('kbd', {}, k)), h('dd', {}, v))),
+    SHORTCUTS.map(([k, v]) =>
+      h('div', {}, h('dt', {}, h('kbd', {}, keyLabel(k))), h('dd', {}, t(v))),
+    ),
   );
 }
 document.addEventListener('keydown', (e) => {
@@ -2774,6 +2780,12 @@ for (const button of document.querySelectorAll('[data-add]'))
 wide.addEventListener('change', () => render());
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible' && !document.querySelector('.mn-sheet')) void load();
+});
+// The packages must be there before the first text is made; a language change redraws.
+await window.mnI18n.ready;
+window.mnI18n.onChange(() => {
+  refresh();
+  if (!document.querySelector('.mn-sheet')) render();
 });
 render();
 const firstLoad = load({ meta: true });

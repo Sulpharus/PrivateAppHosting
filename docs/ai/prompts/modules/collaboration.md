@@ -3,6 +3,7 @@ id: collaboration
 title: Teilen und Echtzeit
 summary: Gemeinsame Daten für Familie oder Gruppe, Live-Aktualisierung
 order: 80
+group: teilen
 ---
 
 ## Feature: sharing and realtime

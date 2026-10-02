@@ -89,7 +89,7 @@ test('the Kalender shows the Sportplaner and Haushalt dates', async ({ browser }
   await hh.getByRole('button', { name: 'Planung' }).first().click();
   await hh.getByRole('button', { name: 'Fixkosten hinzufügen' }).first().click();
   const dialog = hh.getByRole('dialog');
-  await dialog.getByLabel('Beschreibung').fill('Miete');
+  await dialog.getByLabel('Beschreibung', { exact: true }).fill('Miete');
   await dialog.getByLabel('Betrag in €').fill('950');
   await dialog.getByLabel('Erste Buchung').fill(month);
   await dialog.getByLabel('Am Tag').fill('1');

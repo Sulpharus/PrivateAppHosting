@@ -9,7 +9,14 @@ import {
   useRef,
   useState,
 } from 'react';
+import { runtimeConfig } from '../config.ts';
 import { forgetOfflineCopies } from '../lib/apps.ts';
+import {
+  isLanguage,
+  type Language,
+  readLanguageCookie,
+  writeLanguageCookie,
+} from '../lib/language.ts';
 import { forgetThisDevice, releaseForeignSubscription } from '../lib/push.ts';
 import { platform, supabase } from '../lib/supabase.ts';
 import { handOverGoogleGrant } from './google.ts';
@@ -22,6 +29,7 @@ export interface Profile {
   displayName: string;
   role: Role;
   email: string;
+  language: Language;
 }
 
 interface AuthState {
@@ -59,9 +67,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     const { data } = await platform()
       .from('profiles')
-      .select('user_id, display_name, role')
+      .select('user_id, display_name, role, language')
       .eq('user_id', current.user.id)
       .maybeSingle();
+    // The profile is the truth; the cookie lets apps with a language package follow it.
+    const language: Language = isLanguage(data?.language) ? data.language : 'de';
+    if (data && readLanguageCookie() !== language)
+      writeLanguageCookie(language, runtimeConfig()?.cookieDomain);
     setProfile(
       data
         ? {
@@ -69,6 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             displayName: data.display_name as string,
             role: data.role as Role,
             email: current.user.email ?? '',
+            language,
           }
         : null,
     );

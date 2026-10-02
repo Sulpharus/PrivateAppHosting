@@ -1,5 +1,6 @@
 import type React from 'react';
 import { MediaTile } from '../components/MediaTile';
+import { t } from '../i18n';
 import type { MediaItem } from '../types';
 
 interface StartViewProps {
@@ -25,19 +26,19 @@ export const StartView: React.FC<StartViewProps> = ({
       <div className="mn-kpis">
         <div className="mn-kpi">
           <b>{activeItems.length}</b>
-          <span>Aktuell im Gange</span>
+          <span>{t('start.kpiActive')}</span>
         </div>
         <div className="mn-kpi">
           <b>{doneItems.length}</b>
-          <span>Bereits beendet</span>
+          <span>{t('start.kpiDone')}</span>
         </div>
         <div className="mn-kpi">
           <b>{wishlistItems.length}</b>
-          <span>Auf der Wunschliste</span>
+          <span>{t('start.kpiWishlist')}</span>
         </div>
         <div className="mn-kpi">
           <b>{items.length}</b>
-          <span>Medien im Archiv</span>
+          <span>{t('start.kpiTotal')}</span>
         </div>
       </div>
 
@@ -45,7 +46,7 @@ export const StartView: React.FC<StartViewProps> = ({
       <section>
         <div className="mn-sect">
           <h2>
-            Am Lesen & Schauen
+            {t('start.activeTitle')}
             <small>{activeItems.length}</small>
           </h2>
           {activeItems.length > 0 && (
@@ -54,7 +55,7 @@ export const StartView: React.FC<StartViewProps> = ({
               className="mn-link"
               onClick={() => onNavigateToSammlung('active')}
             >
-              Alle anzeigen
+              {t('common.showAll')}
             </button>
           )}
         </div>
@@ -79,10 +80,10 @@ export const StartView: React.FC<StartViewProps> = ({
                 <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
               </svg>
             </div>
-            <h3>Gerade nichts im Gange</h3>
-            <p>Erfasse das Buch, die Serie oder das Spiel, das du gerade liest oder schaust.</p>
+            <h3>{t('start.emptyTitle')}</h3>
+            <p>{t('start.emptyText')}</p>
             <button type="button" className="mn-btn mn-btn--primary" onClick={onOpenAddModal}>
-              Medium erfassen
+              {t('start.addMedium')}
             </button>
           </div>
         )}
@@ -92,12 +93,12 @@ export const StartView: React.FC<StartViewProps> = ({
       <section>
         <div className="mn-sect">
           <h2>
-            Zuletzt beendet
+            {t('start.recentDone')}
             <small>{doneItems.length}</small>
           </h2>
           {doneItems.length > 0 && (
             <button type="button" className="mn-link" onClick={() => onNavigateToSammlung('done')}>
-              Alle beendeten
+              {t('start.allDone')}
             </button>
           )}
         </div>
@@ -109,7 +110,7 @@ export const StartView: React.FC<StartViewProps> = ({
             ))}
           </div>
         ) : (
-          <p className="mn-note">Noch keine beendeten Werke verzeichnet.</p>
+          <p className="mn-note">{t('start.noneDone')}</p>
         )}
       </section>
 
@@ -118,7 +119,7 @@ export const StartView: React.FC<StartViewProps> = ({
         <section>
           <div className="mn-sect">
             <h2>
-              Wunschliste & Gemerkt
+              {t('start.wishlistTitle')}
               <small>{wishlistItems.length}</small>
             </h2>
             <button
@@ -126,7 +127,7 @@ export const StartView: React.FC<StartViewProps> = ({
               className="mn-link"
               onClick={() => onNavigateToSammlung('wishlist')}
             >
-              Wunschliste öffnen
+              {t('start.openWishlist')}
             </button>
           </div>
 

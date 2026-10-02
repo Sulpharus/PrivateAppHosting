@@ -3,6 +3,7 @@ id: calendar
 title: Kalender und Termine
 summary: Wochenleiste, Monatsraster, Wiederholungen, Tagesansicht
 order: 30
+group: anbindungen
 ---
 
 ## Feature: calendar and dates

@@ -1,28 +1,11 @@
 // Solitaer (Klondike, draw one): the rules without any DOM, so they are tested on their own.
-// A card is { s: suit 0..3 (Pik, Herz, Karo, Kreuz), r: rank 1..13, up: face up }.
+// A card is { s: suit 0..3 (spades, hearts, diamonds, clubs), r: rank 1..13, up: face up }.
+// Names of suits and ranks belong to the language packages (suit.<s>, rank.<r>).
 //
 // Scoring: waste to tableau +5, any card to a foundation +10, turning over a tableau card +5,
 // a card from a foundation back to the tableau -15. The score never drops below 0.
 
 export const SUITS = ['♠', '♥', '♦', '♣'];
-export const SUIT_NAMES = ['Pik', 'Herz', 'Karo', 'Kreuz'];
-export const RANKS = ['', 'A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'B', 'D', 'K'];
-export const RANK_NAMES = [
-  '',
-  'Ass',
-  '2',
-  '3',
-  '4',
-  '5',
-  '6',
-  '7',
-  '8',
-  '9',
-  '10',
-  'Bube',
-  'Dame',
-  'König',
-];
 
 export const isRed = (card) => card.s === 1 || card.s === 2;
 

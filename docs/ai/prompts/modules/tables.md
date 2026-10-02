@@ -3,6 +3,7 @@ id: tables
 title: Eigene Tabellen
 summary: SQL-Tabellen statt Key-Value, für Abfragen und große Listen
 order: 70
+group: daten
 ---
 
 ## Feature: own tables

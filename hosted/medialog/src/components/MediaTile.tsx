@@ -1,4 +1,5 @@
 import type React from 'react';
+import { t } from '../i18n';
 import type { MediaItem } from '../types';
 import { getKindLabel, getProgressSummary } from '../utils/text';
 
@@ -14,7 +15,7 @@ export const MediaTile: React.FC<MediaTileProps> = ({
   item,
   onClick,
   onQuickAction,
-  quickActionLabel = 'Merken',
+  quickActionLabel,
   isQuickActionActive = false,
 }) => {
   const initials = item.title.slice(0, 2).toUpperCase();
@@ -26,7 +27,7 @@ export const MediaTile: React.FC<MediaTileProps> = ({
         type="button"
         className="mn-tile"
         onClick={onClick}
-        aria-label={`${item.title} von ${item.creator} öffnen`}
+        aria-label={t('tile.open', { title: item.title, creator: item.creator })}
       >
         <span className="mn-tile-media">
           {item.cover ? (
@@ -49,7 +50,7 @@ export const MediaTile: React.FC<MediaTileProps> = ({
           {/* Top Left Badge: Kind, Series or Rating */}
           <span className="mn-tile-badge">
             {item.isBookSeries
-              ? `📚 Reihe (${item.volumes?.length || 1} Bde.)`
+              ? t('item.series', { n: item.volumes?.length || 1 })
               : item.rating
                 ? `★ ${item.rating}/10`
                 : item.console
@@ -70,7 +71,7 @@ export const MediaTile: React.FC<MediaTileProps> = ({
                 <circle cx="12" cy="12" r="10" />
                 <polyline points="12 6 12 12 16 14" />
               </svg>
-              <span>Aktiv</span>
+              <span>{t('tile.active')}</span>
             </span>
           )}
           {item.status === 'done' && (
@@ -84,7 +85,7 @@ export const MediaTile: React.FC<MediaTileProps> = ({
               >
                 <polyline points="20 6 9 17 4 12" />
               </svg>
-              <span>Beendet</span>
+              <span>{t('tile.done')}</span>
             </span>
           )}
         </span>
@@ -95,7 +96,7 @@ export const MediaTile: React.FC<MediaTileProps> = ({
           </span>
           {item.originalTitle && item.englishTitle && item.title !== item.originalTitle && (
             <span className="block text-[10px] text-[var(--mn-muted)] truncate -mt-0.5">
-              Orig.: {item.originalTitle}
+              {t('item.original', { title: item.originalTitle })}
             </span>
           )}
           <span className="mn-tile-sub" itemProp="author">
@@ -116,7 +117,7 @@ export const MediaTile: React.FC<MediaTileProps> = ({
           type="button"
           className="mn-tile-action"
           aria-pressed={isQuickActionActive}
-          aria-label={quickActionLabel}
+          aria-label={quickActionLabel ?? t('tile.remember')}
           onClick={(e) => {
             e.stopPropagation();
             onQuickAction();

@@ -9,11 +9,11 @@
 // only while the solution stays unique and the puzzle stays at or below the wanted level.
 
 export const LEVELS = {
-  1: { label: 'Sehr leicht', clues: 40 },
-  2: { label: 'Leicht', clues: 34 },
-  3: { label: 'Mittel' },
-  4: { label: 'Schwer' },
-  5: { label: 'Extrem' },
+  1: { clues: 40 },
+  2: { clues: 34 },
+  3: {},
+  4: {},
+  5: {},
 };
 
 const ALL = 0x1ff;

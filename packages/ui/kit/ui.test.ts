@@ -37,6 +37,38 @@ const press = (key: string, shiftKey = false) =>
     new KeyboardEvent('keydown', { key, shiftKey, bubbles: true, cancelable: true }),
   );
 
+describe('English dates (kit/i18n.js found an English package)', () => {
+  const english = () => {
+    (window as unknown as { mnI18n?: { lang: string } }).mnI18n = { lang: 'en' };
+  };
+  afterEach(() => {
+    delete (window as unknown as { mnI18n?: unknown }).mnI18n;
+  });
+
+  it('formats dates with English month names', () => {
+    english();
+    expect(mnui.date.format('2026-10-01')).toBe('01 Oct 2026');
+    expect(mnui.date.format('2026-09')).toBe('Sep 2026');
+    expect(mnui.date.months[2]).toBe('Mar');
+  });
+
+  it('labels the parts in English and relabels fields drawn before the language arrived', async () => {
+    const form = document.createElement('form');
+    form.innerHTML = '<label>Start<input type="date" name="d" value="2026-10-01"></label>';
+    document.body.append(form);
+    await Promise.resolve();
+    const day = form.querySelector('.mn-date-tag') as HTMLSelectElement;
+    expect(day.getAttribute('aria-label')).toBe('Tag');
+    english();
+    window.dispatchEvent(new CustomEvent('mn:language', { detail: 'en' }));
+    expect(day.getAttribute('aria-label')).toBe('Day');
+    const month = form.querySelector('.mn-date-monat') as HTMLSelectElement;
+    expect(month.getAttribute('aria-label')).toBe('Month');
+    expect(month.options[month.selectedIndex]?.textContent).toBe('Oct');
+    expect((form.querySelector('.mn-date-jahr') as HTMLInputElement).placeholder).toBe('Year');
+  });
+});
+
 describe('mnui.sheet', () => {
   const html = '<h2>Titel</h2><button id="a">A</button><button id="b">B</button>';
 

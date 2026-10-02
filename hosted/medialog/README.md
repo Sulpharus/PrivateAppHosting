@@ -86,3 +86,7 @@ eingerichtet". The other APIs work right away.
 - `pnpm --filter @mininode-hosted/medialog test`: the German search, with the SDK faked.
 - `e2e/medialog.spec.ts`: empty start, adding a work by hand, lists, and sharing with a second
   user.
+
+## Languages
+
+German and English (`public/i18n/de.json`, `public/i18n/en.json`, declared under `i18n` in `mininode.json`). The person's choice in Konto → Sprache applies; an unknown key falls back to German. New texts need a key in both files; `pnpm mininode doctor hosted/medialog` checks them (ADR 0017). The packages live in `public/i18n/` (the build copies them to `/i18n/`); `src/i18n.ts` wraps `window.mnI18n`, and a language change remounts the app. API searches use the page language where the service supports it.

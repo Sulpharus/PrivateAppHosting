@@ -3,9 +3,10 @@ import { useState } from 'react';
 import { MediaRow } from '../components/MediaRow';
 import { Overlay } from '../components/Overlay';
 import { showToast } from '../components/Toast';
+import { t } from '../i18n';
 import type { SharedEntry } from '../services/sharing';
 import type { ListCustomItem, MediaItem, MediaList } from '../types';
-import { formatDateDe, getKindLabel, getProgressSummary } from '../utils/text';
+import { formatDate, getKindLabel, getProgressSummary } from '../utils/text';
 
 interface ListenViewProps {
   lists: MediaList[];
@@ -31,7 +32,7 @@ const SharedWorkRow: React.FC<{ work: MediaItem; onCopy: () => void }> = ({ work
       </span>
     </span>
     <button type="button" className="mn-btn text-xs" onClick={onCopy}>
-      In meine Sammlung
+      {t('lists.intoCollection')}
     </button>
   </div>
 );
@@ -96,7 +97,7 @@ export const ListenView: React.FC<ListenViewProps> = ({
 
     await onSaveList(updated);
     setNewTaskTitle('');
-    showToast('Aufgabe hinzugefügt');
+    showToast(t('lists.taskAdded'));
   };
 
   // Remove a media item from current list
@@ -108,7 +109,7 @@ export const ListenView: React.FC<ListenViewProps> = ({
       updatedAt: new Date().toISOString(),
     };
     await onSaveList(updated);
-    showToast('Eintrag aus der Liste entfernt');
+    showToast(t('lists.removed'));
   };
 
   // Create new list
@@ -132,17 +133,17 @@ export const ListenView: React.FC<ListenViewProps> = ({
     setShowCreateModal(false);
     setNewListTitle('');
     setNewListDescription('');
-    showToast(`Liste „${newList.title}“ erstellt`);
+    showToast(t('lists.created', { title: newList.title }));
   };
 
-  const openTasks = (activeList?.customItems || []).filter((t) => !t.done);
-  const doneTasks = (activeList?.customItems || []).filter((t) => t.done);
+  const openTasks = (activeList?.customItems || []).filter((task) => !task.done);
+  const doneTasks = (activeList?.customItems || []).filter((task) => task.done);
 
   return (
     <div className="grid gap-6">
       {/* List Selector Chips */}
       <div className="flex items-center justify-between gap-3">
-        <fieldset className="mn-chips" aria-label="Liste auswählen">
+        <fieldset className="mn-chips" aria-label={t('lists.choose')}>
           {lists.map((l) => (
             <button
               key={l.id}
@@ -151,7 +152,10 @@ export const ListenView: React.FC<ListenViewProps> = ({
               aria-pressed={l.id === activeList?.id}
               onClick={() => setActiveListId(l.id)}
             >
-              {l.title} ({l.itemIds.length + (l.customItems?.length || 0)})
+              {t('lists.chip', {
+                title: l.title,
+                n: l.itemIds.length + (l.customItems?.length || 0),
+              })}
             </button>
           ))}
         </fieldset>
@@ -172,7 +176,7 @@ export const ListenView: React.FC<ListenViewProps> = ({
             <line x1="12" y1="5" x2="12" y2="19" />
             <line x1="5" y1="12" x2="19" y2="12" />
           </svg>
-          <span>Neue Liste</span>
+          <span>{t('lists.new')}</span>
         </button>
       </div>
 
@@ -189,8 +193,9 @@ export const ListenView: React.FC<ListenViewProps> = ({
                 {activeList.sharedWith && activeList.sharedWith.length > 0 && (
                   <div className="flex items-center gap-1.5 mt-2">
                     <span className="text-xs font-semibold text-[var(--mn-accent-text)] bg-[var(--mn-accent-soft)] px-2 py-0.5 rounded-full">
-                      ✓ Geteilt mit:{' '}
-                      {(activeList.sharedWithNames ?? activeList.sharedWith).join(', ')}
+                      {t('lists.sharedWith', {
+                        names: (activeList.sharedWithNames ?? activeList.sharedWith).join(', '),
+                      })}
                     </span>
                   </div>
                 )}
@@ -217,17 +222,17 @@ export const ListenView: React.FC<ListenViewProps> = ({
                     <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
                     <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
                   </svg>
-                  <span>Teilen & PDF</span>
+                  <span>{t('lists.shareAndPdf')}</span>
                 </button>
                 <button
                   type="button"
                   className="mn-btn mn-btn--danger text-sm"
                   onClick={() => {
-                    if (confirm(`Liste „${activeList.title}“ wirklich löschen?`)) {
+                    if (confirm(t('lists.confirmDelete', { title: activeList.title }))) {
                       onDeleteList(activeList.id);
                     }
                   }}
-                  aria-label="Liste löschen"
+                  aria-label={t('lists.delete')}
                 >
                   <svg
                     viewBox="0 0 24 24"
@@ -249,7 +254,7 @@ export const ListenView: React.FC<ListenViewProps> = ({
           <section>
             <div className="mn-sect">
               <h3>
-                Zugeordnete Medien
+                {t('lists.linkedMedia')}
                 <small>{linkedMedia.length}</small>
               </h3>
             </div>
@@ -266,19 +271,16 @@ export const ListenView: React.FC<ListenViewProps> = ({
                         e.stopPropagation();
                         handleRemoveMediaFromList(item.id);
                       }}
-                      title="Aus Liste entfernen"
+                      title={t('lists.removeFromList')}
                     >
-                      Entfernen
+                      {t('lists.remove')}
                     </button>
                   </div>
                 ))}
               </div>
             ) : (
               <div className="mn-empty">
-                <p>
-                  Noch keine Medien in dieser Liste. Öffne ein Medium und wähle „Zu Liste
-                  hinzufügen“.
-                </p>
+                <p>{t('lists.noMedia')}</p>
               </div>
             )}
           </section>
@@ -287,7 +289,7 @@ export const ListenView: React.FC<ListenViewProps> = ({
           <section>
             <div className="mn-sect">
               <h3>
-                Aufgaben & Lese-Ziele
+                {t('lists.tasksTitle')}
                 <small>{openTasks.length + doneTasks.length}</small>
               </h3>
             </div>
@@ -297,7 +299,7 @@ export const ListenView: React.FC<ListenViewProps> = ({
               <form onSubmit={handleAddTask} className="flex gap-2">
                 <input
                   type="text"
-                  placeholder="Neues Ziel oder Unteraufgabe eingeben ... (Enter zum Speichern)"
+                  placeholder={t('lists.taskPlaceholder')}
                   value={newTaskTitle}
                   onChange={(e) => setNewTaskTitle(e.target.value)}
                   className="flex-1"
@@ -307,7 +309,7 @@ export const ListenView: React.FC<ListenViewProps> = ({
                   className="mn-btn mn-btn--primary"
                   disabled={!newTaskTitle.trim()}
                 >
-                  Hinzufügen
+                  {t('common.add')}
                 </button>
               </form>
 
@@ -330,7 +332,7 @@ export const ListenView: React.FC<ListenViewProps> = ({
               {/* Done Tasks Collapsible */}
               {doneTasks.length > 0 && (
                 <details className="mn-more pt-2">
-                  <summary>Erledigt ({doneTasks.length})</summary>
+                  <summary>{t('lists.doneTasks', { n: doneTasks.length })}</summary>
                   <div className="mn-checks pl-2">
                     {doneTasks.map((task) => (
                       <label key={task.id} className="flex items-center gap-3 opacity-60">
@@ -347,24 +349,21 @@ export const ListenView: React.FC<ListenViewProps> = ({
               )}
 
               {openTasks.length === 0 && doneTasks.length === 0 && (
-                <p className="mn-note text-center py-2">Keine offenen Aufgaben für diese Liste.</p>
+                <p className="mn-note text-center py-2">{t('lists.noTasks')}</p>
               )}
             </div>
           </section>
         </div>
       ) : (
         <div className="mn-empty">
-          <h3>Noch keine Listen</h3>
-          <p>
-            Erstelle deine erste Lese- oder Watchlist, um Medien zu bündeln und mit anderen zu
-            teilen.
-          </p>
+          <h3>{t('lists.emptyTitle')}</h3>
+          <p>{t('lists.emptyText')}</p>
           <button
             type="button"
             className="mn-btn mn-btn--primary"
             onClick={() => setShowCreateModal(true)}
           >
-            Liste erstellen
+            {t('lists.create')}
           </button>
         </div>
       )}
@@ -378,51 +377,51 @@ export const ListenView: React.FC<ListenViewProps> = ({
               className="mn-btn mn-btn--ghost"
               onClick={() => setShowCreateModal(false)}
             >
-              Abbrechen
+              {t('common.cancel')}
             </button>
-            <h2 id="new-list-title">Neue Liste anlegen</h2>
+            <h2 id="new-list-title">{t('lists.newTitle')}</h2>
             <span />
           </div>
 
           <form onSubmit={handleCreateList} className="mn-sheet-body mn-form">
             <fieldset>
               <label className="mn-field">
-                Name der Liste *
+                {t('lists.name')}
                 <input
                   type="text"
                   required
-                  placeholder="z. B. Sommer-Lektüre oder Klassiker"
+                  placeholder={t('lists.namePh')}
                   value={newListTitle}
                   onChange={(e) => setNewListTitle(e.target.value)}
                 />
               </label>
 
               <label className="mn-field">
-                Beschreibung
+                {t('common.description')}
                 <input
                   type="text"
-                  placeholder="Wofür diese Liste gedacht ist ..."
+                  placeholder={t('lists.descPh')}
                   value={newListDescription}
                   onChange={(e) => setNewListDescription(e.target.value)}
                 />
               </label>
 
               <label className="mn-field">
-                Art der Liste
+                {t('lists.kind')}
                 <select
                   value={newListKind}
                   onChange={(e) => setNewListKind(e.target.value as MediaList['kind'])}
                 >
-                  <option value="readinglist">Leseliste (Bücher)</option>
-                  <option value="watchlist">Watchlist (Filme & Serien)</option>
-                  <option value="custom">Allgemeine Sammlung</option>
-                  <option value="checklist">Checkliste / Aufgaben</option>
+                  <option value="readinglist">{t('lists.kindReading')}</option>
+                  <option value="watchlist">{t('lists.kindWatch')}</option>
+                  <option value="custom">{t('lists.kindCustom')}</option>
+                  <option value="checklist">{t('lists.kindChecklist')}</option>
                 </select>
               </label>
             </fieldset>
 
             <button type="submit" className="mn-btn mn-btn--primary w-full mt-4">
-              Liste anlegen
+              {t('lists.createSubmit')}
             </button>
           </form>
         </Overlay>
@@ -431,13 +430,14 @@ export const ListenView: React.FC<ListenViewProps> = ({
         <section className="grid gap-3 mt-8" aria-labelledby="shared-title">
           <div className="mn-sect">
             <h2 id="shared-title">
-              Mit dir geteilt<small>{shared.length}</small>
+              {t('lists.sharedWithYou')}
+              <small>{shared.length}</small>
             </h2>
           </div>
           {shared.map((entry) => (
             <div key={entry.key} className="mn-card">
               <p className="text-xs text-[var(--mn-muted)] mb-2">
-                Von {entry.from.name} · {formatDateDe(entry.updatedAt)}
+                {t('lists.from', { name: entry.from.name, date: formatDate(entry.updatedAt) })}
               </p>
               {entry.work && (
                 <SharedWorkRow
@@ -470,7 +470,7 @@ export const ListenView: React.FC<ListenViewProps> = ({
                     ))}
                     {(entry.items ?? []).length === 0 &&
                       (entry.list.customItems ?? []).length === 0 && (
-                        <p className="mn-note">Die Liste ist noch leer.</p>
+                        <p className="mn-note">{t('lists.empty')}</p>
                       )}
                   </div>
                 </>

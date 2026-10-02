@@ -191,7 +191,8 @@ code,
   cursor: pointer;
 }
 
-.chip[aria-pressed="true"] {
+.chip[aria-pressed="true"],
+.chip.active {
   background: var(--ink);
   color: var(--bg);
   border-color: var(--ink);
@@ -369,6 +370,44 @@ code,
   border-color: var(--muted);
 }
 
+/* A tile with its own row of buttons underneath: the text never runs under them. */
+.tile-box {
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--radius-l);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  transition: border-color 120ms ease;
+}
+
+.tile-box:hover,
+.tile-box:focus-within {
+  border-color: var(--muted);
+}
+
+.tile-box .tile {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding-bottom: 8px;
+}
+
+.tile-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
+  padding: 0 8px 8px;
+}
+
+.app-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-m);
+  flex-shrink: 0;
+  object-fit: cover;
+  background: var(--surface-2, var(--line));
+}
+
 .tile-head {
   display: flex;
   align-items: center;
@@ -414,8 +453,6 @@ code,
 
 .tile p {
   margin: 0;
-  /* two lines, clear of the pin button in the bottom-right corner */
-  padding-right: 36px;
   color: var(--muted);
   font-size: 14px;
   line-height: 1.45;
@@ -1544,4 +1581,49 @@ code,
   .table--fixed {
     table-layout: auto;
   }
+}
+
+/* KI-Werkstatt: collapsible groups of features */
+.workshop-group {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-m);
+  background: var(--surface);
+}
+.workshop-group + .workshop-group {
+  margin-top: 8px;
+}
+.workshop-group > summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  min-height: var(--tap);
+  padding: 8px 14px;
+  cursor: pointer;
+  list-style: none;
+}
+.workshop-group > summary::-webkit-details-marker {
+  display: none;
+}
+.workshop-group > summary::before {
+  content: "›";
+  display: inline-block;
+  width: 12px;
+  font-weight: 700;
+}
+.workshop-group[open] > summary::before {
+  transform: rotate(90deg);
+}
+.workshop-group > summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.workshop-group-title {
+  font-weight: 600;
+}
+.workshop-group > summary .pill {
+  margin-left: auto;
+}
+.workshop-group .workshop-checks {
+  padding: 4px 14px 10px;
 }

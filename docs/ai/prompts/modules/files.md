@@ -3,6 +3,7 @@ id: files
 title: Fotos und Dateien
 summary: Bilder, Belege und Anhänge in mn.files, mit Vorschaubildern
 order: 10
+group: daten
 ---
 
 ## Feature: photos and files

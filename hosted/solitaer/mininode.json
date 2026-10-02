@@ -6,8 +6,12 @@
   "description": "Klassisches Klondike mit einer Karte pro Zug, Punkten und Bestzeiten im Gaming Hub",
   "kind": "static",
   "target": "cloudflare",
-  "access": { "default": true },
-  "data": { "mode": "none" },
+  "access": {
+    "default": true
+  },
+  "data": {
+    "mode": "none"
+  },
   "game": {
     "genre": "karten",
     "players": "solo",
@@ -20,8 +24,24 @@
         "min": 30,
         "max": 7200
       },
-      { "id": "moves", "label": "Züge", "better": "lower", "min": 52, "max": 5000 },
-      { "id": "score", "label": "Punkte", "better": "higher", "min": 0, "max": 1000 }
+      {
+        "id": "moves",
+        "label": "Züge",
+        "better": "lower",
+        "min": 52,
+        "max": 5000
+      },
+      {
+        "id": "score",
+        "label": "Punkte",
+        "better": "higher",
+        "min": 0,
+        "max": 1000
+      }
     ]
+  },
+  "i18n": {
+    "languages": ["de", "en"],
+    "default": "de"
   }
 }
