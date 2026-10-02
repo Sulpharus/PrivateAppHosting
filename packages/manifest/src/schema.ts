@@ -265,6 +265,24 @@ const gameSchema = z
   })
   .strict();
 
+export const LANGUAGES = ['de', 'en'] as const;
+export type Language = (typeof LANGUAGES)[number];
+
+/**
+ * Language packages of the app (ADR 0017): `i18n/<code>.json` for every listed language. The
+ * person's choice in the portal switches apps that list it; the others stay German.
+ */
+const i18nSchema = z
+  .object({
+    languages: z
+      .array(z.enum(LANGUAGES))
+      .min(1)
+      .refine((l) => new Set(l).size === l.length, 'languages must be unique'),
+    default: z.enum(LANGUAGES).default('de'),
+  })
+  .strict()
+  .refine((i) => i.languages.includes(i.default), 'languages must include the default language');
+
 const buildSchema = z
   .object({
     command: z.string().min(1).optional(),
@@ -331,6 +349,7 @@ export const manifestSchema = z
       .optional(),
     game: gameSchema.optional(),
     suite: suiteSchema.optional(),
+    i18n: i18nSchema.optional(),
     build: buildSchema.optional(),
     container: containerSchema.optional(),
     remote: remoteSchema.optional(),

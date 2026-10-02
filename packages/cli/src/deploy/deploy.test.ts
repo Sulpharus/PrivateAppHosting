@@ -182,6 +182,7 @@ describe('stageAssets', () => {
         '_mininode/ui.css',
         '_mininode/ui.js',
         '_mininode/game.js',
+        '_mininode/i18n.js',
         '_mininode/sw.js',
         '_mininode/pwa.js',
         '_mininode/fonts/bricolage-grotesque-latin-wght-normal.woff2',

@@ -144,7 +144,7 @@ test('haushalt plans fixed costs, spots a changed price and shows the month', as
   const dialog = page.getByRole('dialog');
   const addFixed = async (text: string, amount: string, art: string, kind?: string) => {
     await page.getByRole('button', { name: 'Fixkosten hinzufügen' }).first().click();
-    await dialog.getByLabel('Beschreibung').fill(text);
+    await dialog.getByLabel('Beschreibung', { exact: true }).fill(text);
     await dialog.getByRole('combobox', { name: 'Gruppe' }).selectOption({ label: art });
     await dialog.getByLabel('Betrag in €').fill(amount);
     if (kind)

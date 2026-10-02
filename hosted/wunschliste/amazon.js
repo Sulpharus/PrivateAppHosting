@@ -49,16 +49,24 @@ export function titleFromPath(path) {
     .slice(0, 200);
 }
 
-/** "12,99" / "1.234,5" / "20" → cents; null when empty or not a price. */
-export function parsePrice(input) {
+/**
+ * "12,99" / "1.234,5" / "20" → cents; null when empty or not a price. In English (`en-GB`) the
+ * grouping comma is read too: "1,234.50".
+ */
+export function parsePrice(input, language = 'de-DE') {
   const text = String(input ?? '')
     .replace(/[€\s]/g, '')
     .trim();
   if (!text) return null;
+  if (language.startsWith('en') && /^\d{1,3}(,\d{3})+(\.\d{1,2})?$/.test(text))
+    return Math.round(Number(text.replace(/,/g, '')) * 100);
   if (!/^\d{1,3}(\.\d{3})*(,\d{1,2})?$|^\d+([,.]\d{1,2})?$/.test(text)) return Number.NaN;
   const normal = text.includes(',') ? text.replace(/\./g, '').replace(',', '.') : text;
   return Math.round(Number(normal) * 100);
 }
 
+/** The language of the page (kit/i18n.js); German when it is not there (tests, other hosts). */
+const locale = () => globalThis.window?.mnI18n?.locale ?? 'de-DE';
+
 export const euro = (cents) =>
-  (cents / 100).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
+  (cents / 100).toLocaleString(locale(), { style: 'currency', currency: 'EUR' });

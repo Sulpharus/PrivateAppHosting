@@ -4,6 +4,10 @@ import { chord, LEVELS, minesLeft, newBoard, reveal, toggleFlag } from './logic.
 
 const $ = (s) => document.querySelector(s);
 const { format } = window.mnGame;
+const t = (key, params) => window.mnI18n.t(key, params);
+const levelName = (id) => t(`level.${id}`);
+// The packages must be there before the first text is made.
+await window.mnI18n.ready;
 
 let mn = null;
 let level = 'leicht';
@@ -19,11 +23,11 @@ const clock = window.mnGame.timer({
 
 function cellLabel(i) {
   const c = board.cells[i];
-  const where = `Reihe ${Math.floor(i / board.cols) + 1}, Spalte ${(i % board.cols) + 1}`;
-  if (c.flag) return `${where}, Flagge`;
-  if (!c.open) return `${where}, verdeckt`;
-  if (c.mine) return `${where}, Mine`;
-  return c.count ? `${where}, ${c.count} Minen in der Nähe` : `${where}, leer`;
+  const where = t('cell.where', { row: Math.floor(i / board.cols) + 1, col: (i % board.cols) + 1 });
+  if (c.flag) return t('cell.flag', { where });
+  if (!c.open) return t('cell.covered', { where });
+  if (c.mine) return t('cell.mine', { where });
+  return c.count ? t('cell.count', { where, n: c.count }) : t('cell.empty', { where });
 }
 
 function build() {
@@ -81,7 +85,7 @@ function newGame() {
   board = newBoard(level);
   focus = Math.floor(board.cells.length / 2);
   $('#end').hidden = true;
-  $('#announce').textContent = `Neues Spiel, ${LEVELS[level].label}.`;
+  $('#announce').textContent = t('announce.new', { level: levelName(level) });
   build();
   paint();
 }
@@ -100,11 +104,11 @@ async function ended(won) {
   const title = $('#end-title');
   const text = $('#end-text');
   if (won) {
-    title.textContent = 'Geschafft!';
-    text.textContent = `${LEVELS[level].label} in ${format.seconds(seconds)} gelöst.`;
+    title.textContent = t('end.won');
+    text.textContent = t('end.wonText', { level: levelName(level), time: format.seconds(seconds) });
   } else {
-    title.textContent = 'Boom!';
-    text.textContent = `Auf eine Mine getreten nach ${format.seconds(seconds)}. Neues Spiel?`;
+    title.textContent = t('end.lost');
+    text.textContent = t('end.lostText', { time: format.seconds(seconds) });
   }
   $('#end').hidden = false;
   $('#end').focus();
@@ -137,7 +141,9 @@ async function showRecords() {
     format: format.seconds,
   });
   $('#record').textContent =
-    best === undefined ? '' : `${LEVELS[level].label}: dein Rekord ${format.seconds(best)}.`;
+    best === undefined
+      ? ''
+      : t('record.best', { level: levelName(level), time: format.seconds(best) });
 }
 
 // Long press flags on touch screens; a plain tap follows the chosen mode.
@@ -196,17 +202,27 @@ $('#restart').addEventListener('click', newGame);
 for (const b of document.querySelectorAll('#mode button')) {
   b.addEventListener('click', () => setMode(b.dataset.mode));
 }
+const levelButton = (key, def) =>
+  t('level.button', { name: levelName(key), cols: def.cols, rows: def.rows, mines: def.mines });
 const levelsHost = $('#levels');
 for (const [key, def] of Object.entries(LEVELS)) {
   const b = document.createElement('button');
   b.type = 'button';
   b.dataset.level = key;
   b.setAttribute('aria-pressed', String(key === level));
-  b.textContent = `${def.label} (${def.cols}×${def.rows}, ${def.mines})`;
+  b.textContent = levelButton(key, def);
   b.addEventListener('click', () => chooseLevel(key));
   levelsHost.append(b);
 }
 newGame();
+window.mnI18n.onChange(() => {
+  window.mnI18n.apply();
+  levelsHost.querySelectorAll('button').forEach((b) => {
+    b.textContent = levelButton(b.dataset.level, LEVELS[b.dataset.level]);
+  });
+  paint();
+  void showRecords();
+});
 
 (async () => {
   mn = await window.mnGame.connect({ player: '#player', hub: '#hub' });

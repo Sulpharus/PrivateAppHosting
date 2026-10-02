@@ -3,16 +3,8 @@
 import { flip, foundPairs, hideMisses, newGame, PAIRS } from './logic.js';
 
 const $ = (s) => document.querySelector(s);
-const SHAPE_LABEL = {
-  circle: 'Kreis',
-  square: 'Quadrat',
-  triangle: 'Dreieck',
-  diamond: 'Raute',
-  star: 'Stern',
-  heart: 'Herz',
-  hexagon: 'Sechseck',
-  cross: 'Kreuz',
-};
+const t = (key, params) => window.mnI18n.t(key, params);
+const shapeLabel = (shape) => t(`shape.${shape}`);
 const SHAPE_SVG = {
   circle: '<circle cx="12" cy="12" r="7.5"/>',
   square: '<rect x="5" y="5" width="14" height="14" rx="2"/>',
@@ -35,9 +27,10 @@ let hideTimer = 0;
 let focusIndex = 0;
 
 function cardLabel(c, i) {
-  if (c.found) return `Karte ${i + 1}: ${SHAPE_LABEL[c.shape]}, gefunden`;
-  if (c.open) return `Karte ${i + 1}: ${SHAPE_LABEL[c.shape]}`;
-  return `Karte ${i + 1}, verdeckt`;
+  const params = { n: i + 1, shape: c.shape ? shapeLabel(c.shape) : '' };
+  if (c.found) return t('card.found', params);
+  if (c.open) return t('card.open', params);
+  return t('card.hidden', params);
 }
 
 function render() {
@@ -87,7 +80,7 @@ function start() {
   focusIndex = 0;
   $('#time').textContent = '0:00';
   $('#won').hidden = true;
-  $('#announce').textContent = 'Neues Spiel. Alle Karten sind verdeckt.';
+  $('#announce').textContent = t('announce.new');
   render();
 }
 
@@ -97,8 +90,11 @@ async function won() {
   stopTracking?.();
   stopTracking = null;
   $('#time').textContent = clock(seconds);
-  $('#won-text').textContent =
-    `Alle ${PAIRS} Paare in ${state.moves} Zügen und ${clock(seconds)} gefunden.`;
+  $('#won-text').textContent = t('won.text', {
+    pairs: PAIRS,
+    n: state.moves,
+    time: clock(seconds),
+  });
   $('#won').hidden = false;
   $('#won').focus();
   $('#announce').textContent = $('#won-text').textContent;
@@ -106,7 +102,7 @@ async function won() {
   try {
     await mn.game.result('win', { moves: state.moves, time: seconds }, seconds);
   } catch {
-    window.mnui?.toast('Das Ergebnis konnte nicht gespeichert werden.');
+    window.mnui?.toast(t('toast.notSaved'));
   }
   void showRecords();
 }
@@ -129,11 +125,11 @@ function pick(i) {
   state = r.state;
   focusIndex = i;
   render();
-  const shape = SHAPE_LABEL[state.cards[i].shape];
-  if (r.event === 'first') $('#announce').textContent = `${shape} aufgedeckt.`;
-  if (r.event === 'match') $('#announce').textContent = `${shape}: Paar gefunden.`;
+  const shape = shapeLabel(state.cards[i].shape);
+  if (r.event === 'first') $('#announce').textContent = t('announce.first', { shape });
+  if (r.event === 'match') $('#announce').textContent = t('announce.match', { shape });
   if (r.event === 'miss') {
-    $('#announce').textContent = `${shape}: kein Paar.`;
+    $('#announce').textContent = t('announce.miss', { shape });
     hideTimer = setTimeout(() => {
       state = hideMisses(state);
       render();
@@ -150,13 +146,15 @@ async function showRecords() {
     const best = stats.records.moves;
     $('#record').textContent =
       best === undefined
-        ? 'Noch kein Rekord.'
-        : `Dein Rekord: ${best} Züge${stats.records.time ? `, schnellste Zeit ${clock(stats.records.time)}` : ''}`;
+        ? t('record.none')
+        : stats.records.time
+          ? t('record.movesTime', { n: best, time: clock(stats.records.time) })
+          : t('record.moves', { n: best });
     host.replaceChildren();
     if (!rows.length) {
       const p = document.createElement('p');
       p.className = 'mn-note';
-      p.textContent = 'Noch keine Einträge. Spielernamen legst du im Gaming Hub fest.';
+      p.textContent = t('leaders.empty');
       host.append(p);
       return;
     }
@@ -169,16 +167,16 @@ async function showRecords() {
       rank.className = 'mem-rank';
       rank.textContent = `${row.rank}.`;
       const name = document.createElement('span');
-      name.textContent = row.mine ? `${row.username} (du)` : row.username;
+      name.textContent = row.mine ? t('leaders.you', { name: row.username }) : row.username;
       const value = document.createElement('span');
       value.className = 'mn-num';
-      value.textContent = `${row.value} Züge`;
+      value.textContent = t('leaders.value', { n: row.value });
       li.append(rank, name, value);
       list.append(li);
     }
     host.append(list);
   } catch {
-    host.textContent = 'Die Bestenliste ist gerade nicht erreichbar.';
+    host.textContent = t('leaders.unreachable');
   }
 }
 
@@ -198,24 +196,37 @@ $('#board').addEventListener('keydown', (e) => {
 });
 $('#restart').addEventListener('click', start);
 
-start();
-(async () => {
-  try {
-    mn = await window.mininode.mininode();
-    await mn.auth.requireLogin();
-    $('#hub').href = mn.game.hubUrl();
-    const name = await mn.game.username();
-    const player = $('#player');
-    if (name) player.textContent = `Du spielst als ${name}.`;
-    else {
-      player.textContent = 'Ohne Spielernamen erscheinst du nicht in der Bestenliste. ';
-      const link = document.createElement('a');
-      link.href = new URL('/games', mn.config.portalUrl).toString();
-      link.textContent = 'Namen festlegen';
-      player.append(link);
-    }
-    void showRecords();
-  } catch {
-    // Offline: the game still works, only nothing is recorded.
+let playerName;
+
+function renderPlayer() {
+  const player = $('#player');
+  if (playerName === undefined) return;
+  if (playerName) player.textContent = t('player.as', { name: playerName });
+  else {
+    player.textContent = `${t('player.noName')} `;
+    const link = document.createElement('a');
+    link.href = new URL('/games', mn.config.portalUrl).toString();
+    link.textContent = t('player.setName');
+    player.append(link);
   }
-})();
+}
+
+// Start once the language packages are loaded; a language change redraws the texts that script made.
+await window.mnI18n.ready;
+start();
+window.mnI18n.onChange(() => {
+  window.mnI18n.apply();
+  renderPlayer();
+  render();
+  void showRecords();
+});
+try {
+  mn = await window.mininode.mininode();
+  await mn.auth.requireLogin();
+  $('#hub').href = mn.game.hubUrl();
+  playerName = await mn.game.username();
+  renderPlayer();
+  void showRecords();
+} catch {
+  // Offline: the game still works, only nothing is recorded.
+}

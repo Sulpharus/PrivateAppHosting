@@ -20,7 +20,11 @@
 6. **CSP.** No external scripts. Fonts and images from third parties are allowed (`img-src https:`)
    but prefer bundling. API calls to third-party hosts need to be listed in the manifest in a
    later spec version; for now avoid them or proxy through `mn.ai`.
-7. **UI.** German copy, 44 px touch targets, light/dark, loading and error states. The look is
+7. **Language packages.** Move every text for people into `i18n/de.json` and `i18n/en.json`
+   (Vite apps: `public/i18n/`), name them in `mininode.json` (`"i18n"`), and use `data-i18n` in
+   markup and `mnI18n.t()` in script; see `docs/ai/LANGUAGE-PACKAGES.md`. Doctor checks key and
+   placeholder parity. An export without them gets a warning (`i18n-missing`) until they exist.
+8. **UI.** German copy, 44 px touch targets, light/dark, loading and error states. The look is
    the App Kit (`docs/ai/DESIGN-SYSTEM.md`):
    - An app that already uses `mn-*` classes with the kit CSS inlined (built outside MiniNode):
      delete the inlined copy and link `/_mininode/ui.css` and `/_mininode/ui.js` instead, keep
@@ -29,8 +33,8 @@
      its shell, buttons, lists and dialogs to the kit components where that is a small change.
      Otherwise keep its layout, but take colours and fonts from the tokens; note what is left in
      the README.
-8. **README.** `hosted/<slug>/README.md`: what the app does, where it came from, what changed.
-9. **Verify locally.**
+9. **README.** `hosted/<slug>/README.md`: what the app does, where it came from, what changed.
+10. **Verify locally.**
    ```bash
    pnpm db:start                                   # once
    pnpm install
@@ -39,5 +43,5 @@
    # sign in at http://localhost:5173, then open http://localhost:8790
    ```
    Exercise every feature once (create, reload, second device/user if shared).
-10. **Commit** on a branch: `feat(<slug>): integrate <source> export`. Open a PR. CI runs doctor,
+11. **Commit** on a branch: `feat(<slug>): integrate <source> export`. Open a PR. CI runs doctor,
     lint, tests and a dry-run deploy; merging deploys.

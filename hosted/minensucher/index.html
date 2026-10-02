@@ -3,11 +3,12 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Minensucher</title>
+  <title data-i18n="app.title">Minensucher</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23a8620a'/%3E%3Ccircle cx='16' cy='17' r='7' fill='white'/%3E%3Cpath d='M16 6v5M7 17H4M28 17h-3M9.5 10.5l2 2M22.5 10.5l-2 2' stroke='white' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="/_mininode/ui.css">
   <link rel="stylesheet" href="/style.css">
   <script src="/_mininode/ui.js"></script>
+  <script src="/_mininode/i18n.js"></script>
   <script src="/_mininode/game.js"></script>
   <script src="/_mininode/sdk.js" defer></script>
   <script type="module" src="/app.js"></script>
@@ -15,39 +16,39 @@
 <body class="mn-app">
   <div class="mn-page ms-page">
     <header class="mn-top"><div class="mn-top-inner">
-      <div class="mn-top-text"><a class="mn-home" href="https://mininode.app">← Alle Apps</a><h1>Minensucher</h1><p class="mn-sub" id="player">Decke alle sicheren Felder auf.</p></div>
-      <div class="mn-top-tools"><a class="mn-btn" id="hub" href="https://mininode.app/games/minensucher">Gaming Hub</a></div>
+      <div class="mn-top-text"><a class="mn-home" href="https://mininode.app" data-i18n="nav.allApps">← Alle Apps</a><h1 data-i18n="app.title">Minensucher</h1><p class="mn-sub" id="player" data-i18n="app.intro">Decke alle sicheren Felder auf.</p></div>
+      <div class="mn-top-tools"><a class="mn-btn" id="hub" href="https://mininode.app/games/minensucher" data-i18n="nav.hub">Gaming Hub</a></div>
     </div></header>
     <main class="mn-main ms-main">
       <!-- biome-ignore lint/a11y/useSemanticElements: a segmented control and a grid have no native element -->
-      <div class="mn-seg" id="levels" role="group" aria-label="Schwierigkeit"></div>
+      <div class="mn-seg" id="levels" role="group" aria-label="Schwierigkeit" data-i18n-attr="aria-label:level.group"></div>
       <div class="mn-kpis">
-        <div class="mn-kpi"><b id="left">10</b><span>Minen übrig</span></div>
-        <div class="mn-kpi"><b id="time">0:00</b><span>Zeit</span></div>
+        <div class="mn-kpi"><b id="left">10</b><span data-i18n="kpi.left">Minen übrig</span></div>
+        <div class="mn-kpi"><b id="time">0:00</b><span data-i18n="kpi.time">Zeit</span></div>
       </div>
       <div class="ms-tools">
         <!-- biome-ignore lint/a11y/useSemanticElements: a segmented control and a grid have no native element -->
-        <div class="mn-seg" id="mode" role="group" aria-label="Was ein Tipp macht">
-          <button type="button" data-mode="open" aria-pressed="true">Aufdecken</button>
-          <button type="button" data-mode="flag" aria-pressed="false">Flagge</button>
+        <div class="mn-seg" id="mode" role="group" aria-label="Was ein Tipp macht" data-i18n-attr="aria-label:mode.group">
+          <button type="button" data-mode="open" aria-pressed="true" data-i18n="mode.open">Aufdecken</button>
+          <button type="button" data-mode="flag" aria-pressed="false" data-i18n="mode.flag">Flagge</button>
         </div>
-        <button type="button" class="mn-btn mn-btn--primary" id="restart">Neues Spiel</button>
+        <button type="button" class="mn-btn mn-btn--primary" id="restart" data-i18n="action.restart">Neues Spiel</button>
       </div>
       <!-- biome-ignore lint/a11y/useSemanticElements: a segmented control and a grid have no native element -->
-      <div class="ms-scroll" id="scroll"><div class="ms-board" id="board" role="grid" aria-label="Spielfeld"></div></div>
+      <div class="ms-scroll" id="scroll"><div class="ms-board" id="board" role="grid" aria-label="Spielfeld" data-i18n-attr="aria-label:board.label"></div></div>
       <p class="mn-sr-only" id="announce" aria-live="polite"></p>
       <section class="mn-card ms-end" id="end" hidden tabindex="-1" aria-labelledby="end-title">
-        <h2 id="end-title">Ergebnis</h2>
+        <h2 id="end-title" data-i18n="end.title">Ergebnis</h2>
         <p id="end-text"></p>
       </section>
       <section aria-labelledby="lb-title" class="ms-section">
-        <div class="mn-sect"><h2 id="lb-title">Bestenliste (schnellste Zeit)</h2></div>
+        <div class="mn-sect"><h2 id="lb-title" data-i18n="leaders.title">Bestenliste (schnellste Zeit)</h2></div>
         <p class="mn-muted" id="record"></p>
         <div id="leaders"></div>
       </section>
       <section class="ms-section" aria-labelledby="rules-title">
-        <h2 id="rules-title">Regeln</h2>
-        <p>Jede Zahl sagt, wie viele Minen in den acht Feldern darum liegen. Decke alle Felder ohne Mine auf. Der erste Tipp ist immer sicher. Mit „Flagge“ (oder langem Drücken, rechter Maustaste, Taste F) markierst du vermutete Minen. Tippst du auf eine Zahl, an der genau so viele Flaggen liegen, öffnen sich die übrigen Nachbarn auf einmal. Pfeiltasten bewegen den Fokus, Enter oder Leertaste deckt auf.</p>
+        <h2 id="rules-title" data-i18n="rules.title">Regeln</h2>
+        <p data-i18n="rules.text">Jede Zahl sagt, wie viele Minen in den acht Feldern darum liegen. Decke alle Felder ohne Mine auf. Der erste Tipp ist immer sicher. Mit „Flagge“ (oder langem Drücken, rechter Maustaste, Taste F) markierst du vermutete Minen. Tippst du auf eine Zahl, an der genau so viele Flaggen liegen, öffnen sich die übrigen Nachbarn auf einmal. Pfeiltasten bewegen den Fokus, Enter oder Leertaste deckt auf.</p>
       </section>
     </main>
   </div>

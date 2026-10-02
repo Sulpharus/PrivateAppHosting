@@ -374,6 +374,11 @@ mnui.sheet.open(sheet, { onClose: () => render() });
 
 ## 8. Copy
 
+- Texts live in the language packages `i18n/de.json` and `i18n/en.json` (see
+  `LANGUAGE-PACKAGES.md`): German with the informal "du", English plain and British. Dates and
+  numbers follow the language (`mnui.date.format`, `mnI18n.locale`); the German examples below
+  are the German package.
+
 - German, informal "du", sentence case. Buttons say what happens: "Speichern", "Buch anlegen",
   "Exportieren", never "OK" or "Absenden".
 - Toasts in the past tense: "Buch gespeichert", "Besuch eingetragen".
@@ -387,8 +392,8 @@ mnui.sheet.open(sheet, { onClose: () => render() });
   - Times use 24 hours: "17:00–22:00".
   - Numbers and amounts: "1.234,50 €", "61 %"; read typed amounts the German way ("1.200,50").
 - Date and time **inputs**: use plain `<input type="date">`, `type="month"` and `type="time"`.
-  `ui.js` shows each one as German parts (Tag · Monat · Jahr, Stunde : Minute), the same in
-  every browser and language setting.
+  `ui.js` shows each one as parts (Tag · Monat · Jahr, Stunde : Minute; in English Day · Month ·
+  Year, Hour : Minute), the same in every browser.
   - The input itself stays hidden in the form with its ISO value (`2026-10-01`, `2026-10`,
     `18:30`) and fires `input`/`change` as before, so app code needs no change.
   - Setting `input.value` updates the visible parts.

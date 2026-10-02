@@ -6,6 +6,14 @@
   "description": "Eigene Wunschliste anlegen, bei anderen Geschenke reservieren, ohne Überraschungen zu verraten",
   "kind": "static",
   "target": "cloudflare",
-  "access": { "default": true },
-  "data": { "mode": "private" }
+  "access": {
+    "default": true
+  },
+  "data": {
+    "mode": "private"
+  },
+  "i18n": {
+    "languages": ["de", "en"],
+    "default": "de"
+  }
 }

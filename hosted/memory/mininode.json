@@ -6,13 +6,23 @@
   "description": "Paare finden mit möglichst wenigen Zügen, mit Rekorden und Bestenliste im Gaming Hub",
   "kind": "static",
   "target": "cloudflare",
-  "access": { "default": true },
-  "data": { "mode": "none" },
+  "access": {
+    "default": true
+  },
+  "data": {
+    "mode": "none"
+  },
   "game": {
     "genre": "puzzle",
     "players": "solo",
     "stats": [
-      { "id": "moves", "label": "Züge", "better": "lower", "min": 8, "max": 500 },
+      {
+        "id": "moves",
+        "label": "Züge",
+        "better": "lower",
+        "min": 8,
+        "max": 500
+      },
       {
         "id": "time",
         "label": "Zeit",
@@ -22,5 +32,9 @@
         "max": 7200
       }
     ]
+  },
+  "i18n": {
+    "languages": ["de", "en"],
+    "default": "de"
   }
 }

@@ -16,6 +16,8 @@ export interface Library {
   spec: string;
   specShort: string;
   design: string;
+  /** The language package guide (docs/ai/LANGUAGE-PACKAGES.md). */
+  language: string;
   kitCss: string;
   types: PromptPart[];
   modules: PromptPart[];
@@ -233,7 +235,7 @@ export function compose(brief: Brief, lib: Library): string {
   lines.push(builder.text);
   lines.push('');
   lines.push(
-    'The UI is German with the informal "du". Start with the most used view, keep one primary action per view, and make every list work empty, loading and full.',
+    'The UI ships in German (informal "du") and English (plain "you"), both as language packages (section 5). Start with the most used view, keep one primary action per view, and make every list work empty, loading and full.',
   );
   lines.push('');
   lines.push('## 3. Platform spec');
@@ -251,28 +253,38 @@ export function compose(brief: Brief, lib: Library): string {
     lines.push(lib.kitCss.trim());
     lines.push('```');
   }
+  lines.push('');
+  lines.push('## 5. Language packages (German and English)');
+  lines.push('');
+  lines.push(
+    lib.language
+      .trim()
+      .replace(/^# .*\n+/, '')
+      .replace(/^## (\d+)\. /gm, '### $1. '),
+  );
   if (type) {
     lines.push('');
-    lines.push('## 5. This kind of app');
+    lines.push('## 6. This kind of app');
     lines.push('');
     lines.push(type.body);
   }
   if (modules.length) {
     lines.push('');
-    lines.push('## 6. Features');
+    lines.push('## 7. Features');
     for (const m of modules) {
       lines.push('');
       lines.push(m.body);
     }
   }
   lines.push('');
-  lines.push('## 7. Before you hand it over');
+  lines.push('## 8. Before you hand it over');
   lines.push('');
   lines.push(
     [
-      `- \`mininode.json\` has slug \`${slug}\`, data mode \`${audience.mode}\`${modules.some((m) => m.id === 'ai') ? ', the AI models with a small monthly budget' : ''}${modules.some((m) => m.id === 'google') ? ', the `google` block with the least access the app needs' : ''}.`,
+      `- \`mininode.json\` has slug \`${slug}\`, data mode \`${audience.mode}\`, the \`i18n\` block (de, en)${modules.some((m) => m.id === 'ai') ? ', the AI models with a small monthly budget' : ''}${modules.some((m) => m.id === 'google') ? ', the `google` block with the least access the app needs' : ''}.`,
       `- \`<html lang="de" data-accent="${brief.accent}">\`, \`<body class="mn-app">\`, the App Kit shell (\`mn-nav\`, \`mn-top\`, \`mn-main\`).`,
-      '- Every view checked at 360 px and 1280 px, in light and dark mode.',
+      '- `i18n/de.json` and `i18n/en.json` (in `public/i18n/` for built apps): same keys, same placeholders, plural forms, professional English; no text for people left in the code; `pnpm mininode doctor` shows no `i18n-*` finding.',
+      '- Every view checked at 360 px and 1280 px, in light and dark mode, in German and in English.',
       '- No localStorage for user data, no CDN scripts, no API keys, no raw colours or fonts in app CSS.',
       '- Every list has an empty state and a loading skeleton; every network call has an error message.',
       '- A README says what the app does, what it stores and how to try it.',

@@ -14,7 +14,9 @@ import {
 } from '../auth/passkeys.ts';
 import { useStepUp } from '../auth/StepUp.tsx';
 import { TopBar } from '../components/TopBar.tsx';
+import { runtimeConfig } from '../config.ts';
 import { isReauthError } from '../lib/api.ts';
+import { LANGUAGES, type Language, writeLanguageCookie } from '../lib/language.ts';
 import { platform, supabase } from '../lib/supabase.ts';
 import { PersonalKeysCard } from './AccountKeys.tsx';
 import { NotificationsCard } from './AccountNotifications.tsx';
@@ -95,6 +97,28 @@ export function Account() {
       await refreshProfile();
     }, 'Name gespeichert.');
 
+  // A preference, not a security setting: no confirmation code is asked for.
+  const saveLanguage = async (language: Language) => {
+    if (!profile || language === profile.language) return;
+    setError(null);
+    setMessage(null);
+    const { error: updateError } = await platform()
+      .from('profiles')
+      .update({ language })
+      .eq('user_id', profile.userId);
+    if (updateError) {
+      setError(
+        language === 'en'
+          ? 'Could not save the language.'
+          : 'Die Sprache konnte nicht gespeichert werden.',
+      );
+      return;
+    }
+    writeLanguageCookie(language, runtimeConfig()?.cookieDomain);
+    await refreshProfile();
+    setMessage(language === 'en' ? 'Language saved.' : 'Sprache gespeichert.');
+  };
+
   const savePassword = async () => {
     setError(null);
     setMessage(null);
@@ -162,6 +186,31 @@ export function Account() {
               Speichern
             </button>
           </form>
+        </section>
+
+        <section className="card" aria-labelledby="language-title">
+          <h2 id="language-title" className="section-title">
+            Sprache / Language
+          </h2>
+          <p className="muted">
+            Gilt für alle Apps, die ein Sprachpaket haben; die übrigen bleiben deutsch. · Applies to
+            every app that has a language package; the others stay German.
+          </p>
+          <fieldset className="chip-scroll" style={{ border: 0, padding: 0, margin: 0 }}>
+            <legend className="sr-only">Sprache / Language</legend>
+            {LANGUAGES.map(({ code, label }) => (
+              <button
+                key={code}
+                type="button"
+                className="chip"
+                lang={code}
+                aria-pressed={profile?.language === code}
+                onClick={() => void saveLanguage(code)}
+              >
+                {label}
+              </button>
+            ))}
+          </fieldset>
         </section>
 
         {passkeysSupported() && (

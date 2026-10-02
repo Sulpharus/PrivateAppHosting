@@ -1,0 +1,44 @@
+{
+  "app.title": "Codeknacker",
+  "app.intro": "Errate den geheimen Code aus vier Zeichen.",
+  "nav.allApps": "← Alle Apps",
+  "nav.hub": "Gaming Hub",
+  "kpi.left": "Versuche übrig",
+  "kpi.time": "Zeit",
+  "rows.label": "Bisherige Versuche",
+  "entry.title": "Dein Versuch",
+  "action.back": "Letztes löschen",
+  "action.submit": "Raten",
+  "action.restart": "Neues Spiel",
+  "end.title": "Ergebnis",
+  "end.won": "Code geknackt!",
+  "end.lost": "Nicht geschafft",
+  "end.wonText": {
+    "one": "In {n} Versuch und {time}.",
+    "other": "In {n} Versuchen und {time}."
+  },
+  "end.lostText": "Der Code war {code}. Neues Spiel?",
+  "leaders.title": "Bestenliste (wenigste Versuche)",
+  "unit.guesses": {
+    "one": "{n} Versuch",
+    "other": "{n} Versuche"
+  },
+  "record.best": {
+    "one": "Dein Rekord: {n} Versuch.",
+    "other": "Dein Rekord: {n} Versuche."
+  },
+  "rules.title": "Regeln",
+  "rules.text": "Der Code besteht aus vier Zeichen, gezogen aus sechs; ein Zeichen kann mehrfach vorkommen. Du hast zehn Versuche. Nach jedem Versuch siehst du, wie viele Zeichen am richtigen Platz sitzen („genau“) und wie viele zwar im Code sind, aber an einer anderen Stelle („nah“). Tastatur: 1 bis 6 setzt ein Zeichen, Rücktaste löscht das letzte, Enter ratet.",
+  "symbol.0": "Kreis",
+  "symbol.1": "Dreieck",
+  "symbol.2": "Quadrat",
+  "symbol.3": "Raute",
+  "symbol.4": "Stern",
+  "symbol.5": "Kreuz",
+  "symbol.place": "{symbol} setzen (Taste {key})",
+  "slot.empty": "leer",
+  "feedback.none": "nichts getroffen",
+  "feedback.hits": "{exact} genau, {near} nah",
+  "say.guess": "Versuch {n}: {feedback}.",
+  "say.new": "Neues Spiel."
+}

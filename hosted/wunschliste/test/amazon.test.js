@@ -40,6 +40,18 @@ describe('titleFromPath', () => {
   });
 });
 
+describe('parsePrice in English', () => {
+  it('reads a grouping comma and a decimal point', () => {
+    expect(parsePrice('1,234.50', 'en-GB')).toBe(123450);
+    expect(parsePrice('24.99', 'en-GB')).toBe(2499);
+    expect(parsePrice('1,234', 'en-GB')).toBe(123400);
+  });
+
+  it('still refuses it in German', () => {
+    expect(parsePrice('1,234.50')).toBeNaN();
+  });
+});
+
 describe('parsePrice', () => {
   it('reads German prices', () => {
     expect(parsePrice('12,99')).toBe(1299);

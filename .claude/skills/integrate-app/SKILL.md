@@ -59,11 +59,17 @@ fixture in `fixtures/<source>/expected/` for the target shape. Keep the app's lo
 change only what the platform requires. Load the `supabase-postgres-best-practices` skill before
 writing `db/*.sql`.
 
+**Language packages.** Move the app's texts into `i18n/de.json` and `i18n/en.json` (Vite apps:
+`public/i18n/`), add the `"i18n"` block to the manifest and use `data-i18n` / `mnI18n.t()` as in
+`docs/ai/LANGUAGE-PACKAGES.md` (follow its style rules; both languages, professional, same keys and
+placeholders). The script cannot translate: an app it finished without packages still passes
+doctor with the `i18n-missing` warning, so add them before the PR unless the user said to skip.
+
 ## 4. Verify (all must pass)
 
 ```bash
 pnpm install
-pnpm mininode doctor hosted/<slug>                 # 0 errors; fix warnings when sensible
+pnpm mininode doctor hosted/<slug>                 # 0 errors; fix warnings when sensible (also i18n-*)
 pnpm lint                                         # hosted/ uses a relaxed profile
 pnpm db:start                                     # if not running
 scripts/with-local-supabase.sh pnpm mininode dev hosted/<slug>

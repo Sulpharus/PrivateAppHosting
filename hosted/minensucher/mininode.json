@@ -6,8 +6,12 @@
   "description": "Minen finden, ohne eine zu treffen: drei Stufen mit Bestzeiten im Gaming Hub",
   "kind": "static",
   "target": "cloudflare",
-  "access": { "default": true },
-  "data": { "mode": "none" },
+  "access": {
+    "default": true
+  },
+  "data": {
+    "mode": "none"
+  },
   "game": {
     "genre": "puzzle",
     "players": "solo",
@@ -37,5 +41,9 @@
         "max": 7200
       }
     ]
+  },
+  "i18n": {
+    "languages": ["de", "en"],
+    "default": "de"
   }
 }

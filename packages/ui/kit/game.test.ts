@@ -56,6 +56,23 @@ afterEach(() => {
   delete (window as unknown as { mininode?: unknown }).mininode;
 });
 
+describe('English shell', () => {
+  afterEach(() => {
+    delete (window as unknown as { mnI18n?: unknown }).mnI18n;
+  });
+
+  it('speaks English when the app runs in English', async () => {
+    (window as unknown as { mnI18n: unknown }).mnI18n = { lang: 'en', locale: 'en-GB' };
+    const { mn } = fakeMn();
+    (window as unknown as { mininode: unknown }).mininode = { mininode: async () => mn };
+    await game.connect({ player: '#player' });
+    expect(document.querySelector('#player')?.textContent).toBe('You are playing as Lena.');
+    await game.leaders(mn, '#lb', { stat: 'time_1' });
+    expect(document.querySelector('#lb li.mine')?.textContent).toContain('Lena (you)');
+    expect(game.format.number(12345)).toBe('12,345');
+  });
+});
+
 describe('connect', () => {
   it('links the hub and greets the player by name', async () => {
     const { mn } = fakeMn();

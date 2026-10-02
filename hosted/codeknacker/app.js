@@ -8,7 +8,10 @@ const random = () => crypto.getRandomValues(new Uint32Array(1))[0] / 4294967296;
 
 // Shapes differ as well as colours, so the symbols are told apart without colour.
 const SHAPES = ['●', '▲', '■', '◆', '★', '✚'];
-const NAMES = ['Kreis', 'Dreieck', 'Quadrat', 'Raute', 'Stern', 'Kreuz'];
+const t = (key, params) => window.mnI18n.t(key, params);
+const symbolName = (s) => t(`symbol.${s}`);
+// The packages must be there before the first text is made.
+await window.mnI18n.ready;
 const TEXT = '︎';
 
 let mn = null;
@@ -27,13 +30,13 @@ function symbol(s, tag = 'span') {
   const el = document.createElement(tag);
   el.className = `ck-sym s${s}`;
   el.textContent = `${SHAPES[s]}${TEXT}`;
-  el.setAttribute('aria-label', NAMES[s]);
+  el.setAttribute('aria-label', symbolName(s));
   return el;
 }
 
 function feedbackText({ exact, near }) {
-  if (!exact && !near) return 'nichts getroffen';
-  return `${exact} genau, ${near} nah`;
+  if (!exact && !near) return t('feedback.none');
+  return t('feedback.hits', { exact, near });
 }
 
 function render() {
@@ -60,7 +63,7 @@ function render() {
     const slot = filled ? symbol(current[i]) : document.createElement('span');
     if (!filled) {
       slot.className = 'ck-sym';
-      slot.setAttribute('aria-label', 'leer');
+      slot.setAttribute('aria-label', t('slot.empty'));
     } else slot.classList.add('filled');
     slots.append(slot);
   }
@@ -75,10 +78,10 @@ async function ended() {
   const seconds = Math.max(1, clock.stop());
   const won = game.status === 'won';
   const n = game.guesses.length;
-  $('#end-title').textContent = won ? 'Code geknackt!' : 'Nicht geschafft';
+  $('#end-title').textContent = t(won ? 'end.won' : 'end.lost');
   $('#end-text').textContent = won
-    ? `In ${n} ${n === 1 ? 'Versuch' : 'Versuchen'} und ${format.seconds(seconds)}.`
-    : `Der Code war ${game.code.map((s) => NAMES[s]).join(', ')}. Neues Spiel?`;
+    ? t('end.wonText', { n, time: format.seconds(seconds) })
+    : t('end.lostText', { code: game.code.map((s) => symbolName(s)).join(', ') });
   $('#end').hidden = false;
   $('#end').focus();
   $('#announce').textContent = `${$('#end-title').textContent} ${$('#end-text').textContent}`;
@@ -100,7 +103,10 @@ function submit() {
   if (current.length !== LENGTH) return;
   const result = guess(game, current);
   if (!result) return;
-  $('#announce').textContent = `Versuch ${game.guesses.length}: ${feedbackText(result)}.`;
+  $('#announce').textContent = t('say.guess', {
+    n: game.guesses.length,
+    feedback: feedbackText(result),
+  });
   current = [];
   render();
   if (game.status !== 'playing') void ended();
@@ -112,7 +118,7 @@ function newRound() {
   current = [];
   reported = false;
   $('#end').hidden = true;
-  $('#announce').textContent = 'Neues Spiel.';
+  $('#announce').textContent = t('say.new');
   render();
 }
 
@@ -120,7 +126,7 @@ const pad = $('#pad');
 for (let s = 0; s < SYMBOLS; s++) {
   const b = symbol(s, 'button');
   b.type = 'button';
-  b.setAttribute('aria-label', `${NAMES[s]} setzen (Taste ${s + 1})`);
+  b.setAttribute('aria-label', t('symbol.place', { symbol: symbolName(s), key: s + 1 }));
   b.addEventListener('click', () => add(s));
   pad.append(b);
 }
@@ -145,13 +151,21 @@ document.addEventListener('keydown', (e) => {
 async function showRecords() {
   const best = await window.mnGame.leaders(mn, '#leaders', {
     stat: 'guesses',
-    format: (n) => `${n}`,
-    unit: ' Versuche',
+    format: (n) => t('unit.guesses', { n }),
   });
-  $('#record').textContent = best === undefined ? '' : `Dein Rekord: ${best} Versuche.`;
+  $('#record').textContent = best === undefined ? '' : t('record.best', { n: best });
 }
 
 render();
+window.mnI18n.onChange(() => {
+  window.mnI18n.apply();
+  pad.querySelectorAll('button').forEach((b, s) => {
+    b.setAttribute('aria-label', t('symbol.place', { symbol: symbolName(s), key: s + 1 }));
+    b.replaceChildren(document.createTextNode(`${SHAPES[s]}${TEXT}`));
+  });
+  render();
+  void showRecords();
+});
 (async () => {
   mn = await window.mnGame.connect({ player: '#player', hub: '#hub' });
   clock.attach();

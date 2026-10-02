@@ -32,20 +32,21 @@ import { buildReturn, euro, FIELDS, FORMS } from './tax.js';
 
 // ---------- helpers ----------
 const $ = (s) => document.querySelector(s);
+const t = (key, params) => window.mnI18n.t(key, params);
+/** The language of the page: 'de-DE' or 'en-GB' (kit/i18n.js). */
+const loc = () => window.mnI18n.locale;
 const pad = (n) => String(n).padStart(2, '0');
 const ymd = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 const today = () => ymd(new Date());
 const newId = () => crypto.randomUUID();
 const monthName = (ym) =>
-  new Intl.DateTimeFormat('de-DE', { month: 'long', year: 'numeric' }).format(
+  new Intl.DateTimeFormat(loc(), { month: 'long', year: 'numeric' }).format(
     new Date(Number(ym.slice(0, 4)), Number(ym.slice(5, 7)) - 1, 1),
   );
 const shortMonth = (m) =>
-  new Intl.DateTimeFormat('de-DE', { month: 'short' })
-    .format(new Date(2000, m, 1))
-    .replace('.', '');
+  new Intl.DateTimeFormat(loc(), { month: 'short' }).format(new Date(2000, m, 1)).replace('.', '');
 const dayLabel = (ds) =>
-  new Intl.DateTimeFormat('de-DE', { weekday: 'short', day: 'numeric', month: 'long' }).format(
+  new Intl.DateTimeFormat(loc(), { weekday: 'short', day: 'numeric', month: 'long' }).format(
     new Date(Number(ds.slice(0, 4)), Number(ds.slice(5, 7)) - 1, Number(ds.slice(8, 10))),
   );
 /** '2026-10-01' → '01. Okt. 2026' (App Kit, the same in every app). */
@@ -54,7 +55,7 @@ const shiftMonth = (ym, n) => {
   const d = new Date(Number(ym.slice(0, 4)), Number(ym.slice(5, 7)) - 1 + n, 1);
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}`;
 };
-/** Cents → "1234,56" for inputs and for pasting into ELSTER. */
+/** Cents → "1234,56" for inputs and for pasting into ELSTER (always German: the form wants it). */
 const plain = (cents) =>
   (cents / 100).toLocaleString('de-DE', { minimumFractionDigits: 2, useGrouping: false });
 
@@ -127,7 +128,14 @@ const ready = (async () => {
 const keyOf = (b) => `tx:${b.date}:${b.id}`;
 const cats = () => S.settings.categories;
 const catById = (id) => cats().find((c) => c.id === id);
-const catName = (id) => catById(id)?.name ?? (id ? 'Gelöschte Kategorie' : 'Ohne Kategorie');
+const GERMAN_DEFAULTS = new Map(DEFAULT_CATEGORIES.map((c) => [c.id, c.name]));
+/** An unrenamed starting category follows the language; a renamed or own one shows its own name. */
+const catLabel = (c) => (GERMAN_DEFAULTS.get(c.id) === c.name ? t(`defaultCat.${c.id}`) : c.name);
+const catName = (id) => {
+  const c = catById(id);
+  return c ? catLabel(c) : t(id ? 'category.deleted' : 'category.none');
+};
+const fieldLabel = (id) => t(FIELDS[id].label);
 function taxFieldOf(b) {
   if (b.taxField === 'none') return '';
   return b.taxField || catById(b.cat)?.tax || '';
@@ -186,10 +194,10 @@ async function ensureProfile(year) {
  * second run writes the same keys instead of duplicates. */
 async function runRecurring() {
   const mn = await ready;
-  const t = today();
+  const day = today();
   let added = 0;
   for (const rec of S.recs.values()) {
-    const due = dueRecurring(rec, t);
+    const due = dueRecurring(rec, day);
     if (!due.length) continue;
     for (const { month, booking } of due) {
       const key = keyOf(booking);
@@ -205,7 +213,7 @@ async function runRecurring() {
     await mn.kv.set(`rec:${rec.id}`, next);
     S.recs.set(rec.id, next);
   }
-  if (added) toast(`${added} ${added === 1 ? 'Fixkosten-Zahlung' : 'Fixkosten-Zahlungen'} gebucht`);
+  if (added) toast(t('toast.fixedBooked', { n: added }));
 }
 
 // ---------- Kalender (ADR 0002) ----------
@@ -220,7 +228,13 @@ async function syncCalendar() {
     const mn = await ready;
     const contract = mn.suite.type('contract');
     const mine = (await contract.list({ limit: 5000 })).filter((r) => r.source_app === 'haushalt');
-    const wanted = calendarPayments(recList(), today(), (id) => (id ? catName(id) : ''));
+    const wanted = calendarPayments(
+      recList(),
+      today(),
+      (id) => (id ? catName(id) : ''),
+      12,
+      t('fixed.fallbackName'),
+    );
     const byKey = new Map(mine.map((r) => [r.source_key, r]));
     const jobs = [];
     for (const [key, f] of wanted) {
@@ -277,7 +291,7 @@ async function load() {
     await runRecurring();
     calendarSoon(5000);
   } catch {
-    toast('Deine Daten konnten nicht geladen werden. Lade die Seite neu.');
+    toast(t('error.loadData'));
   } finally {
     S.loading = false;
     render();
@@ -304,10 +318,16 @@ function stepper(label, value, prev, next, onChange) {
   );
 }
 const monthStepper = () =>
-  stepper('Monat', monthName(S.month), 'Vorheriger Monat', 'Nächster Monat', changeMonth);
+  stepper(
+    t('stepper.month'),
+    monthName(S.month),
+    t('stepper.prevMonth'),
+    t('stepper.nextMonth'),
+    changeMonth,
+  );
 async function changeMonth(n) {
   S.month = shiftMonth(S.month, n);
-  await ensureYear(Number(S.month.slice(0, 4))).catch(() => toast('Laden fehlgeschlagen.'));
+  await ensureYear(Number(S.month.slice(0, 4))).catch(() => toast(t('error.loadFailed')));
   render();
 }
 function meter(value, max, over) {
@@ -383,14 +403,19 @@ function viewOverview() {
     ? h(
         'div',
         { class: 'mn-banner mn-banner--warn', role: 'note' },
-        `${devs.length === 1 ? 'Eine Fixkosten-Zahlung weicht' : `${devs.length} Fixkosten-Zahlungen weichen`} diesen Monat vom Plan ab: `,
-        devs
-          .map(
-            (d) =>
-              `${d.rec.text || catName(d.rec.cat)} ${euro(d.booking.cents)} statt ${euro(d.expected)}`,
-          )
-          .join(', '),
-        '. ',
+        t('overview.deviation', {
+          n: devs.length,
+          list: devs
+            .map((d) =>
+              t('overview.deviationItem', {
+                name: d.rec.text || catName(d.rec.cat),
+                actual: euro(d.booking.cents),
+                expected: euro(d.expected),
+              }),
+            )
+            .join(', '),
+        }),
+        ' ',
         h(
           'button',
           {
@@ -401,7 +426,7 @@ function viewOverview() {
               go('plan');
             },
           },
-          'Ansehen',
+          t('common.view'),
         ),
       )
     : null;
@@ -410,14 +435,14 @@ function viewOverview() {
     return [
       moneyCard(),
       empty(
-        'Noch keine Buchungen in diesem Monat',
-        'Trage Ausgaben und Einnahmen ein oder importiere den Kontoauszug deiner Bank als CSV.',
+        t('overview.emptyTitle'),
+        t('overview.emptyText'),
         h(
           'button',
           { class: 'mn-btn mn-btn--primary', onclick: () => editBooking(null) },
-          'Buchung hinzufügen',
+          t('action.addBooking'),
         ),
-        h('button', { class: 'mn-btn', onclick: () => openImport() }, 'Kontoauszug importieren'),
+        h('button', { class: 'mn-btn', onclick: () => openImport() }, t('action.importStatement')),
       ),
     ];
 
@@ -426,7 +451,7 @@ function viewOverview() {
     { class: 'mn-card' },
     h(
       'div',
-      { class: 'chart', role: 'img', 'aria-label': `Einnahmen und Ausgaben je Monat ${year}` },
+      { class: 'chart', role: 'img', 'aria-label': t('overview.chartLabel', { year }) },
       months.map((x) => {
         const col = (v, cls) => {
           const bar = h('i', { class: cls });
@@ -438,7 +463,11 @@ function viewOverview() {
           {
             type: 'button',
             class: `col${x.ym === S.month ? ' sel' : ''}`,
-            'aria-label': `${monthName(x.ym)}: Einnahmen ${euro(x.income)}, Ausgaben ${euro(x.expense)}`,
+            'aria-label': t('overview.monthLabel', {
+              month: monthName(x.ym),
+              income: euro(x.income),
+              expense: euro(x.expense),
+            }),
             'aria-pressed': String(x.ym === S.month),
             onclick: () => {
               S.month = x.ym;
@@ -457,13 +486,13 @@ function viewOverview() {
         'span',
         {},
         h('i', { class: 'in' }),
-        `Einnahmen ${euro(months.reduce((s, x) => s + x.income, 0))}`,
+        t('overview.legendIncome', { amount: euro(months.reduce((s, x) => s + x.income, 0)) }),
       ),
       h(
         'span',
         {},
         h('i', { class: 'out' }),
-        `Ausgaben ${euro(months.reduce((s, x) => s + x.expense, 0))}`,
+        t('overview.legendExpense', { amount: euro(months.reduce((s, x) => s + x.expense, 0)) }),
       ),
     ),
   );
@@ -474,14 +503,17 @@ function viewOverview() {
     h(
       'div',
       { class: 'mn-kpis' },
-      kpi('Einnahmen', euro(income), 'pos'),
-      kpi('Ausgaben', euro(expense)),
+      kpi(t('common.income'), euro(income), 'pos'),
+      kpi(t('common.expenses'), euro(expense)),
       kpi(
-        saldo >= 0 ? 'Überschuss' : 'Fehlbetrag',
+        t(saldo >= 0 ? 'overview.surplus' : 'overview.shortfall'),
         euro(Math.abs(saldo)),
         saldo >= 0 ? 'pos' : 'neg',
       ),
-      kpi('Sparquote', income > 0 ? `${Math.round((saldo / income) * 100)} %` : '–'),
+      kpi(
+        t('overview.savingsRate'),
+        income > 0 ? t('common.percent', { n: Math.round((saldo / income) * 100) }) : '–',
+      ),
     ),
     h(
       'div',
@@ -492,7 +524,7 @@ function viewOverview() {
         budget > 0
           ? [
               sect(
-                'Budget',
+                t('overview.budget'),
                 h(
                   'button',
                   {
@@ -502,23 +534,25 @@ function viewOverview() {
                       go('plan');
                     },
                   },
-                  'Details',
+                  t('common.details'),
                 ),
               ),
               h(
                 'div',
                 { class: 'mn-list' },
                 barRow(
-                  `${euro(spentInBudget)} von ${euro(budget)}`,
+                  t('overview.budgetOf', { spent: euro(spentInBudget), budget: euro(budget) }),
                   spentInBudget > budget
-                    ? `${euro(spentInBudget - budget)} drüber`
-                    : `${euro(budget - spentInBudget)} übrig`,
+                    ? t('overview.budgetOver', { amount: euro(spentInBudget - budget) })
+                    : t('overview.budgetLeft', { amount: euro(budget - spentInBudget) }),
                   meter(spentInBudget, budget, spentInBudget > budget),
                   overCats.length
                     ? h(
                         'span',
                         { class: 'mn-chip mn-chip--bad over-note' },
-                        `Überschritten: ${overCats.map((c) => c.name).join(', ')}`,
+                        t('overview.exceeded', {
+                          list: overCats.map((c) => catLabel(c)).join(', '),
+                        }),
                       )
                     : null,
                 ),
@@ -527,14 +561,14 @@ function viewOverview() {
           : null,
         top.length
           ? [
-              sect('Ausgaben nach Kategorie'),
+              sect(t('overview.byCategory')),
               h(
                 'div',
                 { class: 'mn-list' },
                 top.map(([cat, cents]) =>
                   barRow(
                     catName(cat),
-                    `${euro(cents)}, ${Math.round((cents / expense) * 100)} %`,
+                    `${euro(cents)}, ${t('common.percent', { n: Math.round((cents / expense) * 100) })}`,
                     meter(cents, top[0][1]),
                   ),
                 ),
@@ -545,10 +579,10 @@ function viewOverview() {
       h(
         'div',
         {},
-        sect(`Jahr ${year}`),
+        sect(t('overview.year', { year })),
         chart,
         sect(
-          'Steuerlich relevant',
+          t('overview.taxRelevant'),
           h(
             'button',
             {
@@ -558,7 +592,7 @@ function viewOverview() {
                 go('tax');
               },
             },
-            'Zur Steuer',
+            t('overview.toTax'),
           ),
         ),
         h(
@@ -567,17 +601,9 @@ function viewOverview() {
           taxYear.length
             ? [
                 h('span', { class: 'mn-big' }, euro(taxSum)),
-                h(
-                  'p',
-                  { class: 'mn-note' },
-                  `${taxYear.length} ${taxYear.length === 1 ? 'Buchung fließt' : 'Buchungen fließen'} ${year} automatisch in die Steuererklärung.`,
-                ),
+                h('p', { class: 'mn-note' }, t('overview.taxFlow', { n: taxYear.length, year })),
               ]
-            : h(
-                'p',
-                { class: 'mn-note' },
-                `Noch keine steuerlich relevanten Buchungen in ${year}. Kategorien wie Handwerker, Spenden oder Arbeitsmittel werden automatisch übernommen.`,
-              ),
+            : h('p', { class: 'mn-note' }, t('overview.taxNone', { year })),
         ),
       ),
     ),
@@ -585,7 +611,7 @@ function viewOverview() {
 }
 
 // ---------- Planung: Fixkosten und Budgets ----------
-const EVERY = { 1: 'monatlich', 3: 'vierteljährlich', 6: 'halbjährlich', 12: 'jährlich' };
+const everyLabel = (months) => t(`every.${months}`);
 const recList = () => [...S.recs.values()];
 
 /** Adopts a different payment as the new amount from its month on. */
@@ -599,22 +625,28 @@ async function adoptAmount(rec, booking) {
   await mn.kv.set(`rec:${next.id}`, next);
   S.recs.set(next.id, next);
   calendarSoon();
-  toast(`${next.text || 'Fixkosten'}: ${euro(booking.cents)} ab ${monthName(from)}`);
+  toast(
+    t('toast.amountAdopted', {
+      name: next.text || t('fixed.fallbackName'),
+      amount: euro(booking.cents),
+      month: monthName(from),
+    }),
+  );
   render();
 }
 
 function fixedRow(rec) {
-  const t = today();
+  const day = today();
   const month = S.month;
   const st = fixedStatus(rec, month);
-  const due = nextDue(rec, t);
+  const due = nextDue(rec, day);
   const amount = amountFor(rec, month);
   const dev = deviations(rec, bookings())[0];
-  const parts = [`${euro(amount)} ${EVERY[rec.every]}`];
-  if (st === 'ended') parts.push(`beendet ${monthName(rec.end)}`);
-  else if (rec.end) parts.push(`letzte Zahlung ${monthName(rec.end)}`);
-  else if (due) parts.push(`nächste am ${dayLabel(due)}`);
-  if (st === 'upcoming') parts.push(`ab ${monthName(rec.start)}`);
+  const parts = [`${euro(amount)} ${everyLabel(rec.every)}`];
+  if (st === 'ended') parts.push(t('fixed.endedIn', { month: monthName(rec.end) }));
+  else if (rec.end) parts.push(t('fixed.lastPayment', { month: monthName(rec.end) }));
+  else if (due) parts.push(t('fixed.nextOn', { day: dayLabel(due) }));
+  if (st === 'upcoming') parts.push(t('fixed.startsIn', { month: monthName(rec.start) }));
   return h(
     'div',
     { class: 'fixed-row' },
@@ -631,11 +663,11 @@ function fixedRow(rec) {
         'span',
         { class: 'mn-row-side' },
         h('b', {}, `${rec.kind === 'income' ? '+' : ''}${euro(monthly(rec, month))}`),
-        'pro Monat',
+        t('fixed.perMonth'),
       ),
     ),
     st === 'ending'
-      ? h('span', { class: 'mn-chip mn-chip--warn fixed-chip' }, 'Endet diesen Monat')
+      ? h('span', { class: 'mn-chip mn-chip--warn fixed-chip' }, t('fixed.endsThisMonth'))
       : null,
     dev
       ? h(
@@ -646,12 +678,17 @@ function fixedRow(rec) {
             {
               class: `mn-chip ${dev.booking.cents > dev.expected ? 'mn-chip--bad' : 'mn-chip--ok'}`,
             },
-            `${dayLabel(dev.booking.date)}: ${euro(dev.booking.cents)} statt ${euro(dev.expected)} (${dev.booking.cents > dev.expected ? '+' : '−'}${euro(Math.abs(dev.booking.cents - dev.expected))})`,
+            t('fixed.deviation', {
+              day: dayLabel(dev.booking.date),
+              actual: euro(dev.booking.cents),
+              expected: euro(dev.expected),
+              diff: `${dev.booking.cents > dev.expected ? '+' : '−'}${euro(Math.abs(dev.booking.cents - dev.expected))}`,
+            }),
           ),
           h(
             'button',
             { type: 'button', class: 'mn-link', onclick: () => void adoptAmount(rec, dev.booking) },
-            'Als neuen Betrag übernehmen',
+            t('fixed.adopt'),
           ),
         )
       : null,
@@ -670,36 +707,32 @@ function viewFixed() {
   if (!all.length)
     return [
       empty(
-        'Noch keine Fixkosten',
-        'Miete, Abos, Versicherungen, Rücklagen oder Spenden: trag ein, was regelmäßig abgeht (und dein Gehalt). Sie werden automatisch gebucht oder beim Kontoimport erkannt.',
+        t('fixed.emptyTitle'),
+        t('fixed.emptyText'),
         h(
           'button',
           { class: 'mn-btn mn-btn--primary', onclick: () => editRecurring(null) },
-          'Fixkosten hinzufügen',
+          t('fixed.add'),
         ),
       ),
     ];
-  const groups = Object.entries(FIXED_TYPES)
-    .map(([type, label]) => [label, live.filter((r) => r.type === type)])
+  const groups = Object.entries(FIXED_TYPES) // type → language key
+    .map(([type, key]) => [t(key), live.filter((r) => r.type === type)])
     .filter(([, list]) => list.length);
   return [
     h(
       'div',
       { class: 'mn-kpis' },
-      kpi('Fixkosten pro Monat', euro(costs)),
-      kpi('Regelmäßige Einnahmen', euro(income), 'pos'),
+      kpi(t('fixed.kpiCosts'), euro(costs)),
+      kpi(t('fixed.kpiIncome'), euro(income), 'pos'),
       kpi(
-        income - costs >= 0 ? 'Bleibt pro Monat' : 'Fehlt pro Monat',
+        t(income - costs >= 0 ? 'fixed.leftPerMonth' : 'fixed.missingPerMonth'),
         euro(Math.abs(income - costs)),
         income - costs >= 0 ? 'pos' : 'neg',
       ),
-      kpi('Pro Jahr', euro(costs * 12)),
+      kpi(t('fixed.perYear'), euro(costs * 12)),
     ),
-    h(
-      'p',
-      { class: 'mn-note' },
-      'Jährliche und vierteljährliche Beträge zählen anteilig pro Monat. Gebucht wird am Fälligkeitstag, beim Kontoimport erkannte Zahlungen ersetzen die automatische Buchung.',
-    ),
+    h('p', { class: 'mn-note' }, t('fixed.note')),
     groups.map(([label, list]) => [
       sect(
         label,
@@ -711,7 +744,7 @@ function viewFixed() {
       ? h(
           'details',
           { class: 'mn-more fixed-ended' },
-          h('summary', {}, `Beendet (${ended.length})`),
+          h('summary', {}, t('fixed.ended', { n: ended.length })),
           h('div', { class: 'mn-list' }, ended.map(fixedRow)),
         )
       : null,
@@ -719,7 +752,7 @@ function viewFixed() {
       'button',
       { type: 'button', class: 'mn-btn fixed-add', onclick: () => editRecurring(null) },
       icon('plus'),
-      'Fixkosten hinzufügen',
+      t('fixed.add'),
     ),
   ];
 }
@@ -727,10 +760,10 @@ function viewFixed() {
 function viewPlan() {
   const seg = h(
     'div',
-    { class: 'mn-seg plan-seg', role: 'group', 'aria-label': 'Planung' },
+    { class: 'mn-seg plan-seg', role: 'group', 'aria-label': t('plan.label') },
     [
-      ['fixed', 'Fixkosten'],
-      ['budget', 'Budgets'],
+      ['fixed', t('plan.fixed')],
+      ['budget', t('plan.budgets')],
     ].map(([id, label]) =>
       h(
         'button',
@@ -764,12 +797,8 @@ function moneyCard() {
     return h(
       'div',
       { class: 'mn-card money' },
-      h('h2', { class: 'money-title' }, 'Dein Monat'),
-      h(
-        'p',
-        { class: 'mn-note' },
-        'Trag unter Planung dein Gehalt und deine Fixkosten ein (oder Budgets), dann zeigt dir dieser Balken jeden Tag, ob du mit dem Geld auskommst.',
-      ),
+      h('h2', { class: 'money-title' }, t('money.title')),
+      h('p', { class: 'mn-note' }, t('money.setup')),
       h(
         'button',
         {
@@ -780,41 +809,39 @@ function moneyCard() {
             go('plan');
           },
         },
-        'Zur Planung',
+        t('money.toPlan'),
       ),
     );
   const over = m.spent > m.available;
   const behind = m.ahead < 0;
   const state = over ? 'bad' : behind ? 'warn' : 'ok';
   const chip = over
-    ? `${euro(m.spent - m.available)} über dem Monat`
+    ? t('money.chipOver', { amount: euro(m.spent - m.available) })
     : !current
       ? day === days
-        ? `${euro(m.left)} übrig`
-        : 'Geplant'
+        ? t('money.chipLeft', { amount: euro(m.left) })
+        : t('money.chipPlanned')
       : behind
-        ? `${euro(-m.ahead)} über Plan`
-        : `${euro(m.ahead)} unter Plan`;
+        ? t('money.chipBehind', { amount: euro(-m.ahead) })
+        : t('money.chipAhead', { amount: euro(m.ahead) });
   const bar = h('span', { class: `money-fill money-${state}` });
   bar.style.transform = `scaleX(${m.available > 0 ? Math.min(1, m.spent / m.available) : 1})`;
   const mark = h('span', { class: 'money-mark', 'aria-hidden': 'true' });
   mark.style.left = `${m.available > 0 ? Math.min(100, (m.pace / m.available) * 100) : 0}%`;
   const headline = current
     ? over
-      ? 'Das Geld für diesen Monat ist ausgegeben'
-      : `Heute noch ${euro(m.perDay ?? 0)} frei`
+      ? t('money.allSpent')
+      : t('money.freeToday', { amount: euro(m.perDay ?? 0) })
     : day === days
-      ? over
-        ? 'Mehr ausgegeben als verfügbar'
-        : 'Mit dem Geld ausgekommen'
-      : `${euro(m.available)} verfügbar`;
+      ? t(over ? 'money.overspent' : 'money.managed')
+      : t('money.available', { amount: euro(m.available) });
   return h(
     'section',
-    { class: 'mn-card money', 'aria-label': 'Dein Monat' },
+    { class: 'mn-card money', 'aria-label': t('money.title') },
     h(
       'div',
       { class: 'money-head' },
-      h('h2', { class: 'money-title' }, 'Dein Monat'),
+      h('h2', { class: 'money-title' }, t('money.title')),
       h(
         'span',
         { class: `mn-chip mn-chip--${state}` },
@@ -827,7 +854,18 @@ function moneyCard() {
       ? h(
           'p',
           { class: 'mn-note' },
-          `${euro(Math.max(0, m.left))} ${days - day === 0 ? 'für heute, den letzten Tag' : `für heute und die ${days - day} Tage danach`}. Bis heute wären ${euro(m.pace)} im Plan, ausgegeben hast du ${euro(m.spent)}.`,
+          days - day === 0
+            ? t('money.noteLast', {
+                left: euro(Math.max(0, m.left)),
+                pace: euro(m.pace),
+                spent: euro(m.spent),
+              })
+            : t('money.noteMore', {
+                n: days - day,
+                left: euro(Math.max(0, m.left)),
+                pace: euro(m.pace),
+                spent: euro(m.spent),
+              }),
         )
       : null,
     h(
@@ -835,11 +873,17 @@ function moneyCard() {
       {
         class: 'money-track',
         role: 'meter',
-        'aria-label': 'Ausgegeben vom frei verfügbaren Geld',
+        'aria-label': t('money.meter'),
         'aria-valuemin': '0',
         'aria-valuemax': String(Math.max(0, m.available) / 100),
         'aria-valuenow': String(m.spent / 100),
-        'aria-valuetext': `${euro(m.spent)} von ${euro(m.available)}${current ? `, Plan bis heute ${euro(m.pace)}` : ''}`,
+        'aria-valuetext': current
+          ? t('money.valueTextPace', {
+              spent: euro(m.spent),
+              available: euro(m.available),
+              pace: euro(m.pace),
+            })
+          : t('money.valueText', { spent: euro(m.spent), available: euro(m.available) }),
       },
       bar,
       current ? mark : null,
@@ -847,8 +891,8 @@ function moneyCard() {
     h(
       'div',
       { class: 'money-scale' },
-      h('span', {}, `Ausgegeben ${euro(m.spent)}`),
-      h('span', {}, `Frei im Monat ${euro(m.available)}`),
+      h('span', {}, t('money.spent', { amount: euro(m.spent) })),
+      h('span', {}, t('money.freeInMonth', { amount: euro(m.available) })),
     ),
     h(
       'dl',
@@ -856,11 +900,11 @@ function moneyCard() {
       h(
         'div',
         {},
-        h('dt', {}, m.basis === 'income' ? 'Einnahmen' : 'Budgets'),
+        h('dt', {}, t(m.basis === 'income' ? 'common.income' : 'plan.budgets')),
         h('dd', {}, euro(m.basis === 'income' ? m.income : budgets)),
       ),
       m.basis === 'income'
-        ? h('div', {}, h('dt', {}, 'Fixkosten und Rücklagen'), h('dd', {}, `−${euro(m.fixed)}`))
+        ? h('div', {}, h('dt', {}, t('money.fixedAndSavings')), h('dd', {}, `−${euro(m.fixed)}`))
         : null,
     ),
   );
@@ -872,13 +916,7 @@ function viewStats() {
   const prevYear = String(S.year - 1);
   const inYear = (y) => bookings().filter((b) => b.date.startsWith(`${y}-`));
   const list = inYear(year);
-  if (!list.length)
-    return [
-      empty(
-        `Noch keine Buchungen in ${year}`,
-        'Sobald Buchungen da sind, zeigt die Statistik Einnahmen, Ausgaben, Fixkosten und Kategorien im Jahresverlauf.',
-      ),
-    ];
+  if (!list.length) return [empty(t('stats.emptyTitle', { year }), t('stats.emptyText'))];
   const months = [...Array(12)].map((_, m) => {
     const ym = `${year}-${pad(m + 1)}`;
     const l = list.filter((b) => b.date.startsWith(ym));
@@ -910,7 +948,7 @@ function viewStats() {
       {
         class: 'chart stats-chart',
         role: 'group',
-        'aria-label': `Einnahmen und Ausgaben je Monat ${year}`,
+        'aria-label': t('overview.chartLabel', { year }),
       },
       months.map((x) => {
         const seg = (v, cls) => {
@@ -918,7 +956,12 @@ function viewStats() {
           el.style.height = `${(v / max) * 100}%`;
           return el;
         };
-        const label = `${monthName(x.ym)}: Einnahmen ${euro(x.income)}, Fixkosten ${euro(x.fixed)}, sonstige Ausgaben ${euro(x.variable)}`;
+        const label = t('stats.monthLabel', {
+          month: monthName(x.ym),
+          income: euro(x.income),
+          fixed: euro(x.fixed),
+          other: euro(x.variable),
+        });
         return h(
           'button',
           {
@@ -944,14 +987,19 @@ function viewStats() {
     h(
       'p',
       { class: 'legend' },
-      h('span', {}, h('i', { class: 's1' }), `Einnahmen ${euro(income)}`),
-      h('span', {}, h('i', { class: 's2' }), `Fixkosten ${euro(fixedSum)}`),
-      h('span', {}, h('i', { class: 's3' }), `Sonstige Ausgaben ${euro(expense - fixedSum)}`),
+      h('span', {}, h('i', { class: 's1' }), t('overview.legendIncome', { amount: euro(income) })),
+      h('span', {}, h('i', { class: 's2' }), t('stats.legendFixed', { amount: euro(fixedSum) })),
+      h(
+        'span',
+        {},
+        h('i', { class: 's3' }),
+        t('stats.legendOther', { amount: euro(expense - fixedSum) }),
+      ),
     ),
     h(
       'details',
       { class: 'mn-more' },
-      h('summary', {}, 'Als Tabelle'),
+      h('summary', {}, t('stats.asTable')),
       h(
         'div',
         { class: 'table-wrap' },
@@ -964,8 +1012,8 @@ function viewStats() {
             h(
               'tr',
               {},
-              ['Monat', 'Einnahmen', 'Fixkosten', 'Sonstige', 'Gespart', 'Saldo'].map((t) =>
-                h('th', { scope: 'col' }, t),
+              ['month', 'income', 'fixed', 'other', 'saved', 'balance'].map((id) =>
+                h('th', { scope: 'col' }, t(`stats.col.${id}`)),
               ),
             ),
           ),
@@ -1023,7 +1071,7 @@ function viewStats() {
     return h(
       'span',
       { class: `mn-chip ${pct > 5 ? 'mn-chip--warn' : 'mn-chip--plain'} stats-delta` },
-      `${pct > 0 ? '+' : ''}${pct} % ggü. ${prevYear}`,
+      t('stats.delta', { pct: `${pct > 0 ? '+' : ''}${pct}`, year: prevYear }),
     );
   };
 
@@ -1031,30 +1079,35 @@ function viewStats() {
     h(
       'div',
       { class: 'mn-kpis' },
-      kpi('Ø Einnahmen pro Monat', euro(Math.round(income / n)), 'pos'),
-      kpi('Ø Ausgaben pro Monat', euro(Math.round(expense / n))),
-      kpi('Fixkostenquote', income > 0 ? `${Math.round((fixedSum / income) * 100)} %` : '–'),
+      kpi(t('stats.avgIncome'), euro(Math.round(income / n)), 'pos'),
+      kpi(t('stats.avgExpense'), euro(Math.round(expense / n))),
       kpi(
-        'Sparquote',
-        income > 0 ? `${Math.round(((income - expense) / income) * 100)} %` : '–',
+        t('stats.fixedRate'),
+        income > 0 ? t('common.percent', { n: Math.round((fixedSum / income) * 100) }) : '–',
+      ),
+      kpi(
+        t('overview.savingsRate'),
+        income > 0
+          ? t('common.percent', { n: Math.round(((income - expense) / income) * 100) })
+          : '–',
         income - expense >= 0 ? 'pos' : 'neg',
       ),
     ),
     h(
       'div',
       { class: 'mn-cols' },
-      h('div', {}, sect(`Monate ${year}`), chart),
+      h('div', {}, sect(t('stats.months', { year })), chart),
       h(
         'div',
         {},
-        sect('Ausgaben nach Kategorie'),
+        sect(t('overview.byCategory')),
         h(
           'div',
           { class: 'mn-list' },
           topCats.map(([cat, cents]) =>
             barRow(
               catName(cat),
-              `${euro(cents)} · Ø ${euro(Math.round(cents / n))} im Monat`,
+              t('stats.catLine', { total: euro(cents), avg: euro(Math.round(cents / n)) }),
               meter(cents, topCats[0][1]),
               change(cat, cents),
             ),
@@ -1068,21 +1121,25 @@ function viewStats() {
       h(
         'div',
         {},
-        sect('Fixkosten nach Art'),
+        sect(t('stats.fixedByType')),
         types.length
           ? h(
               'div',
               { class: 'mn-list' },
               types.map(([type, cents]) =>
-                barRow(FIXED_TYPES[type], `${euro(cents)} im Monat`, meter(cents, types[0][1])),
+                barRow(
+                  t(FIXED_TYPES[type]),
+                  t('stats.perMonthAmount', { amount: euro(cents) }),
+                  meter(cents, types[0][1]),
+                ),
               ),
             )
-          : h('p', { class: 'mn-note' }, 'Noch keine Fixkosten angelegt (Planung).'),
+          : h('p', { class: 'mn-note' }, t('stats.noFixed')),
       ),
       h(
         'div',
         {},
-        sect('Größte Empfänger'),
+        sect(t('stats.topPayees')),
         h(
           'div',
           { class: 'mn-list' },
@@ -1102,7 +1159,7 @@ function bookingRow([key, b]) {
     h(
       'span',
       { class: 'tx-main' },
-      h('span', { class: 'mn-row-title' }, b.text || b.party || KINDS[b.kind]),
+      h('span', { class: 'mn-row-title' }, b.text || b.party || t(KINDS[b.kind])),
       h(
         'span',
         { class: 'mn-row-sub' },
@@ -1112,9 +1169,11 @@ function bookingRow([key, b]) {
         ? h(
             'span',
             { class: 'tx-tags' },
-            field ? h('span', { class: 'mn-chip' }, `Steuer: ${FIELDS[field].label}`) : null,
+            field
+              ? h('span', { class: 'mn-chip' }, t('booking.taxChip', { field: fieldLabel(field) }))
+              : null,
             b.receipt
-              ? h('span', { class: 'mn-chip mn-chip--plain' }, icon('clip'), 'Beleg')
+              ? h('span', { class: 'mn-chip mn-chip--plain' }, icon('clip'), t('booking.receipt'))
               : null,
           )
         : null,
@@ -1128,10 +1187,10 @@ function bookingRow([key, b]) {
         signed(b),
       ),
       !b.cat
-        ? h('span', { class: 'neg' }, 'ohne Kategorie')
+        ? h('span', { class: 'neg' }, t('booking.noCategory'))
         : b.kind === 'expense'
           ? null
-          : KINDS[b.kind],
+          : t(KINDS[b.kind]),
     ),
   );
 }
@@ -1147,11 +1206,8 @@ function bookingList() {
   const rows = filteredMonth();
   if (!rows.length)
     return S.q || S.cat
-      ? h('p', { class: 'mn-note' }, 'Keine Buchung passt zum Filter.')
-      : empty(
-          'Keine Buchungen in diesem Monat',
-          'Trage eine Buchung ein oder importiere den Kontoauszug deiner Bank.',
-        );
+      ? h('p', { class: 'mn-note' }, t('bookings.noMatch'))
+      : empty(t('bookings.emptyTitle'), t('bookings.emptyText'));
   const days = new Map();
   for (const row of rows) {
     if (!days.has(row[1].date)) days.set(row[1].date, []);
@@ -1185,8 +1241,8 @@ function viewBookings() {
         h('input', {
           id: 'q',
           type: 'search',
-          placeholder: 'Beschreibung, Empfänger oder Kategorie',
-          'aria-label': 'Buchungen durchsuchen',
+          placeholder: t('bookings.searchPlaceholder'),
+          'aria-label': t('bookings.searchLabel'),
           value: S.q,
           autocomplete: 'off',
           oninput: (e) => {
@@ -1199,33 +1255,29 @@ function viewBookings() {
         'select',
         {
           id: 'catfilter',
-          'aria-label': 'Nach Kategorie filtern',
+          'aria-label': t('bookings.filterLabel'),
           value: S.cat,
           onchange: (e) => {
             S.cat = e.target.value;
             refresh();
           },
         },
-        h('option', { value: '' }, 'Alle Kategorien'),
-        h('option', { value: '-' }, 'Ohne Kategorie'),
-        cats().map((c) => h('option', { value: c.id }, c.name)),
+        h('option', { value: '' }, t('bookings.allCategories')),
+        h('option', { value: '-' }, t('category.none')),
+        cats().map((c) => h('option', { value: c.id }, catLabel(c))),
       ),
       h(
         'button',
         { class: 'mn-btn', onclick: () => openImport() },
         icon('upload'),
-        'Kontoauszug importieren',
+        t('action.importStatement'),
       ),
     ),
     uncategorised && S.cat !== '-'
       ? h(
           'div',
           { class: 'mn-banner mn-banner--warn', role: 'note' },
-          h(
-            'span',
-            {},
-            `${uncategorised} ${uncategorised === 1 ? 'Buchung ist' : 'Buchungen sind'} noch ohne Kategorie.`,
-          ),
+          h('span', {}, t('bookings.uncategorised', { n: uncategorised })),
           h(
             'button',
             {
@@ -1235,7 +1287,7 @@ function viewBookings() {
                 render();
               },
             },
-            'Anzeigen',
+            t('common.show'),
           ),
         )
       : null,
@@ -1261,7 +1313,7 @@ function viewBudget() {
       h(
         'span',
         { class: 'mn-bar-top' },
-        h('label', { for: id }, c.name),
+        h('label', { for: id }, catLabel(c)),
         h(
           'span',
           { class: 'budget-input' },
@@ -1269,12 +1321,12 @@ function viewBudget() {
             id,
             inputmode: 'decimal',
             autocomplete: 'off',
-            placeholder: 'kein Budget',
+            placeholder: t('budget.none'),
             value: c.budget ? plain(c.budget) : '',
             onchange: async (e) => {
               const v = e.target.value.trim() ? parseAmount(e.target.value) : 0;
               if (v === null || v < 0) {
-                toast('Gib einen Betrag wie 250 oder 99,90 ein.');
+                toast(t('budget.invalid'));
                 return;
               }
               c.budget = v;
@@ -1282,7 +1334,7 @@ function viewBudget() {
                 await saveSettings();
                 render();
               } catch {
-                toast('Speichern fehlgeschlagen.');
+                toast(t('error.saveFailed'));
               }
             },
           }),
@@ -1295,16 +1347,22 @@ function viewBudget() {
             h(
               'span',
               { class: 'mn-bar-top budget-state' },
-              h('span', {}, `${euro(s)} ausgegeben`),
+              h('span', {}, t('budget.spent', { amount: euro(s) })),
               h(
                 'span',
                 { class: over ? 'neg' : '' },
-                over ? `${euro(s - c.budget)} drüber` : `${euro(c.budget - s)} übrig`,
+                over
+                  ? t('overview.budgetOver', { amount: euro(s - c.budget) })
+                  : t('overview.budgetLeft', { amount: euro(c.budget - s) }),
               ),
             ),
           ]
         : s
-          ? h('span', { class: 'mn-note budget-state' }, `${euro(s)} ausgegeben, kein Budget`)
+          ? h(
+              'span',
+              { class: 'mn-note budget-state' },
+              t('budget.spentNoBudget', { amount: euro(s) }),
+            )
           : null,
     );
   };
@@ -1315,10 +1373,10 @@ function viewBudget() {
       ? h(
           'div',
           { class: 'mn-kpis' },
-          kpi('Budget', euro(total)),
-          kpi('Ausgegeben', euro(totalSpent), totalSpent > total ? 'neg' : ''),
+          kpi(t('overview.budget'), euro(total)),
+          kpi(t('budget.kpiSpent'), euro(totalSpent), totalSpent > total ? 'neg' : ''),
           kpi(
-            totalSpent > total ? 'Überschritten' : 'Übrig',
+            t(totalSpent > total ? 'budget.kpiExceeded' : 'budget.kpiLeft'),
             euro(Math.abs(total - totalSpent)),
             totalSpent > total ? 'neg' : 'pos',
           ),
@@ -1330,22 +1388,20 @@ function viewBudget() {
       h(
         'div',
         {},
-        sect('Mit Budget', h('small', {}, String(withBudget.length))),
+        sect(t('budget.with'), h('small', {}, String(withBudget.length))),
         withBudget.length
           ? h('div', { class: 'mn-list' }, withBudget.map(row))
-          : h('p', { class: 'mn-note' }, 'Trag rechts bei einer Kategorie einen Monatsbetrag ein.'),
-        rest > 0 ? h('p', { class: 'mn-note' }, `${euro(rest)} in Kategorien ohne Budget.`) : null,
+          : h('p', { class: 'mn-note' }, t('budget.enterHint')),
+        rest > 0
+          ? h('p', { class: 'mn-note' }, t('budget.restWithout', { amount: euro(rest) }))
+          : null,
       ),
       h(
         'div',
         {},
-        sect('Ohne Budget', h('small', {}, String(without.length))),
+        sect(t('budget.without'), h('small', {}, String(without.length))),
         h('div', { class: 'mn-list' }, without.map(row)),
-        h(
-          'p',
-          { class: 'mn-note' },
-          'Das Budget gilt für jeden Monat. Leer lassen, wenn es für eine Kategorie keins gibt.',
-        ),
+        h('p', { class: 'mn-note' }, t('budget.note')),
       ),
     ),
   ];
@@ -1390,20 +1446,20 @@ function profileForm(year) {
           await saveProfile(year, next);
           $('#forms').replaceChildren(...formsView(year));
         } catch {
-          toast('Speichern fehlgeschlagen.');
+          toast(t('error.saveFailed'));
         }
       },
     },
     h(
       'div',
       { class: 'profile-fields' },
-      field('commuteKm', 'Entfernung zur Arbeit (km, einfach)'),
-      field('commuteDays', 'Tage im Büro'),
-      field('homeofficeDays', 'Tage im Homeoffice', 'Tage ohne Weg zur Arbeit'),
-      field('children', 'Kinder'),
-      field('income', 'Gesamtbetrag der Einkünfte (€)', 'Optional, für die zumutbare Belastung', {
+      field('commuteKm', t('profile.commuteKm')),
+      field('commuteDays', t('profile.commuteDays')),
+      field('homeofficeDays', t('profile.homeofficeDays'), t('profile.homeofficeHint')),
+      field('children', t('profile.children')),
+      field('income', t('profile.income'), t('profile.incomeHint'), {
         money: true,
-        placeholder: 'optional',
+        placeholder: t('profile.optional'),
       }),
     ),
     h(
@@ -1413,24 +1469,19 @@ function profileForm(year) {
         'label',
         {},
         h('input', { type: 'checkbox', name: 'employee', checked: p.employee }),
-        'Ich bin Arbeitnehmer:in (Anlage N)',
+        t('profile.employee'),
       ),
       h(
         'label',
         {},
         h('input', { type: 'checkbox', name: 'car', checked: p.car }),
-        h(
-          'span',
-          {},
-          'Mit dem eigenen Auto zur Arbeit',
-          h('small', {}, 'Keine Obergrenze von 4.500 €'),
-        ),
+        h('span', {}, t('profile.car'), h('small', {}, t('profile.carHint'))),
       ),
       h(
         'label',
         {},
         h('input', { type: 'checkbox', name: 'married', checked: p.married }),
-        'Zusammenveranlagung (verheiratet)',
+        t('profile.married'),
       ),
     ),
   );
@@ -1447,14 +1498,14 @@ function taxBookings(year) {
 async function copy(text) {
   try {
     await navigator.clipboard.writeText(text);
-    toast(`${text} kopiert`);
+    toast(t('tax.copied', { text }));
   } catch {
-    toast('Kopieren nicht möglich. Markiere den Betrag von Hand.');
+    toast(t('tax.copyFailed'));
   }
 }
 function formsView(year) {
   const profile = S.profiles.get(year) ?? cleanProfile(null);
-  const forms = buildReturn(year, taxBookings(year), profile).filter(
+  const forms = buildReturn(year, taxBookings(year), profile, t).filter(
     (f) => f.id !== 'N' || profile.employee,
   );
   return forms.map((f) => {
@@ -1462,7 +1513,7 @@ function formsView(year) {
     return h(
       'section',
       { class: 'form-sheet mn-card', 'aria-labelledby': `form-${f.id}` },
-      h('header', {}, h('h3', { id: `form-${f.id}` }, f.title), h('p', {}, f.sub)),
+      h('header', {}, h('h3', { id: `form-${f.id}` }, t(f.title)), h('p', {}, t(f.sub))),
       rows.length
         ? h(
             'table',
@@ -1473,8 +1524,8 @@ function formsView(year) {
               h(
                 'tr',
                 {},
-                h('th', { scope: 'col' }, 'Eintrag'),
-                h('th', { scope: 'col', class: 'num' }, 'Betrag'),
+                h('th', { scope: 'col' }, t('tax.col.entry')),
+                h('th', { scope: 'col', class: 'num' }, t('tax.col.amount')),
               ),
             ),
             h(
@@ -1490,20 +1541,24 @@ function formsView(year) {
                     h('b', {}, r.label),
                     r.hint ? h('small', {}, r.hint) : null,
                     r.deductible !== undefined && r.deductible !== r.cents
-                      ? h('small', { class: 'pos' }, `Davon abziehbar: ${euro(r.deductible)}`)
+                      ? h(
+                          'small',
+                          { class: 'pos' },
+                          t('tax.deductible', { amount: euro(r.deductible) }),
+                        )
                       : null,
                     r.reduction
-                      ? h('small', { class: 'pos' }, `Steuerermäßigung: ${euro(r.reduction)}`)
+                      ? h(
+                          'small',
+                          { class: 'pos' },
+                          t('tax.reduction', { amount: euro(r.reduction) }),
+                        )
                       : null,
                     r.items?.length
                       ? h(
                           'details',
                           {},
-                          h(
-                            'summary',
-                            {},
-                            `${r.items.length} ${r.items.length === 1 ? 'Buchung' : 'Buchungen'}`,
-                          ),
+                          h('summary', {}, t('tax.items', { n: r.items.length })),
                           h(
                             'ul',
                             {},
@@ -1531,10 +1586,10 @@ function formsView(year) {
                       'button',
                       {
                         class: 'mn-btn mn-btn--small no-print',
-                        'aria-label': `${r.label}: ${plain(r.cents)} kopieren`,
+                        'aria-label': t('tax.copyAria', { label: r.label, amount: plain(r.cents) }),
                         onclick: () => copy(plain(r.cents)),
                       },
-                      'Kopieren',
+                      t('tax.copy'),
                     ),
                   ),
                 ),
@@ -1546,39 +1601,53 @@ function formsView(year) {
               h(
                 'tr',
                 {},
-                h('th', { scope: 'row' }, 'Summe'),
+                h('th', { scope: 'row' }, t('tax.sum')),
                 h('td', { class: 'num' }, euro(f.total)),
               ),
             ),
           )
-        : h('p', { class: 'mn-note' }, 'Keine Einträge.'),
+        : h('p', { class: 'mn-note' }, t('tax.noEntries')),
       f.summary ? h('p', { class: 'summary' }, f.summary) : null,
     );
   });
 }
 function exportTaxCsv(year) {
   const profile = S.profiles.get(year) ?? cleanProfile(null);
-  const lines = [['Formular', 'Eintrag', 'Betrag', 'Abziehbar', 'Steuerermäßigung']];
-  for (const f of buildReturn(year, taxBookings(year), profile))
+  const lines = [
+    [
+      t('tax.csv.form'),
+      t('tax.col.entry'),
+      t('tax.col.amount'),
+      t('tax.csv.deductible'),
+      t('tax.csv.reduction'),
+    ],
+  ];
+  for (const f of buildReturn(year, taxBookings(year), profile, t))
     for (const r of f.rows.filter((x) => x.cents > 0))
       lines.push([
-        f.title,
+        t(f.title),
         r.label,
         plain(r.cents),
         r.deductible !== undefined ? plain(r.deductible) : '',
         r.reduction ? plain(r.reduction) : '',
       ]);
   lines.push([]);
-  lines.push(['Datum', 'Buchung', 'Betrag', 'Eintrag', 'Kategorie']);
+  lines.push([
+    t('tax.csv.date'),
+    t('tax.csv.booking'),
+    t('tax.col.amount'),
+    t('tax.col.entry'),
+    t('tax.csv.category'),
+  ]);
   for (const b of taxBookings(year))
     lines.push([
       b.date,
       b.text || b.party,
       plain((b.kind === 'income' ? -1 : 1) * (b.taxCents ?? b.cents)),
-      FIELDS[b.taxField].label,
+      fieldLabel(b.taxField),
       catName(b.cat),
     ]);
-  download(`steuer-${year}.csv`, csv(lines), 'text/csv');
+  download(t('tax.csv.file', { year }), csv(lines), 'text/csv');
 }
 function viewTax() {
   const year = S.year;
@@ -1592,33 +1661,17 @@ function viewTax() {
         h(
           'div',
           { class: 'mn-card' },
-          h('h3', {}, `Angaben für ${year}`),
-          h(
-            'p',
-            { class: 'mn-note' },
-            'Fließen in Pauschalen und Grenzen ein. Änderungen gelten sofort.',
-          ),
+          h('h3', {}, t('tax.detailsFor', { year })),
+          h('p', { class: 'mn-note' }, t('tax.detailsNote')),
           profileForm(year),
         ),
         h(
           'div',
           { class: 'tax-actions' },
-          h(
-            'button',
-            { class: 'mn-btn', onclick: () => window.print() },
-            'Drucken oder als PDF sichern',
-          ),
-          h(
-            'button',
-            { class: 'mn-btn', onclick: () => exportTaxCsv(year) },
-            'Als CSV exportieren',
-          ),
+          h('button', { class: 'mn-btn', onclick: () => window.print() }, t('tax.print')),
+          h('button', { class: 'mn-btn', onclick: () => exportTaxCsv(year) }, t('tax.exportCsv')),
         ),
-        h(
-          'p',
-          { class: 'mn-note' },
-          'Buchungen mit steuerlicher Zuordnung landen automatisch im passenden Formular. Die Zuordnung kommt von der Kategorie und lässt sich pro Buchung ändern. Übertrage die Beträge in ELSTER; die App reicht nichts ein und ersetzt keine Steuerberatung.',
-        ),
+        h('p', { class: 'mn-note' }, t('tax.note')),
       ),
       h('div', { id: 'forms', class: 'forms' }, formsView(year)),
     ),
@@ -1630,7 +1683,7 @@ async function changeYear(n) {
     // the statistics compare with the year before
     await Promise.all([ensureYear(S.year), ensureYear(S.year - 1), ensureProfile(S.year)]);
   } catch {
-    toast('Laden fehlgeschlagen.');
+    toast(t('error.loadFailed'));
   }
   render();
 }
@@ -1642,15 +1695,15 @@ function taxSelect(name, value, withInherit) {
     { name, value },
     withInherit
       ? h('option', { value: '' }, withInherit)
-      : h('option', { value: '' }, 'Nicht steuerlich relevant'),
-    withInherit ? h('option', { value: 'none' }, 'Nicht steuerlich relevant') : null,
+      : h('option', { value: '' }, t('tax.notRelevant')),
+    withInherit ? h('option', { value: 'none' }, t('tax.notRelevant')) : null,
     FORMS.map((f) =>
       h(
         'optgroup',
-        { label: f.title },
+        { label: t(f.title) },
         Object.entries(FIELDS)
           .filter(([, x]) => x.form === f.id)
-          .map(([k, x]) => h('option', { value: k }, x.label)),
+          .map(([k, x]) => h('option', { value: k }, t(x.label))),
       ),
     ),
   );
@@ -1660,12 +1713,12 @@ function catSelect(name, value, kind) {
   return h(
     'select',
     { name, value },
-    h('option', { value: '' }, 'Ohne Kategorie'),
-    list.map((c) => h('option', { value: c.id }, c.name)),
+    h('option', { value: '' }, t('category.none')),
+    list.map((c) => h('option', { value: c.id }, catLabel(c))),
   );
 }
 function viewSettings() {
-  const recs = [...S.recs.values()].sort((a, b) => a.text.localeCompare(b.text, 'de'));
+  const recs = [...S.recs.values()].sort((a, b) => a.text.localeCompare(b.text, loc()));
   const row = (title, sub, onclick) =>
     h(
       'button',
@@ -1678,7 +1731,7 @@ function viewSettings() {
       ),
       h('span', { class: 'mn-row-side' }, icon('right')),
     );
-  const add = (onclick) => h('button', { class: 'mn-link', onclick }, 'Hinzufügen');
+  const add = (onclick) => h('button', { class: 'mn-link', onclick }, t('common.add'));
   return [
     h(
       'div',
@@ -1687,15 +1740,11 @@ function viewSettings() {
         'div',
         {},
         sect(
-          'Kategorien',
+          t('settings.categories'),
           add(() => editCategory(null)),
         ),
         Object.keys(KINDS).map((kind) => [
-          h(
-            'h3',
-            { class: 'group-head' },
-            kind === 'transfer' ? 'Umbuchungen (zählen nicht als Ausgabe)' : `${KINDS[kind]}n`,
-          ),
+          h('h3', { class: 'group-head' }, t(`settings.group.${kind}`)),
           h(
             'div',
             { class: 'mn-list' },
@@ -1703,8 +1752,11 @@ function viewSettings() {
               .filter((c) => c.kind === kind)
               .map((c) =>
                 row(
-                  c.name,
-                  [c.budget ? `${euro(c.budget)} / Monat` : '', c.tax ? FIELDS[c.tax].label : '']
+                  catLabel(c),
+                  [
+                    c.budget ? t('settings.perMonth', { amount: euro(c.budget) }) : '',
+                    c.tax ? fieldLabel(c.tax) : '',
+                  ]
                     .filter(Boolean)
                     .join(' · '),
                   () => editCategory(c.id),
@@ -1716,11 +1768,11 @@ function viewSettings() {
       h(
         'div',
         {},
-        sect('Fixkosten und Daueraufträge'),
+        sect(t('settings.fixedTitle')),
         h(
           'p',
           { class: 'mn-note' },
-          `${recs.length ? `${recs.length} angelegt. ` : ''}Miete, Abos, Versicherungen, Rücklagen und Gehalt verwaltest du unter Planung.`,
+          recs.length ? t('settings.fixedNoteCount', { n: recs.length }) : t('settings.fixedNote'),
           ' ',
           h(
             'button',
@@ -1732,45 +1784,35 @@ function viewSettings() {
                 go('plan');
               },
             },
-            'Zur Planung',
+            t('money.toPlan'),
           ),
         ),
         sect(
-          'Regeln für den Import',
+          t('settings.rules'),
           add(() => editRule(null)),
         ),
-        h(
-          'p',
-          { class: 'mn-note rules-note' },
-          'Enthält der Empfänger oder Verwendungszweck eines der Wörter, bekommt die Buchung die Kategorie. Mehrere Wörter mit | trennen.',
-        ),
+        h('p', { class: 'mn-note rules-note' }, t('settings.rulesNote')),
         h(
           'div',
           { class: 'mn-list' },
-          S.settings.rules.map((r, i) => row(r.match, `→ ${catName(r.cat)}`, () => editRule(i))),
+          S.settings.rules.map((r, i) =>
+            row(r.match, t('settings.ruleTo', { cat: catName(r.cat) }), () => editRule(i)),
+          ),
         ),
-        h(
-          'button',
-          { class: 'mn-btn apply-rules', onclick: applyRules },
-          'Regeln auf Buchungen ohne Kategorie anwenden',
-        ),
-        sect('Daten'),
+        h('button', { class: 'mn-btn apply-rules', onclick: applyRules }, t('settings.applyRules')),
+        sect(t('settings.data')),
         h(
           'div',
           { class: 'mn-card' },
-          h(
-            'p',
-            { class: 'mn-note data-note' },
-            'Die Sicherung enthält alle Buchungen, Kategorien, Regeln, Daueraufträge und Steuerangaben, aber keine Belege.',
-          ),
+          h('p', { class: 'mn-note data-note' }, t('settings.backupNote')),
           h(
             'div',
             { class: 'data-actions' },
-            h('button', { class: 'mn-btn', onclick: exportBackup }, 'Sicherung exportieren'),
+            h('button', { class: 'mn-btn', onclick: exportBackup }, t('settings.backupExport')),
             h(
               'label',
               { class: 'mn-btn filebtn' },
-              'Sicherung importieren',
+              t('settings.backupImport'),
               h('input', {
                 type: 'file',
                 accept: '.json,application/json',
@@ -1784,7 +1826,7 @@ function viewSettings() {
             h(
               'button',
               { class: 'mn-btn', onclick: exportYearCsv },
-              `Buchungen ${S.month.slice(0, 4)} als CSV`,
+              t('settings.yearCsv', { year: S.month.slice(0, 4) }),
             ),
           ),
         ),
@@ -1803,20 +1845,16 @@ async function applyRules() {
         n++;
       }
     }
-    toast(
-      n
-        ? `${n} ${n === 1 ? 'Buchung' : 'Buchungen'} zugeordnet`
-        : 'Keine passende Buchung gefunden',
-    );
+    toast(n ? t('toast.assigned', { n }) : t('toast.nothingFound'));
   } catch {
-    toast('Speichern fehlgeschlagen.');
+    toast(t('error.saveFailed'));
   }
   render();
 }
 
 // ---------- dialogs (App Kit sheets: focus trap, Escape, inert page) ----------
 let sheetOpen = false;
-/** Opens a sheet with a bar (Abbrechen, title), the form and a footer with the actions. */
+/** Opens a sheet with a bar (Cancel, title), the form and a footer with the actions. */
 function openDialog(title, body, actions, onClose) {
   const form = h(
     'form',
@@ -1838,7 +1876,7 @@ function openDialog(title, body, actions, onClose) {
       h(
         'button',
         { type: 'button', class: 'mn-btn mn-btn--ghost', 'data-mn-close': true },
-        'Abbrechen',
+        t('common.cancel'),
       ),
       h('h2', {}, title),
       h('span', {}),
@@ -1906,7 +1944,7 @@ function editBooking(key) {
             h(
               'button',
               { type: 'button', class: 'mn-link', onclick: () => openReceipt(receipt) },
-              'Beleg öffnen',
+              t('receipt.open'),
             ),
             h(
               'button',
@@ -1918,14 +1956,14 @@ function editBooking(key) {
                   drawReceipt();
                 },
               },
-              'Entfernen',
+              t('common.remove'),
             ),
           )
         : h(
             'label',
             { class: 'mn-btn filebtn' },
             icon('clip'),
-            'Beleg anhängen',
+            t('receipt.attach'),
             h('input', {
               type: 'file',
               accept: 'image/*,application/pdf',
@@ -1934,7 +1972,7 @@ function editBooking(key) {
                 e.target.value = '';
                 if (!file) return;
                 if (file.size > 20 * 1024 * 1024) {
-                  toast('Der Beleg ist größer als 20 MB.');
+                  toast(t('receipt.tooBig'));
                   return;
                 }
                 try {
@@ -1948,7 +1986,7 @@ function editBooking(key) {
                   receipt = path;
                   drawReceipt();
                 } catch {
-                  toast('Der Beleg konnte nicht hochgeladen werden.');
+                  toast(t('receipt.uploadFailed'));
                 }
               },
             }),
@@ -1957,38 +1995,43 @@ function editBooking(key) {
   drawReceipt();
   const kindSeg = h(
     'div',
-    { class: 'mn-seg kind-seg', role: 'radiogroup', 'aria-label': 'Art' },
+    { class: 'mn-seg kind-seg', role: 'radiogroup', 'aria-label': t('field.kind') },
     Object.entries(KINDS).map(([k, label]) =>
       h(
         'label',
         {},
         h('input', { type: 'radio', name: 'kind', value: k, checked: b.kind === k }),
-        h('span', {}, label),
+        h('span', {}, t(label)),
       ),
     ),
   );
-  const catHost = h('label', { class: 'mn-field' }, 'Kategorie', catSelect('cat', b.cat, b.kind));
+  const catHost = h(
+    'label',
+    { class: 'mn-field' },
+    t('field.category'),
+    catSelect('cat', b.cat, b.kind),
+  );
   kindSeg.addEventListener('change', () => {
     const kind = val(form, 'kind');
     catHost.replaceChildren(
-      'Kategorie',
+      t('field.category'),
       catSelect('cat', catById(val(form, 'cat'))?.kind === kind ? val(form, 'cat') : '', kind),
     );
   });
   const inherit = (catId) => {
     const c = catById(catId);
-    return c?.tax ? `Wie Kategorie: ${FIELDS[c.tax].label}` : 'Wie Kategorie (nicht steuerlich)';
+    return c?.tax ? t('tax.likeCategory', { field: fieldLabel(c.tax) }) : t('tax.likeCategoryNone');
   };
   const taxHost = h(
     'label',
     { class: 'mn-field' },
-    'Steuererklärung',
+    t('field.taxReturn'),
     taxSelect('taxField', b.taxField ?? '', inherit(b.cat)),
   );
   // The first option names what the category would put into the tax return.
   const refreshTax = () =>
     taxHost.replaceChildren(
-      'Steuererklärung',
+      t('field.taxReturn'),
       taxSelect('taxField', val(form, 'taxField'), inherit(val(form, 'cat'))),
     );
   kindSeg.addEventListener('change', refreshTax);
@@ -2003,38 +2046,38 @@ function editBooking(key) {
       h(
         'label',
         { class: 'mn-field' },
-        'Betrag in €',
+        t('field.amountEur'),
         h('input', {
           name: 'amount',
           inputmode: 'decimal',
           autocomplete: 'off',
           required: true,
           value: b.cents ? plain(b.cents) : '',
-          placeholder: '0,00',
+          placeholder: t('field.amountPlaceholder'),
         }),
       ),
       h(
         'label',
         { class: 'mn-field' },
-        'Datum',
+        t('field.date'),
         h('input', { name: 'date', type: 'date', required: true, value: b.date }),
       ),
     ),
     h(
       'label',
       { class: 'mn-field' },
-      'Beschreibung',
+      t('field.description'),
       h('input', {
         name: 'text',
         maxlength: 200,
         value: b.text,
-        placeholder: 'z. B. Wocheneinkauf',
+        placeholder: t('field.descriptionPlaceholder'),
       }),
     ),
     h(
       'label',
       { class: 'mn-field' },
-      'Empfänger oder Auftraggeber',
+      t('field.party'),
       h('input', { name: 'party', maxlength: 120, value: b.party }),
     ),
     catHost,
@@ -2042,20 +2085,20 @@ function editBooking(key) {
     h(
       'label',
       { class: 'mn-field' },
-      'Davon steuerlich absetzbar in €',
+      t('field.taxAmount'),
       h('input', {
         name: 'taxAmount',
         inputmode: 'decimal',
         autocomplete: 'off',
         value: b.taxCents !== undefined ? plain(b.taxCents) : '',
-        placeholder: 'ganzer Betrag',
+        placeholder: t('field.taxAmountPlaceholder'),
       }),
-      h('small', {}, 'Bei Handwerkern nur Arbeits- und Fahrtkosten, ohne Material.'),
+      h('small', {}, t('field.taxAmountHint')),
     ),
     receiptHost,
   ];
   const form = openDialog(
-    old ? 'Buchung bearbeiten' : 'Neue Buchung',
+    t(old ? 'booking.edit' : 'booking.new'),
     body,
     [
       old
@@ -2068,14 +2111,14 @@ function editBooking(key) {
                 try {
                   await deleteBooking(key);
                   closeDialog();
-                  toast('Buchung gelöscht');
+                  toast(t('toast.bookingDeleted'));
                   render();
                 } catch {
-                  formError(form, 'Löschen fehlgeschlagen.');
+                  formError(form, t('error.deleteFailed'));
                 }
               },
             },
-            'Löschen',
+            t('common.delete'),
           )
         : null,
       h('span', { class: 'mn-grow' }),
@@ -2087,17 +2130,13 @@ function editBooking(key) {
           onclick: async (e) => {
             e.preventDefault();
             const cents = parseAmount(val(form, 'amount'));
-            if (cents === null || cents <= 0)
-              return formError(form, 'Gib einen Betrag größer als 0 ein, z. B. 12,50.');
+            if (cents === null || cents <= 0) return formError(form, t('booking.errAmount'));
             const date = val(form, 'date');
-            if (!isDay(date)) return formError(form, 'Gib ein Datum an.');
+            if (!isDay(date)) return formError(form, t('booking.errDate'));
             const taxRaw = val(form, 'taxAmount');
             const taxCents = taxRaw ? parseAmount(taxRaw) : undefined;
             if (taxRaw && (taxCents === null || taxCents < 0 || taxCents > cents))
-              return formError(
-                form,
-                'Der absetzbare Anteil muss zwischen 0 und dem Betrag liegen.',
-              );
+              return formError(form, t('booking.errTaxAmount'));
             const next = cleanBooking(
               {
                 ...b,
@@ -2120,14 +2159,14 @@ function editBooking(key) {
               if (old?.receipt && old.receipt !== receipt)
                 ready.then((mn) => mn.files.remove(old.receipt)).catch(() => {});
               closeDialog();
-              toast(old ? 'Gespeichert' : 'Buchung hinzugefügt');
+              toast(t(old ? 'toast.saved' : 'toast.bookingAdded'));
               render();
             } catch {
-              formError(form, 'Speichern fehlgeschlagen. Prüfe deine Verbindung.');
+              formError(form, t('error.saveFailedConnection'));
             }
           },
         },
-        'Speichern',
+        t('common.save'),
       ),
     ],
     dropUnsaved,
@@ -2145,7 +2184,7 @@ async function openReceipt(path) {
     } else location.assign(url);
   } catch {
     tab?.close();
-    toast('Der Beleg konnte nicht geöffnet werden.');
+    toast(t('receipt.openFailed'));
   }
 }
 
@@ -2153,41 +2192,46 @@ function editCategory(id) {
   const c = id ? catById(id) : { id: '', name: '', kind: 'expense', budget: 0, tax: '' };
   const used = id ? bookings().some((b) => b.cat === id) : false;
   const form = openDialog(
-    id ? 'Kategorie bearbeiten' : 'Neue Kategorie',
+    t(id ? 'category.edit' : 'category.new'),
     [
       h(
         'label',
         { class: 'mn-field' },
-        'Name',
-        h('input', { name: 'name', required: true, maxlength: 60, value: c.name }),
-      ),
-      h(
-        'label',
-        { class: 'mn-field' },
-        'Art',
-        h(
-          'select',
-          { name: 'kind', value: c.kind },
-          Object.entries(KINDS).map(([k, l]) => h('option', { value: k }, l)),
-        ),
-      ),
-      h(
-        'label',
-        { class: 'mn-field' },
-        'Monatsbudget in €',
+        t('field.name'),
         h('input', {
-          name: 'budget',
-          inputmode: 'decimal',
-          value: c.budget ? plain(c.budget) : '',
-          placeholder: 'kein Budget',
+          name: 'name',
+          required: true,
+          maxlength: 60,
+          value: id ? catLabel(c) : c.name,
         }),
       ),
       h(
         'label',
         { class: 'mn-field' },
-        'Steuererklärung',
+        t('field.kind'),
+        h(
+          'select',
+          { name: 'kind', value: c.kind },
+          Object.entries(KINDS).map(([k, l]) => h('option', { value: k }, t(l))),
+        ),
+      ),
+      h(
+        'label',
+        { class: 'mn-field' },
+        t('field.budgetEur'),
+        h('input', {
+          name: 'budget',
+          inputmode: 'decimal',
+          value: c.budget ? plain(c.budget) : '',
+          placeholder: t('budget.none'),
+        }),
+      ),
+      h(
+        'label',
+        { class: 'mn-field' },
+        t('field.taxReturn'),
         taxSelect('tax', c.tax, null),
-        h('small', {}, 'Buchungen dieser Kategorie fließen automatisch in dieses Feld.'),
+        h('small', {}, t('category.taxHint')),
       ),
     ],
     [
@@ -2203,18 +2247,14 @@ function editCategory(id) {
                 try {
                   await saveSettings();
                   closeDialog();
-                  toast(
-                    used
-                      ? 'Kategorie gelöscht, ihre Buchungen sind jetzt ohne Kategorie'
-                      : 'Kategorie gelöscht',
-                  );
+                  toast(t(used ? 'toast.categoryDeletedUsed' : 'toast.categoryDeleted'));
                   render();
                 } catch {
-                  formError(form, 'Löschen fehlgeschlagen.');
+                  formError(form, t('error.deleteFailed'));
                 }
               },
             },
-            'Löschen',
+            t('common.delete'),
           )
         : null,
       h('span', { class: 'mn-grow' }),
@@ -2225,12 +2265,13 @@ function editCategory(id) {
           class: 'mn-btn mn-btn--primary',
           onclick: async (e) => {
             e.preventDefault();
-            const name = val(form, 'name');
-            if (!name) return formError(form, 'Gib einen Namen an.');
+            let name = val(form, 'name');
+            if (!name) return formError(form, t('category.errName'));
+            // An unrenamed starting category keeps its stored name, so it follows the language.
+            if (id && name === catLabel(c)) name = c.name;
             const budgetRaw = val(form, 'budget');
             const budget = budgetRaw ? parseAmount(budgetRaw) : 0;
-            if (budget === null || budget < 0)
-              return formError(form, 'Gib ein Budget wie 250 oder 99,90 ein.');
+            if (budget === null || budget < 0) return formError(form, t('category.errBudget'));
             const next = {
               id: c.id || newId().slice(0, 8),
               name,
@@ -2246,11 +2287,11 @@ function editCategory(id) {
               closeDialog();
               render();
             } catch {
-              formError(form, 'Speichern fehlgeschlagen.');
+              formError(form, t('error.saveFailed'));
             }
           },
         },
-        'Speichern',
+        t('common.save'),
       ),
     ],
   );
@@ -2258,51 +2299,20 @@ function editCategory(id) {
 function editRule(index) {
   const r = index === null ? { match: '', cat: '' } : S.settings.rules[index];
   const form = openDialog(
-    index === null ? 'Neue Regel' : 'Regel bearbeiten',
+    t(index === null ? 'rule.new' : 'rule.edit'),
     [
       h(
         'label',
         { class: 'mn-field' },
-        'Enthält',
+        t('rule.contains'),
         h('input', {
           name: 'match',
           required: true,
           value: r.match,
-          placeholder: 'z. B. REWE|EDEKA',
+          placeholder: t('rule.containsPlaceholder'),
         }),
       ),
-      id
-        ? h(
-            'label',
-            { class: 'mn-field' },
-            'Neuer Betrag gilt ab',
-            h('input', { name: 'from', type: 'month', value: thisMonth }),
-            h(
-              'small',
-              {},
-              r.changes.length
-                ? `Bisher: ${[{ from: r.start, cents: r.cents }, ...r.changes].map((c) => `${euro(c.cents)} ab ${monthName(c.from)}`).join(', ')}`
-                : 'Frühere Monate behalten ihren Betrag.',
-            ),
-          )
-        : null,
-      h('label', { class: 'mn-field' }, 'Kategorie', catSelect('cat', r.cat)),
-      h(
-        'label',
-        { class: 'mn-field' },
-        'Auf dem Kontoauszug erkennen an',
-        h('input', {
-          name: 'match',
-          maxlength: 200,
-          value: r.match,
-          placeholder: 'z. B. NETFLIX oder Vermieter GmbH',
-        }),
-        h(
-          'small',
-          {},
-          'Beim Import wird die Zahlung dann zugeordnet statt doppelt gebucht, und ein anderer Betrag fällt auf. Mehrere Wörter mit | trennen. Leer: die Beschreibung.',
-        ),
-      ),
+      h('label', { class: 'mn-field' }, t('field.category'), catSelect('cat', r.cat)),
     ],
     [
       index !== null
@@ -2318,11 +2328,11 @@ function editRule(index) {
                   closeDialog();
                   render();
                 } catch {
-                  formError(form, 'Löschen fehlgeschlagen.');
+                  formError(form, t('error.deleteFailed'));
                 }
               },
             },
-            'Löschen',
+            t('common.delete'),
           )
         : null,
       h('span', { class: 'mn-grow' }),
@@ -2334,8 +2344,7 @@ function editRule(index) {
           onclick: async (e) => {
             e.preventDefault();
             const next = { match: val(form, 'match'), cat: val(form, 'cat') };
-            if (!next.match || !next.cat)
-              return formError(form, 'Gib Wörter und eine Kategorie an.');
+            if (!next.match || !next.cat) return formError(form, t('rule.errFields'));
             S.settings.rules =
               index === null
                 ? [...S.settings.rules, next]
@@ -2345,11 +2354,11 @@ function editRule(index) {
               closeDialog();
               render();
             } catch {
-              formError(form, 'Speichern fehlgeschlagen.');
+              formError(form, t('error.saveFailed'));
             }
           },
         },
-        'Speichern',
+        t('common.save'),
       ),
     ],
   );
@@ -2375,28 +2384,28 @@ function editRecurring(id) {
       };
   const thisMonth = today().slice(0, 7);
   const form = openDialog(
-    id ? 'Fixkosten bearbeiten' : 'Neue Fixkosten',
+    t(id ? 'fixed.edit' : 'fixed.new'),
     [
       h(
         'label',
         { class: 'mn-field' },
-        'Beschreibung',
+        t('field.description'),
         h('input', {
           name: 'text',
           required: true,
           maxlength: 200,
           value: r.text,
-          placeholder: 'z. B. Miete, Netflix, Haftpflicht',
+          placeholder: t('fixed.descriptionPlaceholder'),
         }),
       ),
       h(
         'label',
         { class: 'mn-field' },
-        'Gruppe',
+        t('fixed.group'),
         h(
           'select',
           { name: 'type', value: r.type },
-          Object.entries(FIXED_TYPES).map(([k, l]) => h('option', { value: k }, l)),
+          Object.entries(FIXED_TYPES).map(([k, l]) => h('option', { value: k }, t(l))),
         ),
       ),
       h(
@@ -2405,48 +2414,65 @@ function editRecurring(id) {
         h(
           'label',
           { class: 'mn-field' },
-          'Betrag in €',
+          t('field.amountEur'),
           h('input', {
             name: 'amount',
             inputmode: 'decimal',
             value: r.cents ? plain(amountFor(r, thisMonth)) : '',
-            placeholder: '0,00',
+            placeholder: t('field.amountPlaceholder'),
           }),
         ),
         h(
           'label',
           { class: 'mn-field' },
-          'Art',
+          t('field.kind'),
           h(
             'select',
             { name: 'kind', value: r.kind },
-            Object.entries(KINDS).map(([k, l]) => h('option', { value: k }, l)),
+            Object.entries(KINDS).map(([k, l]) => h('option', { value: k }, t(l))),
           ),
         ),
       ),
-      h('label', { class: 'mn-field' }, 'Kategorie', catSelect('cat', r.cat)),
+      // An existing fixed cost keeps its history: a new amount applies from the chosen month on.
+      id
+        ? h(
+            'label',
+            { class: 'mn-field' },
+            t('fixed.newAmountFrom'),
+            h('input', { name: 'from', type: 'month', value: thisMonth }),
+            h(
+              'small',
+              {},
+              r.changes.length
+                ? t('fixed.historyNow', {
+                    list: [{ from: r.start, cents: r.cents }, ...r.changes]
+                      .map((c) =>
+                        t('fixed.historyItem', { amount: euro(c.cents), month: monthName(c.from) }),
+                      )
+                      .join(', '),
+                  })
+                : t('fixed.historyNone'),
+            ),
+          )
+        : null,
+      h('label', { class: 'mn-field' }, t('field.category'), catSelect('cat', r.cat)),
       h(
         'div',
         { class: 'mn-grid-2' },
         h(
           'label',
           { class: 'mn-field' },
-          'Rhythmus',
+          t('fixed.rhythm'),
           h(
             'select',
             { name: 'every', value: String(r.every) },
-            [
-              [1, 'Monatlich'],
-              [3, 'Vierteljährlich'],
-              [6, 'Halbjährlich'],
-              [12, 'Jährlich'],
-            ].map(([v, l]) => h('option', { value: String(v) }, l)),
+            [1, 3, 6, 12].map((v) => h('option', { value: String(v) }, t(`rhythm.${v}`))),
           ),
         ),
         h(
           'label',
           { class: 'mn-field' },
-          'Am Tag',
+          t('fixed.onDay'),
           h('input', { name: 'day', type: 'number', min: 1, max: 28, value: String(r.day) }),
         ),
       ),
@@ -2456,22 +2482,30 @@ function editRecurring(id) {
         h(
           'label',
           { class: 'mn-field' },
-          'Erste Buchung',
+          t('fixed.firstBooking'),
           h('input', { name: 'start', type: 'month', value: r.start }),
         ),
         h(
           'label',
           { class: 'mn-field' },
-          'Letzte Zahlung',
+          t('fixed.lastBooking'),
           h('input', { name: 'end', type: 'month', value: r.end }),
-          h('small', {}, 'Gekündigt oder befristet? Der letzte Monat. Leer, solange es läuft.'),
+          h('small', {}, t('fixed.lastHint')),
         ),
       ),
       h(
-        'p',
-        { class: 'mn-note' },
-        'Fällige Zahlungen werden beim Öffnen der App gebucht, auch rückwirkend ab der ersten.',
+        'label',
+        { class: 'mn-field' },
+        t('fixed.recognise'),
+        h('input', {
+          name: 'match',
+          maxlength: 200,
+          value: r.match,
+          placeholder: t('fixed.recognisePlaceholder'),
+        }),
+        h('small', {}, t('fixed.recogniseHint')),
       ),
+      h('p', { class: 'mn-note' }, t('fixed.dueNote')),
     ],
     [
       id
@@ -2487,14 +2521,14 @@ function editRecurring(id) {
                   S.recs.delete(id);
                   calendarSoon();
                   closeDialog();
-                  toast('Fixkosten gelöscht, bisherige Buchungen bleiben');
+                  toast(t('toast.fixedDeleted'));
                   render();
                 } catch {
-                  formError(form, 'Löschen fehlgeschlagen.');
+                  formError(form, t('error.deleteFailed'));
                 }
               },
             },
-            'Löschen',
+            t('common.delete'),
           )
         : null,
       h('span', { class: 'mn-grow' }),
@@ -2506,13 +2540,11 @@ function editRecurring(id) {
           onclick: async (e) => {
             e.preventDefault();
             const cents = parseAmount(val(form, 'amount'));
-            if (cents === null || cents <= 0)
-              return formError(form, 'Gib einen Betrag größer als 0 ein.');
+            if (cents === null || cents <= 0) return formError(form, t('fixed.errAmount'));
             const start = val(form, 'start');
             const end = val(form, 'end');
-            if (!start) return formError(form, 'Gib den Monat der ersten Buchung an.');
-            if (end && end < start)
-              return formError(form, 'Die letzte Buchung liegt vor der ersten.');
+            if (!start) return formError(form, t('fixed.errStart'));
+            if (end && end < start) return formError(form, t('fixed.errOrder'));
             // Months already generated stay done (\`until\`), so an edit never re-books a month the
             // user deleted or moved; new settings apply from the next due month on.
             // an existing one keeps its history: a new amount applies from the chosen month on
@@ -2544,7 +2576,7 @@ function editRecurring(id) {
               end,
               until: r.until,
             });
-            if (!next) return formError(form, 'Bitte prüfe die Angaben.');
+            if (!next) return formError(form, t('error.checkInput'));
             try {
               const mn = await ready;
               await mn.kv.set(`rec:${next.id}`, next);
@@ -2558,11 +2590,11 @@ function editRecurring(id) {
               closeDialog();
               render();
             } catch {
-              formError(form, 'Speichern fehlgeschlagen.');
+              formError(form, t('error.saveFailed'));
             }
           },
         },
-        'Speichern',
+        t('common.save'),
       ),
     ],
   );
@@ -2571,17 +2603,13 @@ function editRecurring(id) {
 // ---------- CSV import ----------
 function openImport() {
   const form = openDialog(
-    'Kontoauszug importieren',
+    t('action.importStatement'),
     [
-      h(
-        'p',
-        {},
-        'Wähle einen Kontoauszug als PDF oder die Umsätze als CSV aus dem Online-Banking. Bereits importierte Buchungen werden erkannt und übersprungen. Der Auszug bleibt auf deinem Gerät, nur die Buchungen werden gespeichert.',
-      ),
+      h('p', {}, t('import.intro')),
       h(
         'label',
         { class: 'mn-btn filebtn' },
-        'PDF- oder CSV-Datei wählen',
+        t('import.chooseFile'),
         h('input', {
           type: 'file',
           accept: '.csv,.pdf,text/csv,text/plain,application/pdf',
@@ -2589,8 +2617,7 @@ function openImport() {
             const file = e.target.files[0];
             e.target.value = '';
             if (!file) return;
-            if (file.size > 5 * 1024 * 1024)
-              return formError(form, 'Die Datei ist größer als 5 MB.');
+            if (file.size > 5 * 1024 * 1024) return formError(form, t('import.tooBig'));
             const buf = await file.arrayBuffer();
             if (/\.pdf$/i.test(file.name) || file.type === 'application/pdf')
               return importPdf(form, buf);
@@ -2611,19 +2638,20 @@ async function importPdf(form, buf) {
   let parsed;
   try {
     parsed = parseStatement(await readPdf(buf));
+    // The column names of a PDF are the page's, not the parser's.
+    parsed.header = [
+      t('field.date'),
+      t('tax.col.amount'),
+      t('import.party'),
+      t('import.reference'),
+    ];
   } catch (err) {
     return formError(
       form,
-      err?.name === 'PasswordException'
-        ? 'Der Auszug ist mit einem Passwort geschützt. Speichere ihn ohne Passwort oder nutze den CSV-Export.'
-        : 'Die PDF-Datei konnte nicht gelesen werden.',
+      err?.name === 'PasswordException' ? t('import.pdfPassword') : t('import.pdfUnreadable'),
     );
   }
-  if (!parsed.rows.length)
-    return formError(
-      form,
-      'In diesem PDF wurden keine Buchungen erkannt (gescannte Auszüge enthalten keinen Text). Nutze sonst den CSV-Export deiner Bank.',
-    );
+  if (!parsed.rows.length) return formError(form, t('import.pdfEmpty'));
   previewImport(parsed);
 }
 
@@ -2637,7 +2665,9 @@ async function previewImport(parsed) {
         'select',
         { name, value: String(index) },
         h('option', { value: '-1' }, '–'),
-        parsed.header.map((c, i) => h('option', { value: String(i) }, c || `Spalte ${i + 1}`)),
+        parsed.header.map((c, i) =>
+          h('option', { value: String(i) }, c || t('import.column', { n: i + 1 })),
+        ),
       ),
     );
   const summary = h('div', { class: 'import-summary' });
@@ -2656,13 +2686,7 @@ async function previewImport(parsed) {
     } catch {
       // Without the existing bookings the duplicate check would overwrite them.
       prepared = [];
-      summary.replaceChildren(
-        h(
-          'p',
-          { class: 'mn-error' },
-          'Deine bisherigen Buchungen konnten nicht geladen werden. Versuche es gleich noch einmal.',
-        ),
-      );
+      summary.replaceChildren(h('p', { class: 'mn-error' }, t('import.loadFailed')));
       importBtn.disabled = true;
       return;
     }
@@ -2693,15 +2717,16 @@ async function previewImport(parsed) {
         'p',
         {},
         found.length
-          ? `${found.length} Buchungen erkannt, davon ${fresh.length} neu und ${fresh.filter((b) => b.cat).length} automatisch zugeordnet${fresh.some((b) => b.rec) ? `, ${fresh.filter((b) => b.rec).length} als Fixkosten` : ''}.`
-          : 'Keine Buchungen erkannt. Prüfe die Spaltenzuordnung.',
+          ? t(fresh.some((b) => b.rec) ? 'import.summaryFixed' : 'import.summary', {
+              n: found.length,
+              fresh: fresh.length,
+              assigned: fresh.filter((b) => b.cat).length,
+              fixed: fresh.filter((b) => b.rec).length,
+            })
+          : t('import.nothing'),
       ),
       parsed.guessed
-        ? h(
-            'p',
-            { class: 'mn-note' },
-            `Bei ${parsed.guessed} ${parsed.guessed === 1 ? 'Buchung' : 'Buchungen'} zeigt der Auszug nicht eindeutig, ob Aus- oder Eingang. Sie sind nach dem Text zugeordnet; prüfe sie nach dem Import.`,
-          )
+        ? h('p', { class: 'mn-note' }, t('import.guessed', { n: parsed.guessed }))
         : null,
       fresh.length
         ? h(
@@ -2725,7 +2750,9 @@ async function previewImport(parsed) {
         : null,
     );
     importBtn.disabled = !fresh.length;
-    importBtn.textContent = fresh.length ? `${fresh.length} importieren` : 'Importieren';
+    importBtn.textContent = fresh.length
+      ? t('import.run', { n: fresh.length })
+      : t('import.runNone');
   };
   const importBtn = h(
     'button',
@@ -2750,10 +2777,11 @@ async function previewImport(parsed) {
                 if (key) await deleteBooking(key);
               }
             }
-            if (done % 20 === 0) importBtn.textContent = `${done} von ${fresh.length} …`;
+            if (done % 20 === 0)
+              importBtn.textContent = t('import.progress', { done, total: fresh.length });
           }
           closeDialog();
-          toast(`${done} Buchungen importiert`);
+          toast(t('toast.imported', { n: done }));
           const latest = fresh
             .map((b) => b.date)
             .sort()
@@ -2761,26 +2789,23 @@ async function previewImport(parsed) {
           if (latest) S.month = latest.slice(0, 7);
           go('bookings');
         } catch {
-          formError(
-            form,
-            `Nach ${done} Buchungen abgebrochen. Importiere die Datei erneut, bereits gespeicherte werden übersprungen.`,
-          );
+          formError(form, t('import.aborted', { n: done }));
           importBtn.disabled = false;
         }
       },
     },
-    'Importieren',
+    t('import.runNone'),
   );
   const form = openDialog(
-    'Kontoauszug importieren',
+    t('action.importStatement'),
     [
       h(
         'div',
         { class: 'grid2', onchange: () => update() },
-        pick('date', 'Datum', parsed.map.date),
-        pick('amount', 'Betrag', parsed.map.amount),
-        pick('party', 'Empfänger / Auftraggeber', parsed.map.party),
-        pick('text', 'Verwendungszweck', parsed.map.text),
+        pick('date', t('field.date'), parsed.map.date),
+        pick('amount', t('tax.col.amount'), parsed.map.amount),
+        pick('party', t('import.party'), parsed.map.party),
+        pick('text', t('import.reference'), parsed.map.text),
       ),
       summary,
     ],
@@ -2805,17 +2830,25 @@ async function exportYearCsv() {
     .filter((b) => b.date.startsWith(`${year}-`))
     .sort((a, b) => a.date.localeCompare(b.date));
   download(
-    `buchungen-${year}.csv`,
+    t('export.file', { year }),
     csv([
-      ['Datum', 'Art', 'Betrag', 'Kategorie', 'Beschreibung', 'Empfänger/Auftraggeber', 'Steuer'],
+      [
+        t('tax.csv.date'),
+        t('field.kind'),
+        t('tax.col.amount'),
+        t('tax.csv.category'),
+        t('field.description'),
+        t('export.party'),
+        t('export.tax'),
+      ],
       ...rows.map((b) => [
         b.date,
-        KINDS[b.kind],
+        t(KINDS[b.kind]),
         plain(b.kind === 'income' ? b.cents : -b.cents),
         catName(b.cat),
         b.text,
         b.party,
-        taxFieldOf(b) ? FIELDS[taxFieldOf(b)].label : '',
+        taxFieldOf(b) ? fieldLabel(taxFieldOf(b)) : '',
       ]),
     ]),
     'text/csv',
@@ -2832,11 +2865,11 @@ async function exportBackup() {
       settings: S.settings,
       recurring: [...S.recs.values()],
       profiles: Object.fromEntries(profiles.map((p) => [p.key.slice(8), p.value])),
-      bookings: tx.map((t) => t.value),
+      bookings: tx.map((row) => row.value),
     };
-    download(`haushalt-sicherung-${today()}.json`, JSON.stringify(data), 'application/json');
+    download(t('backup.file', { date: today() }), JSON.stringify(data), 'application/json');
   } catch {
-    toast('Die Sicherung konnte nicht erstellt werden.');
+    toast(t('backup.createFailed'));
   }
 }
 async function importBackup(file) {
@@ -2847,7 +2880,7 @@ async function importBackup(file) {
     data = null;
   }
   if (data?.app !== 'mininode-haushalt' || !Array.isArray(data.bookings)) {
-    toast('Diese Datei ist keine Haushalt-Sicherung.');
+    toast(t('backup.notABackup'));
     return;
   }
   try {
@@ -2877,9 +2910,9 @@ async function importBackup(file) {
     S.years.clear();
     S.tx.clear();
     await Promise.all([ensureYear(Number(S.month.slice(0, 4))), ensureYear(S.year)]);
-    toast(`${n} Buchungen wiederhergestellt`);
+    toast(t('backup.restored', { n }));
   } catch {
-    toast('Die Sicherung konnte nicht vollständig importiert werden.');
+    toast(t('backup.importFailed'));
   }
   render();
 }
@@ -2893,36 +2926,28 @@ const VIEWS = {
   tax: viewTax,
   settings: viewSettings,
 };
-const TITLES = {
-  overview: 'Übersicht',
-  bookings: 'Buchungen',
-  plan: 'Planung',
-  stats: 'Statistik',
-  tax: 'Steuer',
-  settings: 'Einstellungen',
-};
+const titleOf = (tab) => t(`tab.${tab}`);
 function subtitle() {
   const list = inMonth(S.month);
   if (S.tab === 'overview' || S.tab === 'bookings') {
     const open = list.filter((b) => !b.cat).length;
-    return `${list.length} ${list.length === 1 ? 'Buchung' : 'Buchungen'}${open ? `, ${open} ohne Kategorie` : ''}`;
+    return t(open ? 'subtitle.bookingsOpen' : 'subtitle.bookings', { n: list.length, open });
   }
-  if (S.tab === 'plan')
-    return S.plan === 'budget' ? 'Monatsbudget je Kategorie' : 'Was regelmäßig kommt und geht';
-  if (S.tab === 'stats') return `Einnahmen, Ausgaben und Fixkosten ${S.year}`;
-  if (S.tab === 'tax') return 'Automatisch aus deinen Buchungen';
-  return 'Kategorien, Regeln und Daten';
+  if (S.tab === 'plan') return t(S.plan === 'budget' ? 'subtitle.budget' : 'subtitle.fixed');
+  if (S.tab === 'stats') return t('subtitle.stats', { year: S.year });
+  if (S.tab === 'tax') return t('subtitle.tax');
+  return t('subtitle.settings');
 }
 function render() {
   for (const tab of document.querySelectorAll('.mn-tab')) {
     if (tab.dataset.tab === S.tab) tab.setAttribute('aria-current', 'page');
     else tab.removeAttribute('aria-current');
   }
-  $('#title').textContent = TITLES[S.tab];
+  $('#title').textContent = titleOf(S.tab);
   const view = $('#view');
   const tools = $('#tools');
   if (S.loading) {
-    $('#subtitle').textContent = 'Wird geladen …';
+    $('#subtitle').textContent = t('state.loading');
     tools.replaceChildren();
     view.replaceChildren(
       h(
@@ -2941,7 +2966,7 @@ function render() {
     {
       type: 'button',
       class: 'mn-icon-btn settings-btn',
-      'aria-label': 'Einstellungen',
+      'aria-label': t('tab.settings'),
       onclick: () => go('settings'),
     },
     icon('gear'),
@@ -2952,10 +2977,10 @@ function render() {
       : S.tab === 'tax' || S.tab === 'stats'
         ? [
             stepper(
-              S.tab === 'tax' ? 'Steuerjahr' : 'Jahr',
+              t(S.tab === 'tax' ? 'stepper.taxYear' : 'stepper.year'),
               String(S.year),
-              'Vorheriges Jahr',
-              'Nächstes Jahr',
+              t('stepper.prevYear'),
+              t('stepper.nextYear'),
               changeYear,
             ),
           ]
@@ -3022,6 +3047,11 @@ document.addEventListener('visibilitychange', () => {
   if (document.hidden || S.loading || Date.now() - refreshedAt < 30_000) return;
   refreshedAt = Date.now();
   refresh().catch(() => {});
+});
+// The packages must be there before the first text is made; a language change redraws.
+await window.mnI18n.ready;
+window.mnI18n.onChange(() => {
+  if (!sheetOpen) render();
 });
 render();
 const firstLoad = load();

@@ -3,11 +3,12 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>2048</title>
+  <title data-i18n="app.title">2048</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23a8620a'/%3E%3Crect x='6' y='6' width='9' height='9' rx='2' fill='white'/%3E%3Crect x='17' y='6' width='9' height='9' rx='2' fill='white' opacity='.6'/%3E%3Crect x='6' y='17' width='9' height='9' rx='2' fill='white' opacity='.6'/%3E%3Crect x='17' y='17' width='9' height='9' rx='2' fill='white'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="/_mininode/ui.css">
   <link rel="stylesheet" href="/style.css">
   <script src="/_mininode/ui.js"></script>
+  <script src="/_mininode/i18n.js"></script>
   <script src="/_mininode/game.js"></script>
   <script src="/_mininode/sdk.js" defer></script>
   <script type="module" src="/app.js"></script>
@@ -15,46 +16,46 @@
 <body class="mn-app">
   <div class="mn-page g-page">
     <header class="mn-top"><div class="mn-top-inner">
-      <div class="mn-top-text"><a class="mn-home" href="https://mininode.app">← Alle Apps</a><h1>2048</h1><p class="mn-sub" id="player">Verschmelze gleiche Kacheln bis zur 2048.</p></div>
-      <div class="mn-top-tools"><a class="mn-btn" id="hub" href="https://mininode.app/games/n2048">Gaming Hub</a></div>
+      <div class="mn-top-text"><a class="mn-home" href="https://mininode.app" data-i18n="nav.allApps">← Alle Apps</a><h1 data-i18n="app.title">2048</h1><p class="mn-sub" id="player" data-i18n="app.intro">Verschmelze gleiche Kacheln bis zur 2048.</p></div>
+      <div class="mn-top-tools"><a class="mn-btn" id="hub" href="https://mininode.app/games/n2048" data-i18n="nav.hub">Gaming Hub</a></div>
     </div></header>
     <main class="mn-main g-main">
       <div class="mn-kpis">
-        <div class="mn-kpi"><b id="score">0</b><span>Punkte</span></div>
-        <div class="mn-kpi"><b id="tile">2</b><span>Größte Kachel</span></div>
-        <div class="mn-kpi"><b id="time">0:00</b><span>Zeit</span></div>
+        <div class="mn-kpi"><b id="score">0</b><span data-i18n="kpi.score">Punkte</span></div>
+        <div class="mn-kpi"><b id="tile">2</b><span data-i18n="kpi.tile">Größte Kachel</span></div>
+        <div class="mn-kpi"><b id="time">0:00</b><span data-i18n="kpi.time">Zeit</span></div>
       </div>
       <div class="g-play">
         <!-- biome-ignore lint/a11y/useSemanticElements: a board and a button cluster have no native element -->
-        <div class="g-board" id="board" role="group" aria-label="Spielfeld, 4 mal 4 Kacheln"></div>
+        <div class="g-board" id="board" role="group" aria-label="Spielfeld, 4 mal 4 Kacheln" data-i18n-attr="aria-label:board.label"></div>
         <div class="g-side">
           <!-- biome-ignore lint/a11y/useSemanticElements: a board and a button cluster have no native element -->
-          <div class="g-arrows" role="group" aria-label="Richtung">
-            <button type="button" class="mn-btn g-up" data-dir="up" aria-label="Nach oben">↑</button>
-            <button type="button" class="mn-btn g-left" data-dir="left" aria-label="Nach links">←</button>
-            <button type="button" class="mn-btn g-down" data-dir="down" aria-label="Nach unten">↓</button>
-            <button type="button" class="mn-btn g-right" data-dir="right" aria-label="Nach rechts">→</button>
+          <div class="g-arrows" role="group" aria-label="Richtung" data-i18n-attr="aria-label:dir.label">
+            <button type="button" class="mn-btn g-up" data-dir="up" aria-label="Nach oben" data-i18n-attr="aria-label:dir.up">↑</button>
+            <button type="button" class="mn-btn g-left" data-dir="left" aria-label="Nach links" data-i18n-attr="aria-label:dir.left">←</button>
+            <button type="button" class="mn-btn g-down" data-dir="down" aria-label="Nach unten" data-i18n-attr="aria-label:dir.down">↓</button>
+            <button type="button" class="mn-btn g-right" data-dir="right" aria-label="Nach rechts" data-i18n-attr="aria-label:dir.right">→</button>
           </div>
           <div class="g-tools">
-            <button type="button" class="mn-btn" id="undo">Rückgängig</button>
-            <button type="button" class="mn-btn" id="finish">Beenden</button>
-            <button type="button" class="mn-btn mn-btn--primary" id="restart">Neues Spiel</button>
+            <button type="button" class="mn-btn" id="undo" data-i18n="action.undo">Rückgängig</button>
+            <button type="button" class="mn-btn" id="finish" data-i18n="action.finish">Beenden</button>
+            <button type="button" class="mn-btn mn-btn--primary" id="restart" data-i18n="action.restart">Neues Spiel</button>
           </div>
         </div>
       </div>
       <p class="mn-sr-only" id="announce" aria-live="polite"></p>
       <section class="mn-card g-end" id="end" hidden tabindex="-1" aria-labelledby="end-title">
-        <h2 id="end-title">Ergebnis</h2>
+        <h2 id="end-title" data-i18n="end.title">Ergebnis</h2>
         <p id="end-text"></p>
       </section>
       <section aria-labelledby="lb-title" class="g-section">
-        <div class="mn-sect"><h2 id="lb-title">Bestenliste (meiste Punkte)</h2></div>
+        <div class="mn-sect"><h2 id="lb-title" data-i18n="leaders.title">Bestenliste (meiste Punkte)</h2></div>
         <p class="mn-muted" id="record"></p>
         <div id="leaders"></div>
       </section>
       <section class="g-section" aria-labelledby="rules-title">
-        <h2 id="rules-title">Regeln</h2>
-        <p>Wische oder nutze die Pfeiltasten (auch W, A, S, D): alle Kacheln rutschen in diese Richtung, zwei gleiche verschmelzen zur doppelten Zahl und zählen als Punkte. Nach jedem Zug erscheint eine neue 2 oder 4. Das Spiel endet, wenn nichts mehr geht. „Beenden“ wertet die laufende Runde. Rückgängig nimmt den letzten Zug zurück, ein Zug lässt sich aber nur einmal zurücknehmen.</p>
+        <h2 id="rules-title" data-i18n="rules.title">Regeln</h2>
+        <p data-i18n="rules.text">Wische oder nutze die Pfeiltasten (auch W, A, S, D): alle Kacheln rutschen in diese Richtung, zwei gleiche verschmelzen zur doppelten Zahl und zählen als Punkte. Nach jedem Zug erscheint eine neue 2 oder 4. Das Spiel endet, wenn nichts mehr geht. „Beenden“ wertet die laufende Runde. Rückgängig nimmt den letzten Zug zurück, ein Zug lässt sich aber nur einmal zurücknehmen.</p>
       </section>
     </main>
   </div>

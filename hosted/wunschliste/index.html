@@ -3,32 +3,33 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Wunschliste</title>
+  <title data-i18n="app.title">Wunschliste</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23b3264f'/%3E%3Cpath d='M7 13h18v12H7zM5 9h22v4H5zM16 9v16' fill='none' stroke='white' stroke-width='2.2' stroke-linejoin='round'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="/_mininode/ui.css">
   <link rel="stylesheet" href="/style.css">
   <script src="/_mininode/ui.js"></script>
+  <script src="/_mininode/i18n.js"></script>
   <script src="/_mininode/sdk.js" defer></script>
   <script type="module" src="/app.js"></script>
 </head>
 <body class="mn-app">
-  <nav class="mn-nav" aria-label="Bereiche">
+  <nav class="mn-nav" aria-label="Bereiche" data-i18n-attr="aria-label:nav.sections">
     <div class="mn-brand">
-      <a class="mn-home" href="https://mininode.app"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>Alle Apps</a>
-      <span class="mn-brand-name"><span class="mn-brand-mark"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M5 10h14v10H5zM3.5 6.5h17V10h-17zM12 6.5V20"/><path d="M12 6.5C10.5 3.5 7 3.5 7.5 5.5S12 6.5 12 6.5zM12 6.5c1.5-3 5-3 4.5-1S12 6.5 12 6.5z"/></svg></span>Wunschliste</span>
-      <button type="button" class="mn-btn mn-btn--primary" data-add><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Wunsch hinzufügen</button>
+      <a class="mn-home" href="https://mininode.app"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg><span data-i18n="nav.allApps">Alle Apps</span></a>
+      <span class="mn-brand-name"><span class="mn-brand-mark"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M5 10h14v10H5zM3.5 6.5h17V10h-17zM12 6.5V20"/><path d="M12 6.5C10.5 3.5 7 3.5 7.5 5.5S12 6.5 12 6.5zM12 6.5c1.5-3 5-3 4.5-1S12 6.5 12 6.5z"/></svg></span><span data-i18n="app.title">Wunschliste</span></span>
+      <button type="button" class="mn-btn mn-btn--primary" data-add><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg><span data-i18n="action.add">Wunsch hinzufügen</span></button>
     </div>
     <div class="mn-tabs">
-      <button type="button" class="mn-tab" data-tab="mine" aria-current="page"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M5 10h14v10H5zM3.5 6.5h17V10h-17zM12 6.5V20"/></svg>Meine Liste</button>
-      <button type="button" class="mn-tab" data-tab="others"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="9" cy="8.5" r="3.5"/><path d="M3 20c.8-3.4 3.2-5 6-5s5.2 1.6 6 5"/><circle cx="17" cy="9.5" r="2.5"/><path d="M16.5 14.5c2.3.2 3.9 1.6 4.5 4"/></svg>Andere</button>
-      <button type="button" class="mn-tab" data-tab="shopping"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h2l2 10h10l2-7H7.2"/><circle cx="9.5" cy="19" r="1.3"/><circle cx="17" cy="19" r="1.3"/></svg>Einkaufsliste</button>
+      <button type="button" class="mn-tab" data-tab="mine" aria-current="page"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M5 10h14v10H5zM3.5 6.5h17V10h-17zM12 6.5V20"/></svg><span data-i18n="tab.mine">Meine Liste</span></button>
+      <button type="button" class="mn-tab" data-tab="others"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="9" cy="8.5" r="3.5"/><path d="M3 20c.8-3.4 3.2-5 6-5s5.2 1.6 6 5"/><circle cx="17" cy="9.5" r="2.5"/><path d="M16.5 14.5c2.3.2 3.9 1.6 4.5 4"/></svg><span data-i18n="tab.others">Andere</span></button>
+      <button type="button" class="mn-tab" data-tab="shopping"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h2l2 10h10l2-7H7.2"/><circle cx="9.5" cy="19" r="1.3"/><circle cx="17" cy="19" r="1.3"/></svg><span data-i18n="tab.shopping">Einkaufsliste</span></button>
     </div>
   </nav>
   <div class="mn-page">
     <header class="mn-top"><div class="mn-top-inner">
-      <div class="mn-top-text"><a class="mn-home" href="https://mininode.app">← Alle Apps</a><h1 id="title" tabindex="-1">Meine Liste</h1><p class="mn-sub" id="subtitle"></p></div>
+      <div class="mn-top-text"><a class="mn-home" href="https://mininode.app" data-i18n="nav.allAppsBack">← Alle Apps</a><h1 id="title" tabindex="-1">Meine Liste</h1><p class="mn-sub" id="subtitle"></p></div>
       <div class="mn-top-tools" id="tools"></div>
-      <button type="button" class="mn-fab" data-add aria-label="Wunsch hinzufügen"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+      <button type="button" class="mn-fab" data-add aria-label="Wunsch hinzufügen" data-i18n-attr="aria-label:action.add"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
     </div></header>
     <main class="mn-main" id="view" tabindex="-1"></main>
   </div>

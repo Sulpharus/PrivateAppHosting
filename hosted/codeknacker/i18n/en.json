@@ -1,0 +1,44 @@
+{
+  "app.title": "Codeknacker",
+  "app.intro": "Work out the secret code of four symbols.",
+  "nav.allApps": "← All apps",
+  "nav.hub": "Gaming Hub",
+  "kpi.left": "Guesses left",
+  "kpi.time": "Time",
+  "rows.label": "Previous guesses",
+  "entry.title": "Your guess",
+  "action.back": "Remove last",
+  "action.submit": "Guess",
+  "action.restart": "New game",
+  "end.title": "Result",
+  "end.won": "Code cracked!",
+  "end.lost": "Not this time",
+  "end.wonText": {
+    "one": "In {n} guess and {time}.",
+    "other": "In {n} guesses and {time}."
+  },
+  "end.lostText": "The code was {code}. New game?",
+  "leaders.title": "Leaderboard (fewest guesses)",
+  "unit.guesses": {
+    "one": "{n} guess",
+    "other": "{n} guesses"
+  },
+  "record.best": {
+    "one": "Your record: {n} guess.",
+    "other": "Your record: {n} guesses."
+  },
+  "rules.title": "Rules",
+  "rules.text": "The code has four symbols drawn from six; a symbol can appear more than once. You have ten guesses. After each guess you see how many symbols are in the right place (“exact”) and how many are in the code but in a different place (“near”). Keyboard: 1 to 6 places a symbol, Backspace removes the last one, Enter submits the guess.",
+  "symbol.0": "circle",
+  "symbol.1": "triangle",
+  "symbol.2": "square",
+  "symbol.3": "diamond",
+  "symbol.4": "star",
+  "symbol.5": "cross",
+  "symbol.place": "Place {symbol} (key {key})",
+  "slot.empty": "empty",
+  "feedback.none": "no hits",
+  "feedback.hits": "{exact} exact, {near} near",
+  "say.guess": "Guess {n}: {feedback}.",
+  "say.new": "New game."
+}

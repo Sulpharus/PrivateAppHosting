@@ -1,6 +1,7 @@
 // Defaults and validation for the household book. Amounts are integer cents.
 
-export const KINDS = { expense: 'Ausgabe', income: 'Einnahme', transfer: 'Umbuchung' };
+/** Kinds of bookings; the value is the language key of the name (kind.<id>). */
+export const KINDS = { expense: 'kind.expense', income: 'kind.income', transfer: 'kind.transfer' };
 
 /** Starting categories; the tax field is only a default and can be changed per category. */
 export const DEFAULT_CATEGORIES = [
@@ -100,17 +101,17 @@ export function cleanSettings(raw, fields) {
   return { categories, rules };
 }
 
-/** Kinds of fixed costs, for grouping and statistics. */
+/** Kinds of fixed costs, for grouping and statistics; the value is the language key (fixedType.<id>). */
 export const FIXED_TYPES = {
-  wohnen: 'Wohnen',
-  abo: 'Abos und Verträge',
-  versicherung: 'Versicherungen',
-  mobilitaet: 'Mobilität',
-  kredit: 'Kredite',
-  ruecklage: 'Rücklagen und Sparen',
-  spende: 'Spenden und Beiträge',
-  einnahme: 'Regelmäßige Einnahmen',
-  sonstiges: 'Sonstiges',
+  wohnen: 'fixedType.wohnen',
+  abo: 'fixedType.abo',
+  versicherung: 'fixedType.versicherung',
+  mobilitaet: 'fixedType.mobilitaet',
+  kredit: 'fixedType.kredit',
+  ruecklage: 'fixedType.ruecklage',
+  spende: 'fixedType.spende',
+  einnahme: 'fixedType.einnahme',
+  sonstiges: 'fixedType.sonstiges',
 };
 
 export function cleanRecurring(raw) {

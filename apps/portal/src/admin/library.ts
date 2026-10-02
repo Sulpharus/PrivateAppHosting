@@ -2,6 +2,7 @@
 // build time. Sources: docs/ai (specs, design system, prompt parts) and packages/ui/kit.
 
 import design from '../../../../docs/ai/DESIGN-SYSTEM.md?raw';
+import language from '../../../../docs/ai/LANGUAGE-PACKAGES.md?raw';
 import spec from '../../../../docs/ai/NEW-APP-SPEC.md?raw';
 import specShort from '../../../../docs/ai/NEW-APP-SPEC.short.md?raw';
 import kitCss from '../../../../packages/ui/kit/ui.css?raw';
@@ -23,6 +24,7 @@ export const LIBRARY: Library = {
   spec,
   specShort,
   design,
+  language,
   kitCss,
   types: sortParts(Object.values(types).map(parsePart)),
   modules: sortParts(Object.values(modules).map(parsePart)),
@@ -58,6 +60,14 @@ export const FILES: BuildFile[] = [
     description:
       'Farben (hell und dunkel), Schriften, App-Gerüst und alle Komponenten des App Kits mit HTML-Beispielen.',
     content: design,
+    type: 'text/markdown',
+  },
+  {
+    name: 'LANGUAGE-PACKAGES.md',
+    title: 'Sprachpakete',
+    description:
+      'Deutsche und englische Texte jeder App: Dateien, Einbau, Stilregeln, Glossar und Prüfliste. Im Prompt-Ersteller schon enthalten.',
+    content: language,
     type: 'text/markdown',
   },
   {

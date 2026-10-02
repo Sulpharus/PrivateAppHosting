@@ -1,0 +1,37 @@
+{
+  "app.title": "2048",
+  "app.intro": "Verschmelze gleiche Kacheln bis zur 2048.",
+  "nav.allApps": "← Alle Apps",
+  "nav.hub": "Gaming Hub",
+  "kpi.score": "Punkte",
+  "kpi.tile": "Größte Kachel",
+  "kpi.time": "Zeit",
+  "board.label": "Spielfeld, 4 mal 4 Kacheln",
+  "dir.label": "Richtung",
+  "dir.up": "Nach oben",
+  "dir.down": "Nach unten",
+  "dir.left": "Nach links",
+  "dir.right": "Nach rechts",
+  "action.undo": "Rückgängig",
+  "action.finish": "Beenden",
+  "action.restart": "Neues Spiel",
+  "end.title": "Ergebnis",
+  "end.over": "Spiel vorbei",
+  "end.quit": "Beendet",
+  "end.noMoves": "Keine Züge mehr.",
+  "end.roundOver": "Runde beendet.",
+  "end.summary": "{headline} Punkte: {score}, größte Kachel: {tile}, Züge: {n}, Zeit: {time}.",
+  "leaders.title": "Bestenliste (meiste Punkte)",
+  "unit.points": {
+    "one": "{n} Punkt",
+    "other": "{n} Punkte"
+  },
+  "record.best": {
+    "one": "Dein Rekord: {n} Punkt.",
+    "other": "Dein Rekord: {n} Punkte."
+  },
+  "rules.title": "Regeln",
+  "rules.text": "Wische oder nutze die Pfeiltasten (auch W, A, S, D): alle Kacheln rutschen in diese Richtung, zwei gleiche verschmelzen zur doppelten Zahl und zählen als Punkte. Nach jedem Zug erscheint eine neue 2 oder 4. Das Spiel endet, wenn nichts mehr geht. „Beenden“ wertet die laufende Runde. Rückgängig nimmt den letzten Zug zurück, ein Zug lässt sich aber nur einmal zurücknehmen.",
+  "say.state": "Punkte {score}, größte Kachel {tile}. {rows}",
+  "say.new": "Neues Spiel."
+}

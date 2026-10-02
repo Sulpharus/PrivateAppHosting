@@ -389,6 +389,34 @@
       ],
       "additionalProperties": false
     },
+    "i18n": {
+      "type": "object",
+      "properties": {
+        "languages": {
+          "minItems": 1,
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "de",
+              "en"
+            ]
+          }
+        },
+        "default": {
+          "default": "de",
+          "type": "string",
+          "enum": [
+            "de",
+            "en"
+          ]
+        }
+      },
+      "required": [
+        "languages"
+      ],
+      "additionalProperties": false
+    },
     "build": {
       "type": "object",
       "properties": {

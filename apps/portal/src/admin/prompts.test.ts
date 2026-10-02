@@ -21,6 +21,7 @@ const library: Library = {
   spec: read('docs/ai/NEW-APP-SPEC.md'),
   specShort: read('docs/ai/NEW-APP-SPEC.short.md'),
   design: read('docs/ai/DESIGN-SYSTEM.md'),
+  language: read('docs/ai/LANGUAGE-PACKAGES.md'),
   kitCss: read('packages/ui/kit/ui.css'),
   types: parts('docs/ai/prompts/types'),
   modules: parts('docs/ai/prompts/modules'),
@@ -95,6 +96,10 @@ describe('compose', () => {
     expect(text).toContain('## Feature: statistics and charts');
     expect(text).not.toContain('## Feature: AI');
     expect(text).toContain('### The SDK');
+    expect(text).toContain('## 5. Language packages (German and English)');
+    expect(text).toContain('### 3. Writing the texts (both languages)');
+    expect(text).toContain('`i18n/de.json` and `i18n/en.json`');
+    expect(text).toContain('Platform glossary');
     expect(text).toContain('# MiniNode App Kit');
     expect(text).not.toContain('short:start');
     expect(text).not.toContain('Do not edit.');

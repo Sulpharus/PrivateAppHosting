@@ -16,6 +16,29 @@
 //   mnGame.format.seconds(75) → '1:15', mnGame.format.number(12345) → '12.345'
 //   mnGame.random(n) → a crypto random integer in [0, n)
 (() => {
+  // The texts of the shared game shell, in the language of the app (kit/i18n.js).
+  const TEXT = {
+    de: {
+      playing: (name) => `Du spielst als ${name}.`,
+      noName: 'Ohne Spielernamen erscheinst du nicht in der Bestenliste. ',
+      setName: 'Namen festlegen',
+      notSaved: 'Das Ergebnis konnte nicht gespeichert werden.',
+      empty: 'Noch keine Einträge. Spielernamen legst du im Gaming Hub fest.',
+      you: (name) => `${name} (du)`,
+      unreachable: 'Die Bestenliste ist gerade nicht erreichbar.',
+    },
+    en: {
+      playing: (name) => `You are playing as ${name}.`,
+      noName: 'Without a player name you will not appear on the leaderboard. ',
+      setName: 'Set a name',
+      notSaved: 'The result could not be saved.',
+      empty: 'No entries yet. You set your player name in the Gaming Hub.',
+      you: (name) => `${name} (you)`,
+      unreachable: 'The leaderboard cannot be reached right now.',
+    },
+  };
+  const words = () => TEXT[window.mnI18n?.lang === 'en' ? 'en' : 'de'];
+
   const format = {
     seconds(total) {
       const s = Math.max(0, Math.round(total));
@@ -25,7 +48,7 @@
       return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${rest}` : `${m}:${rest}`;
     },
     number(value) {
-      return Number(value).toLocaleString('de-DE');
+      return Number(value).toLocaleString(window.mnI18n?.locale ?? 'de-DE');
     },
   };
 
@@ -49,14 +72,20 @@
       const box = el(player);
       if (box) {
         const name = await mn.game.username();
-        if (name) box.textContent = `Du spielst als ${name}.`;
-        else {
-          box.textContent = 'Ohne Spielernamen erscheinst du nicht in der Bestenliste. ';
-          const link = document.createElement('a');
-          link.href = new URL('/games', mn.config.portalUrl).toString();
-          link.textContent = 'Namen festlegen';
-          box.append(link);
-        }
+        const greet = () => {
+          box.replaceChildren();
+          if (name) box.textContent = words().playing(name);
+          else {
+            box.textContent = words().noName;
+            const link = document.createElement('a');
+            link.href = new URL('/games', mn.config.portalUrl).toString();
+            link.textContent = words().setName;
+            box.append(link);
+          }
+        };
+        greet();
+        // The line is made by script, so a language change redraws it.
+        window.mnI18n?.onChange(greet);
       }
       return mn;
     } catch {
@@ -120,7 +149,7 @@
       await mn.game.result(outcome, stats, Math.max(1, Math.round(seconds)));
       return true;
     } catch {
-      window.mnui?.toast('Das Ergebnis konnte nicht gespeichert werden.');
+      window.mnui?.toast(words().notSaved);
       return false;
     }
   }
@@ -134,7 +163,7 @@
       if (!rows.length) {
         const note = document.createElement('p');
         note.className = 'mn-note';
-        note.textContent = 'Noch keine Einträge. Spielernamen legst du im Gaming Hub fest.';
+        note.textContent = words().empty;
         target.append(note);
       } else {
         const list = document.createElement('ol');
@@ -146,7 +175,7 @@
           rank.className = 'mn-lb-rank';
           rank.textContent = `${row.rank}.`;
           const name = document.createElement('span');
-          name.textContent = row.mine ? `${row.username} (du)` : row.username;
+          name.textContent = row.mine ? words().you(row.username) : row.username;
           const value = document.createElement('span');
           value.className = 'mn-num';
           value.textContent = `${show(row.value)}${unit}`;
@@ -157,7 +186,7 @@
       }
       return stats.records[stat];
     } catch {
-      target.textContent = 'Die Bestenliste ist gerade nicht erreichbar.';
+      target.textContent = words().unreachable;
       return undefined;
     }
   }

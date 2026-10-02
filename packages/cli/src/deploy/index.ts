@@ -100,6 +100,7 @@ export function stageAssets(appDir: string, manifest: Manifest): string {
   cpSync(join(KIT, 'ui.css'), join(platform, 'ui.css'));
   cpSync(join(KIT, 'ui.js'), join(platform, 'ui.js'));
   cpSync(join(KIT, 'game.js'), join(platform, 'game.js'));
+  cpSync(join(KIT, 'i18n.js'), join(platform, 'i18n.js'));
   // A new version per deploy: browsers reinstall the worker and drop the old caches.
   const version = `${manifest.slug}-${Date.now().toString(36)}`;
   writeFileSync(

@@ -4,6 +4,9 @@ import { best, newGame, play } from './logic.js';
 
 const $ = (s) => document.querySelector(s);
 const { format } = window.mnGame;
+const t = (key, params) => window.mnI18n.t(key, params);
+// The packages must be there before the first text is made.
+await window.mnI18n.ready;
 const random = () => crypto.getRandomValues(new Uint32Array(1))[0] / 4294967296;
 
 let mn = null;
@@ -33,7 +36,7 @@ function render() {
       if (v >= 1000) tile.classList.add('big');
       if (v >= 10000) tile.classList.add('huge');
       if (i === fresh) tile.classList.add('new');
-      tile.setAttribute('aria-label', `${v}`);
+      tile.setAttribute('aria-label', format.number(v));
     } else tile.setAttribute('aria-hidden', 'true');
     host.append(tile);
   });
@@ -51,7 +54,11 @@ function describe() {
         .map((v) => v || '·')
         .join(' '),
     );
-  return `Punkte ${game.score}, größte Kachel ${best(game.board)}. ${rows.join('; ')}`;
+  return t('say.state', {
+    score: format.number(game.score),
+    tile: format.number(best(game.board)),
+    rows: rows.join('; '),
+  });
 }
 
 async function finish(kind) {
@@ -60,10 +67,15 @@ async function finish(kind) {
   const seconds = Math.max(1, clock.stop());
   const top = best(game.board);
   const outcome = top >= 2048 ? 'win' : kind === 'over' ? 'loss' : 'done';
-  const headline = kind === 'over' ? 'Keine Züge mehr.' : 'Runde beendet.';
-  $('#end-title').textContent = kind === 'over' ? 'Spiel vorbei' : 'Beendet';
-  $('#end-text').textContent =
-    `${headline} ${format.number(game.score)} Punkte, größte Kachel ${format.number(top)}, ${game.moves} Züge in ${format.seconds(seconds)}.`;
+  const headline = t(kind === 'over' ? 'end.noMoves' : 'end.roundOver');
+  $('#end-title').textContent = t(kind === 'over' ? 'end.over' : 'end.quit');
+  $('#end-text').textContent = t('end.summary', {
+    headline,
+    score: format.number(game.score),
+    tile: format.number(top),
+    n: game.moves,
+    time: format.seconds(seconds),
+  });
   $('#end').hidden = false;
   $('#announce').textContent = $('#end-text').textContent;
   await window.mnGame.report(
@@ -98,7 +110,7 @@ function newRound() {
   reported = false;
   $('#end').hidden = true;
   render();
-  $('#announce').textContent = 'Neues Spiel.';
+  $('#announce').textContent = t('say.new');
 }
 
 const KEYS = {
@@ -158,14 +170,17 @@ $('#restart').addEventListener('click', newRound);
 async function showRecords() {
   const best = await window.mnGame.leaders(mn, '#leaders', {
     stat: 'score',
-    format: format.number,
-    unit: ' Punkte',
+    format: (n) => t('unit.points', { n }),
   });
-  $('#record').textContent =
-    best === undefined ? '' : `Dein Rekord: ${format.number(best)} Punkte.`;
+  $('#record').textContent = best === undefined ? '' : t('record.best', { n: best });
 }
 
 render();
+window.mnI18n.onChange(() => {
+  window.mnI18n.apply();
+  render();
+  void showRecords();
+});
 (async () => {
   mn = await window.mnGame.connect({ player: '#player', hub: '#hub' });
   clock.attach();

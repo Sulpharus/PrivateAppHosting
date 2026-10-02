@@ -24,10 +24,16 @@ needs a backend. Do not build your own login, backend or API-key handling.**
    relational data. Do not add a service worker, web manifest or push code: the platform makes
    every app installable and offline-capable and delivers notifications (`mn.notify`,
    `mn.push`).
-5. **UI language German**, informal "du". Mobile-first, works from 360 px wide, touch targets
+5. **UI in German and English.** Every text for people lives in two language packages,
+   `i18n/de.json` and `i18n/en.json`, declared under `i18n` in `mininode.json`; the person's
+   choice in the portal switches every app that has them. Markup keeps the German text and names
+   the key (`data-i18n="app.title"`), script uses `mnI18n.t('list.count', { n })` from
+   `/_mininode/i18n.js`. German uses the informal "du", English a plain "you". Both files have
+   the same keys and placeholders (`mininode doctor` checks it); follow `LANGUAGE-PACKAGES.md`.
+   Mobile-first, works from 360 px wide, touch targets
    at least 44 px, light and dark mode (`prefers-color-scheme`), WCAG AA contrast.
    **Look:** use the MiniNode App Kit (`DESIGN-SYSTEM.md`): link `/_mininode/ui.css` and
-   `/_mininode/ui.js`, put `class="mn-app"` on `<body>`, pick a `data-accent` and build from
+   `/_mininode/ui.js` (and `/_mininode/i18n.js`), put `class="mn-app"` on `<body>`, pick a `data-accent` and build from
    its `mn-*` components and `--mn-*` tokens.
 6. Deliver a **ZIP** containing the project (source, `package.json` if any, `mininode.json`).
 
@@ -126,6 +132,7 @@ select platform.secure_table('<slug>', 'recipes', 'private');
   "description": "Rezepte und Wochenplan",  // max 120 chars, shown on the start page
   "kind": "spa",                            // "static" (plain HTML) or "spa" (Vite build)
   "target": "cloudflare",
+  "i18n": { "languages": ["de", "en"], "default": "de" },   // language packages i18n/de.json, i18n/en.json
   "access": { "default": true },            // true: every user gets it; false: admin grants it
   "data": { "mode": "private" },            // none | private | shared-account | group | readonly
   "ai": { "models": ["gemini-flash"], "monthlyBudgetEur": 2, "maxOutputTokens": 1500 },

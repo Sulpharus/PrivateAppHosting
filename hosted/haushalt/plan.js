@@ -109,9 +109,16 @@ const INTERVAL = { 1: 'month', 3: 'quarter', 6: 'half_year', 12: 'year' };
 /**
  * The payments of fixed costs from last month until `months` ahead, as shared `contract`
  * records for the Kalender (ADR 0002): source key `<fixed cost id>#<YYYY-MM>` → fields. The due
- * date is local midnight, so the Kalender shows it as an all-day date.
+ * date is local midnight, so the Kalender shows it as an all-day date. `fallbackTitle` names a
+ * fixed cost without a description or category (the page's language).
  */
-export function calendarPayments(recs, today, categoryName, months = 12) {
+export function calendarPayments(
+  recs,
+  today,
+  categoryName,
+  months = 12,
+  fallbackTitle = 'Fixkosten',
+) {
   const out = new Map();
   const [y, m] = today.slice(0, 7).split('-').map(Number);
   for (let i = -1; i <= months; i++) {
@@ -121,7 +128,7 @@ export function calendarPayments(recs, today, categoryName, months = 12) {
       if (!dueIn(rec, month)) continue;
       const due = new Date(d.getFullYear(), d.getMonth(), rec.day);
       out.set(`${rec.id}#${month}`, {
-        title: rec.text || categoryName(rec.cat) || 'Fixkosten',
+        title: rec.text || categoryName(rec.cat) || fallbackTitle,
         due_at: due.toISOString(),
         amount_cents: amountFor(rec, month),
         currency: 'EUR',

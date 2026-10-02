@@ -3,11 +3,12 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Codeknacker</title>
+  <title data-i18n="app.title">Codeknacker</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%233b4cc0'/%3E%3Ccircle cx='9' cy='16' r='3.5' fill='white'/%3E%3Ccircle cx='16' cy='16' r='3.5' fill='white' opacity='.7'/%3E%3Ccircle cx='23' cy='16' r='3.5' fill='white' opacity='.45'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="/_mininode/ui.css">
   <link rel="stylesheet" href="/style.css">
   <script src="/_mininode/ui.js"></script>
+  <script src="/_mininode/i18n.js"></script>
   <script src="/_mininode/game.js"></script>
   <script src="/_mininode/sdk.js" defer></script>
   <script type="module" src="/app.js"></script>
@@ -15,38 +16,38 @@
 <body class="mn-app">
   <div class="mn-page ck-page">
     <header class="mn-top"><div class="mn-top-inner">
-      <div class="mn-top-text"><a class="mn-home" href="https://mininode.app">← Alle Apps</a><h1>Codeknacker</h1><p class="mn-sub" id="player">Errate den geheimen Code aus vier Zeichen.</p></div>
-      <div class="mn-top-tools"><a class="mn-btn" id="hub" href="https://mininode.app/games/codeknacker">Gaming Hub</a></div>
+      <div class="mn-top-text"><a class="mn-home" href="https://mininode.app" data-i18n="nav.allApps">← Alle Apps</a><h1 data-i18n="app.title">Codeknacker</h1><p class="mn-sub" id="player" data-i18n="app.intro">Errate den geheimen Code aus vier Zeichen.</p></div>
+      <div class="mn-top-tools"><a class="mn-btn" id="hub" href="https://mininode.app/games/codeknacker" data-i18n="nav.hub">Gaming Hub</a></div>
     </div></header>
     <main class="mn-main ck-main">
       <div class="mn-kpis">
-        <div class="mn-kpi"><b id="left">10</b><span>Versuche übrig</span></div>
-        <div class="mn-kpi"><b id="time">0:00</b><span>Zeit</span></div>
+        <div class="mn-kpi"><b id="left">10</b><span data-i18n="kpi.left">Versuche übrig</span></div>
+        <div class="mn-kpi"><b id="time">0:00</b><span data-i18n="kpi.time">Zeit</span></div>
       </div>
-      <ol class="ck-rows" id="rows" aria-label="Bisherige Versuche"></ol>
+      <ol class="ck-rows" id="rows" aria-label="Bisherige Versuche" data-i18n-attr="aria-label:rows.label"></ol>
       <section class="ck-entry" aria-labelledby="entry-title">
-        <h2 class="mn-sr-only" id="entry-title">Dein Versuch</h2>
+        <h2 class="mn-sr-only" id="entry-title" data-i18n="entry.title">Dein Versuch</h2>
         <div class="ck-slots" id="slots"></div>
         <div class="ck-pad" id="pad"></div>
         <div class="ck-tools">
-          <button type="button" class="mn-btn" id="back">Letztes löschen</button>
-          <button type="button" class="mn-btn mn-btn--primary" id="submit" disabled>Raten</button>
-          <button type="button" class="mn-btn" id="restart">Neues Spiel</button>
+          <button type="button" class="mn-btn" id="back" data-i18n="action.back">Letztes löschen</button>
+          <button type="button" class="mn-btn mn-btn--primary" id="submit" disabled data-i18n="action.submit">Raten</button>
+          <button type="button" class="mn-btn" id="restart" data-i18n="action.restart">Neues Spiel</button>
         </div>
       </section>
       <p class="mn-sr-only" id="announce" aria-live="polite"></p>
       <section class="mn-card ck-end" id="end" hidden tabindex="-1" aria-labelledby="end-title">
-        <h2 id="end-title">Ergebnis</h2>
+        <h2 id="end-title" data-i18n="end.title">Ergebnis</h2>
         <p id="end-text"></p>
       </section>
       <section aria-labelledby="lb-title" class="ck-section">
-        <div class="mn-sect"><h2 id="lb-title">Bestenliste (wenigste Versuche)</h2></div>
+        <div class="mn-sect"><h2 id="lb-title" data-i18n="leaders.title">Bestenliste (wenigste Versuche)</h2></div>
         <p class="mn-muted" id="record"></p>
         <div id="leaders"></div>
       </section>
       <section class="ck-section" aria-labelledby="rules-title">
-        <h2 id="rules-title">Regeln</h2>
-        <p>Der Code besteht aus vier Zeichen, gezogen aus sechs; ein Zeichen kann mehrfach vorkommen. Du hast zehn Versuche. Nach jedem Versuch siehst du, wie viele Zeichen am richtigen Platz sitzen („genau“) und wie viele zwar im Code sind, aber an einer anderen Stelle („nah“). Tastatur: 1 bis 6 setzt ein Zeichen, Rücktaste löscht das letzte, Enter ratet.</p>
+        <h2 id="rules-title" data-i18n="rules.title">Regeln</h2>
+        <p data-i18n="rules.text">Der Code besteht aus vier Zeichen, gezogen aus sechs; ein Zeichen kann mehrfach vorkommen. Du hast zehn Versuche. Nach jedem Versuch siehst du, wie viele Zeichen am richtigen Platz sitzen („genau“) und wie viele zwar im Code sind, aber an einer anderen Stelle („nah“). Tastatur: 1 bis 6 setzt ein Zeichen, Rücktaste löscht das letzte, Enter ratet.</p>
       </section>
     </main>
   </div>

@@ -32,14 +32,71 @@ const rules = (dir: string) =>
     .findings.filter((f) => f.severity === 'error')
     .map((f) => f.rule);
 
+const I18N = { i18n: { languages: ['de', 'en'], default: 'de' } };
 const healthy = {
-  'mininode.json': manifest(),
+  'mininode.json': manifest(I18N),
+  'i18n/de.json': JSON.stringify({
+    'app.title': 'Rezepte',
+    'list.count': { one: '{n} Rezept', other: '{n} Rezepte' },
+  }),
+  'i18n/en.json': JSON.stringify({
+    'app.title': 'Recipes',
+    'list.count': { one: '{n} recipe', other: '{n} recipes' },
+  }),
   'package.json': '{}',
   'README.md': '# Rezepte',
   'src/main.ts': "import { mininode } from '@mininode/sdk';\nconst mn = await mininode();",
   'db/001_init.sql':
     "select platform.create_app_schema('rezepte');\ncreate table app_rezepte.recipes (id uuid primary key, owner_id uuid);\nselect platform.secure_table('rezepte', 'recipes', 'private');",
 };
+
+describe('doctor language packages', () => {
+  const warn = (dir: string) => doctor(dir).findings.map((f) => f.rule);
+
+  it('warns when an app has no language package', () => {
+    const { 'mininode.json': _m, 'i18n/de.json': _d, 'i18n/en.json': _e, ...rest } = healthy;
+    expect(warn(app({ ...rest, 'mininode.json': manifest() }))).toEqual(['i18n-missing']);
+  });
+
+  it('requires the listed files', () => {
+    const { 'i18n/en.json': _e, ...rest } = healthy;
+    expect(rules(app(rest))).toEqual(['i18n-missing']);
+  });
+
+  it('finds different keys, changed placeholders and broken JSON', () => {
+    expect(
+      rules(app({ ...healthy, 'i18n/en.json': JSON.stringify({ 'app.title': 'Recipes' }) })),
+    ).toContain('i18n-parity');
+    expect(
+      rules(
+        app({
+          ...healthy,
+          'i18n/en.json': JSON.stringify({
+            'app.title': 'Recipes',
+            'list.count': { one: '{count} recipe', other: '{count} recipes' },
+          }),
+        }),
+      ),
+    ).toContain('i18n-placeholder');
+    expect(rules(app({ ...healthy, 'i18n/en.json': '{' }))).toContain('i18n-format');
+  });
+
+  it('finds keys the source uses but the packages lack', () => {
+    const dir = app({
+      ...healthy,
+      'src/main.ts':
+        "import { mininode } from '@mininode/sdk';\nconst a = t('app.title'); const b = t('app.missing');",
+    });
+    expect(rules(dir)).toEqual(['i18n-key-missing', 'i18n-key-missing']);
+  });
+
+  it('reads the packages from public/ for built apps', () => {
+    const { 'i18n/de.json': de, 'i18n/en.json': en, ...rest } = healthy;
+    expect(
+      doctor(app({ ...rest, 'public/i18n/de.json': de, 'public/i18n/en.json': en })).findings,
+    ).toEqual([]);
+  });
+});
 
 describe('doctor', () => {
   it('passes a correctly integrated app', () => {

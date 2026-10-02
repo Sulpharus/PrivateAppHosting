@@ -1,0 +1,37 @@
+{
+  "app.title": "2048",
+  "app.intro": "Merge matching tiles until you reach 2048.",
+  "nav.allApps": "← All apps",
+  "nav.hub": "Gaming Hub",
+  "kpi.score": "Score",
+  "kpi.tile": "Highest tile",
+  "kpi.time": "Time",
+  "board.label": "Game board, 4 by 4 tiles",
+  "dir.label": "Direction",
+  "dir.up": "Up",
+  "dir.down": "Down",
+  "dir.left": "Left",
+  "dir.right": "Right",
+  "action.undo": "Undo",
+  "action.finish": "Finish",
+  "action.restart": "New game",
+  "end.title": "Result",
+  "end.over": "Game over",
+  "end.quit": "Finished",
+  "end.noMoves": "No moves left.",
+  "end.roundOver": "Round finished.",
+  "end.summary": "{headline} Score: {score}, highest tile: {tile}, moves: {n}, time: {time}.",
+  "leaders.title": "Leaderboard (highest score)",
+  "unit.points": {
+    "one": "{n} point",
+    "other": "{n} points"
+  },
+  "record.best": {
+    "one": "Your record: {n} point.",
+    "other": "Your record: {n} points."
+  },
+  "rules.title": "Rules",
+  "rules.text": "Swipe or use the arrow keys (W, A, S, D work too): all tiles slide that way, and two equal tiles merge into one with double the value, which adds to your score. A new 2 or 4 appears after every move. The game ends when no move is left. “Finish” scores the current round. Undo takes back the last move, but only one move can be taken back.",
+  "say.state": "Score {score}, highest tile {tile}. {rows}",
+  "say.new": "New game."
+}
