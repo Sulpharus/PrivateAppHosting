@@ -9,6 +9,7 @@ interface Clock {
   seconds(): number;
   penalty(s: number): void;
   reset(): void;
+  attach(): void;
   readonly running: boolean;
 }
 interface MnGame {
@@ -101,6 +102,33 @@ describe('timer', () => {
     clock.reset();
     expect(clock.seconds()).toBe(0);
     expect(ticks.at(-1)).toBe(0);
+  });
+
+  it('starts tracking when the client arrives after the first move', () => {
+    vi.useFakeTimers();
+    const { mn, track } = fakeMn();
+    let client: unknown = null;
+    const clock = game.timer({ mn: () => client });
+    clock.start();
+    expect(track).not.toHaveBeenCalled();
+    client = mn;
+    clock.attach();
+    clock.attach();
+    expect(track).toHaveBeenCalledTimes(1);
+    clock.stop();
+  });
+
+  it('does not count a pause between stop and start', () => {
+    vi.useFakeTimers();
+    const clock = game.timer({ mn: () => null });
+    clock.start();
+    vi.advanceTimersByTime(5000);
+    expect(clock.stop()).toBe(5);
+    vi.advanceTimersByTime(60_000);
+    expect(clock.seconds()).toBe(5);
+    clock.start();
+    vi.advanceTimersByTime(2000);
+    expect(clock.stop()).toBe(7);
   });
 
   it('works without a connection', () => {

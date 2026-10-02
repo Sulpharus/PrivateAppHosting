@@ -115,7 +115,7 @@ document.addEventListener('keydown', (e) => {
   if (e.altKey || e.ctrlKey || e.metaKey) return;
   const dir = KEYS[e.key.length === 1 ? e.key.toLowerCase() : e.key];
   const t = e.target;
-  // Arrow keys on a focused button or field keep their own meaning; the board takes the rest.
+  // Fields keep their own arrow keys; everything else moves the board.
   if (!dir || t.closest?.('input, select, textarea')) return;
   e.preventDefault();
   step(dir);
@@ -168,5 +168,6 @@ async function showRecords() {
 render();
 (async () => {
   mn = await window.mnGame.connect({ player: '#player', hub: '#hub' });
+  clock.attach();
   void showRecords();
 })();

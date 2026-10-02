@@ -99,7 +99,7 @@
 }
 .su-pad {
   display: grid;
-  grid-template-columns: repeat(9, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: var(--mn-s1);
 }
 @media (min-width: 820px) {
@@ -108,6 +108,7 @@
   }
 }
 .su-key {
+  min-width: 44px;
   min-height: 44px;
   border: 1px solid var(--mn-line);
   border-radius: var(--mn-r-sm, 8px);

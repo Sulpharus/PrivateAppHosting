@@ -27,11 +27,41 @@ const ACCESS_LABEL: Record<Access, string> = {
   delete: 'Löschen',
 };
 
+type SortKey = 'open' | 'type' | 'app';
+const SORTS: { key: SortKey; label: string }[] = [
+  { key: 'open', label: 'Offene zuerst' },
+  { key: 'type', label: 'Datentyp' },
+  { key: 'app', label: 'App' },
+];
+
+/** 0 = nothing granted yet, 1 = granted less than asked, 2 = granted as asked. */
+export function openRank(row: Pick<MatrixRow, 'requested' | 'granted'>): 0 | 1 | 2 {
+  if (!row.granted) return 0;
+  return LEVELS.indexOf(row.granted) < LEVELS.indexOf(row.requested) ? 1 : 2;
+}
+
+export function sortRows(rows: MatrixRow[], key: SortKey): MatrixRow[] {
+  const text = (a: string, b: string) => a.localeCompare(b, 'de');
+  const byType = (a: MatrixRow, b: MatrixRow) =>
+    text(a.type_label, b.type_label) || text(a.app_name, b.app_name);
+  const byApp = (a: MatrixRow, b: MatrixRow) =>
+    text(a.app_name, b.app_name) || text(a.type_label, b.type_label);
+  const compare =
+    key === 'open'
+      ? (a: MatrixRow, b: MatrixRow) => openRank(a) - openRank(b) || byType(a, b)
+      : key === 'app'
+        ? byApp
+        : byType;
+  return [...rows].sort(compare);
+}
+
 export function Suite() {
   const { run } = useStepUp();
   const [rows, setRows] = useState<MatrixRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [sort, setSort] = useState<SortKey>('open');
+  const [onlyOpen, setOnlyOpen] = useState(false);
 
   const load = useCallback(async () => {
     const { data, error: loadError } = await platform().rpc('admin_suite_matrix');
@@ -101,6 +131,15 @@ export function Suite() {
   };
 
   const pending = (rows ?? []).filter((r) => !r.granted).length;
+  const shown = useMemo(
+    () =>
+      sortRows(
+        (rows ?? []).filter((r) => !onlyOpen || openRank(r) < 2),
+        sort,
+      ),
+    [rows, sort, onlyOpen],
+  );
+  const stillOpen = (rows ?? []).filter((r) => openRank(r) < 2).length;
 
   return (
     <>
@@ -126,37 +165,71 @@ export function Suite() {
         <p className="empty">Noch keine App fragt gemeinsame Daten an.</p>
       )}
 
-      {byType.map((list) => {
-        const first = list[0];
-        if (!first) return null;
-        const writers = list
-          .filter((r) => r.granted && r.granted !== 'read')
-          .sort((a, b) => (a.priority ?? 1000) - (b.priority ?? 1000));
-        return (
-          <section key={first.type} className="card" aria-labelledby={`type-${first.type}`}>
-            <h2 id={`type-${first.type}`} className="section-title">
-              {first.type_label} <span className="muted mono">{first.type}</span>
-            </h2>
-            <div className="table-wrap">
-              <table className="table table--cards">
-                <thead>
-                  <tr>
-                    <th>App</th>
-                    <th>Grund</th>
-                    <th>Angefragt</th>
-                    <th>Freigabe</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {list.map((row) => (
-                    <tr key={row.app_slug}>
-                      <td>
-                        <strong>{row.app_name}</strong>
-                        <div className="muted mono">{row.app_slug}</div>
-                      </td>
-                      <td data-label="Grund">{row.why}</td>
-                      <td data-label="Angefragt">{ACCESS_LABEL[row.requested]}</td>
-                      <td data-label="Freigabe">
+      {rows && rows.length > 0 && (
+        <>
+          <div className="row" style={{ flexWrap: 'wrap' }}>
+            <fieldset className="chip-scroll" style={{ border: 0, padding: 0, margin: 0 }}>
+              <legend className="sr-only">Sortieren nach</legend>
+              <span className="muted" aria-hidden="true">
+                Sortieren:
+              </span>
+              {SORTS.map((option) => (
+                <button
+                  key={option.key}
+                  type="button"
+                  className="chip"
+                  aria-pressed={sort === option.key}
+                  onClick={() => setSort(option.key)}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </fieldset>
+            <span className="spacer" />
+            <button
+              type="button"
+              className="chip"
+              aria-pressed={onlyOpen}
+              onClick={() => setOnlyOpen(!onlyOpen)}
+            >
+              Nur noch offene <span className="count">{stillOpen}</span>
+            </button>
+          </div>
+
+          <div className="table-wrap">
+            <table className="table table--cards table--fixed">
+              <caption className="sr-only">Angefragte gemeinsame Datentypen je App</caption>
+              <colgroup>
+                <col style={{ width: '17%' }} />
+                <col style={{ width: '17%' }} />
+                <col style={{ width: '28%' }} />
+                <col style={{ width: '12%' }} />
+                <col style={{ width: '26%' }} />
+              </colgroup>
+              <thead>
+                <tr>
+                  <th>Datentyp</th>
+                  <th>App</th>
+                  <th>Grund</th>
+                  <th>Angefragt</th>
+                  <th>Freigabe</th>
+                </tr>
+              </thead>
+              <tbody>
+                {shown.map((row) => (
+                  <tr key={`${row.type}:${row.app_slug}`}>
+                    <td data-label="Datentyp">
+                      <strong>{row.type_label}</strong>
+                      <div className="muted mono">{row.type}</div>
+                    </td>
+                    <td data-label="App">
+                      <strong>{row.app_name}</strong>
+                      <div className="muted mono">{row.app_slug}</div>
+                    </td>
+                    <td data-label="Grund">{row.why}</td>
+                    <td data-label="Angefragt">{ACCESS_LABEL[row.requested]}</td>
+                    <td data-label="Freigabe">
+                      <div className="suite-grant">
                         <label className="field">
                           <span className="sr-only">
                             Freigabe für {row.app_name}: {row.type_label}
@@ -175,13 +248,32 @@ export function Suite() {
                             ))}
                           </select>
                         </label>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            {writers.length > 1 && (
+                        {openRank(row) === 0 && <span className="pill accent">Offen</span>}
+                        {openRank(row) === 1 && <span className="pill">Weniger als gefragt</span>}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {shown.length === 0 && <p className="empty">Nichts mehr offen.</p>}
+        </>
+      )}
+
+      {byType.map((list) => {
+        const first = list[0];
+        if (!first) return null;
+        const writers = list
+          .filter((r) => r.granted && r.granted !== 'read')
+          .sort((a, b) => (a.priority ?? 1000) - (b.priority ?? 1000));
+        if (writers.length < 2) return null;
+        return (
+          <section key={first.type} className="card" aria-labelledby={`type-${first.type}`}>
+            <h2 id={`type-${first.type}`} className="section-title">
+              {first.type_label} <span className="muted mono">{first.type}</span>
+            </h2>
+            <>
               <div className="stack" style={{ gap: 8 }}>
                 <h3 style={{ fontSize: 16 }}>Vorrang beim Schreiben</h3>
                 <p className="muted" style={{ margin: 0 }}>
@@ -215,7 +307,7 @@ export function Suite() {
                   ))}
                 </ol>
               </div>
-            )}
+            </>
           </section>
         );
       })}

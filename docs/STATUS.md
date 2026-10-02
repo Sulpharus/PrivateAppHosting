@@ -3,7 +3,7 @@
 Where things stand, what the owner still has to do, and what a new session should know.
 Update it at the end of every working session; history belongs in git, not here.
 
-Last updated: 2026-10-01 (second session).
+Last updated: 2026-10-02 (third session).
 
 ## Start here
 
@@ -51,6 +51,8 @@ Where things are documented:
 | Personal API keys | Admin switches an API to "persönlich"; the SDK popup leads to `/account/keys` | ADR 0014 |
 | Release editions | `v*` tags build cloud, PC/server and complete packages; `cloud-v*`, `pc-server-v*` one edition | ADR 0016, `docs/runbooks/releases.md` |
 | Sportplaner course price | Whole course or monthly fee, split over the sessions that take place, booked per session in Statistik | `hosted/sportplaner/js/price.js`, README |
+| Medialog | "Sammlung" tab no longer shows the suggestion chips ("Vorschläge") under the search | `hosted/medialog/src/views/SammlungView.tsx` |
+| Gemeinsame Daten | One aligned table (Datentyp, App, Grund, Angefragt, Freigabe); sort by open requests first, type or app; filter "Nur noch offene"; write priority below | `apps/portal/src/admin/Suite.tsx` |
 | German formats | Date, month and time inputs as German parts in every browser; full dates as "01. Okt. 2026"; German numbers | `packages/ui/kit/ui.js`, `docs/ai/DESIGN-SYSTEM.md` §8 |
 
 The Sportplaner map (tab "Karte") and course mode (editor step "Zeiten" → "Kurs") are live

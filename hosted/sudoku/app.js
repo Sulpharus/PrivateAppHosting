@@ -1,7 +1,6 @@
 // Sudoku: the board and its input. Rules and generator are in logic.js (generated in a worker),
 // the Gaming Hub parts in the kit's game.js (login, playtime, results, leaderboard).
 import {
-  box,
   col,
   conflicts,
   generate,
@@ -156,14 +155,29 @@ function paint() {
 
 // ---- playing ------------------------------------------------------------------------------
 
+function blank() {
+  for (const cell of document.querySelectorAll('.su-cell')) {
+    cell.replaceChildren();
+    cell.className = 'su-cell';
+    cell.setAttribute('aria-label', 'wird erzeugt');
+  }
+  for (const key of document.querySelectorAll('.su-key')) key.disabled = true;
+  $('#hints').textContent = '0';
+  $('#undo').disabled = true;
+}
+
 async function newPuzzle() {
   const mine = ++token;
+  // Nothing is playable while the next puzzle is made.
+  game = null;
   clock.reset();
+  blank();
   $('#end').hidden = true;
   $('#busy').hidden = false;
   document.body.setAttribute('aria-busy', 'true');
   const made = await take(level);
   if (mine !== token) return;
+  clock.reset();
   $('#busy').hidden = true;
   document.body.removeAttribute('aria-busy');
   game = newGame(made.puzzle, made.solution);
@@ -294,9 +308,9 @@ for (const [key, def] of Object.entries(LEVELS)) {
   levelsHost.append(b);
 }
 void newPuzzle();
-void box;
 
 (async () => {
   mn = await window.mnGame.connect({ player: '#player', hub: '#hub' });
+  clock.attach();
   void showRecords();
 })();

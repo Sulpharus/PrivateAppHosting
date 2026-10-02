@@ -19,3 +19,6 @@ Leicht, Mittel, Schwer, Extrem. Every puzzle is made on the spot, never looked u
 - **Gaming Hub:** stats `time_1` … `time_5` (fewer seconds is better, hints included). Login,
   playtime, saving and the leaderboard come from the kit helper `/_mininode/game.js`.
 - **Data:** none (`data.mode: none`). A running puzzle is not saved.
+- **Touch targets:** the 9×9 board scales with the screen (about 37 px per cell on a 360 px wide
+  phone, up to 52 px); the number pad keys are at least 44 px. A board that fits nine columns
+  cannot have 44 px cells on the narrowest phones.

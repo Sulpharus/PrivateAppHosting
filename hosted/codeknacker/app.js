@@ -136,7 +136,10 @@ document.addEventListener('keydown', (e) => {
   else if (e.key === 'Backspace') {
     current.pop();
     render();
-  } else if (e.key === 'Enter' && e.target === document.body) submit();
+  } else if (e.key === 'Enter' && !e.target.closest?.('#submit, #back, #restart')) {
+    e.preventDefault();
+    submit();
+  }
 });
 
 async function showRecords() {
@@ -151,5 +154,6 @@ async function showRecords() {
 render();
 (async () => {
   mn = await window.mnGame.connect({ player: '#player', hub: '#hub' });
+  clock.attach();
   void showRecords();
 })();

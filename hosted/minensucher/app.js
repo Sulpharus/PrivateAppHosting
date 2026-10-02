@@ -1,6 +1,6 @@
 // Minensucher: the board and its input. Rules are in logic.js, the Gaming Hub parts in the kit's
 // game.js (login, playtime, results, leaderboard).
-import { chord, LEVELS, minesLeft, neighbors, newBoard, reveal, toggleFlag } from './logic.js';
+import { chord, LEVELS, minesLeft, newBoard, reveal, toggleFlag } from './logic.js';
 
 const $ = (s) => document.querySelector(s);
 const { format } = window.mnGame;
@@ -169,6 +169,8 @@ board$.addEventListener('contextmenu', (e) => {
   const btn = e.target.closest('.ms-cell');
   if (!btn) return;
   e.preventDefault();
+  // Android sends contextmenu after the long press that already set the flag.
+  if (longPressed) return;
   act(Number(btn.dataset.i), 'flag');
 });
 board$.addEventListener('keydown', (e) => {
@@ -205,10 +207,9 @@ for (const [key, def] of Object.entries(LEVELS)) {
   levelsHost.append(b);
 }
 newGame();
-// Neighbours are used by keyboard hints only; kept imported for clarity of the rules module.
-void neighbors;
 
 (async () => {
   mn = await window.mnGame.connect({ player: '#player', hub: '#hub' });
+  clock.attach();
   void showRecords();
 })();

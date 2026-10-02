@@ -106,3 +106,43 @@
   color: var(--mn-muted);
   max-width: 62ch;
 }
+
+/* The number colours need their own values on a dark board to keep their contrast. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .ms-cell.n1 {
+    color: #8ab4ff;
+  }
+  :root:not([data-theme="light"]) .ms-cell.n2 {
+    color: #7fd18a;
+  }
+  :root:not([data-theme="light"]) .ms-cell.n3 {
+    color: #ff8a80;
+  }
+  :root:not([data-theme="light"]) .ms-cell.n4 {
+    color: #c9a3ff;
+  }
+  :root:not([data-theme="light"]) .ms-cell.n5 {
+    color: #f0b45c;
+  }
+  :root:not([data-theme="light"]) .ms-cell.n6 {
+    color: #5fd6dd;
+  }
+}
+:root[data-theme="dark"] .ms-cell.n1 {
+  color: #8ab4ff;
+}
+:root[data-theme="dark"] .ms-cell.n2 {
+  color: #7fd18a;
+}
+:root[data-theme="dark"] .ms-cell.n3 {
+  color: #ff8a80;
+}
+:root[data-theme="dark"] .ms-cell.n4 {
+  color: #c9a3ff;
+}
+:root[data-theme="dark"] .ms-cell.n5 {
+  color: #f0b45c;
+}
+:root[data-theme="dark"] .ms-cell.n6 {
+  color: #5fd6dd;
+}

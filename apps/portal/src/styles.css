@@ -1523,3 +1523,25 @@ code,
   height: 20px;
   accent-color: var(--accent);
 }
+
+/* Gemeinsame Daten: one table, every column at the same place in every row */
+.table--fixed {
+  table-layout: fixed;
+}
+.table--fixed td {
+  overflow-wrap: anywhere;
+}
+.suite-grant {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.suite-grant .field {
+  flex: 1 1 140px;
+}
+@media (max-width: 700px) {
+  .table--fixed {
+    table-layout: auto;
+  }
+}

@@ -6,6 +6,7 @@
 //     als …", or a link to set the name). Resolves to null offline: the game still works.
 //   const clock = mnGame.timer({ onTick, mn: () => mn })
 //     clock.start() begins the timer and playtime tracking (once), clock.stop() ends both,
+//     clock.attach() starts the tracking when `mn` only arrived after the first move,
 //     clock.seconds() is the elapsed time, clock.reset() starts over. A penalty (hints) is added
 //     with clock.penalty(seconds).
 //   await mnGame.report(mn, 'win' | 'loss' | 'draw' | 'done', { time: 91 }, seconds)
@@ -76,18 +77,27 @@
       },
       seconds,
       start() {
-        if (handle) return;
-        startedAt = startedAt || Date.now();
-        handle = setInterval(() => onTick?.(seconds()), 1000);
+        if (!handle) {
+          startedAt = Date.now();
+          handle = setInterval(() => onTick?.(seconds()), 1000);
+        }
+        api.attach();
+      },
+      /** Starts playtime tracking when the client arrived after the round began. */
+      attach() {
         const client = mn();
-        if (client && !stopTracking) stopTracking = client.game.track();
+        if (handle && client && !stopTracking) stopTracking = client.game.track();
       },
       stop() {
+        // Fold the running time in, so a later start() carries on instead of counting the pause.
+        const total = seconds();
         clearInterval(handle);
         handle = 0;
+        extra = total;
+        startedAt = 0;
         stopTracking?.();
         stopTracking = null;
-        return seconds();
+        return total;
       },
       /** Adds seconds to the clock (a hint costs time); also while it is not running. */
       penalty(add) {

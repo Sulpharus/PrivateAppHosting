@@ -384,5 +384,6 @@ async function showRecords() {
 newGame();
 (async () => {
   mn = await window.mnGame.connect({ player: '#player', hub: '#hub' });
+  clock.attach();
   void showRecords();
 })();
