@@ -59,7 +59,8 @@ function UsernameCard({ onSaved }: { onSaved?: (name: string | null) => void }) 
     loadUsername().then(
       (name) => {
         setCurrent(name);
-        setValue(name ?? '');
+        // The name arrives after the first paint: never overwrite what the person already typed.
+        setValue((typed) => (typed === '' ? (name ?? '') : typed));
       },
       () => setCurrent(null),
     );
