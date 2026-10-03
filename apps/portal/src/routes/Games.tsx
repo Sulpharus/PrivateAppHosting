@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router';
+import { AppIcon } from '../components/AppIcon.tsx';
 import { AppDrawersDialog, DrawerContentDialog, NameDialog } from '../components/DrawerDialogs.tsx';
 import { DrawerIcon } from '../components/icons.tsx';
 import { ReorderGrid } from '../components/ReorderGrid.tsx';
 import { TopBar } from '../components/TopBar.tsx';
-import { appUrl, monogram, tintFor } from '../lib/apps.ts';
+import { appUrl } from '../lib/apps.ts';
 import { applyOrder, scopeOf } from '../lib/arrange.ts';
 import {
   achievements,
@@ -202,9 +203,7 @@ function GameCard({
         }}
       >
         <div className="tile-head">
-          <div className="monogram" style={{ background: tintFor(game.slug) }} aria-hidden="true">
-            {monogram(game.name)}
-          </div>
+          <AppIcon app={game} />
           <div className="tile-title">
             <strong>{game.name}</strong>
             <span className="muted" style={{ fontSize: 13 }}>
@@ -350,13 +349,7 @@ export function Games() {
                       Weiterspielen
                     </h2>
                     <div className="row">
-                      <div
-                        className="monogram"
-                        style={{ background: tintFor(last.slug) }}
-                        aria-hidden="true"
-                      >
-                        {monogram(last.name)}
-                      </div>
+                      <AppIcon app={last} />
                       <div className="stack" style={{ gap: 2 }}>
                         <strong>{last.name}</strong>
                         <span className="muted" style={{ fontSize: 13 }}>
@@ -689,9 +682,7 @@ export function GameProfile() {
       <main className="page stack" style={{ gap: 24, maxWidth: 960 }}>
         <Link to="/games">← Gaming Hub</Link>
         <div className="row" style={{ flexWrap: 'wrap' }}>
-          <div className="monogram" style={{ background: tintFor(game.slug) }} aria-hidden="true">
-            {monogram(game.name)}
-          </div>
+          <AppIcon app={game} />
           <div className="stack" style={{ gap: 4 }}>
             <h1 style={{ fontSize: 36 }}>{game.name}</h1>
             <span className="muted">{GENRE_LABEL[game.genre]}</span>

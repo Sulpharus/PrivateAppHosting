@@ -92,6 +92,12 @@ since the PR #12 deploy. Earlier deploys stopped at medialog and never shipped t
 
 ## Waiting on the owner
 
+0. **Check in Verwaltung → Hochladen and Apps (nothing the code can do for you):** the page still
+   says "Der automatische Einbau ist noch nicht eingerichtet" until `LIBRARY_DISPATCH_TOKEN`
+   (fine-grained token, Actions: read and write, secret of the GitHub environment `production`)
+   exists and a deploy ran; add `INTEGRATE_TOKEN` too. Google sign-in needs one Google OAuth client
+   entered under Supabase → Auth → Google (`first-setup.md` §3.1). New migrations
+   (`…_profile_language`, `…_app_icons`) are applied by the deploy.
 0. **For the new upload features** (all optional until used, each page says what is missing):
    - `INTEGRATE_TOKEN` (GitHub secret: contents + pull requests write) so CI and deploy run on
      what the integrate workflow creates; `INTEGRATE_AUTOMERGE=true` (variable) only when you
