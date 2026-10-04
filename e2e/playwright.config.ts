@@ -50,8 +50,10 @@ export default defineConfig({
       ['solitaer', 8802],
       ['n2048', 8803],
       ['codeknacker', 8804],
+      ['haushalts-inventar', 8805],
     ].map(([slug, port]) => ({
-      command: `pnpm mininode dev hosted/${slug} --port ${port}`,
+      // shared-account apps need an admin to own their data: make sure there is one first.
+      command: `${slug === 'haushalts-inventar' ? 'node seed-admin.ts && ' : ''}pnpm mininode dev hosted/${slug} --port ${port}`,
       url: `http://localhost:${port}/_mininode/config.json`,
       reuseExistingServer: !process.env.CI,
       timeout: 120_000,

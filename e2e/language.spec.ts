@@ -68,6 +68,11 @@ const APPS: [slug: string, port: number, shows: (page: Page) => ReturnType<Page[
   ['solitaer', 8802, (p) => p.getByText('Move every card to the four foundations.')],
   ['n2048', 8803, (p) => p.getByText('Merge matching tiles until you reach 2048.')],
   ['codeknacker', 8804, (p) => p.getByText('Work out the secret code of four symbols.')],
+  [
+    'haushalts-inventar',
+    8805,
+    (p) => p.getByRole('button', { name: 'Inventory', exact: true }).first(),
+  ],
 ];
 
 test('every hosted app follows the language of the profile', async ({ browser }) => {

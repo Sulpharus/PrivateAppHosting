@@ -1,0 +1,98 @@
+/* The look comes from the App Kit (/_mininode/ui.css); this file only adds what the kit lacks. */
+
+fieldset {
+  min-width: 0;
+}
+/* Button groups are fieldsets for their name; they keep the layout of the kit's classes. */
+fieldset.mn-chips,
+fieldset.mn-seg {
+  border: 0;
+}
+
+/* The long app name fits the 256 px side navigation. */
+.mn-brand-name > span:last-child {
+  font-size: var(--mn-fs-lg);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.mn-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Long German compound words break at syllables instead of mid-word. */
+.mn-tile-title,
+.mn-row-title {
+  hyphens: auto;
+  overflow-wrap: break-word;
+}
+
+/* Parts of a card, a column, the page and a sheet keep one rhythm. */
+.mn-card > * + * {
+  margin-top: var(--mn-s3);
+}
+.mn-main > * + * {
+  margin-top: var(--mn-s4);
+}
+.mn-sheet-body > * + * {
+  margin-top: var(--mn-s3);
+}
+.mn-cols > div > * + * {
+  margin-top: var(--mn-s6);
+}
+
+/* Headings follow the kit's card heading. */
+.mn-card > h2,
+.mn-card > h3 {
+  font-size: var(--mn-fs-lg);
+  margin: 0;
+}
+.mn-card > h3 {
+  margin-top: var(--mn-s5);
+}
+.mn-main > .mn-sect,
+.mn-sheet-body > .mn-sect {
+  margin-top: var(--mn-s6);
+}
+.mn-card .mn-sheet-hero {
+  border-radius: var(--mn-r-md);
+}
+.mn-card .mn-list {
+  box-shadow: none;
+  padding: 0;
+  background: transparent;
+}
+
+/* Quick actions: one column on phones, one row from tablets. */
+.hi-quick {
+  display: grid;
+  gap: var(--mn-s2);
+}
+.hi-quick .mn-btn {
+  white-space: nowrap;
+}
+@media (min-width: 640px) {
+  .hi-quick {
+    grid-template-columns: repeat(3, max-content);
+  }
+}
+
+/* The name cell of a row that opens the item. */
+.hi-name {
+  display: block;
+  min-width: 0;
+  min-height: var(--mn-tap);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+}
+.hi-name:hover .mn-row-title {
+  color: var(--mn-accent-text);
+}
+.hi-name .mn-row-sub {
+  white-space: normal;
+}

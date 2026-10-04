@@ -57,6 +57,7 @@ Where things are documented:
 | KI-Werkstatt | Features in 7 collapsible groups with search; 19 new feature modules (money, dates, editor, drag sort, AI chat/vision, roles, comments, accessibility, errors, testing, migration, game save/touch/generator/kit, container, remote program, library entry) and 2 new types (Server-Dienst, Programm) | `docs/ai/prompts/`, `apps/portal/src/admin/{Workshop,prompts}.ts(x)` |
 | Language switch | Per person in Konto → "Sprache / Language" (de/en, profile + `mn-lang` cookie); every hosted app has `i18n/de.json` + `en.json`; new apps must ship both; doctor checks them | ADR 0017, `docs/ai/LANGUAGE-PACKAGES.md`, `packages/ui/kit/i18n.js`, `e2e/language.spec.ts` |
 | App logos | Verwaltung → Apps uploads a logo per app (bucket `app-icons`); deploy picks up `icon.svg`; prompt module "App-Logo"; tile buttons in their own row | ADR 0018, `apps/portal/src/lib/appIcon.ts`, `packages/cli/src/deploy/icon.ts`, `e2e/app-icons.spec.ts` |
+| Haushaltsinventar | Upload review `ee7721bb` (AI Studio "Steward") rebuilt on the platform: items with photo, receipt, warranty, owner, households, service dates and reminders (`mn.push`), backups that restore, Excel report; data mode `shared-account`, rose accent | `hosted/haushalts-inventar`, `e2e/haushalts-inventar.spec.ts` |
 | German formats | Date, month and time inputs as German parts in every browser; full dates as "01. Okt. 2026"; German numbers | `packages/ui/kit/ui.js`, `docs/ai/DESIGN-SYSTEM.md` §8 |
 
 The Sportplaner map (tab "Karte") and course mode (editor step "Zeiten" → "Kurs") are live
@@ -83,7 +84,7 @@ since the PR #12 deploy. Earlier deploys stopped at medialog and never shipped t
   - To pick values like a person: `locator('.mn-date').getByRole('combobox', { name: 'Monat' })`.
   - Opt out per field or area with `data-mn-native`. Invalid fields get a German message under
     the parts (role=alert) instead of the browser bubble.
-- **Apps that load the kit:** haushalt, kalender, wunschliste, memory and medialog load
+- **Apps that load the kit:** haushalt, kalender, wunschliste, memory, medialog and haushalts-inventar load
   `ui.css` and `ui.js`; the games also load `game.js`. The Sportplaner has its own styles and loads only `ui.js`.
 - **Plain-script apps** (sportplaner, haushalt) share one global scope per page. Testable pure
   logic goes into its own file:
