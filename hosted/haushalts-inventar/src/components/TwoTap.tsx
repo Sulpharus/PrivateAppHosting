@@ -17,19 +17,23 @@ export function TwoTap({ label, confirmLabel, onConfirm, className, disabled }: 
     return () => clearTimeout(timer);
   }, [armed]);
   return (
-    <button
-      type="button"
-      className={className ?? 'mn-btn mn-btn--danger'}
-      disabled={disabled}
-      aria-live="polite"
-      onClick={() => {
-        if (armed) {
-          setArmed(false);
-          onConfirm();
-        } else setArmed(true);
-      }}
-    >
-      {armed ? confirmLabel : label}
-    </button>
+    <>
+      <button
+        type="button"
+        className={className ?? 'mn-btn mn-btn--danger'}
+        disabled={disabled}
+        onClick={() => {
+          if (armed) {
+            setArmed(false);
+            onConfirm();
+          } else setArmed(true);
+        }}
+      >
+        {armed ? confirmLabel : label}
+      </button>
+      <span className="mn-sr-only" role="status">
+        {armed ? confirmLabel : ''}
+      </span>
+    </>
   );
 }

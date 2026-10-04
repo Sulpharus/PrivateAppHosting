@@ -43,7 +43,11 @@ export default function App() {
   const [editor, setEditor] = useState<EditorState | null>(null);
   const [maintenance, setMaintenance] = useState<{ item: Item; suggestion: string } | null>(null);
 
-  const activeHouseholdId = data.prefs.activeHouseholdId ?? '';
+  // A household another person deleted falls back to "all".
+  const preferred = data.prefs.activeHouseholdId ?? '';
+  const activeHouseholdId = data.households.some((household) => household.id === preferred)
+    ? preferred
+    : '';
   const viewMode = data.prefs.viewMode ?? 'grid';
   const scopeFilters: Filters = { ...filters, householdId: activeHouseholdId };
 
@@ -219,6 +223,7 @@ export default function App() {
           focusReceipt={editor.focusReceipt}
           onClose={() => setEditor(null)}
           onSave={api.saveItem}
+          onDiscard={api.dropFiles}
         />
       )}
       {maintenance && (

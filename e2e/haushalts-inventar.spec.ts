@@ -94,3 +94,42 @@ test('haushalts-inventar: add an item with files, keep it, log a service, delete
 
   expect(errors).toEqual([]);
 });
+
+test('haushalts-inventar: a restored backup brings back deleted items and keeps the old state', async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  await signIn(page, lena.email);
+  await expect(page.locator('.mn-sk')).toHaveCount(0, { timeout: 15_000 });
+
+  await page.getByRole('button', { name: 'Gegenstand hinzufügen' }).first().click();
+  const editor = page.getByRole('dialog', { name: 'Neuer Gegenstand' });
+  await editor.getByLabel('Name *').fill('Sofa Sicherung');
+  await editor.getByRole('button', { name: 'Gegenstand anlegen' }).click();
+  await expect(page.getByText('Gegenstand angelegt')).toBeVisible();
+
+  // Back it up, then delete the item.
+  await page.getByRole('button', { name: 'Haushalt', exact: true }).first().click();
+  await page.getByLabel('Name der Sicherung').fill('Vorher');
+  await page.getByRole('button', { name: 'Sicherung anlegen' }).click();
+  await expect(page.getByText('Sicherung angelegt')).toBeVisible();
+  await page.getByRole('button', { name: 'Inventar', exact: true }).first().click();
+  await page.locator('.mn-tile').filter({ hasText: 'Sofa Sicherung' }).click();
+  const sheet = page.getByRole('dialog');
+  await sheet.getByRole('button', { name: 'Löschen', exact: true }).click();
+  await sheet.getByRole('button', { name: 'Zum Löschen erneut tippen' }).click();
+  await expect(page.getByText('Dein Inventar ist noch leer')).toBeVisible();
+
+  // Restore asks twice and saves the empty state first.
+  await page.getByRole('button', { name: 'Haushalt', exact: true }).first().click();
+  await page.getByRole('button', { name: 'Wiederherstellen', exact: true }).click();
+  await page.getByRole('button', { name: 'Erneut tippen: ersetzt dein Inventar' }).click();
+  await expect(page.getByText('Sicherung wiederhergestellt')).toBeVisible();
+  await expect(page.getByText('Vor dem Wiederherstellen von „Vorher“')).toBeVisible();
+  await page.getByRole('button', { name: 'Inventar', exact: true }).first().click();
+  await expect(page.locator('.mn-tile').filter({ hasText: 'Sofa Sicherung' })).toBeVisible();
+
+  expect(errors).toEqual([]);
+});

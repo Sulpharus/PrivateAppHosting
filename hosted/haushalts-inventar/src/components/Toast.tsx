@@ -24,10 +24,10 @@ export function ToastContainer() {
     };
   }, []);
 
-  if (!toast) return null;
+  // The live region stays in the page, so screen readers announce the text when it changes.
   return (
-    <div className="mn-toast show" role="status" aria-live="polite">
-      {toast.message}
+    <div className={toast ? 'mn-toast show' : 'mn-toast'} role="status" aria-live="polite">
+      {toast?.message}
     </div>
   );
 }

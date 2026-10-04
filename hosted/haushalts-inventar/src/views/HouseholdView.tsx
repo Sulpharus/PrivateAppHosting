@@ -3,7 +3,7 @@ import { showToast } from '../components/Toast';
 import { TwoTap } from '../components/TwoTap';
 import { t } from '../i18n';
 import { useApp } from '../lib/context';
-import { categoryStats } from '../lib/domain';
+import { categoryStats, toIso } from '../lib/domain';
 import { formatDate, formatMoney, newId, roomLabel } from '../lib/format';
 import type { Backup, Household, Item } from '../types';
 
@@ -20,7 +20,7 @@ interface Kit {
 }
 
 function HouseholdCard({ activeHouseholdId }: { activeHouseholdId: string }) {
-  const { data, mn, setHouseholds, setPrefs } = useApp();
+  const { data, mn, setHouseholds, setPrefs, moveItems } = useApp();
   const [name, setName] = useState('');
   const [member, setMember] = useState('');
   const [people, setPeople] = useState<{ id: string; name: string }[]>([]);
@@ -101,6 +101,9 @@ function HouseholdCard({ activeHouseholdId }: { activeHouseholdId: string }) {
                   confirmLabel={t('common.deleteConfirm')}
                   onConfirm={async () => {
                     const rest = households.filter((other) => other.id !== entry.id);
+                    // Its items move to the next household, so they do not disappear.
+                    const target = rest[0];
+                    if (target && !(await moveItems(entry.id, target.id))) return;
                     await setHouseholds(rest);
                     if (entry.id === activeId) await setPrefs({ activeHouseholdId: rest[0]?.id });
                     showToast(t('household.deleted'));
@@ -355,7 +358,7 @@ function BackupCard() {
 
   const describe = (backup: Backup) =>
     t('backup.line', {
-      date: formatDate(new Date(backup.savedAt).toISOString().slice(0, 10)),
+      date: formatDate(toIso(new Date(backup.savedAt))),
       n: backup.items.length,
     });
 

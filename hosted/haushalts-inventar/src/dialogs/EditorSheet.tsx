@@ -22,6 +22,8 @@ interface Props {
   focusReceipt?: boolean;
   onClose: () => void;
   onSave: (item: Item, removedPaths: (string | undefined)[]) => Promise<boolean>;
+  /** Deletes files that were uploaded for an item that was not saved. */
+  onDiscard: (paths: string[]) => Promise<void>;
 }
 
 type FieldError = 'name' | 'price' | 'months' | null;
@@ -42,6 +44,7 @@ export function EditorSheet({
   focusReceipt,
   onClose,
   onSave,
+  onDiscard,
 }: Props) {
   const id = useMemo(() => item?.id ?? newId('item-'), [item]);
   const [name, setName] = useState(item?.name ?? '');
@@ -75,6 +78,17 @@ export function EditorSheet({
   const [error, setError] = useState<FieldError>(null);
   const [saving, setSaving] = useState(false);
   const receiptBox = useRef<HTMLFieldSetElement>(null);
+  const nameInput = useRef<HTMLInputElement>(null);
+  const priceInput = useRef<HTMLInputElement>(null);
+  const monthsInput = useRef<HTMLInputElement>(null);
+
+  const fail = (
+    field: Exclude<FieldError, null>,
+    input: React.RefObject<HTMLInputElement | null>,
+  ) => {
+    setError(field);
+    input.current?.focus();
+  };
 
   useEffect(() => {
     if (focusReceipt) receiptBox.current?.scrollIntoView({ block: 'center' });
@@ -111,19 +125,22 @@ export function EditorSheet({
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
-    if (!name.trim()) return setError('name');
+    if (!name.trim()) return fail('name', nameInput);
     const amount = price.trim() === '' ? 0 : parseAmount(price);
-    if (amount === null || amount < 0) return setError('price');
-    if (months.trim() !== '' && readNumber(months) === undefined) return setError('months');
+    if (amount === null || amount < 0) return fail('price', priceInput);
+    if (months.trim() !== '' && readNumber(months) === undefined)
+      return fail('months', monthsInput);
     setError(null);
     setSaving(true);
     const removed: (string | undefined)[] = [];
+    const uploaded: string[] = [];
     let photoPath = item?.photoPath;
     let receiptPath = item?.receiptPath;
     try {
       if (photo && mn) {
         removed.push(photoPath);
         photoPath = await uploadItemFile(mn, id, 'photo', photo);
+        uploaded.push(photoPath);
       } else if (dropPhoto) {
         removed.push(photoPath);
         photoPath = undefined;
@@ -131,11 +148,13 @@ export function EditorSheet({
       if (receipt && mn) {
         removed.push(receiptPath);
         receiptPath = await uploadItemFile(mn, id, 'receipt', receipt);
+        uploaded.push(receiptPath);
       } else if (dropReceipt) {
         removed.push(receiptPath);
         receiptPath = undefined;
       }
     } catch {
+      await onDiscard(uploaded);
       showToast(t('editor.uploadFailed'));
       setSaving(false);
       return;
@@ -170,6 +189,8 @@ export function EditorSheet({
       updatedAt: now,
     };
     const ok = await onSave(saved, removed);
+    // Files for an item that was not saved would stay in storage with no one to use them.
+    if (!ok) await onDiscard(uploaded);
     setSaving(false);
     if (ok) {
       showToast(t(item ? 'editor.saved' : 'editor.created'));
@@ -194,6 +215,7 @@ export function EditorSheet({
           <label className="mn-field">
             {t('editor.name')}
             <input
+              ref={nameInput}
               value={name}
               onChange={(event) => setName(event.target.value)}
               aria-invalid={error === 'name'}
@@ -236,6 +258,7 @@ export function EditorSheet({
             <label className="mn-field">
               {t('editor.price')}
               <input
+                ref={priceInput}
                 value={price}
                 inputMode="decimal"
                 onChange={(event) => setPrice(event.target.value)}
@@ -291,6 +314,7 @@ export function EditorSheet({
           <label className="mn-field">
             {t('editor.months')}
             <input
+              ref={monthsInput}
               value={months}
               inputMode="numeric"
               onChange={(event) => setMonths(event.target.value)}

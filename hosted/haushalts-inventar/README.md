@@ -32,6 +32,15 @@ only when no item and no backup uses it any more. Reminders go through `mn.push`
 (warranty: 30 days before the end, service: 7 days before the date) and work with the app
 closed.
 
+Reminders belong to the person who saves the item (the platform delivers a reminder to the
+account that scheduled it), so other members of a shared account do not get them unless they
+save the item themselves; restoring a backup plans them for the person restoring. An item whose
+warranty ends in less than 30 days (or whose service is due in less than 7) gets no reminder,
+because that moment has passed; the overview and the inventory filter show it instead.
+
+Restoring a backup first saves the current state as its own backup ("Vor dem Wiederherstellen
+von …"), so nothing is lost; deleting a household moves its items to the next one.
+
 ## What changed against the export
 
 - **Gone:** the sign-in and guest forms, the language and dark-mode buttons in the header (the
