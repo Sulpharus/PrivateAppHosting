@@ -210,16 +210,20 @@ async function startIntegration(env: ApiEnv, db: SupabaseClient, row: Submission
     environment: environmentOf(env),
   });
   if (started instanceof Response) {
+    const reason = await started
+      .clone()
+      .json<{ message?: string }>()
+      .then((body) => body.message ?? '')
+      .catch(() => '');
     const failed = await updateRow(db, row.id, {
       status: 'failed',
-      log: 'Der Einbau konnte nicht gestartet werden (GitHub hat den Start abgelehnt).',
+      log: `Der Einbau konnte nicht gestartet werden. ${reason}`.trim(),
     });
     return Response.json(
       {
         ...(failed ?? row),
         error: 'github_unavailable',
-        message:
-          'GitHub hat den Start des Einbaus abgelehnt. Der Upload ist gespeichert; versuche es erneut.',
+        message: `${reason || 'GitHub hat den Start des Einbaus abgelehnt.'} Der Upload ist gespeichert; versuche es erneut.`,
       },
       { status: 502 },
     );

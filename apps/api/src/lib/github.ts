@@ -10,6 +10,18 @@ export function workflowRepo(env: ApiEnv): string {
   return env.GITHUB_REPO ?? DEFAULT_REPO;
 }
 
+/** What a refused dispatch usually means, so the owner knows what to fix. */
+function refusalHint(status: number): string {
+  if (status === 401) return 'Der Startschlüssel ist ungültig oder abgelaufen.';
+  if (status === 403)
+    return 'Dem Startschlüssel fehlt die Berechtigung „Actions: Read and write“ für dieses Repository.';
+  if (status === 404)
+    return 'Der Startschlüssel sieht das Repository oder den Workflow nicht (falsches Repository oder Workflow nicht auf main).';
+  if (status === 422)
+    return 'Der Workflow lässt sich auf main nicht starten (Eingaben oder workflow_dispatch fehlen).';
+  return 'unerwartete Antwort von GitHub.';
+}
+
 /**
  * Dispatches `workflow` on main. Returns the Actions page of the workflow, or a problem
  * response when the token is missing or GitHub refuses.
@@ -42,7 +54,19 @@ export async function dispatchWorkflow(
     },
   ).catch(() => null);
   if (!response) return problem(502, 'github_unavailable', 'GitHub ist gerade nicht erreichbar.');
-  if (!response.ok)
-    return problem(502, 'github_error', `GitHub hat den Start abgelehnt (${response.status}).`);
+  if (!response.ok) {
+    const detail = await response
+      .json<{ message?: string }>()
+      .then((body) => body.message ?? '')
+      .catch(() => '');
+    console.error('github dispatch refused', { workflow, status: response.status, detail });
+    return problem(
+      502,
+      'github_error',
+      `GitHub hat den Start abgelehnt (${response.status}): ${refusalHint(response.status)}${
+        detail ? ` [${detail.slice(0, 120)}]` : ''
+      }`,
+    );
+  }
   return { runs: `https://github.com/${repo}/actions/workflows/${workflow}` };
 }

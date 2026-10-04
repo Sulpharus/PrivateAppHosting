@@ -55,3 +55,12 @@ pnpm mininode integrate path/to/export.zip --build --tidy --report report.md
 
 Exit code 0: `hosted/<slug>` is ready. Exit code 2: needs review (see the report). Nothing is left
 behind in `hosted/` in that case.
+
+## "GitHub hat den Start des Einbaus abgelehnt"
+
+The message now names GitHub's status. 401: the token is invalid, expired or pasted with
+quotes or spaces. 403: the fine-grained token lacks *Actions: Read and write*. 404: the token
+does not cover `Sulpharus/PrivateAppHosting` (select the repository explicitly) or
+`integrate.yml` is not on `main`. 422: the workflow cannot be dispatched with these inputs.
+After fixing `LIBRARY_DISPATCH_TOKEN` in the GitHub environment `production`, run the Deploy
+workflow on `main` once so the API Worker receives it, then retry the upload.
