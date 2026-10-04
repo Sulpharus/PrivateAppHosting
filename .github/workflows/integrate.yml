@@ -1,4 +1,5 @@
 name: Web-App einbauen
+# Registered with GitHub on the default branch (touched again so Actions lists it).
 
 # Integrates an uploaded ZIP (Verwaltung → Hochladen, ADR 0013). Started by the API.
 #
