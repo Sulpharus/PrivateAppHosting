@@ -66,6 +66,12 @@
           }
         }
       }
+    },
+    {
+      "includes": ["hosted/bill-the-splitter/**"],
+      "linter": {
+        "enabled": false
+      }
     }
   ],
   "css": {

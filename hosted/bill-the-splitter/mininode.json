@@ -1,0 +1,25 @@
+{
+  "$schema": "../../packages/manifest/schema.json",
+  "specVersion": 1,
+  "slug": "bill-the-splitter",
+  "name": "Bill the Splitter",
+  "description": "Smart group bill splitting with deadlines, receipt management, direct PayPal and SEPA bank payment links, and push remi…",
+  "kind": "spa",
+  "target": "cloudflare",
+  "access": {
+    "default": false,
+    "roles": ["user", "trusted", "admin"]
+  },
+  "data": {
+    "mode": "private"
+  },
+  "ai": {
+    "models": ["gemini-flash"],
+    "monthlyBudgetEur": 3,
+    "maxOutputTokens": 4000
+  },
+  "build": {
+    "command": "pnpm build",
+    "output": "dist"
+  }
+}
