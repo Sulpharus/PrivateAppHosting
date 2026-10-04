@@ -1,0 +1,10 @@
+name: Probe push
+on:
+  push:
+    branches: [claude/probe-wf]
+  workflow_dispatch:
+jobs:
+  a:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hi
