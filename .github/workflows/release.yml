@@ -1,4 +1,5 @@
 name: Release
+# Registered with GitHub on the default branch (touched again so Actions lists it).
 
 # Packages the editions and attaches them to a GitHub release (scripts/package-release.sh).
 #   v1.2.0            all three: cloud, pc-server and complete

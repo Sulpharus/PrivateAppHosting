@@ -1,4 +1,5 @@
 name: KI-Prüfung abgeschlossen
+# Registered with GitHub on the default branch (touched again so Actions lists it).
 
 # When an `ai-review` issue (opened by integrate.yml) is closed, the upload in Verwaltung →
 # Hochladen follows: done when a session finished the integration, dismissed when closed as not

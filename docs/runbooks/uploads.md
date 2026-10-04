@@ -64,3 +64,8 @@ does not cover `Sulpharus/PrivateAppHosting` (select the repository explicitly) 
 `integrate.yml` is not on `main`. 422: the workflow cannot be dispatched with these inputs.
 After fixing `LIBRARY_DISPATCH_TOKEN` in the GitHub environment `production`, run the Deploy
 workflow on `main` once so the API Worker receives it, then retry the upload.
+
+If the start is refused with 404 although the token is right, check that GitHub lists the
+workflow: `GET /repos/Sulpharus/PrivateAppHosting/actions/workflows` must contain
+`integrate.yml`. A workflow file that was merged but never registered answers 404 until a
+push to `main` touches it again.
