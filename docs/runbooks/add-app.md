@@ -18,6 +18,6 @@ hands the rest to the steps below. The steps below are the manual way and the AI
 7. Remote apps only: upload the installer to R2 (`installers/<slug>/<file>`), then *Admin →
    Remote-Apps → Installieren*.
 
-Remove an app: delete `hosted/<slug>/`, merge, then *Admin → Apps → Deaktivieren*. The data
-schema `app_<slug>` stays until you drop it manually (`drop schema app_<slug> cascade;`) after a
-backup.
+Remove an app: Verwaltung → Apps → *Löschen* (`uninstall.md`). It takes the app offline, deletes its
+Worker and (optionally) all its data, and opens a pull request that removes `hosted/<slug>/`. *Deaktivieren*
+only switches it off.

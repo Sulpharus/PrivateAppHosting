@@ -13,3 +13,5 @@
 11. [releases.md](releases.md): cloud, PC/server and complete packages per version
 12. [backups.md](backups.md): full backup from Verwaltung, password-protected, and how to restore it
 13. [uninstall.md](uninstall.md): delete an app with its data from Verwaltung, programs, by hand
+
+The owner's knowledge base (concepts, how-tos, Startup-Guide) is the wiki in Verwaltung → Wissen, source `docs/wiki/`; runbooks are the operating procedures it links to.

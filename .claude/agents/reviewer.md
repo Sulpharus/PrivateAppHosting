@@ -21,6 +21,10 @@ you have checked it. Do not edit files.
      `prefers-reduced-motion`, light + dark, German copy consistent with existing screens.
    - **Ops:** migrations safe on live data (expand/contract), shell scripts pass shellcheck,
      docs/runbooks updated when behaviour or setup changes.
+   - **Knowledge:** a change people can see or operate also updates `docs/wiki/` (the article,
+     `neuigkeiten.md`, the Startup-Guide or `fehlerbehebung.md` where they apply) and, when apps
+     can use it, `docs/ai/NEW-APP-SPEC.md` and `docs/ai/prompts/`. Report a missing or outdated
+     wiki text as a should-fix.
 3. Run the fast checks that apply: `pnpm lint`, `pnpm typecheck`, the changed packages'
    `pnpm --filter <pkg> test`, `pnpm db:test` if `supabase/` changed and Docker is available.
 
