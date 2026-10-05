@@ -143,6 +143,7 @@
   "map.layer.standard": "Standard",
   "map.layer.topo": "Gelände",
   "map.lookingUp": "Adressen werden gesucht … {i} von {n}",
+  "map.lookupFailed": "Adressen konnten nicht gesucht werden. {reason}",
   "map.missing": {
     "one": "{n} Adresse konnte nicht gefunden werden und fehlt auf der Karte.",
     "other": "{n} Adressen konnten nicht gefunden werden und fehlen auf der Karte."
@@ -156,6 +157,16 @@
     "other": "{n} Personen im Umkreis von {place}"
   },
   "map.nearTitle": "Wer wohnt in der Nähe?",
+  "map.problem.api_blocked": "Die Adresse des Dienstes ist gesperrt.",
+  "map.problem.api_key_missing": "Der Schlüssel fehlt noch (Verwaltung → API-Schlüssel).",
+  "map.problem.api_key_unreadable": "Der gespeicherte Schlüssel lässt sich nicht lesen: bitte neu eintragen.",
+  "map.problem.api_not_declared": "Die App ist für diesen Dienst nicht angemeldet (neu deployen).",
+  "map.problem.api_unavailable": "Der Dienst ist gerade nicht erreichbar.",
+  "map.problem.forbidden": "Zugriff verweigert.",
+  "map.problem.network": "Keine Verbindung zum MiniNode-Server.",
+  "map.problem.rate_limited": "Zu viele Anfragen, bitte kurz warten.",
+  "map.problem.unauthenticated": "Du bist nicht angemeldet.",
+  "map.problem.upstream_error": "Der Dienst hat mit Fehler {status} geantwortet.",
   "map.radius": "Umkreis: {km} km",
   "map.region": "Karte der Wohnorte",
   "map.route": "Route",

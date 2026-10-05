@@ -349,5 +349,16 @@
   "map.late": "Nicht zu schaffen: {travel} Weg, nur {gap} Zeit.",
   "map.totalTravel": "Unterwegs insgesamt: {time}",
   "map.min": "{m} Min.",
-  "map.hm": "{h} Std. {m} Min."
+  "map.hm": "{h} Std. {m} Min.",
+  "map.lookupFailed": "Orte konnten nicht gesucht werden. {reason}",
+  "map.problem.api_key_missing": "Der Schlüssel fehlt noch (Verwaltung → API-Schlüssel).",
+  "map.problem.api_key_unreadable": "Der gespeicherte Schlüssel lässt sich nicht lesen: bitte neu eintragen.",
+  "map.problem.api_not_declared": "Die App ist für diesen Dienst nicht angemeldet (neu deployen).",
+  "map.problem.api_blocked": "Die Adresse des Dienstes ist gesperrt.",
+  "map.problem.api_unavailable": "Der Dienst ist gerade nicht erreichbar.",
+  "map.problem.rate_limited": "Zu viele Anfragen, bitte kurz warten.",
+  "map.problem.upstream_error": "Der Dienst hat mit Fehler {status} geantwortet.",
+  "map.problem.unauthenticated": "Du bist nicht angemeldet.",
+  "map.problem.forbidden": "Zugriff verweigert.",
+  "map.problem.network": "Keine Verbindung zum MiniNode-Server."
 }

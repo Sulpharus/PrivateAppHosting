@@ -349,5 +349,16 @@
   "map.late": "Not possible: {travel} to get there, only {gap} between the events.",
   "map.totalTravel": "Total travel time: {time}",
   "map.min": "{m} min",
-  "map.hm": "{h} h {m} min"
+  "map.hm": "{h} h {m} min",
+  "map.lookupFailed": "Places could not be looked up. {reason}",
+  "map.problem.api_key_missing": "The key is still missing (Verwaltung → API-Schlüssel).",
+  "map.problem.api_key_unreadable": "The stored key cannot be read: please enter it again.",
+  "map.problem.api_not_declared": "The app is not registered for this service (deploy again).",
+  "map.problem.api_blocked": "The address of the service is blocked.",
+  "map.problem.api_unavailable": "The service cannot be reached right now.",
+  "map.problem.rate_limited": "Too many requests, please wait a moment.",
+  "map.problem.upstream_error": "The service answered with error {status}.",
+  "map.problem.unauthenticated": "You are not signed in.",
+  "map.problem.forbidden": "Access denied.",
+  "map.problem.network": "No connection to the MiniNode server."
 }

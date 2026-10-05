@@ -61,6 +61,25 @@ let geo = {}; // place text → { lat, lon } | 0 (not found)
 let geoLoaded = false;
 let geoSave = 0;
 let lookingUp = false;
+/** Why the last call to an address or route service failed (shown instead of a silent gap). */
+let lastError = null;
+const KNOWN_PROBLEMS = [
+  'api_key_missing',
+  'api_key_unreadable',
+  'api_not_declared',
+  'api_blocked',
+  'api_unavailable',
+  'rate_limited',
+  'upstream_error',
+  'unauthenticated',
+  'forbidden',
+];
+export function reasonOf(err) {
+  const code = err?.code;
+  return KNOWN_PROBLEMS.includes(code)
+    ? ctx.t(`map.problem.${code}`, { status: err?.status ?? '' })
+    : ctx.t('map.problem.network');
+}
 /** Counts the drawn views: work that was started for an older one stops (the map was removed). */
 let generation = 0;
 const routes = new Map();
@@ -110,9 +129,11 @@ export function geocode(q) {
     const mn = await ctx.ready;
     if (!keyedOff) {
       try {
-        return parseKeyedGeocode(
+        const keyed = parseKeyedGeocode(
           await mn.api('geoapify').json(keyedGeocodePath(q, window.mnI18n.lang)),
         );
+        if (keyed.length) return keyed;
+        // nothing found: the free service may know the place
       } catch (err) {
         if (notSetUp(err)) keyedOff = true;
         // any other failure: ask the free service once
@@ -122,11 +143,18 @@ export function geocode(q) {
     const wait = geoLast + 1100 - Date.now();
     if (wait > 0) await new Promise((r) => setTimeout(r, wait));
     geoLast = Date.now();
-    const rows = await mn
-      .api('nominatim')
-      .json(
-        `/search?format=jsonv2&limit=5&accept-language=${window.mnI18n.lang}&q=${encodeURIComponent(q.trim())}`,
-      );
+    let rows;
+    try {
+      rows = await mn
+        .api('nominatim')
+        .json(
+          `/search?format=jsonv2&limit=5&accept-language=${window.mnI18n.lang}&q=${encodeURIComponent(q.trim())}`,
+        );
+    } catch (err) {
+      lastError = err;
+      throw err;
+    }
+    lastError = null;
     return (Array.isArray(rows) ? rows : [])
       .map((r) => ({
         lat: +r.lat,
@@ -163,9 +191,9 @@ function saveGeoSoon() {
 
 /** Looks up the places the items name but that have no point yet, one after the other. */
 async function lookUp(items, onProgress) {
-  if (lookingUp) return;
+  if (lookingUp) return null;
   const todo = placesToLookUp(items, geo);
-  if (!todo.length) return;
+  if (!todo.length) return null;
   lookingUp = true;
   try {
     for (const [i, place] of todo.entries()) {
@@ -173,12 +201,13 @@ async function lookUp(items, onProgress) {
       try {
         const [hit] = await geocode(place.text);
         geo[place.key] = hit ? { lat: hit.lat, lon: hit.lon } : 0;
-      } catch {
-        break; // offline or not set up: ask again next time
+      } catch (err) {
+        return err; // offline or not set up: ask again next time
       }
       saveGeoSoon();
       ctx.redrawMap?.();
     }
+    return null;
   } finally {
     lookingUp = false;
     onProgress(0, 0);
@@ -208,7 +237,8 @@ async function routeOf(a, b, mode) {
         distance: r.distance,
         line: (r.geometry?.coordinates ?? []).map(([lon, lat]) => [lat, lon]),
       };
-    } catch {
+    } catch (err) {
+      lastError = err;
       return null;
     }
   })();
@@ -320,11 +350,12 @@ export function mapView() {
   ctx.redrawMap = () => paint(items, canvas, list, status, mine);
   // the nodes have to be in the page before Leaflet measures them
   setTimeout(() => paint(items, canvas, list, status, mine), 0);
-  void loadGeo().then(() =>
-    lookUp(items, (i, n) => {
+  void loadGeo().then(async () => {
+    const failure = await lookUp(items, (i, n) => {
       status.textContent = n ? t('map.lookingUp', { i, n }) : '';
-    }),
-  );
+    });
+    if (failure) status.textContent = t('map.lookupFailed', { reason: reasonOf(failure) });
+  });
   return view;
 }
 
@@ -489,7 +520,7 @@ async function drawRoutes(groups, list, status, mine) {
       const route = await routeOf(leg.from, leg.to, p.mode);
       if (drawRoutes.token !== token || !list.isConnected || mine !== generation) return;
       if (!route) {
-        if (el) el.textContent = t('map.routeFailed');
+        if (el) el.textContent = `${t('map.routeFailed')} ${reasonOf(lastError)}`;
         continue;
       }
       total += route.duration;
@@ -678,8 +709,8 @@ function openHome() {
             )
           : h('p', { class: 'mn-note' }, t('map.homeNone')),
       );
-    } catch {
-      results.textContent = t('map.homeOffline');
+    } catch (err) {
+      results.textContent = `${t('map.homeOffline')} ${reasonOf(err)}`;
     }
   };
   const form = h(

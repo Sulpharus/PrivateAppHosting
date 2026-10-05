@@ -73,28 +73,29 @@ export function unknownTexts(texts: (string | undefined | null)[]): string[] {
 
 /**
  * Looks the texts up one after the other (one request per second). `onStep` is called after each
- * one, so a view can draw what is known so far. Stops quietly when the service is unreachable.
+ * one, so a view can draw what is known so far. Stops when the service cannot be reached and returns the error (null when all went well).
  */
 export async function lookUp(
   texts: string[],
   onStep: (done: number, total: number) => void,
   shouldStop: () => boolean = () => false,
-): Promise<void> {
+): Promise<unknown> {
   await loadGeo();
   const todo = unknownTexts(texts);
   for (const [i, text] of todo.entries()) {
-    if (shouldStop()) return;
+    if (shouldStop()) return null;
     try {
       const [hit]: Place[] = await MiniNode.geocode(text);
       (cache as Cache)[placeKey(text)] = hit
         ? { lat: hit.lat, lon: hit.lon, city: hit.city, postcode: hit.postcode }
         : 0;
-    } catch {
-      return;
+    } catch (err) {
+      return err; // the reason, for the view to show
     }
     saveSoon();
     onStep(i + 1, todo.length);
   }
+  return null;
 }
 
 /** Remembers a place the person chose for an address text. */
@@ -114,3 +115,26 @@ export const directionsUrl = (from: Point | null, to: Point, mode: 'car' | 'bike
   `https://www.openstreetmap.org/directions?engine=fossgis_osrm_${mode}&route=${
     from ? `${from.lat}%2C${from.lon}` : ''
   }%3B${to.lat}%2C${to.lon}`;
+
+const KNOWN_PROBLEMS = [
+  'api_key_missing',
+  'api_key_unreadable',
+  'api_not_declared',
+  'api_blocked',
+  'api_unavailable',
+  'rate_limited',
+  'upstream_error',
+  'unauthenticated',
+  'forbidden',
+];
+
+/** A readable reason for a failed call to an address service (the platform proxy's error code). */
+export function reasonOf(
+  err: unknown,
+  t: (key: string, params?: Record<string, string | number>) => string,
+): string {
+  const { code, status } = (err ?? {}) as { code?: string; status?: number };
+  return code && KNOWN_PROBLEMS.includes(code)
+    ? t(`map.problem.${code}`, { status: status ?? '' })
+    : t('map.problem.network');
+}

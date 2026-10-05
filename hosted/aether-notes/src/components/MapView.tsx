@@ -11,6 +11,7 @@ import {
   lookUp,
   type Point,
   pointOf,
+  reasonOf,
   remember,
 } from '../geo';
 import { MiniNode } from '../mininode';
@@ -112,6 +113,7 @@ export default function MapView({ contacts, people, meetups }: Props) {
   const [group, setGroup] = useState('all');
   const [homeText, setHomeText] = useState('');
   const [homeMessage, setHomeMessage] = useState('');
+  const [problem, setProblem] = useState('');
   const mapEl = useRef<HTMLDivElement | null>(null);
   const map = useRef<L.Map | null>(null);
   const layers = useRef<L.Layer[]>([]);
@@ -175,6 +177,7 @@ export default function MapView({ contacts, people, meetups }: Props) {
   useEffect(() => {
     if (!prefsLoaded) return;
     let stop = false;
+    setProblem('');
     void lookUp(
       places,
       (done, total) => {
@@ -183,7 +186,9 @@ export default function MapView({ contacts, people, meetups }: Props) {
         setTick((n) => n + 1);
       },
       () => stop,
-    );
+    ).then((failure) => {
+      if (!stop && failure) setProblem(t('map.lookupFailed', { reason: reasonOf(failure, t) }));
+    });
     return () => {
       stop = true;
     };
@@ -364,8 +369,8 @@ export default function MapView({ contacts, people, meetups }: Props) {
       remember(q, { lat: hit.lat, lon: hit.lon, city: hit.city, postcode: hit.postcode });
       choose({ home: { lat: hit.lat, lon: hit.lon, city: hit.city, label }, center: 'home' });
       setHomeMessage(t('map.homeFound', { place: label }));
-    } catch {
-      setHomeMessage(t('map.homeOffline'));
+    } catch (err) {
+      setHomeMessage(`${t('map.homeOffline')} ${reasonOf(err, t)}`);
     }
   };
 
@@ -443,7 +448,8 @@ export default function MapView({ contacts, people, meetups }: Props) {
 
       <p role="status" className="text-xs text-on-surface-variant min-h-5">
         {progress ? t('map.lookingUp', { i: progress.done, n: progress.total }) : ''}
-        {!progress && missing > 0 ? t('map.missing', { n: missing }) : ''}
+        {!progress && !problem && missing > 0 ? t('map.missing', { n: missing }) : ''}
+        {problem}
       </p>
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px] items-start">

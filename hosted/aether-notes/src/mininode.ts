@@ -130,7 +130,7 @@ export const MiniNode = {
             .json<{ results?: KeyedRow[] }>(
               `/v1/geocode/search?text=${encodeURIComponent(query.trim())}&format=json&limit=5&lang=${encodeURIComponent(window.mnI18n.lang)}`,
             );
-          return (Array.isArray(found.results) ? found.results : [])
+          const matches = (Array.isArray(found.results) ? found.results : [])
             .map((r) => ({
               lat: Number(r.lat),
               lon: Number(r.lon),
@@ -139,6 +139,8 @@ export const MiniNode = {
               postcode: r.postcode,
             }))
             .filter(validPlace);
+          if (matches.length) return matches;
+          // nothing found: the free service may know the place
         } catch (err) {
           // not set up (no key yet): the free service below is used until the page is reloaded
           if (NOT_SET_UP.includes((err as { code?: string })?.code ?? '')) keyedOff = true;
