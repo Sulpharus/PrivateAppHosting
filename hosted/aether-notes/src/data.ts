@@ -16,8 +16,8 @@ import type {
 } from './types';
 
 export const INITIAL_SETTINGS: UserSettings = {
-  userName: 'Alex',
-  userTitle: 'Achtsame Kontakte & Notizen',
+  userName: '',
+  userTitle: '',
   avatarUrl: '',
   streakDays: 0,
   pushEnabled: true,

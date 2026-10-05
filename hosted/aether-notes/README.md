@@ -19,6 +19,12 @@ Achtsames CRM für Kontakte, Notizen, Routinen und Aufgaben auf der MiniNode-Pla
   - Spalten für *Zu tun*, *In Bearbeitung*, *Überprüfung* und *Abgeschlossen*.
   - Meilenstein-Checklisten mit direktem Fortschrittsbalken und Abhaken auf der Karte.
   - Prioritätsstufen und Fälligkeitstermine.
+- **Karte**: Wohnorte aus den Adressen von Kontakten und Personen als Markierungen, **Heatmap** oder nach Orten gruppiert,
+  „Wer wohnt in der Nähe?“ um den eigenen Wohnort oder den Ort eines Treffens (Umkreis, Entfernung, Route). Adressen werden
+  einmal gesucht (Nominatim) und im Konto gemerkt (`aether_geo`). Datenschutz: Dafür gehen die Adresstexte an den öffentlichen
+  Dienst OpenStreetMap Nominatim (über den MiniNode-Proxy); Kartenkacheln laden vom gewählten Anbieter.
+- **Treffen im Kalender**: Treffen mit Datum erscheinen als `event`-Datensätze (Quellschlüssel `meetup:<id>` / `people:<id>`)
+  im Kalender, mit Ort und Koordinaten für dessen Kartenansicht (`src/suite.ts`).
 - **Daten & Sicherung**:
   - Vollständige JSON-Sicherung nach MiniNode-Spezifikation (Export und Import mit ID-Zusammenführung).
   - CSV-Export der Kontakte (deutsch, Semikolon-getrennt mit UTF-8 BOM).
@@ -26,7 +32,9 @@ Achtsames CRM für Kontakte, Notizen, Routinen und Aufgaben auf der MiniNode-Pla
 ## Datenspeicherung & MiniNode
 
 - **Modus**: `private` (jeder Benutzer hat seine eigenen, isolierten Daten).
-- **SDK**: Nutzt `mn.kv` zur Speicherung aller Einträge und `mn.push` / `mn.notify` für Erinnerungen.
+- **Sprache**: Texte in `public/i18n/de.json` und `en.json`; die Sprache kommt aus dem Konto (kein eigener Schalter).
+- **Name**: Kommt immer aus dem MiniNode-Konto (Anzeigename, sonst E-Mail vor dem @); es gibt weder Profilbild noch Namensfelder.
+- **SDK**: Nutzt `@mininode/sdk` direkt (kein eigener Ersatz-Client), mit `mn.kv` zur Speicherung aller Einträge und `mn.push` / `mn.notify` für Erinnerungen.
 - **Offline-Fähigkeit**: Unterstützt lokales Caching und nahtlosen Betrieb ohne aktive Internetverbindung.
 
 ## Darstellung (Oktober 2026)

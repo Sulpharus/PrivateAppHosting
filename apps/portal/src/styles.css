@@ -340,6 +340,12 @@ code,
 
 .home-grid {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+  align-items: start;
+}
+
+.home-grid.with-remote {
   grid-template-columns: minmax(0, 1fr) 340px;
   gap: 40px;
   align-items: start;
@@ -347,8 +353,138 @@ code,
 
 .tiles {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  /* at most three tiles per row, fewer when they would get narrower than 260 px */
+  grid-template-columns: repeat(auto-fill, minmax(max(260px, calc((100% - 32px) / 3)), 1fr));
   gap: 16px;
+}
+
+/* Views of the app list: tiles (default), large logos, list, compact */
+.view-switch {
+  display: inline-flex;
+  margin: 0;
+  padding: 3px;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  background: var(--surface);
+}
+
+.view-switch button {
+  min-height: 38px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 20px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 14px;
+}
+
+.view-switch button[aria-pressed="true"] {
+  background: var(--ink);
+  color: var(--bg);
+}
+
+.view-large {
+  grid-template-columns: repeat(auto-fill, minmax(max(200px, calc((100% - 32px) / 3)), 1fr));
+}
+
+.view-large .tile {
+  align-items: center;
+  text-align: center;
+  min-height: 200px;
+  justify-content: center;
+  padding: 24px 18px 12px;
+}
+
+.view-large .tile-head {
+  flex-direction: column;
+  gap: 12px;
+}
+
+.view-large .app-icon,
+.view-large .monogram {
+  width: 88px;
+  height: 88px;
+  border-radius: 22px;
+  font-size: 32px;
+}
+
+.view-large .tile-title {
+  align-items: center;
+  flex: none;
+  max-width: 100%;
+}
+
+.view-large .tile-actions {
+  justify-content: center;
+}
+
+.view-list {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+}
+
+.view-list .tile {
+  flex-direction: row;
+  align-items: center;
+  min-height: 72px;
+  padding: 10px 16px;
+  gap: 16px;
+}
+
+.view-list .tile-box {
+  flex-direction: row;
+  align-items: center;
+}
+
+.view-list .tile-head {
+  flex: 0 0 min(340px, 45%);
+}
+
+.view-list .tile p {
+  flex: 1;
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+}
+
+.view-list .tile-actions {
+  padding: 0 8px;
+}
+
+.view-compact {
+  grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
+  gap: 12px;
+}
+
+.view-compact .tile {
+  align-items: center;
+  text-align: center;
+  min-height: 0;
+  padding: 16px 8px 4px;
+}
+
+.view-compact .tile-head {
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.view-compact .tile-title {
+  align-items: center;
+  width: 100%;
+  flex: none;
+}
+
+.view-compact .tile-title .mono,
+.view-compact .tile p,
+.view-compact .tile .pill {
+  display: none;
+}
+
+.view-compact .tile-title strong {
+  font-size: 15px;
+  max-width: 100%;
 }
 
 .tile {
@@ -873,6 +1009,34 @@ code,
   .tiles {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 12px;
+  }
+
+  .view-list {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .view-compact {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .view-list .tile-head {
+    flex: 1;
+  }
+
+  .view-large .tile {
+    min-height: 168px;
+  }
+
+  .view-large .app-icon,
+  .view-large .monogram {
+    width: 72px;
+    height: 72px;
+    font-size: 26px;
+  }
+
+  .view-switch {
+    align-self: flex-start;
   }
 
   .filter-bar {

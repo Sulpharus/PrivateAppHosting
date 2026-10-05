@@ -39,7 +39,7 @@ export default function ContactsView({
   onUpdateMeetup,
   onDeleteMeetup,
 }: ContactsViewProps) {
-  const { t, language } = useTranslation();
+  const { t } = useTranslation();
   // Search and Filter State for Contacts
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTag, setSelectedTag] = useState<string>('All');
@@ -92,9 +92,6 @@ export default function ContactsView({
   // Dropdown for linking existing notes
   const [selectedNoteIdToLink, setSelectedNoteIdToLink] = useState('');
 
-  // Check if MiniNode is present
-  const isMiniNodeAbsent = typeof window === 'undefined' || !(window as any).MiniNode;
-
   // Helpers to check follow-up dates (Local Time sv-SE is YYYY-MM-DD)
   const getFollowUpStatus = (dateStr?: string | null) => {
     if (!dateStr) return null;
@@ -106,15 +103,13 @@ export default function ContactsView({
     const diffTime = target.getTime() - today.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-    if (diffDays < 0)
-      return { type: 'overdue', text: language === 'de' ? 'Überfällig' : 'Overdue' };
-    if (diffDays === 0) return { type: 'today', text: language === 'de' ? 'Heute' : 'Today' };
-    if (diffDays === 1)
-      return { type: 'tomorrow', text: language === 'de' ? 'Morgen' : 'Tomorrow' };
+    if (diffDays < 0) return { type: 'overdue', text: t('contacts.overdue') };
+    if (diffDays === 0) return { type: 'today', text: t('contacts.today') };
+    if (diffDays === 1) return { type: 'tomorrow', text: t('contacts.tomorrow') };
     if (diffDays <= 14)
       return {
         type: 'upcoming',
-        text: language === 'de' ? `In ${diffDays} T.` : `In ${diffDays}d`,
+        text: t('contacts.inD', { diffDays }),
       };
     return { type: 'future', text: dateStr };
   };
@@ -368,246 +363,217 @@ export default function ContactsView({
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="font-serif text-3xl font-bold tracking-tight text-on-background">
-            {language === 'de' ? 'CRM-Kontakte & Netzwerk' : 'Client & Contacts CRM'}
+            {t('contacts.clientContactsCrm')}
           </h1>
           <p className="font-serif text-xs italic text-on-surface-variant mt-1.5 leading-normal max-w-xl">
-            {language === 'de'
-              ? 'Behalten Sie ruhige Gespräche, Adressbücher, Nachfolge-Zeitpläne im Blick und planen Sie vorbereitete Treffen.'
-              : 'Keep track of slow conversations, address books, follow-up timelines, and plan prepared meetups.'}
+            {t('contacts.keepTrackOfSlowConversations')}
           </p>
         </div>
         <div className="flex items-center gap-2.5">
           <button
             onClick={handleOpenScheduleMeetup}
-            disabled={isMiniNodeAbsent || contacts.length === 0}
+            disabled={contacts.length === 0}
             className="bg-secondary/15 hover:bg-secondary/25 text-secondary border border-secondary/20 disabled:opacity-50 text-xs font-semibold px-4 py-3 rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer select-none"
           >
             <span className="material-symbols-outlined text-base">calendar_today</span>
-            {language === 'de' ? 'Treffen planen' : 'Schedule Meetup'}
+            {t('contacts.scheduleMeetup')}
           </button>
           <button
             onClick={handleOpenAddContact}
-            disabled={isMiniNodeAbsent}
             className="bg-primary hover:bg-primary/95 text-on-primary disabled:opacity-50 text-xs font-semibold px-4.5 py-3 rounded-xl transition-all shadow-sm active:scale-95 duration-100 flex items-center justify-center gap-2 cursor-pointer select-none"
           >
             <span className="material-symbols-outlined text-base">person_add</span>
-            {language === 'de' ? 'Neuer Kontakt' : 'Add New Contact'}
+            {t('contacts.addNewContact')}
           </button>
         </div>
       </header>
 
-      {/* MiniNode Guard Fallback */}
-      {isMiniNodeAbsent && (
-        <div className="p-4.5 rounded-2xl border border-error/20 bg-error/5 flex items-start gap-3 select-none">
-          <span className="material-symbols-outlined text-error text-xl shrink-0">warning</span>
-          <div>
-            <h4 className="text-xs font-bold text-error uppercase tracking-wider">
-              {language === 'de' ? 'Speicher eingeschränkt' : 'Storage Restricted'}
-            </h4>
-            <p className="text-xs text-on-surface-variant mt-1 leading-normal">
-              {language === 'de'
-                ? 'Kontakte erfordern eine MiniNode-DB-Verbindung. Bitte melden Sie sich an oder führen Sie die Anwendung in der MiniNode-Laufzeit aus, um diesen Tab zu aktivieren.'
-                : 'Contacts require MiniNode DB persistence. Please sign in or mount within the MiniNode runtime to enable this tab.'}
-            </p>
-          </div>
-        </div>
-      )}
-
       {/* MEETUPS HORIZONTAL SIDESCROLLABLE BOARD */}
-      {!isMiniNodeAbsent && (
-        <section className="bg-surface-container-low border border-outline-variant/15 rounded-3xl p-5 space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span
-                className="material-symbols-outlined text-primary text-xl"
-                style={{ fontVariationSettings: "'FILL' 1" }}
-              >
-                event_seat
-              </span>
-              <h2 className="font-serif text-base font-bold text-on-surface">
-                {language === 'de'
-                  ? 'Treffen-Planer & Vorbereitungsboard'
-                  : 'Meetup Planner & Preparation Board'}
-              </h2>
-            </div>
-            {meetups.length > 0 && (
-              <span className="font-mono text-[10px] bg-primary/10 text-primary font-bold px-2.5 py-0.5 rounded-full">
-                {meetups.filter((m) => !m.completed).length}{' '}
-                {language === 'de' ? 'ausstehend' : 'pending'}
-              </span>
-            )}
+      <section className="bg-surface-container-low border border-outline-variant/15 rounded-3xl p-5 space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span
+              className="material-symbols-outlined text-primary text-xl"
+              style={{ fontVariationSettings: "'FILL' 1" }}
+            >
+              event_seat
+            </span>
+            <h2 className="font-serif text-base font-bold text-on-surface">
+              {t('contacts.meetupPlannerPreparationBoard')}
+            </h2>
           </div>
+          {meetups.length > 0 && (
+            <span className="font-mono text-[10px] bg-primary/10 text-primary font-bold px-2.5 py-0.5 rounded-full">
+              {meetups.filter((m) => !m.completed).length} {t('contacts.pending')}
+            </span>
+          )}
+        </div>
 
-          <div className="flex overflow-x-auto gap-4 pb-3 scrollbar-thin scroll-smooth select-none min-h-[170px]">
-            {meetups.length === 0 ? (
-              <div className="w-full flex flex-col items-center justify-center py-6 border border-dashed border-outline-variant/30 rounded-2xl bg-surface-container-lowest text-center">
-                <span className="material-symbols-outlined text-on-surface-variant/40 text-3xl mb-1.5">
-                  groups_3
-                </span>
-                <p className="font-serif text-xs text-on-surface-variant/75">
-                  {language === 'de'
-                    ? 'Keine geplanten Treffen gefunden.'
-                    : 'No scheduled meetups found.'}
-                </p>
-                <button
-                  onClick={handleOpenScheduleMeetup}
-                  disabled={contacts.length === 0}
-                  className="mt-2 text-primary hover:underline text-[11px] font-bold flex items-center gap-1"
-                >
-                  {language === 'de'
-                    ? 'Planen Sie Ihr erstes Treffen mit einem Kontakt'
-                    : 'Schedule your first meetup with a contact'}
-                </button>
-              </div>
-            ) : (
-              meetups
-                .sort(
-                  (a, b) =>
-                    a.date.localeCompare(b.date) || (a.time || '').localeCompare(b.time || ''),
-                )
-                .map((m) => {
-                  const linkedIds = m.contactIds || (m.contactId ? [m.contactId] : []);
-                  const linkedContacts = contacts.filter((c) => linkedIds.includes(c.id));
+        <div className="flex overflow-x-auto gap-4 pb-3 scrollbar-thin scroll-smooth select-none min-h-[170px]">
+          {meetups.length === 0 ? (
+            <div className="w-full flex flex-col items-center justify-center py-6 border border-dashed border-outline-variant/30 rounded-2xl bg-surface-container-lowest text-center">
+              <span className="material-symbols-outlined text-on-surface-variant/40 text-3xl mb-1.5">
+                groups_3
+              </span>
+              <p className="font-serif text-xs text-on-surface-variant/75">
+                {t('contacts.noScheduledMeetupsFound')}
+              </p>
+              <button
+                onClick={handleOpenScheduleMeetup}
+                disabled={contacts.length === 0}
+                className="mt-2 text-primary hover:underline text-[11px] font-bold flex items-center gap-1"
+              >
+                {t('contacts.scheduleYourFirstMeetupWith')}
+              </button>
+            </div>
+          ) : (
+            meetups
+              .sort(
+                (a, b) =>
+                  a.date.localeCompare(b.date) || (a.time || '').localeCompare(b.time || ''),
+              )
+              .map((m) => {
+                const linkedIds = m.contactIds || (m.contactId ? [m.contactId] : []);
+                const linkedContacts = contacts.filter((c) => linkedIds.includes(c.id));
 
-                  return (
-                    <div
-                      key={m.id}
-                      className={`w-80 shrink-0 rounded-2xl border p-4.5 flex flex-col justify-between gap-3.5 transition-all text-left bg-surface-container-lowest ${
-                        m.completed
-                          ? 'border-outline-variant/20 opacity-65 grayscale-30 shadow-xs'
-                          : 'border-primary/20 shadow-sm hover:border-primary/45 hover:shadow-md'
-                      }`}
-                    >
-                      {/* Top Header */}
-                      <div className="space-y-1.5 min-w-0">
-                        <div className="flex items-start justify-between gap-2">
-                          <h3
-                            className={`font-serif text-xs font-bold leading-tight truncate text-on-surface ${m.completed ? 'line-through text-on-surface-variant' : ''}`}
-                          >
-                            {m.title}
-                          </h3>
-                          <div className="flex items-center gap-1 shrink-0">
-                            <button
-                              onClick={() => handleOpenEditMeetup(m)}
-                              className="p-1 hover:bg-surface-container rounded text-on-surface-variant/70 hover:text-primary transition-all cursor-pointer"
-                              title="Edit Meetup"
-                            >
-                              <span className="material-symbols-outlined text-xs">edit</span>
-                            </button>
-                            <button
-                              onClick={() => handleDeleteMeetupItem(m.id)}
-                              className="p-1 hover:bg-error/5 rounded text-on-surface-variant/70 hover:text-error transition-all cursor-pointer"
-                              title="Delete Meetup"
-                            >
-                              <span className="material-symbols-outlined text-xs">delete</span>
-                            </button>
-                          </div>
-                        </div>
-
-                        {/* Date & Time Badge */}
-                        <div className="flex items-center gap-2 text-[10px] font-sans font-semibold text-primary/85 bg-primary/5 rounded-lg px-2 py-0.5 w-max">
-                          <span className="material-symbols-outlined text-sm">schedule</span>
-                          <span>
-                            {m.date} {m.time ? `@ ${m.time}` : ''}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Contact Info Row */}
-                      <div className="space-y-1">
-                        <span className="text-[9px] font-bold uppercase text-on-surface-variant/75 tracking-wider block">
-                          Connections ({linkedContacts.length})
-                        </span>
-                        {linkedContacts.length > 0 ? (
-                          <div className="flex flex-wrap gap-1.5 max-h-[76px] overflow-y-auto pr-1">
-                            {linkedContacts.map((lc) => {
-                              const initials = lc.name
-                                ? lc.name
-                                    .split(' ')
-                                    .map((n) => n[0])
-                                    .join('')
-                                    .slice(0, 2)
-                                    .toUpperCase()
-                                : '??';
-                              return (
-                                <div
-                                  key={lc.id}
-                                  className="flex items-center gap-1.5 p-1.5 pl-2 pr-2.5 bg-surface-container/50 hover:bg-surface-container rounded-lg cursor-pointer duration-100 border border-outline-variant/10 min-w-0 max-w-full"
-                                  onClick={() => {
-                                    setSelectedContact(lc);
-                                    setShowAddContactForm(false);
-                                  }}
-                                  title={`View Profile for ${lc.name}`}
-                                >
-                                  <div className="w-5 h-5 shrink-0 rounded-full bg-primary-container/40 text-primary flex items-center justify-center font-bold text-[8px] uppercase">
-                                    {initials}
-                                  </div>
-                                  <span className="text-[10px] font-bold text-on-surface truncate leading-none">
-                                    {lc.name}
-                                  </span>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        ) : (
-                          <div className="text-[9px] text-error/85 bg-error/5 border border-error/10 p-2 rounded-xl">
-                            Associated contacts have been deleted.
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Preparation Notes */}
-                      <div className="space-y-1">
-                        <span className="text-[9px] font-bold uppercase text-on-surface-variant/75 tracking-wider block">
-                          Preparation & Notes
-                        </span>
-                        <div className="bg-surface-container/60 p-2.5 rounded-xl border border-outline-variant/10 min-h-[48px] max-h-[70px] overflow-y-auto">
-                          <p className="text-[10px] text-on-surface-variant/90 leading-relaxed font-serif italic whitespace-pre-line">
-                            {m.preparationNotes ||
-                              'No notes added. Click edit to compile what you might need to prepare for this meetup.'}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Location & Toggle Complete */}
-                      <div className="flex items-center justify-between gap-2 border-t border-outline-variant/10 pt-2.5 mt-1">
-                        {m.location ? (
-                          <div
-                            className="flex items-center gap-1 min-w-0 text-[10px] text-on-surface-variant/85"
-                            title={m.location}
-                          >
-                            <span className="material-symbols-outlined text-xs text-secondary">
-                              pin_drop
-                            </span>
-                            <span className="truncate">{m.location}</span>
-                          </div>
-                        ) : (
-                          <span className="text-[9px] text-on-surface-variant/60 italic">
-                            Location unassigned
-                          </span>
-                        )}
-
-                        <button
-                          onClick={() => handleToggleMeetupCompleted(m)}
-                          className={`px-3 py-1 rounded-lg text-[9px] font-bold transition-all flex items-center gap-1 cursor-pointer border ${
-                            m.completed
-                              ? 'bg-secondary/5 text-secondary border-secondary/15 hover:bg-secondary/10'
-                              : 'bg-primary text-on-primary border-transparent hover:bg-primary/90'
-                          }`}
+                return (
+                  <div
+                    key={m.id}
+                    className={`w-80 shrink-0 rounded-2xl border p-4.5 flex flex-col justify-between gap-3.5 transition-all text-left bg-surface-container-lowest ${
+                      m.completed
+                        ? 'border-outline-variant/20 opacity-65 grayscale-30 shadow-xs'
+                        : 'border-primary/20 shadow-sm hover:border-primary/45 hover:shadow-md'
+                    }`}
+                  >
+                    {/* Top Header */}
+                    <div className="space-y-1.5 min-w-0">
+                      <div className="flex items-start justify-between gap-2">
+                        <h3
+                          className={`font-serif text-xs font-bold leading-tight truncate text-on-surface ${m.completed ? 'line-through text-on-surface-variant' : ''}`}
                         >
-                          <span className="material-symbols-outlined text-[10px] font-bold">
-                            {m.completed ? 'undo' : 'check'}
-                          </span>
-                          {m.completed ? 'Reopen' : 'Done'}
-                        </button>
+                          {m.title}
+                        </h3>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            onClick={() => handleOpenEditMeetup(m)}
+                            className="p-1 hover:bg-surface-container rounded text-on-surface-variant/70 hover:text-primary transition-all cursor-pointer"
+                            title={t('meetups.edit')}
+                          >
+                            <span className="material-symbols-outlined text-xs">edit</span>
+                          </button>
+                          <button
+                            onClick={() => handleDeleteMeetupItem(m.id)}
+                            className="p-1 hover:bg-error/5 rounded text-on-surface-variant/70 hover:text-error transition-all cursor-pointer"
+                            title={t('meetups.delete')}
+                          >
+                            <span className="material-symbols-outlined text-xs">delete</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Date & Time Badge */}
+                      <div className="flex items-center gap-2 text-[10px] font-sans font-semibold text-primary/85 bg-primary/5 rounded-lg px-2 py-0.5 w-max">
+                        <span className="material-symbols-outlined text-sm">schedule</span>
+                        <span>
+                          {m.date} {m.time ? `@ ${m.time}` : ''}
+                        </span>
                       </div>
                     </div>
-                  );
-                })
-            )}
-          </div>
-        </section>
-      )}
+
+                    {/* Contact Info Row */}
+                    <div className="space-y-1">
+                      <span className="text-[9px] font-bold uppercase text-on-surface-variant/75 tracking-wider block">
+                        Connections ({linkedContacts.length})
+                      </span>
+                      {linkedContacts.length > 0 ? (
+                        <div className="flex flex-wrap gap-1.5 max-h-[76px] overflow-y-auto pr-1">
+                          {linkedContacts.map((lc) => {
+                            const initials = lc.name
+                              ? lc.name
+                                  .split(' ')
+                                  .map((n) => n[0])
+                                  .join('')
+                                  .slice(0, 2)
+                                  .toUpperCase()
+                              : '??';
+                            return (
+                              <div
+                                key={lc.id}
+                                className="flex items-center gap-1.5 p-1.5 pl-2 pr-2.5 bg-surface-container/50 hover:bg-surface-container rounded-lg cursor-pointer duration-100 border border-outline-variant/10 min-w-0 max-w-full"
+                                onClick={() => {
+                                  setSelectedContact(lc);
+                                  setShowAddContactForm(false);
+                                }}
+                                title={`View Profile for ${lc.name}`}
+                              >
+                                <div className="w-5 h-5 shrink-0 rounded-full bg-primary-container/40 text-primary flex items-center justify-center font-bold text-[8px] uppercase">
+                                  {initials}
+                                </div>
+                                <span className="text-[10px] font-bold text-on-surface truncate leading-none">
+                                  {lc.name}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="text-[9px] text-error/85 bg-error/5 border border-error/10 p-2 rounded-xl">
+                          {t('meetups.contactsDeleted')}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Preparation Notes */}
+                    <div className="space-y-1">
+                      <span className="text-[9px] font-bold uppercase text-on-surface-variant/75 tracking-wider block">
+                        {t('meetups.preparation')}
+                      </span>
+                      <div className="bg-surface-container/60 p-2.5 rounded-xl border border-outline-variant/10 min-h-[48px] max-h-[70px] overflow-y-auto">
+                        <p className="text-[10px] text-on-surface-variant/90 leading-relaxed font-serif italic whitespace-pre-line">
+                          {m.preparationNotes ||
+                            'No notes added. Click edit to compile what you might need to prepare for this meetup.'}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Location & Toggle Complete */}
+                    <div className="flex items-center justify-between gap-2 border-t border-outline-variant/10 pt-2.5 mt-1">
+                      {m.location ? (
+                        <div
+                          className="flex items-center gap-1 min-w-0 text-[10px] text-on-surface-variant/85"
+                          title={m.location}
+                        >
+                          <span className="material-symbols-outlined text-xs text-secondary">
+                            pin_drop
+                          </span>
+                          <span className="truncate">{m.location}</span>
+                        </div>
+                      ) : (
+                        <span className="text-[9px] text-on-surface-variant/60 italic">
+                          {t('meetups.locationUnassigned')}
+                        </span>
+                      )}
+
+                      <button
+                        onClick={() => handleToggleMeetupCompleted(m)}
+                        className={`px-3 py-1 rounded-lg text-[9px] font-bold transition-all flex items-center gap-1 cursor-pointer border ${
+                          m.completed
+                            ? 'bg-secondary/5 text-secondary border-secondary/15 hover:bg-secondary/10'
+                            : 'bg-primary text-on-primary border-transparent hover:bg-primary/90'
+                        }`}
+                      >
+                        <span className="material-symbols-outlined text-[10px] font-bold">
+                          {m.completed ? 'undo' : 'check'}
+                        </span>
+                        {m.completed ? 'Reopen' : 'Done'}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })
+          )}
+        </div>
+      </section>
 
       {/* MEETUP FORM MODAL DIALOG */}
       {showScheduleMeetupForm && (
@@ -636,12 +602,12 @@ export default function ContactsView({
             <div className="space-y-3">
               <div className="space-y-1">
                 <label className="text-[10px] font-bold uppercase text-on-surface-variant tracking-wider">
-                  Meetup Title / Objective *
+                  {t('meetups.titleLabel')}
                 </label>
                 <input
                   type="text"
                   required
-                  placeholder="Tea & Acoustic Specs Sync"
+                  placeholder={t('meetups.titlePlaceholder')}
                   value={meetupTitle}
                   onChange={(e) => setMeetupTitle(e.target.value)}
                   className="w-full bg-surface-container border border-outline-variant/30 rounded-xl p-2.5 text-xs text-on-surface focus:outline-none focus:ring-1 focus:ring-primary/30"
@@ -650,12 +616,12 @@ export default function ContactsView({
 
               <div className="space-y-1.5">
                 <label className="text-[10px] font-bold uppercase text-on-surface-variant tracking-wider block">
-                  With Network Contacts * (Select one or more)
+                  {t('meetups.withLabel')}
                 </label>
                 <div className="max-h-36 overflow-y-auto border border-outline-variant/30 rounded-xl bg-surface-container p-2 space-y-1 scrollbar-thin">
                   {contacts.length === 0 ? (
                     <p className="text-[11px] text-on-surface-variant italic p-2">
-                      No contacts available. Please add a contact first.
+                      {t('meetups.noContacts')}
                     </p>
                   ) : (
                     contacts.map((c) => {
@@ -694,7 +660,7 @@ export default function ContactsView({
               <div className="grid grid-cols-2 gap-3.5">
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold uppercase text-on-surface-variant tracking-wider">
-                    Date *
+                    {t('meetups.dateLabel')}
                   </label>
                   <input
                     type="date"
@@ -707,7 +673,7 @@ export default function ContactsView({
 
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold uppercase text-on-surface-variant tracking-wider">
-                    Time
+                    {t('meetups.timeLabel')}
                   </label>
                   <input
                     type="time"
@@ -720,11 +686,11 @@ export default function ContactsView({
 
               <div className="space-y-1">
                 <label className="text-[10px] font-bold uppercase text-on-surface-variant tracking-wider">
-                  Meetup Location
+                  {t('meetups.locationLabel')}
                 </label>
                 <input
                   type="text"
-                  placeholder="Cottage Coffee, Room 4, or Virtual Link"
+                  placeholder={t('meetups.locationPlaceholder')}
                   value={meetupLocation}
                   onChange={(e) => setMeetupLocation(e.target.value)}
                   className="w-full bg-surface-container border border-outline-variant/30 rounded-xl p-2.5 text-xs text-on-surface focus:outline-none focus:ring-1 focus:ring-primary/30"
@@ -733,11 +699,11 @@ export default function ContactsView({
 
               <div className="space-y-1">
                 <label className="text-[10px] font-bold uppercase text-on-surface-variant tracking-wider">
-                  Preparation Notes & Objectives
+                  {t('meetups.notesLabel')}
                 </label>
                 <textarea
                   rows={3}
-                  placeholder="What items should you bring? Any questions to prepare or agendas to outline?"
+                  placeholder={t('meetups.notesPlaceholder')}
                   value={meetupPrepNotes}
                   onChange={(e) => setMeetupPrepNotes(e.target.value)}
                   className="w-full bg-surface-container border border-outline-variant/30 rounded-xl p-2.5 text-xs text-on-surface focus:outline-none focus:ring-1 focus:ring-primary/30"
@@ -754,7 +720,7 @@ export default function ContactsView({
                 }}
                 className="px-4 py-2 rounded-xl border border-outline-variant text-xs text-on-surface hover:bg-surface-container transition-all cursor-pointer"
               >
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 type="submit"
@@ -779,7 +745,7 @@ export default function ContactsView({
               </span>
               <input
                 type="text"
-                placeholder="Search by name, company, job, address..."
+                placeholder={t('contacts.searchPlaceholder')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full bg-surface-container border border-outline-variant/30 rounded-xl py-2 pl-9.5 pr-4 text-xs font-sans placeholder-on-surface-variant/50 focus:outline-none focus:ring-1 focus:ring-primary/40 focus:border-primary/40 text-on-surface"
@@ -798,7 +764,7 @@ export default function ContactsView({
             <div className="grid grid-cols-2 gap-2.5">
               <div className="space-y-1">
                 <label className="text-[10px] uppercase font-bold text-on-surface-variant/70 tracking-wider">
-                  Tag
+                  {t('contacts.tag')}
                 </label>
                 <select
                   value={selectedTag}
@@ -815,7 +781,7 @@ export default function ContactsView({
 
               <div className="space-y-1">
                 <label className="text-[10px] uppercase font-bold text-on-surface-variant/70 tracking-wider">
-                  Company
+                  {t('contacts.company')}
                 </label>
                 <select
                   value={selectedCompany}
@@ -842,7 +808,7 @@ export default function ContactsView({
                     : 'text-on-surface-variant hover:text-on-surface'
                 }`}
               >
-                {language === 'de' ? 'Alle Kontakte' : 'All Contacts'} ({contacts.length})
+                {t('contacts.allContacts')} ({contacts.length})
               </button>
               <button
                 type="button"
@@ -859,7 +825,7 @@ export default function ContactsView({
                 >
                   notifications_active
                 </span>
-                <span>{language === 'de' ? 'Erinnerungen' : 'Reminders'}</span>
+                <span>{t('contacts.reminders')}</span>
                 <span className="bg-primary/10 text-primary px-1.5 py-0.2 rounded-full text-[9px] leading-tight font-extrabold">
                   {contacts.filter((c) => !!c.followUpDate).length}
                 </span>
@@ -875,7 +841,7 @@ export default function ContactsView({
                   person_search
                 </span>
                 <p className="font-serif text-xs text-on-surface-variant/70">
-                  No contacts found matching search.
+                  {t('contacts.noMatch')}
                 </p>
               </div>
             ) : (
@@ -995,12 +961,12 @@ export default function ContactsView({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1 col-span-1 sm:col-span-2">
                   <label className="text-[10px] font-bold uppercase text-on-surface-variant tracking-wider">
-                    Full Name *
+                    {t('contacts.fullName')}
                   </label>
                   <input
                     type="text"
                     required
-                    placeholder="Ada Lovelace"
+                    placeholder={t('contacts.fullNamePlaceholder')}
                     value={contactName}
                     onChange={(e) => setContactName(e.target.value)}
                     className="w-full bg-surface-container border border-outline-variant/30 rounded-xl p-2.5 text-xs text-on-surface focus:ring-1 focus:ring-primary/30"
@@ -1009,11 +975,11 @@ export default function ContactsView({
 
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold uppercase text-on-surface-variant tracking-wider">
-                    Company
+                    {t('contacts.company')}
                   </label>
                   <input
                     type="text"
-                    placeholder="Analytical Engine Ltd"
+                    placeholder={t('contacts.companyPlaceholder')}
                     value={contactCompany}
                     onChange={(e) => setContactCompany(e.target.value)}
                     className="w-full bg-surface-container border border-outline-variant/30 rounded-xl p-2.5 text-xs text-on-surface focus:ring-1 focus:ring-primary/30"
@@ -1022,11 +988,11 @@ export default function ContactsView({
 
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold uppercase text-on-surface-variant tracking-wider">
-                    Job Role
+                    {t('contacts.role')}
                   </label>
                   <input
                     type="text"
-                    placeholder="Chief Mathematician"
+                    placeholder={t('contacts.rolePlaceholder')}
                     value={contactRole}
                     onChange={(e) => setContactRole(e.target.value)}
                     className="w-full bg-surface-container border border-outline-variant/30 rounded-xl p-2.5 text-xs text-on-surface focus:ring-1 focus:ring-primary/30"
@@ -1035,11 +1001,11 @@ export default function ContactsView({
 
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold uppercase text-on-surface-variant tracking-wider">
-                    Email Address
+                    {t('contacts.email')}
                   </label>
                   <input
                     type="email"
-                    placeholder="ada@example.com"
+                    placeholder={t('contacts.emailPlaceholder')}
                     value={contactEmail}
                     onChange={(e) => setContactEmail(e.target.value)}
                     className="w-full bg-surface-container border border-outline-variant/30 rounded-xl p-2.5 text-xs text-on-surface focus:ring-1 focus:ring-primary/30"
@@ -1048,11 +1014,11 @@ export default function ContactsView({
 
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold uppercase text-on-surface-variant tracking-wider">
-                    Phone Number
+                    {t('contacts.phone')}
                   </label>
                   <input
                     type="tel"
-                    placeholder="+44 1815 1210"
+                    placeholder={t('contacts.phonePlaceholder')}
                     value={contactPhone}
                     onChange={(e) => setContactPhone(e.target.value)}
                     className="w-full bg-surface-container border border-outline-variant/30 rounded-xl p-2.5 text-xs text-on-surface focus:ring-1 focus:ring-primary/30"
@@ -1061,7 +1027,7 @@ export default function ContactsView({
 
                 <div className="space-y-1 col-span-1 sm:col-span-2">
                   <label className="text-[10px] font-bold uppercase text-on-surface-variant tracking-wider">
-                    Postal / Office Address
+                    {t('contacts.addressLabel')}
                   </label>
                   <input
                     type="text"
@@ -1074,11 +1040,11 @@ export default function ContactsView({
 
                 <div className="space-y-1 col-span-1 sm:col-span-2">
                   <label className="text-[10px] font-bold uppercase text-on-surface-variant tracking-wider">
-                    Tags (comma-separated)
+                    {t('contacts.tagsLabel')}
                   </label>
                   <input
                     type="text"
-                    placeholder="client, VIP, partner, developer"
+                    placeholder={t('contacts.tagsPlaceholder')}
                     value={contactTags}
                     onChange={(e) => setContactTags(e.target.value)}
                     className="w-full bg-surface-container border border-outline-variant/30 rounded-xl p-2.5 text-xs text-on-surface focus:ring-1 focus:ring-primary/30"
@@ -1088,11 +1054,11 @@ export default function ContactsView({
 
               <div className="space-y-1">
                 <label className="text-[10px] font-bold uppercase text-on-surface-variant tracking-wider">
-                  Notes & Bio Background
+                  {t('contacts.notesLabel')}
                 </label>
                 <textarea
                   rows={3}
-                  placeholder="Met at computing lecture. Discussing analytical engine models..."
+                  placeholder={t('contacts.notesPlaceholder')}
                   value={contactNotes}
                   onChange={(e) => setContactNotes(e.target.value)}
                   className="w-full bg-surface-container border border-outline-variant/30 rounded-xl p-2.5 text-xs text-on-surface focus:ring-1 focus:ring-primary/30"
@@ -1106,7 +1072,7 @@ export default function ContactsView({
                     <span className="material-symbols-outlined text-sm text-secondary">
                       notifications
                     </span>
-                    Follow-up Date
+                    {t('contacts.followUpDate')}
                   </label>
                   <input
                     type="date"
@@ -1118,11 +1084,11 @@ export default function ContactsView({
 
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold uppercase text-on-surface-variant tracking-wider">
-                    Follow-up Task Note
+                    {t('contacts.followUpNote')}
                   </label>
                   <input
                     type="text"
-                    placeholder="Send proposal..."
+                    placeholder={t('contacts.followUpPlaceholder')}
                     value={contactFollowUpNote}
                     onChange={(e) => setContactFollowUpNote(e.target.value)}
                     className="w-full bg-surface-container-low border border-outline-variant/30 rounded-lg p-2 text-xs text-on-surface focus:outline-none"
@@ -1136,13 +1102,13 @@ export default function ContactsView({
                   onClick={() => setShowAddContactForm(false)}
                   className="px-4 py-2 rounded-xl border border-outline-variant text-xs text-on-surface hover:bg-surface-container hover:border-on-surface transition-all cursor-pointer"
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </button>
                 <button
                   type="submit"
                   className="px-5 py-2 bg-primary hover:bg-primary/95 text-on-primary rounded-xl text-xs font-semibold transition-all shadow-xs cursor-pointer"
                 >
-                  Save Profile
+                  {t('contacts.saveProfile')}
                 </button>
               </div>
             </form>
@@ -1178,14 +1144,14 @@ export default function ContactsView({
                   <button
                     onClick={() => handleOpenEditContact(selectedContact)}
                     className="p-2 text-on-surface-variant hover:text-primary hover:bg-surface-container-high rounded-xl transition-all cursor-pointer border border-outline-variant/10"
-                    title="Edit Contact"
+                    title={t('contacts.edit')}
                   >
                     <span className="material-symbols-outlined text-base">edit</span>
                   </button>
                   <button
                     onClick={handleDeleteCurrentContact}
                     className="p-2 text-on-surface-variant hover:text-error hover:bg-error/5 rounded-xl transition-all cursor-pointer border border-outline-variant/10"
-                    title="Delete Contact"
+                    title={t('contacts.delete')}
                   >
                     <span className="material-symbols-outlined text-base">delete</span>
                   </button>
@@ -1197,7 +1163,7 @@ export default function ContactsView({
                 {selectedContact.email && (
                   <div className="space-y-1">
                     <span className="text-[10px] uppercase font-bold text-on-surface-variant/75 tracking-wider block">
-                      Email
+                      {t('contacts.emailShort')}
                     </span>
                     <a
                       href={`mailto:${selectedContact.email}`}
@@ -1212,7 +1178,7 @@ export default function ContactsView({
                 {selectedContact.phone && (
                   <div className="space-y-1">
                     <span className="text-[10px] uppercase font-bold text-on-surface-variant/75 tracking-wider block">
-                      Phone
+                      {t('contacts.phoneShort')}
                     </span>
                     <a
                       href={`tel:${selectedContact.phone}`}
@@ -1227,7 +1193,7 @@ export default function ContactsView({
                 {selectedContact.address && (
                   <div className="sm:col-span-2 space-y-1">
                     <span className="text-[10px] uppercase font-bold text-on-surface-variant/75 tracking-wider block">
-                      Address
+                      {t('contacts.addressShort')}
                     </span>
                     <div className="text-on-surface font-sans flex items-start gap-1 p-2.5 rounded-xl bg-surface-container/30 border border-outline-variant/10">
                       <span className="material-symbols-outlined text-sm text-secondary shrink-0 mt-0.5">
@@ -1241,7 +1207,7 @@ export default function ContactsView({
                 {selectedContact.tags && selectedContact.tags.length > 0 && (
                   <div className="sm:col-span-2 space-y-1">
                     <span className="text-[10px] uppercase font-bold text-on-surface-variant/75 tracking-wider block">
-                      Tags
+                      {t('contacts.tags')}
                     </span>
                     <div className="flex flex-wrap gap-1.5">
                       {selectedContact.tags.map((tag) => (
@@ -1259,7 +1225,7 @@ export default function ContactsView({
                 {selectedContact.notes && (
                   <div className="sm:col-span-2 space-y-1">
                     <span className="text-[10px] uppercase font-bold text-on-surface-variant/75 tracking-wider block">
-                      Background
+                      {t('contacts.background')}
                     </span>
                     <p className="text-on-surface-variant leading-relaxed font-serif bg-surface-container/30 p-3 rounded-xl border border-outline-variant/10 whitespace-pre-line">
                       {selectedContact.notes}
@@ -1279,9 +1245,7 @@ export default function ContactsView({
                       <div className="space-y-0.5 min-w-0">
                         <div className="flex items-center gap-2">
                           <h4 className="text-[11px] font-bold text-on-surface uppercase tracking-wider">
-                            {language === 'de'
-                              ? 'Geplante Wiedervorlage / Erinnerung'
-                              : 'Scheduled Follow-Up / Reminder'}
+                            {t('contacts.scheduledFollowUpReminder')}
                           </h4>
                           {(() => {
                             const st = getFollowUpStatus(selectedContact.followUpDate);
@@ -1300,8 +1264,7 @@ export default function ContactsView({
                         </div>
                         <p className="text-xs text-on-surface-variant font-medium truncate">
                           <strong className="text-primary">{selectedContact.followUpDate}</strong> —{' '}
-                          {selectedContact.followUpNote ||
-                            (language === 'de' ? 'Wiedervorlage' : 'Touch base')}
+                          {selectedContact.followUpNote || t('contacts.touchBase')}
                         </p>
                       </div>
                     </div>
@@ -1320,7 +1283,7 @@ export default function ContactsView({
                       className="px-3 py-1.5 rounded-xl bg-primary text-on-primary hover:bg-primary/95 text-[10px] font-bold transition-all shrink-0 cursor-pointer shadow-2xs flex items-center gap-1 active:scale-95"
                     >
                       <span className="material-symbols-outlined text-xs">done</span>
-                      <span>{language === 'de' ? 'Als erledigt markieren' : 'Mark Completed'}</span>
+                      <span>{t('contacts.markCompleted')}</span>
                     </button>
                   </div>
                 )}
@@ -1339,7 +1302,7 @@ export default function ContactsView({
 
                 {contactLinkedNotes.length === 0 ? (
                   <p className="text-[11px] italic text-on-surface-variant/70">
-                    No notes currently linked to this contact.
+                    {t('contacts.noLinkedNotes')}
                   </p>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
@@ -1359,7 +1322,7 @@ export default function ContactsView({
                         <button
                           onClick={() => onLinkNoteToContact(note.id, undefined)}
                           className="text-on-surface-variant hover:text-error p-1 rounded-lg hover:bg-surface-container duration-100 cursor-pointer"
-                          title="Unlink Note"
+                          title={t('contacts.unlinkNote')}
                         >
                           <span className="material-symbols-outlined text-sm">link_off</span>
                         </button>
@@ -1388,7 +1351,7 @@ export default function ContactsView({
                       disabled={!selectedNoteIdToLink}
                       className="px-3 py-2 bg-primary text-on-primary disabled:opacity-55 text-[11px] font-bold rounded-xl hover:bg-primary/95 transition-all cursor-pointer whitespace-nowrap"
                     >
-                      Link Note
+                      {t('contacts.linkNote')}
                     </button>
                   </div>
                 )}
@@ -1410,7 +1373,7 @@ export default function ContactsView({
                       className="px-3 py-1.5 border border-primary/20 text-primary hover:bg-primary/5 rounded-xl text-[11px] font-bold transition-all flex items-center gap-1 cursor-pointer"
                     >
                       <span className="material-symbols-outlined text-sm">add</span>
-                      Log Interaction
+                      {t('contacts.logInteraction')}
                     </button>
                   )}
                 </div>
@@ -1423,7 +1386,7 @@ export default function ContactsView({
                   >
                     <div className="flex items-center justify-between border-b border-outline-variant/10 pb-2">
                       <span className="text-[10px] font-bold uppercase text-on-surface-variant tracking-wider">
-                        Record Contact interaction
+                        {t('contacts.recordInteraction')}
                       </span>
                       <button
                         type="button"
@@ -1437,7 +1400,7 @@ export default function ContactsView({
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-1">
                         <label className="text-[9px] uppercase font-bold text-on-surface-variant/80 tracking-wider">
-                          Date
+                          {t('contacts.date')}
                         </label>
                         <input
                           type="date"
@@ -1450,7 +1413,7 @@ export default function ContactsView({
 
                       <div className="space-y-1">
                         <label className="text-[9px] uppercase font-bold text-on-surface-variant/80 tracking-wider">
-                          Channel
+                          {t('contacts.channel')}
                         </label>
                         <select
                           value={interactionChannel}
@@ -1467,12 +1430,12 @@ export default function ContactsView({
 
                     <div className="space-y-1">
                       <label className="text-[9px] uppercase font-bold text-on-surface-variant/80 tracking-wider">
-                        Discussion Summary
+                        {t('contacts.summary')}
                       </label>
                       <textarea
                         rows={2}
                         required
-                        placeholder="Discussed Q3 deliverables and set follow-up schedule..."
+                        placeholder={t('contacts.summaryPlaceholder')}
                         value={interactionSummary}
                         onChange={(e) => setInteractionSummary(e.target.value)}
                         className="w-full bg-surface-container-low border border-outline-variant/30 rounded-lg p-2 text-[11px] text-on-surface focus:outline-none"
@@ -1485,13 +1448,13 @@ export default function ContactsView({
                         onClick={() => setShowAddInteractionForm(false)}
                         className="px-3 py-1.5 border border-outline-variant rounded-lg text-[10px] text-on-surface hover:bg-surface-container-low cursor-pointer"
                       >
-                        Cancel
+                        {t('common.cancel')}
                       </button>
                       <button
                         type="submit"
                         className="px-3.5 py-1.5 bg-primary text-on-primary rounded-lg text-[10px] font-semibold hover:bg-primary/95 transition-all cursor-pointer"
                       >
-                        Record Logs
+                        {t('contacts.recordLogs')}
                       </button>
                     </div>
                   </form>
@@ -1500,7 +1463,7 @@ export default function ContactsView({
                 {/* List of logged interactions */}
                 {contactInteractions.length === 0 ? (
                   <p className="text-[11px] italic text-on-surface-variant/60">
-                    No interaction logs stored yet.
+                    {t('contacts.noLogs')}
                   </p>
                 ) : (
                   <div className="space-y-3 max-h-[35vh] overflow-y-auto pr-1">
@@ -1526,7 +1489,7 @@ export default function ContactsView({
                         <button
                           onClick={() => onDeleteInteraction(int.id)}
                           className="opacity-0 group-hover:opacity-100 hover:text-error transition-opacity duration-150 p-1 rounded-md shrink-0 self-start cursor-pointer font-sans"
-                          title="Delete Log"
+                          title={t('contacts.deleteLog')}
                         >
                           <span className="material-symbols-outlined text-xs">delete</span>
                         </button>
@@ -1546,11 +1509,10 @@ export default function ContactsView({
                 contact_page
               </span>
               <h3 className="font-serif text-base font-bold text-on-surface">
-                No Contact Selected
+                {t('contacts.noneSelected')}
               </h3>
               <p className="font-serif text-xs text-on-surface-variant/75 text-center mt-1.5 leading-normal max-w-sm">
-                Select a contact profile from the list directory to inspect contact data, log
-                interactions, and link associated notes.
+                {t('contacts.noneSelectedHint')}
               </p>
             </div>
           )}

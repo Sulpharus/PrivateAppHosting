@@ -18,6 +18,8 @@ import {
 import { parseIcs, toIcs } from './ics.js';
 import { appName, COLORS, itemsFor, onDay, SELF, sourcesFrom, spanOf } from './items.js';
 import { isoWeek, layoutDay, monthGrid, startOfWeek } from './layout.js';
+import { geocode, initMap, mapView } from './map.js';
+import { validPoint } from './route.js';
 import { buildRule, describeRule, occurrenceKey, parseRule } from './rrule.js';
 
 // ---------- helpers ----------
@@ -166,7 +168,7 @@ const reminderLabel = (offset) => {
 
 // ---------- state ----------
 const params = new URLSearchParams(location.search);
-const VIEWS = ['month', 'week', 'day', 'list'];
+const VIEWS = ['month', 'week', 'day', 'list', 'map'];
 const S = {
   view: VIEWS.includes(params.get('view')) ? params.get('view') : 'month',
   anchor: parseDateParam(params.get('date')) ?? dayStart(new Date()),
@@ -212,6 +214,11 @@ function rangeOf(view, anchor) {
   if (view === 'week') {
     const from = startOfWeek(anchor);
     return { from, to: addDays(from, 7) };
+  }
+  if (view === 'map') {
+    // the map shows a day, a week or all seven weeks, whichever the person chose
+    const from = startOfWeek(anchor);
+    return { from, to: addDays(from, 49) };
   }
   const from = dayStart(anchor);
   return { from, to: addDays(from, view === 'day' ? 1 : 42) };
@@ -316,6 +323,18 @@ function setSource(id, patch) {
   }, 400);
 }
 
+function savePrefs() {
+  clearTimeout(prefsTimer);
+  prefsTimer = setTimeout(async () => {
+    try {
+      const mn = await ready;
+      await mn.kv.set('prefs', S.prefs);
+    } catch {
+      toast(t('error.prefsSave'));
+    }
+  }, 400);
+}
+
 const sourceName = (item) => S.sources.find((s) => s.id === item.sourceId)?.name ?? '';
 const itemLabel = (item) =>
   [item.title, whenText(item), item.cancelled ? t('event.cancelled') : null, sourceName(item)]
@@ -343,7 +362,13 @@ function step(n) {
   if (S.view === 'month') {
     const last = new Date(a.getFullYear(), a.getMonth() + n + 1, 0).getDate();
     S.anchor = new Date(a.getFullYear(), a.getMonth() + n, Math.min(a.getDate(), last));
-  } else S.anchor = addDays(a, n * { week: 7, day: 1, list: 42 }[S.view]);
+  } else {
+    const days =
+      S.view === 'map'
+        ? { day: 1, week: 7, all: 42 }[S.prefs.map?.scope ?? 'day']
+        : { week: 7, day: 1, list: 42 }[S.view];
+    S.anchor = addDays(a, n * days);
+  }
   S.mini = null;
   void load();
 }
@@ -360,6 +385,15 @@ function titleFor() {
   if (S.view === 'week') return `${F.dm.format(from)} – ${F.dm.format(addDays(to, -1))}`;
   if (S.view === 'day')
     return sameDay(S.anchor, new Date()) ? t('nav.today') : F.dayLong.format(S.anchor);
+  if (S.view === 'map') {
+    const scope = S.prefs.map?.scope ?? 'day';
+    if (scope === 'day') return F.dayLong.format(S.anchor);
+    if (scope === 'week') {
+      const start = startOfWeek(S.anchor);
+      return `${F.dm.format(start)} – ${F.dm.format(addDays(start, 6))}`;
+    }
+    return t('map.title');
+  }
   return t('nav.upcoming');
 }
 function subtitleFor() {
@@ -371,6 +405,10 @@ function subtitleFor() {
   if (S.view === 'day')
     return sameDay(S.anchor, new Date()) ? `${F.dayLong.format(S.anchor)} · ${n}` : n;
   if (S.view === 'list') return t('subtitle.list', { from: F.day.format(from), n });
+  if (S.view === 'map') {
+    const withPlace = S.items.filter((i) => i.record.place_name || validPoint(i.record)).length;
+    return t('map.subtitle', { n: withPlace });
+  }
   return n;
 }
 
@@ -476,6 +514,7 @@ function viewBody() {
     return timeGrid(Array.from({ length: 7 }, (_, i) => addDays(from, i)));
   }
   if (S.view === 'day') return timeGrid([S.anchor]);
+  if (S.view === 'map') return mapView();
   return agenda();
 }
 
@@ -1122,6 +1161,21 @@ function openDetail(item) {
           { class: 'mn-facts' },
           facts.map(([k, v]) => h('div', {}, h('dt', {}, k), h('dd', {}, v))),
         ),
+        r.place_name || validPoint(r)
+          ? h(
+              'button',
+              {
+                type: 'button',
+                class: 'mn-link',
+                onclick: () => {
+                  window.mnui.sheet.close();
+                  S.prefs.map = { ...(S.prefs.map ?? {}), scope: 'day' };
+                  setView('map', item.start);
+                },
+              },
+              t('detail.showOnMap'),
+            )
+          : null,
         link
           ? h(
               'a',
@@ -1212,6 +1266,8 @@ const baseFields = (r) => ({
   starts_at: r.starts_at,
   ends_at: r.ends_at,
   place_name: r.place_name,
+  lat: r.lat,
+  lon: r.lon,
   data: { ...(r.data ?? {}) },
 });
 const isFirst = (item) => {
@@ -1671,12 +1727,52 @@ async function openEditor(item, opts = {}) {
     option('cancelled', t('chip.cancelled')),
   );
   status.value = src?.data?.status ?? 'confirmed';
+  // The checked point of the place (stored with the event, so the map needs no lookup).
+  let coords = validPoint({ lat: src?.lat, lon: src?.lon })
+    ? { lat: src.lat, lon: src.lon, q: (src.place_name ?? '').trim() }
+    : null;
+  const placeNote = h(
+    'p',
+    { class: 'mn-note', role: 'status' },
+    coords ? t('editor.placeChecked') : '',
+  );
   const place = h('input', {
     name: 'place',
     maxlength: 300,
     autocomplete: 'off',
     value: src?.place_name ?? '',
   });
+  place.addEventListener('input', () => {
+    if (coords && coords.q !== place.value.trim()) {
+      coords = null;
+      placeNote.textContent = '';
+    }
+  });
+  const checkPlace = h(
+    'button',
+    {
+      type: 'button',
+      class: 'mn-btn',
+      onclick: async (e) => {
+        const text = place.value.trim();
+        if (!text) return;
+        e.currentTarget.disabled = true;
+        placeNote.textContent = t('map.searching');
+        try {
+          const [hit] = await geocode(text);
+          if (hit) {
+            coords = { lat: hit.lat, lon: hit.lon, q: text };
+            placeNote.textContent = t('editor.placeFound', { place: hit.label });
+          } else placeNote.textContent = t('editor.placeNone');
+        } catch {
+          placeNote.textContent = t('editor.placeOffline');
+        } finally {
+          e.currentTarget.disabled = false;
+        }
+      },
+    },
+    t('editor.placeCheck'),
+  );
   const description = h(
     'textarea',
     { name: 'description', rows: 4, maxlength: 10000 },
@@ -1723,6 +1819,7 @@ async function openEditor(item, opts = {}) {
       'div',
       {},
       h('label', { class: 'mn-field' }, t('fact.place'), place),
+      h('div', { class: 'cal-place-check' }, checkPlace, placeNote),
       h('label', { class: 'mn-field' }, t('fact.description'), description),
       h('label', { class: 'mn-field' }, t('editor.link'), url),
     ),
@@ -1821,11 +1918,26 @@ async function openEditor(item, opts = {}) {
       reminders: reminder.value ? [{ offset: reminder.value, channel: 'push' }] : null,
     };
     if (scope !== 'one') data.recurrence = recurrenceValue();
+    const placeText = place.value.trim();
+    // A place nobody checked is looked up quietly (a few seconds at most); no result is no problem.
+    if (placeText && !coords) {
+      try {
+        const [hit] = await Promise.race([
+          geocode(placeText),
+          new Promise((resolve) => setTimeout(() => resolve([]), 3500)),
+        ]);
+        if (hit) coords = { lat: hit.lat, lon: hit.lon, q: placeText };
+      } catch {
+        // offline or not set up
+      }
+    }
     const fields = {
       title: text,
       starts_at: s.toISOString(),
       ends_at: e.toISOString(),
-      place_name: place.value.trim() || null,
+      place_name: placeText || null,
+      lat: placeText && coords ? coords.lat : null,
+      lon: placeText && coords ? coords.lon : null,
       data,
     };
     saving = true;
@@ -2728,7 +2840,7 @@ const SHORTCUTS = [
   ['T', 'keys.today'],
   [['J', 'N'], 'keys.next'],
   [['K', 'P'], 'keys.prev'],
-  ['M, W, D, L', 'keys.views'],
+  ['M, W, D, L, O', 'keys.views'],
   ['C', 'keys.add'],
   ['/', 'keys.search'],
 ];
@@ -2763,6 +2875,7 @@ document.addEventListener('keydown', (e) => {
     w: () => setView('week'),
     d: () => setView('day'),
     l: () => setView('list'),
+    o: () => setView('map'),
     c: () => openEditor(null),
     '/': openSearch,
   };
@@ -2773,6 +2886,18 @@ document.addEventListener('keydown', (e) => {
 });
 
 // ---------- wiring ----------
+initMap({
+  S,
+  h,
+  t,
+  F,
+  ready,
+  openDetail,
+  render,
+  savePrefs,
+  startOfWeek,
+  addDays,
+});
 for (const tab of document.querySelectorAll('.mn-tab'))
   tab.addEventListener('click', () => setView(tab.dataset.view));
 for (const button of document.querySelectorAll('[data-add]'))

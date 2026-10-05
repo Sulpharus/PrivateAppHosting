@@ -3,15 +3,22 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { useEffect, useState } from 'react';
 import { useTranslation } from '../contexts/TranslationContext';
-import type { MiniNodeUser } from '../mininode';
+import { MiniNode, type MiniNodeUser } from '../mininode';
 import type { UserSettings } from '../types';
 
 interface SidebarProps {
-  activeTab: 'dashboard' | 'library' | 'routines' | 'people' | 'contacts' | 'settings' | 'kanban';
-  setActiveTab: (
-    tab: 'dashboard' | 'library' | 'routines' | 'people' | 'contacts' | 'settings' | 'kanban',
-  ) => void;
+  activeTab:
+    | 'dashboard'
+    | 'library'
+    | 'routines'
+    | 'people'
+    | 'contacts'
+    | 'map'
+    | 'settings'
+    | 'kanban';
+  setActiveTab: (tab: SidebarProps['activeTab']) => void;
   settings: UserSettings;
   onNewNoteClick: () => void;
   streakCount: number;
@@ -19,19 +26,6 @@ interface SidebarProps {
   onLogout: () => void;
   isDarkMode: boolean;
   onToggleDarkMode: () => void;
-}
-
-/** The profile picture, or the first letter of the name when there is none. */
-function AvatarFace({ url, name }: { url?: string; name?: string }) {
-  if (url)
-    return (
-      <img alt="" className="w-full h-full object-cover" src={url} referrerPolicy="no-referrer" />
-    );
-  return (
-    <span className="w-full h-full flex items-center justify-center text-sm font-bold text-primary select-none">
-      {(name ?? '?').trim().charAt(0).toUpperCase() || '?'}
-    </span>
-  );
 }
 
 export default function Sidebar({
@@ -45,24 +39,38 @@ export default function Sidebar({
   isDarkMode,
   onToggleDarkMode,
 }: SidebarProps) {
-  const { t, language, setLanguage } = useTranslation();
+  const { t } = useTranslation();
+  const [portalUrl, setPortalUrl] = useState('/');
+  useEffect(() => {
+    MiniNode.portalUrl()
+      .then(setPortalUrl)
+      .catch(() => {});
+  }, []);
+  const allApps = t('sidebar.allApps');
 
   return (
     <>
       {/* Desktop Side Navigation (hidden md:flex) */}
-      <aside className="hidden md:flex fixed left-0 top-0 h-full w-64 border-r border-outline-variant/30 flex-col p-4 bg-surface-container-low z-40">
+      <aside className="hidden md:flex fixed left-0 top-0 h-full w-64 overflow-y-auto border-r border-outline-variant/30 flex-col p-4 bg-surface-container-low z-40">
+        <a
+          href={portalUrl}
+          className="mx-2 mt-2 inline-flex min-h-11 items-center gap-1.5 self-start rounded-lg px-2 text-xs font-semibold text-on-surface-variant hover:text-primary focus-visible:outline-2 focus-visible:outline-primary"
+        >
+          <span className="material-symbols-outlined text-base" aria-hidden="true">
+            arrow_back
+          </span>
+          {allApps}
+        </a>
+
         {/* Brand Header */}
         <div className="flex items-center justify-between px-2 py-6 mb-4 min-w-0">
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-9 h-9 rounded-full bg-primary-container overflow-hidden shrink-0 ring-2 ring-primary-container/10">
-              <AvatarFace url={settings.avatarUrl} name={settings.userName} />
-            </div>
             <div className="min-w-0 flex-1">
               <h1 className="font-sans text-base text-primary font-bold leading-none tracking-tight truncate">
-                {language === 'de' ? 'Aether Notizen' : 'Aether Notes'}
+                {t('sidebar.aetherNotes')}
               </h1>
               <p className="font-sans text-[10px] text-on-surface-variant mt-1 font-medium select-none truncate">
-                {settings.userTitle}
+                {t('sidebar.mindfulContactsNotes')}
               </p>
             </div>
           </div>
@@ -78,18 +86,11 @@ export default function Sidebar({
               local_fire_department
             </span>
             <span className="text-xs text-on-surface-variant font-medium">
-              {t('dailyStreak', 'Daily Streak')}
+              {t('ui.dailyStreak')}
             </span>
           </div>
           <span className="text-sm font-bold text-primary">
-            {streakCount}{' '}
-            {language === 'de'
-              ? streakCount === 1
-                ? 'Tag'
-                : 'Tage'
-              : streakCount === 1
-                ? 'Day'
-                : 'Days'}
+            {t('streak.days', { n: streakCount })}
           </span>
         </div>
 
@@ -99,7 +100,7 @@ export default function Sidebar({
           className="mx-2 mb-6 bg-primary text-on-primary hover:bg-primary/95 font-sans font-medium text-sm py-3 px-4 rounded-xl transition-all hover:scale-[1.02] duration-200 flex items-center justify-center gap-2 shadow-sm cursor-pointer select-none"
         >
           <span className="material-symbols-outlined text-lg">add</span>
-          {t('newNote', 'New Note')}
+          {t('ui.newNote')}
         </button>
 
         {/* Navigation Links */}
@@ -120,7 +121,7 @@ export default function Sidebar({
             >
               dashboard
             </span>
-            <span className="text-sm font-medium">{t('dashboard', 'Dashboard')}</span>
+            <span className="text-sm font-medium">{t('ui.dashboard')}</span>
           </button>
 
           {/* Notes Library */}
@@ -139,7 +140,7 @@ export default function Sidebar({
             >
               description
             </span>
-            <span className="text-sm font-medium">{t('notesLibrary', 'Notes Library')}</span>
+            <span className="text-sm font-medium">{t('ui.notesLibrary')}</span>
           </button>
 
           {/* Routines */}
@@ -158,7 +159,7 @@ export default function Sidebar({
             >
               rebase_edit
             </span>
-            <span className="text-sm font-medium">{t('routines', 'Routines')}</span>
+            <span className="text-sm font-medium">{t('ui.routines')}</span>
           </button>
 
           {/* People */}
@@ -177,7 +178,7 @@ export default function Sidebar({
             >
               group
             </span>
-            <span className="text-sm font-medium">{t('people', 'People')}</span>
+            <span className="text-sm font-medium">{t('ui.people')}</span>
           </button>
 
           {/* Contacts CRM */}
@@ -196,7 +197,26 @@ export default function Sidebar({
             >
               contact_page
             </span>
-            <span className="text-sm font-medium">{t('contactsCrm', 'Contacts CRM')}</span>
+            <span className="text-sm font-medium">{t('ui.contactsCrm')}</span>
+          </button>
+
+          {/* Map */}
+          <button
+            onClick={() => setActiveTab('map')}
+            className={`w-full flex items-center gap-3 px-4 py-3 font-sans rounded-xl transition-all duration-200 text-left cursor-pointer group select-none ${
+              activeTab === 'map'
+                ? 'text-primary font-bold bg-primary-container/20 scale-[0.98]'
+                : 'text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface'
+            }`}
+          >
+            <span
+              className={`material-symbols-outlined text-xl transition-transform duration-200 group-hover:scale-105 ${
+                activeTab === 'map' ? 'icon-fill text-primary' : ''
+              }`}
+            >
+              map
+            </span>
+            <span className="text-sm font-medium">{t('sidebar.map')}</span>
           </button>
 
           {/* Combined Tasks Board */}
@@ -215,7 +235,7 @@ export default function Sidebar({
             >
               view_kanban
             </span>
-            <span className="text-sm font-medium">{t('workTasks', 'Tasks Board')}</span>
+            <span className="text-sm font-medium">{t('ui.workTasks')}</span>
           </button>
         </nav>
 
@@ -236,7 +256,7 @@ export default function Sidebar({
             >
               settings
             </span>
-            <span className="text-sm font-medium">{t('settingsTitle', 'Settings')}</span>
+            <span className="text-sm font-medium">{t('ui.settingsTitle')}</span>
           </button>
         </div>
       </aside>
@@ -244,6 +264,15 @@ export default function Sidebar({
       {/* Mobile Top App Bar (md:hidden) */}
       <header className="flex md:hidden justify-between items-center w-full px-5 py-3 bg-surface border-b border-surface-container-high fixed top-0 left-0 z-40 h-14">
         <div className="flex items-center gap-1.5 min-w-0">
+          <a
+            href={portalUrl}
+            aria-label={allApps}
+            className="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-on-surface-variant hover:text-primary focus-visible:outline-2 focus-visible:outline-primary"
+          >
+            <span className="material-symbols-outlined text-xl" aria-hidden="true">
+              arrow_back
+            </span>
+          </a>
           <span
             className="material-symbols-outlined text-primary text-xl shrink-0"
             style={{ fontVariationSettings: "'FILL' 1" }}
@@ -264,110 +293,57 @@ export default function Sidebar({
             </span>
             <span className="text-[10px] font-bold text-primary">{streakCount}d</span>
           </div>
-          {/* Mobile Language Toggle */}
-          <button
-            onClick={() => setLanguage(language === 'en' ? 'de' : 'en')}
-            className="px-2.5 py-1 text-[9px] font-bold tracking-wide rounded-lg bg-surface-container-high/60 border border-outline-variant/15 text-on-surface-variant hover:text-on-surface select-none active:scale-95 transition-all cursor-pointer"
-          >
-            {language === 'en' ? 'DE' : 'EN'}
-          </button>
           <button
             onClick={() => setActiveTab('settings')}
-            className="w-8 h-8 rounded-full bg-surface-container-high overflow-hidden border border-outline-variant/30 shrink-0"
+            aria-label={t('sidebar.settings')}
+            className="w-11 h-11 -mr-1.5 rounded-full flex items-center justify-center text-on-surface-variant hover:text-on-surface shrink-0"
           >
-            <AvatarFace url={settings.avatarUrl} name={settings.userName} />
+            <span className="material-symbols-outlined text-xl">settings</span>
           </button>
         </div>
       </header>
 
-      {/* Mobile Bottom Navigation (md:hidden) */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-surface border-t border-surface-container-high flex justify-around items-center z-45 px-2 pb-safe shadow-lg">
-        <button
-          onClick={() => setActiveTab('dashboard')}
-          className={`flex flex-col items-center justify-center w-full h-full text-center transition-all ${
-            activeTab === 'dashboard' ? 'text-primary' : 'text-on-surface-variant opacity-80'
-          }`}
-        >
-          <span
-            className={`material-symbols-outlined text-xl ${activeTab === 'dashboard' ? 'icon-fill' : ''}`}
-          >
-            dashboard
-          </span>
-          <span className="font-sans text-[10px] font-medium mt-0.5">
-            {t('dashboardTab', 'Dashboard')}
-          </span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('library')}
-          className={`flex flex-col items-center justify-center w-full h-full text-center transition-all ${
-            activeTab === 'library' ? 'text-primary' : 'text-on-surface-variant opacity-80'
-          }`}
-        >
-          <span
-            className={`material-symbols-outlined text-xl ${activeTab === 'library' ? 'icon-fill' : ''}`}
-          >
-            description
-          </span>
-          <span className="font-sans text-[10px] font-medium mt-0.5">
-            {language === 'de' ? 'Notizen' : 'Notes'}
-          </span>
-        </button>
-
-        <div className="w-full flex justify-center -mt-6">
+      {/* Mobile: new note, and the bottom navigation (scrolls sideways when it does not fit) */}
+      <button
+        type="button"
+        onClick={onNewNoteClick}
+        aria-label={t('ui.newNote')}
+        className="md:hidden fixed right-4 bottom-20 z-45 bg-primary hover:bg-primary/95 text-on-primary w-14 h-14 rounded-full flex items-center justify-center sunlight-shadow transition-transform active:scale-95 duration-200 focus-visible:outline-2 focus-visible:outline-primary"
+      >
+        <span className="material-symbols-outlined text-2xl">add</span>
+      </button>
+      <nav
+        aria-label={t('sidebar.areas')}
+        className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-surface border-t border-surface-container-high flex items-stretch overflow-x-auto z-45 px-1 pb-safe shadow-lg"
+      >
+        {(
+          [
+            ['dashboard', 'dashboard', t('ui.dashboardTab')],
+            ['library', 'description', t('sidebar.notes')],
+            ['routines', 'rebase_edit', t('sidebar.routines')],
+            ['people', 'group', t('ui.people')],
+            ['contacts', 'contact_page', t('sidebar.contacts')],
+            ['map', 'map', t('sidebar.map')],
+            ['kanban', 'view_kanban', t('sidebar.tasks')],
+          ] as const
+        ).map(([tab, glyph, label]) => (
           <button
-            onClick={onNewNoteClick}
-            className="bg-primary hover:bg-primary/95 text-on-primary w-12 h-12 rounded-full flex items-center justify-center sunlight-shadow transition-transform active:scale-95 duration-200 shrink-0"
+            key={tab}
+            type="button"
+            onClick={() => setActiveTab(tab)}
+            aria-current={activeTab === tab ? 'page' : undefined}
+            className={`flex flex-col items-center justify-center min-w-[4.5rem] flex-1 shrink-0 h-full text-center transition-colors focus-visible:outline-2 focus-visible:outline-primary ${
+              activeTab === tab ? 'text-primary' : 'text-on-surface-variant opacity-80'
+            }`}
           >
-            <span className="material-symbols-outlined text-2xl">add</span>
+            <span
+              className={`material-symbols-outlined text-xl ${activeTab === tab ? 'icon-fill' : ''}`}
+            >
+              {glyph}
+            </span>
+            <span className="font-sans text-[10px] font-medium mt-0.5">{label}</span>
           </button>
-        </div>
-
-        <button
-          onClick={() => setActiveTab('routines')}
-          className={`flex flex-col items-center justify-center w-full h-full text-center transition-all ${
-            activeTab === 'routines' ? 'text-primary' : 'text-on-surface-variant opacity-80'
-          }`}
-        >
-          <span
-            className={`material-symbols-outlined text-xl ${activeTab === 'routines' ? 'icon-fill' : ''}`}
-          >
-            rebase_edit
-          </span>
-          <span className="font-sans text-[10px] font-medium mt-0.5">
-            {language === 'de' ? 'Routinen' : 'Routines'}
-          </span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('people')}
-          className={`flex flex-col items-center justify-center w-full h-full text-center transition-all ${
-            activeTab === 'people' ? 'text-primary' : 'text-on-surface-variant opacity-80'
-          }`}
-        >
-          <span
-            className={`material-symbols-outlined text-xl ${activeTab === 'people' ? 'icon-fill' : ''}`}
-          >
-            group
-          </span>
-          <span className="font-sans text-[10px] font-medium mt-0.5">{t('people', 'People')}</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('kanban')}
-          className={`flex flex-col items-center justify-center w-full h-full text-center transition-all ${
-            activeTab === 'kanban' ? 'text-primary' : 'text-on-surface-variant opacity-80'
-          }`}
-        >
-          <span
-            className={`material-symbols-outlined text-xl ${activeTab === 'kanban' ? 'icon-fill' : ''}`}
-          >
-            view_kanban
-          </span>
-          <span className="font-sans text-[10px] font-medium mt-0.5">
-            {language === 'de' ? 'Aufgaben' : 'Tasks'}
-          </span>
-        </button>
+        ))}
       </nav>
     </>
   );

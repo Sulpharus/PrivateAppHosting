@@ -34,7 +34,7 @@ const AVAILABLE_TAGS: TagType[] = [
 ];
 
 export default function NoteModal({ note, isOpen, onClose, onSave, onDelete }: NoteModalProps) {
-  const { language } = useTranslation();
+  const { t } = useTranslation();
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [selectedTags, setSelectedTags] = useState<TagType[]>([]);
@@ -115,7 +115,7 @@ export default function NoteModal({ note, isOpen, onClose, onSave, onDelete }: N
 
     onSave({
       id: note?.id,
-      title: title.trim() || (language === 'de' ? 'Unbenannte Reflexion' : 'Untitled Reflection'),
+      title: title.trim() || t('note.untitledReflection'),
       content: finalContent,
       tags: selectedTags.length > 0 ? selectedTags : ['Journal'],
       type,
@@ -132,13 +132,7 @@ export default function NoteModal({ note, isOpen, onClose, onSave, onDelete }: N
         {/* Modal Header */}
         <header className="px-6 py-4 bg-surface-container-low border-b border-outline-variant/15 flex items-center justify-between">
           <h3 className="font-sans text-sm font-bold text-primary uppercase tracking-widest leading-none">
-            {language === 'de'
-              ? note
-                ? 'Reflexion überprüfen'
-                : 'Reflexion entwerfen'
-              : note
-                ? 'Reviewing Reflection'
-                : 'Drafting Reflection'}
+            {note ? t('noteModal.reviewing') : t('noteModal.drafting')}
           </h3>
           <button
             onClick={onClose}
@@ -155,11 +149,7 @@ export default function NoteModal({ note, isOpen, onClose, onSave, onDelete }: N
             <input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder={
-                language === 'de'
-                  ? 'Gib deinem Gedanken einen Namen...'
-                  : 'Give your thought a name...'
-              }
+              placeholder={t('note.giveYourThoughtAName')}
               className="w-full bg-transparent border-none text-xl md:text-2xl font-sans font-bold text-on-surface focus:outline-none placeholder:text-on-surface-variant/30 select-text leading-tight"
             />
           </div>
@@ -169,7 +159,7 @@ export default function NoteModal({ note, isOpen, onClose, onSave, onDelete }: N
             {/* Tag Badges Selectors */}
             <div className="space-y-1.5">
               <label className="block text-xs font-semibold text-on-surface-variant/70 uppercase tracking-wider font-sans leading-none">
-                {language === 'de' ? 'Reflektive Tags' : 'Reflective Tags'}
+                {t('note.reflectiveTags')}
               </label>
               <div className="flex flex-wrap gap-1.5 pt-0.5">
                 {AVAILABLE_TAGS.map((tag) => {
@@ -185,33 +175,19 @@ export default function NoteModal({ note, isOpen, onClose, onSave, onDelete }: N
                       }`}
                     >
                       {tag === 'Creative'
-                        ? language === 'de'
-                          ? 'Kreativ'
-                          : 'Creative'
+                        ? t('note.creative')
                         : tag === 'Journal'
-                          ? language === 'de'
-                            ? 'Journal'
-                            : 'Journal'
+                          ? t('note.journal')
                           : tag === 'Work'
-                            ? language === 'de'
-                              ? 'Arbeit'
-                              : 'Work'
+                            ? t('note.work')
                             : tag === 'Planning'
-                              ? language === 'de'
-                                ? 'Planung'
-                                : 'Planning'
+                              ? t('note.planning')
                               : tag === 'Personal'
-                                ? language === 'de'
-                                  ? 'Privat'
-                                  : 'Personal'
+                                ? t('note.personal')
                                 : tag === 'Idea'
-                                  ? language === 'de'
-                                    ? 'Idee'
-                                    : 'Idea'
+                                  ? t('note.idea')
                                   : tag === 'Draft'
-                                    ? language === 'de'
-                                      ? 'Entwurf'
-                                      : 'Draft'
+                                    ? t('note.draft')
                                     : tag}
                     </button>
                   );
@@ -222,7 +198,7 @@ export default function NoteModal({ note, isOpen, onClose, onSave, onDelete }: N
             {/* Note Type switcher ('text' vs 'checklist') */}
             <div className="space-y-1.5 shrink-0">
               <label className="block text-xs font-semibold text-on-surface-variant/70 uppercase tracking-wider font-sans leading-none">
-                {language === 'de' ? 'Gedanken-Medium' : 'Thought Medium'}
+                {t('note.thoughtMedium')}
               </label>
               <div className="inline-flex rounded-xl bg-surface-container-low p-1 border border-outline-variant/10">
                 <button
@@ -234,7 +210,7 @@ export default function NoteModal({ note, isOpen, onClose, onSave, onDelete }: N
                       : 'text-on-surface-variant hover:text-on-surface'
                   }`}
                 >
-                  {language === 'de' ? 'Freies Journal' : 'Free Journal'}
+                  {t('note.freeJournal')}
                 </button>
                 <button
                   type="button"
@@ -245,7 +221,7 @@ export default function NoteModal({ note, isOpen, onClose, onSave, onDelete }: N
                       : 'text-on-surface-variant hover:text-on-surface'
                   }`}
                 >
-                  {language === 'de' ? 'Fluss-Checkliste' : 'Flow Checklist'}
+                  {t('note.flowChecklist')}
                 </button>
               </div>
             </div>
@@ -257,11 +233,7 @@ export default function NoteModal({ note, isOpen, onClose, onSave, onDelete }: N
               <textarea
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
-                placeholder={
-                  language === 'de'
-                    ? 'Lass deine Gedanken heute auf der Seite freien Lauf...'
-                    : 'Let your thoughts unfold onto the page today...'
-                }
+                placeholder={t('note.letYourThoughtsUnfoldOnto')}
                 rows={10}
                 className="w-full bg-transparent border-none font-serif text-sm md:text-base leading-relaxed text-on-surface focus:outline-none placeholder:text-on-surface-variant/40 select-text resize-none"
               />
@@ -308,9 +280,7 @@ export default function NoteModal({ note, isOpen, onClose, onSave, onDelete }: N
 
                   {checklistItems.length === 0 && (
                     <li className="p-8 text-center bg-surface-container-low/40 rounded-xl border border-dashed border-outline-variant/35 text-xs text-on-surface-variant">
-                      {language === 'de'
-                        ? 'Keine Meilensteine in dieser Liste aufgezeichnet. Nutze das Feld unten, um Einträge hinzuzufügen.'
-                        : 'No milestones recorded in this list. Use the block below to construct items.'}
+                      {t('note.noMilestonesRecordedInThis')}
                     </li>
                   )}
                 </ul>
@@ -320,16 +290,14 @@ export default function NoteModal({ note, isOpen, onClose, onSave, onDelete }: N
                   <input
                     value={newCheckItemText}
                     onChange={(e) => setNewCheckItemText(e.target.value)}
-                    placeholder={
-                      language === 'de' ? 'Meilenstein hinzufügen...' : 'Add item milestone...'
-                    }
+                    placeholder={t('note.addItemMilestone')}
                     className="flex-1 bg-surface-container-low border border-outline-variant/20 px-4 py-2 rounded-xl text-sm font-sans focus:outline-primary placeholder:text-on-surface-variant/40"
                   />
                   <button
                     type="submit"
                     className="bg-primary/10 hover:bg-primary/15 text-primary font-sans text-xs font-semibold px-4 rounded-xl transition-all cursor-pointer"
                   >
-                    {language === 'de' ? 'Block hinzufügen' : 'Add Block'}
+                    {t('note.addBlock')}
                   </button>
                 </form>
               </div>
@@ -344,20 +312,20 @@ export default function NoteModal({ note, isOpen, onClose, onSave, onDelete }: N
             showDeleteConfirm ? (
               <div className="flex items-center gap-1.5 animate-fade-in">
                 <span className="text-[10px] font-sans font-bold text-error uppercase tracking-wider">
-                  {language === 'de' ? 'Bist du sicher?' : 'Are you sure?'}
+                  {t('note.areYouSure')}
                 </span>
                 <button
                   onClick={() => onDelete(note.id)}
                   className="bg-error hover:bg-error/95 text-on-error py-1.5 px-3 rounded-xl font-sans text-xs font-bold select-none cursor-pointer transition-all active:scale-95 duration-100"
                 >
-                  {language === 'de' ? 'Ja, verblassen lassen' : 'Yes, Fade Away'}
+                  {t('note.yesFadeAway')}
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowDeleteConfirm(false)}
                   className="bg-surface hover:bg-surface-container border border-outline-variant/35 py-1.5 px-3 rounded-xl font-sans text-xs font-semibold select-none cursor-pointer"
                 >
-                  {language === 'de' ? 'Abbrechen' : 'Cancel'}
+                  {t('note.cancel')}
                 </button>
               </div>
             ) : (
@@ -367,7 +335,7 @@ export default function NoteModal({ note, isOpen, onClose, onSave, onDelete }: N
                 className="text-error/85 hover:text-error bg-error/10 hover:bg-error/15 py-2 px-3.5 rounded-xl font-sans text-xs font-semibold select-none flex items-center gap-1 cursor-pointer transition-all active:scale-95 duration-100"
               >
                 <span className="material-symbols-outlined text-sm">delete_forever</span>
-                {language === 'de' ? 'Gedanken verblassen lassen' : 'Fade Away Thought'}
+                {t('note.fadeAwayThought')}
               </button>
             )
           ) : (
@@ -379,13 +347,13 @@ export default function NoteModal({ note, isOpen, onClose, onSave, onDelete }: N
               onClick={onClose}
               className="text-on-surface-variant hover:bg-surface border border-outline-variant/35 font-sans text-xs font-semibold py-2 px-4 rounded-xl transition-all cursor-pointer"
             >
-              {language === 'de' ? 'Änderungen verwerfen' : 'Discard Changes'}
+              {t('note.discardChanges')}
             </button>
             <button
               onClick={handleSaveClick}
               className="bg-primary hover:bg-primary/95 text-on-primary font-sans text-xs font-semibold py-2 px-4.5 rounded-xl transition-all shadow-sm cursor-pointer select-none active:scale-95 duration-100"
             >
-              {language === 'de' ? 'Reflexion bewahren' : 'Preserve Reflection'}
+              {t('note.preserveReflection')}
             </button>
           </div>
         </footer>

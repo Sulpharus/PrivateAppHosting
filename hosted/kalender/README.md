@@ -14,9 +14,18 @@ Nothing app-specific: the calendar works only on suite records (ADR 0002, `mn.su
   (`suite.uses` in `mininode.json`). Bookings (`transaction`) start hidden.
 - **Preferences** (visible sources, colours, default calendar) live in `mn.kv` under `prefs`.
 
+## Map (`map.js`, `route.js`)
+
+Events with a place as numbered pins (Leaflet from `/vendor`), for a day, a week or seven weeks. Places without
+coordinates are looked up with Nominatim (one request per second, cached in `mn.kv` under `geo`); the editor's
+"Ort prüfen" stores the point on the record (`lat`, `lon`). Layer, way of travelling, buffer and start point live in
+`prefs.map`. Routes come from `routing.openstreetmap.de` (car, bike, foot) through the platform proxy (`apis` in
+`mininode.json`, both without a key); `route.js` holds the pure parts (legs of a day, judging the time between two
+appointments) and is covered by `test/route.test.js`. Shortcut: O.
+
 ## Features
 
-- Month, week, day and list (six weeks) views; mini month and source list on wide screens.
+- Month, week, day, list (six weeks) and **map** views; mini month and source list on wide screens.
 - Events with all-day flag, place, description, link, colour and status (tentative, cancelled).
 - Repeating events (daily to yearly, interval, weekdays, count or end date). Changes and deletes
   ask for "Nur dieser Termin", "Dieser und alle folgenden" or "Alle Termine der Serie".

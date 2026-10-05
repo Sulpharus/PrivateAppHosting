@@ -32,10 +32,19 @@ die **gemeinsamen Daten** (die „Suite“, ADR 0002; Datentypen: `docs/suite/da
 Haushalt (Typ `contract`, „Bearbeiten“). Nach dem ersten Deploy genehmigst du:
 
 - **Kalender:** Termine mit „Löschen“, die anderen Typen mit „Lesen“;
-- **Sportplaner:** `activity` „Bearbeiten“; **Haushalt:** `contract` „Bearbeiten“.
+- **Sportplaner:** `activity` „Bearbeiten“; **Haushalt:** `contract` „Bearbeiten“; **Aether Notes:** `event` „Löschen“ (seine Treffen mit Ort).
 
 Jede App schreibt ihre Datensätze beim nächsten Öffnen. Ohne Genehmigung zeigt der Kalender nichts und kann nicht speichern.
 Weiteres (Wiederholungen, Erinnerungen, ICS, geteilte Kalender): Runbook `kalender.md`.
+
+### Karte und Wege
+
+Die Ansicht **Karte** (Taste O) zeigt die Termine mit Ort als nummerierte Markierungen für einen Tag, eine Woche oder sieben Wochen, in wählbarem Kartenstil
+(hell/dunkel automatisch, Standard, Gelände, Satellit). Ein Ort ohne Koordinaten wird einmal gesucht und im Konto gemerkt; im Termin-Editor prüft **Ort prüfen**
+den Ort und speichert den Punkt gleich mit. Mit einem **Startpunkt** (deine Adresse) und der Fortbewegung (Auto, Fahrrad, zu Fuß) berechnet die Karte die Wege
+zwischen den Terminen eines Tages, nennt die Zeit zum Losgehen und warnt, wenn die Zeit zwischen zwei Terminen knapp („Knapp“) oder zu kurz ist („Nicht zu
+schaffen“). „Navigation öffnen“ startet die Route in OpenStreetMap. Dafür nutzt der Kalender zwei öffentliche Dienste ohne Schlüssel: Nominatim (Orte suchen) und
+das OpenStreetMap-Routing von FOSSGIS ([API-Schlüssel](wiki:api-schluessel)). Treffen aus Aether Notes erscheinen mit ihrem Ort ebenfalls auf der Karte.
 
 ## Google Kalender
 

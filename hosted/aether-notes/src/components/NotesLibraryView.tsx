@@ -97,7 +97,18 @@ export default function NotesLibraryView({
   onAddJournalEntry,
   onDeleteJournalEntry,
 }: NotesLibraryViewProps) {
-  const { language } = useTranslation();
+  const { t } = useTranslation();
+  const moodName = (value?: string) => {
+    const key =
+      {
+        peaceful: 'peaceful',
+        joyful: 'joyful',
+        reflective: 'reflective',
+        neutral: 'neutral',
+        tired: 'tired',
+      }[value ?? ''] ?? 'anxious';
+    return t(`notesLibrary.${key}`).toLocaleLowerCase(window.mnI18n.locale);
+  };
   // Main view system tab
   const [activeTab, setActiveTab] = useState<'thoughts' | 'journal'>('thoughts');
 
@@ -194,27 +205,19 @@ export default function NotesLibraryView({
   const handleSignPage = (e: FormEvent) => {
     e.preventDefault();
     if (!formText.trim()) {
-      triggerToast(
-        language === 'de'
-          ? 'Bitte schreibe ein paar Sätze, bevor du die Seite signierst.'
-          : 'Please write down some sentences before signing the page.',
-      );
+      triggerToast(t('notesLibrary.pleaseWriteDownSomeSentences'));
       return;
     }
 
     onAddJournalEntry({
       date: formDate,
-      place: formPlace.trim() || (language === 'de' ? 'Gemütliche Ecke' : 'Cozy Corner'),
+      place: formPlace.trim() || t('notesLibrary.cozyCorner'),
       mood: formMood,
       peopleMetIds: formPeopleIds,
       text: formText.trim(),
     });
 
-    triggerToast(
-      language === 'de'
-        ? 'Seite signiert & im Tagebuch gebunden! 📖'
-        : 'Page signed & bound in your Journaling Book! 📖',
-    );
+    triggerToast(t('notesLibrary.pageSignedBoundInYour'));
 
     // Clear and reset state
     setFormPlace('');
@@ -238,16 +241,12 @@ export default function NotesLibraryView({
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-outline-variant/10 pb-4">
         <div>
           <h2 className="font-sans text-3xl text-on-background font-bold tracking-tight flex items-center gap-2">
-            {language === 'de' ? 'Achtsame Räume' : 'Mindful Spaces'}
+            {t('notesLibrary.mindfulSpaces')}
           </h2>
           <p className="font-serif text-sm text-on-surface-variant mt-1 opacity-80">
             {activeTab === 'thoughts'
-              ? language === 'de'
-                ? 'Sammle verstreute Entwürfe, Arbeitslisten und Ideenprotokolle.'
-                : 'Collect scattered drafts, work lists, and ideas logs.'
-              : language === 'de'
-                ? 'Schreibe in ein fortlaufendes Notizbuch; beobachte deine Stimmungen und Verbindungen ohne Ablenkung.'
-                : 'Write into one continuous notebook; monitor your moods and connections without noise.'}
+              ? t('notesLibrary.collectScatteredDraftsWorkLists')
+              : t('notesLibrary.writeIntoOneContinuousNotebook')}
           </p>
         </div>
 
@@ -262,7 +261,7 @@ export default function NotesLibraryView({
             }`}
           >
             <span className="material-symbols-outlined text-base">sticky_note_2</span>
-            {language === 'de' ? 'Verstreute Notizen' : 'Scattered Notes'}
+            {t('notesLibrary.scatteredNotes')}
           </button>
           <button
             onClick={() => setActiveTab('journal')}
@@ -273,7 +272,7 @@ export default function NotesLibraryView({
             }`}
           >
             <span className="material-symbols-outlined text-base">menu_book</span>
-            {language === 'de' ? 'Tagebuch' : 'Journaling Book'}
+            {t('notesLibrary.journalingBook')}
             {journalEntries.length > 0 && (
               <span className="ml-1 px-1.5 py-0.5 bg-primary/10 text-primary text-[9px] rounded-full">
                 {journalEntries.length}
@@ -297,11 +296,7 @@ export default function NotesLibraryView({
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full bg-surface-container-low border border-outline-variant/15 pr-10 pl-11 py-3 rounded-xl outline-none font-sans font-medium text-xs text-on-surface placeholder:text-on-surface-variant/40 transition-all focus:border-primary/50"
-                placeholder={
-                  language === 'de'
-                    ? 'Notizbücher, Checklisten oder Arbeitspläne durchsuchen...'
-                    : 'Search notebooks, checklists, or work specs...'
-                }
+                placeholder={t('notesLibrary.searchNotebooksChecklistsOrWork')}
                 type="text"
               />
               {searchQuery && (
@@ -319,7 +314,7 @@ export default function NotesLibraryView({
               className="bg-primary text-on-primary py-3 px-4.5 rounded-xl text-xs font-bold hover:opacity-95 select-none flex items-center gap-1.5 shadow-xs active:scale-95 duration-100 transition-transform cursor-pointer"
             >
               <span className="material-symbols-outlined text-xs font-black">add</span>
-              {language === 'de' ? 'Reflexion erstellen' : 'Create Reflection'}
+              {t('notesLibrary.createReflection')}
             </button>
           </div>
 
@@ -338,37 +333,21 @@ export default function NotesLibraryView({
                   }`}
                 >
                   {chip.label === 'All'
-                    ? language === 'de'
-                      ? 'Alle'
-                      : 'All'
+                    ? t('notesLibrary.all')
                     : chip.label === 'Creative'
-                      ? language === 'de'
-                        ? 'Kreativ'
-                        : 'Creative'
+                      ? t('notesLibrary.creative')
                       : chip.label === 'Journal'
-                        ? language === 'de'
-                          ? 'Tagebuch'
-                          : 'Journal'
+                        ? t('notesLibrary.journal')
                         : chip.label === 'Work'
-                          ? language === 'de'
-                            ? 'Arbeit'
-                            : 'Work'
+                          ? t('notesLibrary.work')
                           : chip.label === 'Planning'
-                            ? language === 'de'
-                              ? 'Planung'
-                              : 'Planning'
+                            ? t('notesLibrary.planning')
                             : chip.label === 'Personal'
-                              ? language === 'de'
-                                ? 'Privat'
-                                : 'Personal'
+                              ? t('notesLibrary.personal')
                               : chip.label === 'Idea'
-                                ? language === 'de'
-                                  ? 'Idee'
-                                  : 'Idea'
+                                ? t('notesLibrary.idea')
                                 : chip.label === 'Draft'
-                                  ? language === 'de'
-                                    ? 'Entwurf'
-                                    : 'Draft'
+                                  ? t('notesLibrary.draft')
                                   : chip.label}
                 </button>
               );
@@ -395,33 +374,19 @@ export default function NotesLibraryView({
                       className="px-2.5 py-0.5 bg-primary/10 text-primary font-sans text-[10px] uppercase tracking-wider font-extrabold rounded-full select-none"
                     >
                       {tag === 'Creative'
-                        ? language === 'de'
-                          ? 'Kreativ'
-                          : 'Creative'
+                        ? t('notesLibrary.creative')
                         : tag === 'Journal'
-                          ? language === 'de'
-                            ? 'Tagebuch'
-                            : 'Journal'
+                          ? t('notesLibrary.journal')
                           : tag === 'Work'
-                            ? language === 'de'
-                              ? 'Arbeit'
-                              : 'Work'
+                            ? t('notesLibrary.work')
                             : tag === 'Planning'
-                              ? language === 'de'
-                                ? 'Planung'
-                                : 'Planning'
+                              ? t('notesLibrary.planning')
                               : tag === 'Personal'
-                                ? language === 'de'
-                                  ? 'Privat'
-                                  : 'Personal'
+                                ? t('notesLibrary.personal')
                                 : tag === 'Idea'
-                                  ? language === 'de'
-                                    ? 'Idee'
-                                    : 'Idea'
+                                  ? t('notesLibrary.idea')
                                   : tag === 'Draft'
-                                    ? language === 'de'
-                                      ? 'Entwurf'
-                                      : 'Draft'
+                                    ? t('notesLibrary.draft')
                                     : tag}
                     </span>
                   ))}
@@ -465,7 +430,7 @@ export default function NotesLibraryView({
                     {(note.checklistItems?.length ?? 0) > 4 && (
                       <li className="text-[10px] text-outline/70 font-sans italic pl-6 mt-0.5">
                         + {(note.checklistItems?.length ?? 0) - 4}{' '}
-                        {language === 'de' ? 'weitere Meilensteine' : 'more reflections'}
+                        {t('notesLibrary.moreReflections')}
                       </li>
                     )}
                   </ul>
@@ -478,14 +443,11 @@ export default function NotesLibraryView({
                 {/* Date Footer */}
                 <div className="mt-auto pt-4 border-t border-outline-variant/10 flex items-center justify-between text-on-surface-variant/50 font-sans text-[10px] font-bold tracking-wide">
                   <span>
-                    {new Date(note.createdAt).toLocaleDateString(
-                      language === 'de' ? 'de-DE' : undefined,
-                      {
-                        year: 'numeric',
-                        month: 'short',
-                        day: 'numeric',
-                      },
-                    )}
+                    {new Date(note.createdAt).toLocaleDateString(window.mnI18n.locale, {
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric',
+                    })}
                   </span>
                   <span className="material-symbols-outlined text-sm group-hover:text-primary opacity-0 group-hover:opacity-100 transition-all transform translate-x-1 group-hover:translate-x-0">
                     arrow_right_alt
@@ -500,14 +462,10 @@ export default function NotesLibraryView({
                   search_off
                 </span>
                 <p className="font-sans text-sm font-semibold text-on-surface">
-                  {language === 'de'
-                    ? 'Keine Reflexionen stimmen mit deiner Suche überein'
-                    : 'No reflections matched your search'}
+                  {t('notesLibrary.noReflectionsMatchedYourSearch')}
                 </p>
                 <p className="font-sans text-xs text-on-surface-variant/70 mt-1">
-                  {language === 'de'
-                    ? 'Versuche, deinen Stichwortfilter anzupassen oder einen anderen Tag-Chip auszuwählen.'
-                    : 'Try adjusting your keyword filter or changing the selected tag chip.'}
+                  {t('notesLibrary.tryAdjustingYourKeywordFilter')}
                 </p>
                 <button
                   onClick={() => {
@@ -516,7 +474,7 @@ export default function NotesLibraryView({
                   }}
                   className="mt-4 bg-primary/10 hover:bg-primary/15 text-primary text-xs font-semibold px-4 py-2 rounded-xl transition-all cursor-pointer font-sans"
                 >
-                  {language === 'de' ? 'Filter zurücksetzen' : 'Clear Filters'}
+                  {t('notesLibrary.clearFilters')}
                 </button>
               </div>
             )}
@@ -533,13 +491,13 @@ export default function NotesLibraryView({
             <div className="bg-surface-container-low rounded-2xl border border-outline-variant/10 p-5 font-sans space-y-4">
               <h3 className="text-xs uppercase tracking-widest text-primary font-extrabold flex items-center gap-1.5">
                 <span className="material-symbols-outlined text-base">analytics</span>
-                {language === 'de' ? 'Buch-Erkenntnisse & Statistiken' : 'Book Insights & Stats'}
+                {t('notesLibrary.bookInsightsStats')}
               </h3>
 
               <div className="grid grid-cols-2 gap-3.5 pt-1">
                 <div className="p-3 bg-surface-container-lowest rounded-xl border border-outline-variant/10">
                   <span className="block text-[10px] uppercase font-bold text-on-surface-variant/60 leading-none">
-                    {language === 'de' ? 'Einträge gesamt' : 'Total Entries'}
+                    {t('notesLibrary.totalEntries')}
                   </span>
                   <span className="block text-2xl font-black text-on-surface mt-1.5">
                     {stats.total}
@@ -547,10 +505,10 @@ export default function NotesLibraryView({
                 </div>
                 <div className="p-3 bg-surface-container-lowest rounded-xl border border-outline-variant/10">
                   <span className="block text-[10px] uppercase font-bold text-on-surface-variant/60 leading-none">
-                    {language === 'de' ? 'Letzte 7 Tage' : 'Past 7 Days'}
+                    {t('notesLibrary.past7Days')}
                   </span>
                   <span className="block text-2xl font-black text-on-surface mt-1.5">
-                    {stats.countThisWeek} {language === 'de' ? 'Einträge' : 'logs'}
+                    {stats.countThisWeek} {t('notesLibrary.logs')}
                   </span>
                 </div>
               </div>
@@ -560,41 +518,17 @@ export default function NotesLibraryView({
                 <div className="p-3.5 bg-surface-container-lowest rounded-xl border border-outline-variant/10 flex items-center justify-between gap-4 mt-1">
                   <div className="space-y-1">
                     <span className="block text-[9px] uppercase font-bold text-on-surface-variant/60 leading-none">
-                      {language === 'de' ? 'Vorherrschende Stimmung' : 'Dominant Mood'}
+                      {t('notesLibrary.dominantMood')}
                     </span>
                     <span className="block text-xs font-bold text-on-surface">
-                      {language === 'de' ? (
-                        <>
-                          Zuletzt meist{' '}
-                          <span className="underline decoration-primary decoration-2">
-                            {stats.dominantLabel?.value === 'peaceful'
-                              ? 'friedlich'
-                              : stats.dominantLabel?.value === 'joyful'
-                                ? 'freudvoll'
-                                : stats.dominantLabel?.value === 'reflective'
-                                  ? 'nachdenklich'
-                                  : stats.dominantLabel?.value === 'neutral'
-                                    ? 'neutral'
-                                    : stats.dominantLabel?.value === 'tired'
-                                      ? 'müde'
-                                      : 'besorgt'}
-                          </span>{' '}
-                          gefühlt
-                        </>
-                      ) : (
-                        <>
-                          Feeling mostly{' '}
-                          <span className="underline decoration-primary decoration-2">
-                            {stats.dominantLabel?.label}
-                          </span>{' '}
-                          lately
-                        </>
-                      )}
+                      {t('notesLibrary.feelingMostly', {
+                        mood: moodName(stats.dominantLabel?.value),
+                      })}
                     </span>
                   </div>
                   <span
                     className="text-3xl bg-surface-container p-2 rounded-full leading-none shrink-0"
-                    title={stats.dominantLabel?.label}
+                    title={moodName(stats.dominantLabel?.value)}
                   >
                     {stats.dominantLabel?.emoji}
                   </span>
@@ -604,9 +538,7 @@ export default function NotesLibraryView({
               {/* Mood Breakdown Tracker Grid */}
               <div className="space-y-2 pt-2 border-t border-outline-variant/10">
                 <h4 className="text-[10px] uppercase font-extrabold tracking-wider text-on-surface-variant/70">
-                  {language === 'de'
-                    ? 'Tägliche Gemütslagen-Statistik'
-                    : 'Mood Frequency Breakdown'}
+                  {t('notesLibrary.moodFrequencyBreakdown')}
                 </h4>
                 <div className="grid grid-cols-3 gap-2">
                   {MOODS.map((m) => {
@@ -619,28 +551,16 @@ export default function NotesLibraryView({
                         <span className="text-lg leading-none mb-1">{m.emoji}</span>
                         <span className="text-[9px] font-bold text-on-surface-variant/80 truncate">
                           {m.value === 'peaceful'
-                            ? language === 'de'
-                              ? 'Friedlich'
-                              : 'Peaceful'
+                            ? t('notesLibrary.peaceful')
                             : m.value === 'joyful'
-                              ? language === 'de'
-                                ? 'Freudvoll'
-                                : 'Joyful'
+                              ? t('notesLibrary.joyful')
                               : m.value === 'reflective'
-                                ? language === 'de'
-                                  ? 'Nachdenklich'
-                                  : 'Reflective'
+                                ? t('notesLibrary.reflective')
                                 : m.value === 'neutral'
-                                  ? language === 'de'
-                                    ? 'Neutral'
-                                    : 'Neutral'
+                                  ? t('notesLibrary.neutral')
                                   : m.value === 'tired'
-                                    ? language === 'de'
-                                      ? 'Müde'
-                                      : 'Tired'
-                                    : language === 'de'
-                                      ? 'Besorgt'
-                                      : 'Anxious'}
+                                    ? t('notesLibrary.tired')
+                                    : t('notesLibrary.anxious')}
                         </span>
                         <span className="text-xs font-black text-on-surface mt-0.5">{count}</span>
                       </div>
@@ -660,7 +580,7 @@ export default function NotesLibraryView({
               <div className="flex items-center gap-2 mb-1.5">
                 <span className="material-symbols-outlined text-primary text-xl">stylus_note</span>
                 <h3 className="font-sans text-sm font-black text-on-surface uppercase tracking-wider">
-                  {language === 'de' ? 'Neue Tagebuchseite eintragen' : 'Sign a New Memoir Page'}
+                  {t('notesLibrary.signANewMemoirPage')}
                 </h3>
               </div>
 
@@ -668,7 +588,7 @@ export default function NotesLibraryView({
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[9px] font-black uppercase text-on-surface-variant/70 tracking-wider mb-1.5 font-sans">
-                    {language === 'de' ? 'Chronologisches Datum' : 'Chronology Date'}
+                    {t('notesLibrary.chronologyDate')}
                   </label>
                   <input
                     value={formDate}
@@ -680,12 +600,12 @@ export default function NotesLibraryView({
                 </div>
                 <div>
                   <label className="block text-[9px] font-black uppercase text-on-surface-variant/70 tracking-wider mb-1.5 font-sans">
-                    {language === 'de' ? 'Aktueller Ort' : 'Current Location'}
+                    {t('notesLibrary.currentLocation')}
                   </label>
                   <input
                     value={formPlace}
                     onChange={(e) => setFormPlace(e.target.value)}
-                    placeholder={language === 'de' ? 'z.B. Arbeitsplatz' : 'e.g. Workspace Desk'}
+                    placeholder={t('notesLibrary.eGWorkspaceDesk')}
                     type="text"
                     className="w-full bg-surface-container border border-outline-variant/15 px-3 py-2 rounded-xl text-xs outline-none focus:outline-primary/45 font-sans placeholder:text-on-surface-variant/35 text-on-surface font-medium"
                   />
@@ -695,9 +615,7 @@ export default function NotesLibraryView({
               {/* Mood selection box */}
               <div>
                 <label className="block text-[9px] font-black uppercase text-on-surface-variant/70 tracking-wider mb-2 font-sans">
-                  {language === 'de'
-                    ? 'Tägliche Gemütslage (Stimmung)'
-                    : 'Daily Heart & Mind State (Mood)'}
+                  {t('notesLibrary.dailyHeartMindStateMood')}
                 </label>
                 <div className="grid grid-cols-3 gap-1.5 select-none text-[10px]">
                   {MOODS.map((m) => {
@@ -716,28 +634,16 @@ export default function NotesLibraryView({
                         <span className="text-sm leading-none shrink-0">{m.emoji}</span>
                         <span>
                           {m.value === 'peaceful'
-                            ? language === 'de'
-                              ? 'Friedlich'
-                              : 'Peaceful'
+                            ? t('notesLibrary.peaceful')
                             : m.value === 'joyful'
-                              ? language === 'de'
-                                ? 'Freudvoll'
-                                : 'Joyful'
+                              ? t('notesLibrary.joyful')
                               : m.value === 'reflective'
-                                ? language === 'de'
-                                  ? 'Nachdenklich'
-                                  : 'Reflective'
+                                ? t('notesLibrary.reflective')
                                 : m.value === 'neutral'
-                                  ? language === 'de'
-                                    ? 'Neutral'
-                                    : 'Neutral'
+                                  ? t('notesLibrary.neutral')
                                   : m.value === 'tired'
-                                    ? language === 'de'
-                                      ? 'Müde'
-                                      : 'Tired'
-                                    : language === 'de'
-                                      ? 'Besorgt'
-                                      : 'Anxious'}
+                                    ? t('notesLibrary.tired')
+                                    : t('notesLibrary.anxious')}
                         </span>
                       </button>
                     );
@@ -748,15 +654,11 @@ export default function NotesLibraryView({
               {/* Companion list (People met dropdown checklist) */}
               <div>
                 <label className="block text-[9px] font-black uppercase text-on-surface-variant/70 tracking-wider mb-2 font-sans">
-                  {language === 'de'
-                    ? 'Heute getroffene Personen (Verknüpfte Begleiter)'
-                    : 'People Met Today (Linked Companion)'}
+                  {t('notesLibrary.peopleMetTodayLinkedCompanion')}
                 </label>
                 {people.length === 0 ? (
                   <p className="font-serif italic text-[10px] text-on-surface-variant/60 leading-normal bg-surface-container p-2.5 rounded-xl border border-outline-variant/10">
-                    {language === 'de'
-                      ? 'Es existieren keine aktiven Profile. Füge zuerst Freunde auf der Seite "Verbindungen" hinzu, um Begleiter zu verknüpfen.'
-                      : 'No active people profiles exist. Add some friends first under the "People" tab to link companions dynamically here.'}
+                    {t('notesLibrary.noActivePeopleProfilesExist')}
                   </p>
                 ) : (
                   <div className="flex flex-wrap gap-1.5 select-none">
@@ -787,9 +689,7 @@ export default function NotesLibraryView({
               {/* Main journal description content */}
               <div>
                 <label className="block text-[9px] font-black uppercase text-on-surface-variant/70 tracking-wider mb-1.5 font-sans">
-                  {language === 'de'
-                    ? 'Chronik-Eintrag (Reflexionen)'
-                    : 'The Chronicle Entry (Reflections)'}
+                  {t('notesLibrary.theChronicleEntryReflections')}
                 </label>
                 <div className="bg-surface-container border border-outline-variant/15 p-1 rounded-xl">
                   <textarea
@@ -797,15 +697,11 @@ export default function NotesLibraryView({
                     onChange={(e) => setFormText(e.target.value)}
                     required
                     rows={6}
-                    placeholder={
-                      language === 'de'
-                        ? 'Beschreibe, wie dein Tag geatmet hat... Schreibe über Beobachtungen, schöne Momente oder Stille-Stunden...'
-                        : 'Describe how your day breathed... Write about observations, acoustic setups, silence hours, or picnic spots...'
-                    }
+                    placeholder={t('notesLibrary.describeHowYourDayBreathed')}
                     className="w-full bg-transparent px-3 py-2 cursor-text outline-none resize-none font-serif text-sm tracking-wide text-on-surface italic placeholder:text-on-surface-variant/40 leading-relaxed"
                   />
                   <div className="flex justify-end p-1 text-[9px] text-on-surface-variant/40 font-mono font-medium">
-                    {formText.length} {language === 'de' ? 'Zeichen' : 'characters'}
+                    {formText.length} {t('notesLibrary.characters')}
                   </div>
                 </div>
               </div>
@@ -815,7 +711,7 @@ export default function NotesLibraryView({
                 className="bg-primary hover:opacity-95 text-on-primary font-sans text-xs font-bold py-3 px-5 rounded-xl shadow-xs transition-all flex items-center justify-center gap-2 mt-1 select-none active:scale-95 cursor-pointer w-full"
               >
                 <span className="material-symbols-outlined text-sm font-bold">draw</span>
-                {language === 'de' ? 'Im Buch eintragen' : 'Sign Inside Book'}
+                {t('notesLibrary.signInsideBook')}
               </button>
             </form>
           </div>
@@ -827,10 +723,10 @@ export default function NotesLibraryView({
                 <span className="material-symbols-outlined text-primary text-base">
                   auto_stories
                 </span>
-                {language === 'de' ? 'Chroniken-Zeitachse' : 'Chronicles Timeline'}
+                {t('notesLibrary.chroniclesTimeline')}
               </h3>
               <span className="font-mono text-[10px] text-on-surface-variant/50 font-bold bg-surface-container px-2 py-0.5 rounded-md">
-                {journalEntries.length} {language === 'de' ? 'Einträge gebunden' : 'entries bound'}
+                {journalEntries.length} {t('notesLibrary.entriesBound')}
               </span>
             </div>
 
@@ -840,12 +736,10 @@ export default function NotesLibraryView({
                   auto_stories
                 </span>
                 <h4 className="font-serif text-sm italic font-bold text-on-surface">
-                  {language === 'de' ? 'Das Tagebuch ist leer' : 'The Journal is empty'}
+                  {t('notesLibrary.theJournalIsEmpty')}
                 </h4>
                 <p className="font-sans text-xs text-on-surface-variant/60 max-w-sm mt-1.5 leading-relaxed">
-                  {language === 'de'
-                    ? 'Beginne mit dem Entwerfen von Beobachtungen im Formular links. Sobald sie eingetragen sind, erscheinen sie auf der Zeitachse.'
-                    : 'Start drafting observations in the booklet form on the left. Once signed, they will weave into your permanent timeline log.'}
+                  {t('notesLibrary.startDraftingObservationsInThe')}
                 </p>
               </div>
             ) : (
@@ -867,15 +761,12 @@ export default function NotesLibraryView({
                           <span className="text-2xl leading-none">{entryMood?.emoji}</span>
                           <div>
                             <span className="block font-sans text-xs font-black tracking-wide text-on-surface leading-none">
-                              {new Date(entry.date).toLocaleDateString(
-                                language === 'de' ? 'de-DE' : undefined,
-                                {
-                                  weekday: 'long',
-                                  year: 'numeric',
-                                  month: 'short',
-                                  day: 'numeric',
-                                },
-                              )}
+                              {new Date(entry.date).toLocaleDateString(window.mnI18n.locale, {
+                                weekday: 'long',
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric',
+                              })}
                             </span>
                             <span className="block text-[10px] text-on-surface-variant/50 font-sans font-semibold mt-1 leading-none">
                               📍 {entry.place}
@@ -889,28 +780,16 @@ export default function NotesLibraryView({
                             className={`px-2.5 py-0.5 rounded-full border font-sans text-[9px] uppercase tracking-wider font-extrabold leading-none ${entryMood?.colorClass}`}
                           >
                             {entryMood?.value === 'peaceful'
-                              ? language === 'de'
-                                ? 'Friedlich'
-                                : 'Peaceful'
+                              ? t('notesLibrary.peaceful')
                               : entryMood?.value === 'joyful'
-                                ? language === 'de'
-                                  ? 'Freudvoll'
-                                  : 'Joyful'
+                                ? t('notesLibrary.joyful')
                                 : entryMood?.value === 'reflective'
-                                  ? language === 'de'
-                                    ? 'Nachdenklich'
-                                    : 'Reflective'
+                                  ? t('notesLibrary.reflective')
                                   : entryMood?.value === 'neutral'
-                                    ? language === 'de'
-                                      ? 'Neutral'
-                                      : 'Neutral'
+                                    ? t('notesLibrary.neutral')
                                     : entryMood?.value === 'tired'
-                                      ? language === 'de'
-                                        ? 'Müde'
-                                        : 'Tired'
-                                      : language === 'de'
-                                        ? 'Besorgt'
-                                        : 'Anxious'}
+                                      ? t('notesLibrary.tired')
+                                      : t('notesLibrary.anxious')}
                           </span>
                         </div>
                       </header>
@@ -927,7 +806,7 @@ export default function NotesLibraryView({
                           {entry.peopleMetIds.length > 0 ? (
                             <div className="flex gap-1.5 items-center">
                               <span className="text-[10px] font-bold text-on-surface-variant/50 uppercase tracking-widest leading-none">
-                                {language === 'de' ? 'Begleiter:' : 'companions:'}
+                                {t('notesLibrary.companions')}
                               </span>
                               <div className="flex flex-wrap gap-1">
                                 {entry.peopleMetIds.map((pid) => {
@@ -949,9 +828,7 @@ export default function NotesLibraryView({
                             </div>
                           ) : (
                             <span className="text-[9px] font-bold italic text-on-surface-variant/40 uppercase tracking-wider leading-none">
-                              {language === 'de'
-                                ? 'Einsame Meditationsseite'
-                                : 'Solitary meditation page'}
+                              {t('notesLibrary.solitaryMeditationPage')}
                             </span>
                           )}
                         </div>
@@ -959,26 +836,16 @@ export default function NotesLibraryView({
                         <button
                           type="button"
                           onClick={() => {
-                            if (
-                              window.confirm(
-                                language === 'de'
-                                  ? 'Möchtest du diese eingetragene Seite wirklich aus den Chroniken reißen? Diese Aktion ist dauerhaft.'
-                                  : 'Tear this signed page out of the Chronicles? This action is permanent.',
-                              )
-                            ) {
+                            if (window.confirm(t('notesLibrary.tearThisSignedPageOut'))) {
                               onDeleteJournalEntry(entry.id);
-                              triggerToast(
-                                language === 'de'
-                                  ? 'Tagebuchseite aus dem Buch gerissen.'
-                                  : 'Memoir page ripped out of the Journaling Book.',
-                              );
+                              triggerToast(t('notesLibrary.memoirPageRippedOutOf'));
                             }
                           }}
                           className="opacity-0 group-hover:opacity-100 focus:opacity-100 hover:text-error text-on-surface-variant/50 p-1 rounded-full hover:bg-surface-container transition-all active:scale-90 shrink-0 flex items-center justify-center gap-1 font-sans text-[10px] font-bold cursor-pointer"
-                          title="Rip page out"
+                          title={t('notesLibrary.deleteEntry')}
                         >
                           <span className="material-symbols-outlined text-sm">content_cut</span>
-                          {language === 'de' ? 'Seite ausreißen' : 'Tear page'}
+                          {t('notesLibrary.tearPage')}
                         </button>
                       </footer>
                     </article>

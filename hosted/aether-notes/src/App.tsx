@@ -3,11 +3,12 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import CelebrationModal from './components/CelebrationModal';
 import ContactsView from './components/ContactsView';
 import DashboardView from './components/DashboardView';
 import KanbanView from './components/KanbanView';
+import MapView from './components/MapView';
 import NoteModal from './components/NoteModal';
 import NotesLibraryView from './components/NotesLibraryView';
 import PeopleView from './components/PeopleView';
@@ -27,11 +28,13 @@ import {
   INITIAL_SETTINGS,
 } from './data';
 import {
+  accountName,
   cancelMiniNodeReminder,
   MiniNode,
   type MiniNodeUser,
   scheduleMiniNodeReminder,
 } from './mininode';
+import { scheduleSuiteSync } from './suite';
 import type {
   Contact,
   Interaction,
@@ -46,10 +49,10 @@ import type {
 } from './types';
 
 export default function App() {
-  const { language, setLanguage, t } = useTranslation();
+  const { setLanguage, t } = useTranslation();
   // Navigation State
   const [activeTab, setActiveTab] = useState<
-    'dashboard' | 'library' | 'routines' | 'people' | 'contacts' | 'settings' | 'kanban'
+    'dashboard' | 'library' | 'routines' | 'people' | 'contacts' | 'map' | 'settings' | 'kanban'
   >('dashboard');
 
   // MiniNode Session & Loading States
@@ -63,7 +66,12 @@ export default function App() {
   const [contacts, setContacts] = useState<Contact[]>(INITIAL_CONTACTS);
   const [interactions, setInteractions] = useState<Interaction[]>(INITIAL_INTERACTIONS);
   const [meetups, setMeetups] = useState<Meetup[]>(INITIAL_MEETUPS);
-  const [settings, setSettings] = useState<UserSettings>(INITIAL_SETTINGS);
+  const [stored, setSettings] = useState<UserSettings>(INITIAL_SETTINGS);
+  // The name is the person's MiniNode account; nothing about it is stored or edited in this app.
+  const settings = useMemo<UserSettings>(
+    () => ({ ...stored, userName: accountName(currentUser), userTitle: '', avatarUrl: '' }),
+    [stored, currentUser],
+  );
   const [kanbanTasks, setKanbanTasks] = useState<KanbanTask[]>(INITIAL_KANBAN_TASKS);
   const [journalEntries, setJournalEntries] = useState<JournalEntry[]>(INITIAL_JOURNAL_ENTRIES);
 
@@ -210,24 +218,15 @@ export default function App() {
 
     initGate();
 
-    // Listen for sign-out/sign-in changes to force reload state safely
-    const unsubscribe = MiniNode.auth.onChange(async (u) => {
-      if (!u && !isLoading) {
-        setIsLoading(true);
-        setCurrentUser(null);
-        const reUser = await MiniNode.auth.requireLogin();
-        if (isMounted) {
-          setCurrentUser(reUser);
-          bootstrap(reUser, isMounted);
-        }
-      }
-    });
-
     return () => {
       isMounted = false;
-      unsubscribe();
     };
   }, []);
+
+  // Meetups and the addresses of people show up in the Kalender: a moment after every change
+  useEffect(() => {
+    if (!isLoading) scheduleSuiteSync();
+  }, [meetups, contacts, people, isLoading]);
 
   // Routine Completion Check-off Handler
   const handleToggleRoutine = async (id: string) => {
@@ -705,18 +704,13 @@ export default function App() {
     });
   };
 
-  const handleSaveSettings = async (nextSettings: UserSettings) => {
-    setSettings(nextSettings);
-    await MiniNode.db.setItem('aether_settings_v1', nextSettings);
-  };
-
   const handleImportBackup = async (
     importedData: any,
   ): Promise<{ count: number; error?: string }> => {
     if (!importedData || typeof importedData !== 'object') {
       return {
         count: 0,
-        error: language === 'de' ? 'Ungültiges Dateiformat' : 'Invalid file format',
+        error: t('app.invalidFileFormat'),
       };
     }
 
@@ -829,10 +823,10 @@ export default function App() {
           </span>
         </div>
         <h2 className="text-xl font-bold font-sans tracking-tight text-on-background mb-1">
-          Aether Notes
+          {t('app.name')}
         </h2>
         <p className="font-serif text-xs italic text-on-surface-variant/75 max-w-xs leading-normal">
-          Connecting to your secure host profile...
+          {t('app.connecting')}
         </p>
       </div>
     );
@@ -857,43 +851,11 @@ export default function App() {
       <main className="flex-1 w-full ml-0 md:ml-64 pt-16 md:pt-6 pb-20 md:pb-10 px-5 md:px-12 min-h-screen overflow-x-hidden relative">
         {/* Global Top-Right Quick Bar */}
         <div className="absolute top-4 right-5 md:top-6 md:right-12 hidden md:flex items-center gap-2.5 z-50 select-none">
-          {/* Language Toggle */}
-          <div className="flex bg-surface-container-high/60 border border-outline-variant/20 p-1 rounded-lg gap-1 items-center shadow-xs backdrop-blur-md">
-            <button
-              onClick={() => setLanguage('en')}
-              className={`px-2 py-1 rounded-md text-[9px] font-bold tracking-wide transition-all uppercase cursor-pointer ${
-                language === 'en'
-                  ? 'bg-primary text-on-primary shadow-2xs font-bold'
-                  : 'text-on-surface-variant hover:bg-surface-container-highest hover:text-on-surface'
-              }`}
-            >
-              EN
-            </button>
-            <button
-              onClick={() => setLanguage('de')}
-              className={`px-2 py-1 rounded-md text-[9px] font-bold tracking-wide transition-all uppercase cursor-pointer ${
-                language === 'de'
-                  ? 'bg-primary text-on-primary shadow-2xs font-bold'
-                  : 'text-on-surface-variant hover:bg-surface-container-highest hover:text-on-surface'
-              }`}
-            >
-              DE
-            </button>
-          </div>
-
           {/* Dark Mode Toggle */}
           <button
             onClick={handleToggleDarkMode}
             className="w-8 h-8 flex items-center justify-center rounded-lg bg-surface-container-high/60 border border-outline-variant/20 text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest transition-all duration-200 cursor-pointer shadow-xs backdrop-blur-md"
-            title={
-              language === 'de'
-                ? isDarkMode
-                  ? 'Lichtmodus'
-                  : 'Dunkelmodus'
-                : isDarkMode
-                  ? 'Light Mode'
-                  : 'Dark Mode'
-            }
+            title={isDarkMode ? t('app.lightMode') : t('app.darkMode')}
           >
             <span className="material-symbols-outlined text-[16px]">
               {isDarkMode ? 'light_mode' : 'dark_mode'}
@@ -967,10 +929,10 @@ export default function App() {
           />
         )}
 
+        {activeTab === 'map' && <MapView contacts={contacts} people={people} meetups={meetups} />}
+
         {activeTab === 'settings' && (
           <SettingsView
-            settings={settings}
-            onSaveSettings={handleSaveSettings}
             onResetApp={handleResetToDefaults}
             isDarkMode={isDarkMode}
             onToggleDarkMode={handleToggleDarkMode}

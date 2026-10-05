@@ -42,6 +42,7 @@ Where things are documented:
 | Kalender | Views, own events, recurrence, reminders, sources, ICS, shared calendars | `hosted/kalender`, runbook `kalender.md` |
 | Google Calendar | Two-way sync with a "MiniNode" calendar | ADR 0010 |
 | Haushalt | Fixed costs (end date, amount changes, statement matching), "Dein Monat", statistics, PDF statement import (pdf.js vendored) | `hosted/haushalt` |
+| Kalender map | View Karte: pins, ways and travel times (OpenStreetMap routing), start point, map styles; Aether Notes shows where people live (pins, heat map, towns, who lives nearby) and hands meetups to the Kalender | `hosted/kalender/map.js`, `hosted/kalender/route.js`, `hosted/aether-notes/src/components/MapView.tsx` |
 | Kalender sources | Sportplaner sessions (`activity`) and Haushalt payments (`contract`) as suite records | `hosted/sportplaner/js/suite.js`, `hosted/haushalt/plan.js` |
 | App-Bibliothek | Jellyfin, n8n, Uptime Kuma, Stirling PDF on the NucBox with one click | ADR 0011, runbook `app-library.md` |
 | App export | An app as its own GitHub repository, without data or keys | ADR 0012, runbook `app-export.md` |
@@ -124,7 +125,8 @@ since the PR #12 deploy. Earlier deploys stopped at medialog and never shipped t
 1. Approve the suite requests under Verwaltung → Gemeinsame Daten:
    - Kalender: event delete, the other types read;
    - Sportplaner: activity write;
-   - Haushalt: contract write.
+   - Haushalt: contract write;
+   - Aether Notes: event delete (its meetups appear in the Kalender with their place).
 2. Connect Google with calendar access under "Dein Konto" (Google Calendar sync).
 3. NucBox setup (`nucbox-install.md`): `vars.NUCBOX_TUNNEL_ID`, deploy SSH key, Access
    secrets. Container apps and the App-Bibliothek need it.

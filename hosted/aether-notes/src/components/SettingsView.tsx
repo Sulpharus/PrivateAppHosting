@@ -20,8 +20,6 @@ import type {
 } from '../types';
 
 interface SettingsViewProps {
-  settings: UserSettings;
-  onSaveSettings: (settings: UserSettings) => void;
   onResetApp: () => void;
   isDarkMode: boolean;
   onToggleDarkMode: () => void;
@@ -40,53 +38,30 @@ interface SettingsViewProps {
 }
 
 export default function SettingsView({
-  settings,
-  onSaveSettings,
   onResetApp,
   isDarkMode,
   onToggleDarkMode,
   workspaceData,
   onImportBackup,
 }: SettingsViewProps) {
-  const { t, language } = useTranslation();
-  const [userName, setUserName] = useState(settings.userName);
-  const [userTitle, setUserTitle] = useState(settings.userTitle);
-
-  const [savedStatus, setSavedStatus] = useState(false);
+  const { t } = useTranslation();
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [confirmText, setConfirmText] = useState('');
   const [importStatus, setImportStatus] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!userName.trim()) return;
-
-    onSaveSettings({
-      userName: userName.trim(),
-      userTitle: userTitle.trim() || 'Mindful Thinking',
-      avatarUrl: settings.avatarUrl,
-      streakDays: settings.streakDays,
-    });
-
-    setSavedStatus(true);
-    setTimeout(() => setSavedStatus(false), 3000);
-  };
-
   const handleExportBackup = () => {
     exportMiniNodeBackup(workspaceData);
     if (typeof window !== 'undefined' && window.mnui?.toast) {
-      window.mnui.toast(language === 'de' ? 'Sicherung heruntergeladen' : 'Backup exported');
+      window.mnui.toast(t('settings.backupExported'));
     }
   };
 
   const handleExportCsv = () => {
     exportContactsCsv(workspaceData.contacts);
     if (typeof window !== 'undefined' && window.mnui?.toast) {
-      window.mnui.toast(
-        language === 'de' ? 'Kontakte als CSV exportiert' : 'Contacts exported as CSV',
-      );
+      window.mnui.toast(t('settings.contactsExportedAsCsv'));
     }
   };
 
@@ -101,19 +76,14 @@ export default function SettingsView({
       if (res.error) {
         setImportStatus(res.error);
       } else {
-        const msg =
-          language === 'de'
-            ? `${res.count} Einträge erfolgreich importiert`
-            : `${res.count} items imported successfully`;
+        const msg = t('settings.itemsImportedSuccessfully', { count: res.count });
         setImportStatus(msg);
         if (typeof window !== 'undefined' && window.mnui?.toast) {
           window.mnui.toast(msg);
         }
       }
     } catch (err: any) {
-      setImportStatus(
-        language === 'de' ? 'Fehler beim Lesen der Datei' : 'Failed to parse JSON file',
-      );
+      setImportStatus(t('settings.failedToParseJsonFile'));
     }
 
     if (fileInputRef.current) {
@@ -126,54 +96,18 @@ export default function SettingsView({
     <div className="max-w-xl mx-auto w-full pt-4 md:pt-10 pb-16 flex flex-col gap-10 animate-fade-in select-none">
       <div>
         <h2 className="font-sans text-3xl font-bold text-on-surface tracking-tight">
-          {t('settingsTitle', 'Space Settings')}
+          {t('ui.settingsTitle')}
         </h2>
         <p className="font-serif text-sm text-on-surface-variant mt-1.5 opacity-85">
-          {t(
-            'settingsSubtitle',
-            'Konfiguriere deinen Slow-Living-Arbeitsbereich, deine Profilidentität und Daten.',
-          )}
+          {t('ui.settingsSubtitle')}
         </p>
       </div>
 
-      <form
-        onSubmit={handleSubmit}
-        className="flex flex-col gap-6 bg-surface-container-low p-6 md:p-8 rounded-2xl border border-outline-variant/30 shadow-sm"
-      >
-        {/* Name Fields */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="space-y-1">
-            <label className="block text-xs font-semibold text-on-surface-variant uppercase tracking-wider font-sans">
-              {t('usernameLabel', 'Username / Handle')}
-            </label>
-            <input
-              required
-              type="text"
-              value={userName}
-              onChange={(e) => setUserName(e.target.value)}
-              placeholder="z.B. Alex"
-              className="w-full bg-surface-container-lowest border border-outline-variant/20 px-3.5 py-2.5 rounded-xl text-sm font-sans focus:outline-primary select-text text-on-surface"
-            />
-          </div>
-
-          <div className="space-y-1">
-            <label className="block text-xs font-semibold text-on-surface-variant uppercase tracking-wider font-sans">
-              {t('userTitleLabel', 'Space Title / Subtitle')}
-            </label>
-            <input
-              type="text"
-              value={userTitle}
-              onChange={(e) => setUserTitle(e.target.value)}
-              placeholder="z.B. Mindful Thinking"
-              className="w-full bg-surface-container-lowest border border-outline-variant/20 px-3.5 py-2.5 rounded-xl text-sm font-sans focus:outline-primary select-text text-on-surface"
-            />
-          </div>
-        </div>
-
+      <div className="flex flex-col gap-6 bg-surface-container-low p-6 md:p-8 rounded-2xl border border-outline-variant/30 shadow-sm">
         {/* Workspace Aesthetic Theme Configuration */}
         <div className="space-y-3 pt-4 border-t border-outline-variant/15">
           <label className="block text-xs font-semibold text-on-surface-variant uppercase tracking-wider font-sans">
-            {language === 'de' ? 'Design-Erscheinungsbild' : 'Workspace Aesthetic Theme'}
+            {t('settings.workspaceAestheticTheme')}
           </label>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <button
@@ -194,13 +128,11 @@ export default function SettingsView({
                   light_mode
                 </span>
                 <span className="font-sans text-xs font-bold text-on-surface">
-                  {language === 'de' ? 'Klassischer Sonnenaufgang' : 'Classic Sunrise'}
+                  {t('settings.classicSunrise')}
                 </span>
               </div>
               <span className="font-serif text-[10px] text-on-surface-variant/70 leading-normal">
-                {language === 'de'
-                  ? 'Weiche, organische Off-White- und Ton-Texturen, ideal für den Fokus am Tag und entschleunigtes Leben.'
-                  : 'Soft organic off-white & clay textures ideal for daylight focus and slow living.'}
+                {t('settings.softOrganicOffWhiteClay')}
               </span>
             </button>
 
@@ -222,35 +154,16 @@ export default function SettingsView({
                   dark_mode
                 </span>
                 <span className="font-sans text-xs font-bold text-on-surface">
-                  {language === 'de' ? 'Mitternachts-Fichte' : 'Midnight Spruce'}
+                  {t('settings.midnightSpruce')}
                 </span>
               </div>
               <span className="font-serif text-[10px] text-on-surface-variant/70 leading-normal">
-                {language === 'de'
-                  ? 'Augenschonender dunkler Schiefer mit botanischen Waldgrün-Akzenten, entworfen für nächtliche Reflexion.'
-                  : 'Eye-friendly dark slate with botanical forest green accents designed for late-night reflection.'}
+                {t('settings.eyeFriendlyDarkSlateWith')}
               </span>
             </button>
           </div>
         </div>
-
-        {/* Buttons submission */}
-        <div className="flex items-center justify-between mt-2 border-t border-outline-variant/10 pt-4">
-          <button
-            type="submit"
-            className="bg-primary hover:bg-primary/95 text-on-primary text-xs font-semibold px-5 py-2.5 rounded-xl transition-all shadow-sm cursor-pointer select-none active:scale-95 duration-100"
-          >
-            {t('saveSettings', 'Save Workspace')}
-          </button>
-
-          {savedStatus && (
-            <span className="text-primary font-sans text-xs font-semibold flex items-center gap-1 shrink-0 animate-pulse">
-              <span className="material-symbols-outlined text-xs">done_all</span>
-              {language === 'de' ? 'Sicher gespeichert!' : 'Saved Securely!'}
-            </span>
-          )}
-        </div>
-      </form>
+      </div>
 
       {/* MiniNode Data & Backup Section */}
       <div className="bg-surface-container-low p-6 md:p-8 rounded-2xl border border-outline-variant/30 flex flex-col gap-4 shadow-sm">
@@ -262,13 +175,11 @@ export default function SettingsView({
             cloud_sync
           </span>
           <h4 className="font-sans text-base font-bold text-on-surface">
-            {language === 'de' ? 'Daten, Sicherung & Export' : 'Data & Backup'}
+            {t('settings.dataBackup')}
           </h4>
         </div>
         <p className="font-serif text-xs text-on-surface-variant leading-relaxed">
-          {language === 'de'
-            ? 'Deine Daten werden privat in deinem MiniNode-Benutzerkonto gespeichert. Du kannst jederzeit eine vollständige JSON-Sicherung herunterladen oder Kontakte als CSV exportieren.'
-            : 'Your data is private to your MiniNode account. You can download a full JSON backup or export contacts as CSV at any time.'}
+          {t('settings.yourDataIsPrivateTo')}
         </p>
 
         <div className="flex flex-wrap gap-2.5 pt-2">
@@ -278,9 +189,7 @@ export default function SettingsView({
             className="px-4 py-2.5 rounded-xl bg-surface-container-lowest hover:bg-surface-container border border-outline-variant/25 text-on-surface text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer shadow-2xs active:scale-95"
           >
             <span className="material-symbols-outlined text-sm text-primary">download</span>
-            <span>
-              {language === 'de' ? 'Sicherung exportieren (JSON)' : 'Export Backup (JSON)'}
-            </span>
+            <span>{t('settings.exportBackupJson')}</span>
           </button>
 
           <button
@@ -289,7 +198,7 @@ export default function SettingsView({
             className="px-4 py-2.5 rounded-xl bg-surface-container-lowest hover:bg-surface-container border border-outline-variant/25 text-on-surface text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer shadow-2xs active:scale-95"
           >
             <span className="material-symbols-outlined text-sm text-primary">upload</span>
-            <span>{language === 'de' ? 'Sicherung importieren' : 'Import Backup'}</span>
+            <span>{t('settings.importBackup')}</span>
           </button>
 
           <button
@@ -298,7 +207,7 @@ export default function SettingsView({
             className="px-4 py-2.5 rounded-xl bg-surface-container-lowest hover:bg-surface-container border border-outline-variant/25 text-on-surface text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer shadow-2xs active:scale-95"
           >
             <span className="material-symbols-outlined text-sm text-primary">table_view</span>
-            <span>{language === 'de' ? 'Kontakte als CSV' : 'Export Contacts (CSV)'}</span>
+            <span>{t('settings.exportContactsCsv')}</span>
           </button>
 
           <input
@@ -321,22 +230,15 @@ export default function SettingsView({
       {/* Danger Zone Section */}
       <div className="p-6 border border-dashed border-error/30 rounded-2xl bg-error/5 flex flex-col gap-4">
         <div>
-          <h4 className="font-sans text-sm font-bold text-error">
-            {t('dangerZone', 'Danger Zone')}
-          </h4>
+          <h4 className="font-sans text-sm font-bold text-error">{t('ui.dangerZone')}</h4>
           <p className="font-sans text-xs text-on-surface-variant mt-1 max-w-md">
-            {t(
-              'resetDescription',
-              'Lösche all deine Notizen, Gewohnheiten, Routinen, Journale, Kontakte und Aufgabenboards, um mit einer sauberen Weste neu zu beginnen.',
-            )}
+            {t('ui.resetDescription')}
           </p>
         </div>
         {showResetConfirm ? (
           <div className="flex flex-col gap-3.5 animate-fade-in w-full">
             <span className="text-xs font-bold text-error block">
-              {language === 'de'
-                ? 'Wirklich alle Daten dieser App löschen? Bitte gib "löschen" ein, um zu bestätigen:'
-                : 'Completely erase everything? Please type "löschen" or "DELETE" below to confirm:'}
+              {t('settings.completelyEraseEverythingPleaseType')}
             </span>
             <div className="flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center">
               <input
@@ -365,7 +267,7 @@ export default function SettingsView({
                       : 'bg-on-surface-variant/10 text-on-surface-variant/40 cursor-not-allowed border border-outline-variant/10'
                   }`}
                 >
-                  {language === 'de' ? 'Löschen bestätigen' : 'Confirm Delete'}
+                  {t('settings.confirmDelete')}
                 </button>
                 <button
                   type="button"
@@ -375,7 +277,7 @@ export default function SettingsView({
                   }}
                   className="bg-surface-bright hover:bg-surface-container-high border border-outline-variant/35 py-2.5 px-4 rounded-xl font-sans text-xs font-semibold select-none cursor-pointer text-on-surface flex-1 sm:flex-none text-center"
                 >
-                  {t('cancel', 'Cancel')}
+                  {t('ui.cancel')}
                 </button>
               </div>
             </div>
@@ -389,7 +291,7 @@ export default function SettingsView({
             }}
             className="self-start text-error hover:text-on-error hover:bg-error border border-error bg-transparent hover:border-transparent py-2.5 px-4 rounded-xl text-xs font-semibold transition-all cursor-pointer active:scale-95 duration-100"
           >
-            {t('resetButton', 'Bereich zurücksetzen')}
+            {t('ui.resetButton')}
           </button>
         )}
       </div>

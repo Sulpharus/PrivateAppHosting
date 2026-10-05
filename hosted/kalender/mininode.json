@@ -57,5 +57,27 @@
   "i18n": {
     "languages": ["de", "en"],
     "default": "de"
-  }
+  },
+  "apis": [
+    {
+      "id": "nominatim",
+      "name": "OpenStreetMap Nominatim",
+      "baseUrl": "https://nominatim.openstreetmap.org",
+      "auth": {
+        "type": "none"
+      },
+      "docs": "https://operations.osmfoundation.org/policies/nominatim/",
+      "reason": "Orte von Terminen auf der Karte finden"
+    },
+    {
+      "id": "routing",
+      "name": "OpenStreetMap-Routing (FOSSGIS)",
+      "baseUrl": "https://routing.openstreetmap.de",
+      "auth": {
+        "type": "none"
+      },
+      "docs": "https://routing.openstreetmap.de/about.html",
+      "reason": "Wege und Fahrzeiten zwischen Terminen berechnen"
+    }
+  ]
 }

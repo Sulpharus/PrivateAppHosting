@@ -202,3 +202,40 @@ body {
 .animate-fade-in {
   animation: fadeIn 0.8s ease-out forwards;
 }
+
+/* map pins (MapView) */
+.aether-pin-wrap {
+  background: transparent;
+  border: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.aether-pin-wrap:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+.aether-pin {
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50% 50% 50% 4px;
+  transform: rotate(-45deg);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  border: 2px solid var(--color-surface);
+  box-shadow: 0 1px 4px color-mix(in srgb, var(--color-on-surface) 35%, transparent);
+  font: 700 11px / 1 var(--font-sans, sans-serif);
+}
+.aether-pin > span {
+  transform: rotate(45deg);
+}
+.aether-radius {
+  stroke: var(--color-primary);
+  stroke-width: 2px;
+  fill: var(--color-primary);
+  fill-opacity: 0.08;
+}

@@ -15,7 +15,9 @@ Die Startseite `mininode.app` zeigt jeder Person **die Apps, die sie öffnen dar
 - **Remote-Apps** zeigen ihren Zustand live (frei, belegt seit …).
 - **Benachrichtigungen:** die Glocke oben; mit eingeschaltetem Push kommen sie auch aufs Handy ([Push](wiki:push-offline)).
 
-## Sortieren und filtern
+## Ansicht, Sortieren und filtern
+
+**Ansicht:** *Kacheln* (höchstens drei pro Reihe), *Groß* (große Logos), *Liste* (eine Zeile pro App) und *Kompakt* (nur Logo und Name). Die Wahl wird je Browser gemerkt.
 
 Sortierung: Name, **meistgenutzt** (deine eigenen Zähler), neu, alt. Filter: Alle, Favoriten, Geteilt und jede Kategorie, in der
 Apps liegen. Die Wahl wird je Browser gemerkt.

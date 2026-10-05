@@ -5,7 +5,12 @@ import { occurrenceKey, occurrences, parseRule } from './rrule.js';
 export const SELF = 'kalender';
 export const COLORS = ['blue', 'green', 'violet', 'amber', 'rose', 'teal', 'gray'];
 
-const APP_NAMES = { sportplaner: 'Sportplaner', haushalt: 'Haushalt', kalender: 'Kalender' };
+const APP_NAMES = {
+  sportplaner: 'Sportplaner',
+  haushalt: 'Haushalt',
+  kalender: 'Kalender',
+  'aether-notes': 'Aether Notes',
+};
 export const appName = (slug) => APP_NAMES[slug] ?? slug;
 
 /**
@@ -136,7 +141,7 @@ export function itemsFor(
         recurring: Boolean(rule),
         occurrence: rule ? occurrenceKey(start) : null,
         sourceId: source?.id ?? sourceOf(r),
-        color: r.data?.color ?? source?.color ?? 'gray',
+        color: COLORS.includes(r.data?.color) ? r.data.color : (source?.color ?? 'gray'),
         cancelled: r.data?.status === 'cancelled' || r.data?.plan_status === 'cancelled',
         editable:
           r.type === 'event' &&

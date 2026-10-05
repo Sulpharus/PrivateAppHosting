@@ -11,6 +11,11 @@ Jede Änderung am System bekommt hier eine Zeile (siehe [Wissen aktuell halten](
 
 | Datum | Neu | Wo |
 | --- | --- | --- |
+| 05.10. | **Kalender: Karte** mit Terminen, Wegen und Fahrzeiten (Warnung bei zu knapper Zeit, Startpunkt, Auto/Fahrrad/zu Fuß, mehrere Kartenstile); **Aether Notes: Karte** der Wohnorte als Markierungen, Heatmap und Orte, „Wer wohnt in der Nähe?“ (auch um den Ort eines Treffens), Treffen mit Ort erscheinen im Kalender; „CRM“ und „Karte“ jetzt auch auf dem Handy erreichbar | Kalender → Karte, Aether Notes → Karte |
+| 05.10. | **Aether Notes folgt der Sprache** aus dem Konto (Deutsch/Englisch, Sprachpakete in `public/i18n/`), alle Texte inklusive Kontakte-Formular sind übersetzt, die eigenen Sprachschalter sind weg | App Aether Notes |
+| 05.10. | **App-Menü: bis zu drei Kacheln pro Reihe** und vier Ansichten zur Wahl (Kacheln, Groß, Liste, Kompakt) | Startseite |
+| 05.10. | **Aether Notes und Bill the Splitter: „← Alle Apps“** führt zurück ins App-Menü; Aether: das Mond-Symbol der Abend-Rhythmen wird wieder gezeichnet (der Icon-Zuschnitt `scripts/subset-icons.py` fand Icons nicht, deren Glyphe anders heißt als der Icon-Name); Bill the Splitter: ein fehlender Import ließ die App nach dem Start abstürzen | Apps Aether Notes, Bill the Splitter |
+| 05.10. | **Aether Notes: Name aus dem MiniNode-Konto**: die Begrüßung nutzt deinen Kontonamen, Profilbild und die Felder Benutzername und Bereichs-Titel sind entfernt; die Warnung „Speicher eingeschränkt“ bei den Kontakten ist weg, die App nutzt jetzt direkt das SDK (kein Ersatz-Client mehr), und eigene Kategorien und Treffen liegen im Konto statt im Browser | App Aether Notes |
 | 05.10. | **Sportplaner: Credits und Kontingente** für Mitgliedschaften wie Urban Sports Club oder ClassPass: Credits pro Monat oder maximale Besuche (pro Monat/Tag) beim Tarif, Kosten bzw. Monatslimit je Aktivität beim Verknüpfen, Hinweis bei Überschreitung und Verbrauch des Monats in Statistik und Details | App Sportplaner |
 | 05.10. | **Wunschliste**: Fotos direkt hochladen (nicht nur per Link) und die Liste als schön gestaltetes **PDF mit Bildern** exportieren („Als PDF“) | App Wunschliste |
 | 05.10. | **Sportplaner**: bei *Sportart* mehrere Sportarten mit Komma eintragen („Schwimmen, Sauna“); Filter, Chips und Statistik zählen jede einzeln | App Sportplaner |
