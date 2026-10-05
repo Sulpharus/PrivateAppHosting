@@ -68,7 +68,7 @@ export function splashLanguage(cookieHeader: string | null): SplashLanguage {
  * letter tile. Colours, light and dark, from the portal's palette; only transform and opacity
  * move; no motion for people who asked for none.
  */
-export const SPLASH_CSS = `#mn-splash{--mns-accent:var(--mns-tile);position:fixed;inset:0;z-index:2147483000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:26px;padding:max(24px,env(safe-area-inset-top)) 24px max(24px,env(safe-area-inset-bottom));background:${SPLASH_BACKGROUND};color:#17160f;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;opacity:1;transition:opacity .28s ease}
+export const SPLASH_CSS = `#mn-splash{--mns-accent:var(--mns-tile);position:fixed;inset:0;z-index:2147483000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:26px;padding:max(24px,env(safe-area-inset-top)) 24px max(24px,env(safe-area-inset-bottom));background:${SPLASH_BACKGROUND};color:#17160f;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;opacity:1;transition:opacity .28s ease;animation:mns-giveup 0s linear 20s forwards}
 #mn-splash.mns-out{opacity:0;pointer-events:none}
 #mn-splash .mns-tile{display:grid;place-items:center;width:116px;height:116px;border-radius:30px;background:color-mix(in srgb,var(--mns-accent) 13%,transparent)}\n#mn-splash .mns-mark{width:72px;height:72px;color:var(--mns-accent)}
 #mn-splash .mns-mark path{fill:none;stroke:currentColor;stroke-width:3.5;stroke-linecap:round;opacity:.4}
@@ -82,10 +82,16 @@ export const SPLASH_CSS = `#mn-splash{--mns-accent:var(--mns-tile);position:fixe
 #mn-splash .mns-hint[hidden]{display:none}
 #mn-splash .mns-brand{position:absolute;bottom:max(24px,env(safe-area-inset-bottom));margin:0;font-size:.78rem;font-weight:600;letter-spacing:.16em;text-transform:uppercase;opacity:.6}
 #mn-splash .mns-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+@keyframes mns-giveup{to{opacity:0;visibility:hidden;pointer-events:none}}
 @keyframes mns-pulse{0%,100%{opacity:.4;transform:scale(.82)}50%{opacity:1;transform:scale(1)}}
 @keyframes mns-slide{0%{transform:translateX(-100%)}100%{transform:translateX(250%)}}
 @media (prefers-color-scheme:dark){#mn-splash{background:#121210;color:#edeae2}#mn-splash .mns-bar{background:rgba(237,234,226,.16)}#mn-splash{--mns-accent:color-mix(in srgb,var(--mns-tile) 38%,#fff)}}
 @media (prefers-reduced-motion:reduce){#mn-splash{transition:none}#mn-splash .mns-mark circle{animation:none}#mn-splash .mns-bar span{width:100%;opacity:.45;animation:none}}`;
+
+/** The start screen belongs to a page the person opens, not to a frame inside an app. */
+export function wantsSplash(secFetchDest: string | null): boolean {
+  return !['iframe', 'frame', 'embed', 'object'].includes(secFetchDest ?? '');
+}
 
 export function splashHtml(app: PwaApp, language: SplashLanguage = 'de'): string {
   const text = SPLASH_TEXT[language];

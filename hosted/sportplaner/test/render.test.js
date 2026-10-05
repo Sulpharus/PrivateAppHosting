@@ -55,6 +55,23 @@ function boot(code) {
     closeSheet();
     openPlanEditor(null);
     out.plan = document.querySelector('#sheet-root').textContent;
+    out.sports = sportsOf(' Schwimmen, sauna ;Schwimmen,, Yoga ');
+    out.norm = normSports('Schwimmen,Sauna ,schwimmen');
+    // An offer with two sports: one chip each, found under each sport, its cost shared.
+    S.acts[0].category = 'Schwimmen, Sauna';
+    S.acts[0].done = [todayStr()];
+    S.plans[0].category = '';
+    S.plans[0].type = 'visit';
+    S.plans[0].amount = 10;
+    S.cat = 'Sauna';
+    S.view = 'lib';
+    mounted = null;
+    render();
+    out.libSauna = document.querySelector('#view').textContent;
+    openDetail('a1', todayStr());
+    out.chips = [...document.querySelectorAll('#sheet-root .chip')].map((c) => c.textContent);
+    closeSheet();
+    out.groups = computeStats(new Date().getFullYear()).groups.category;
     return out;`;
   window.mininode = { mininode: () => new Promise(() => {}) }; // no connection: never answers
   return new Function(source)();
@@ -67,6 +84,15 @@ describe('sportplaner views', () => {
     expect(out.detail).toContain('Anmeldung');
     expect(out.editor).toContain('Grundlagen');
     expect(out.stats).toContain('Tarife und Mitgliedschaften');
+  });
+
+  it('takes several sports in one field, separated by commas', () => {
+    const out = boot('de');
+    expect(out.sports).toEqual(['Schwimmen', 'sauna', 'Yoga']);
+    expect(out.norm).toBe('Schwimmen, Sauna');
+    expect(out.libSauna).toContain('Beachvolleyball');
+    expect(out.chips).toEqual(expect.arrayContaining(['Schwimmen', 'Sauna']));
+    expect(Object.fromEntries(out.groups)).toEqual({ Schwimmen: 5, Sauna: 5 });
   });
 
   it('render in English', () => {

@@ -176,7 +176,12 @@ function computeStats(Y) {
   const total = entries.reduce((s, e) => s + e.amount, 0);
   const group = (k) => {
     const m = new Map();
-    for (const e of entries) m.set(e[k], (m.get(e[k]) || 0) + e.amount);
+    for (const e of entries) {
+      // An offer with several sports shares its cost between them.
+      const keys = k === 'category' ? sportsOf(e.category) : [e[k]];
+      for (const key of keys.length ? keys : [e[k]])
+        m.set(key, (m.get(key) || 0) + e.amount / (keys.length || 1));
+    }
     return [...m].sort((x, y) => y[1] - x[1]);
   };
   const actCost = new Map();

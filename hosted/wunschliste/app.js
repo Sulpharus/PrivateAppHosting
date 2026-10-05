@@ -3,6 +3,7 @@
 // Tables: wishes (own list) and reservations (own shopping list); the functions people(),
 // wishlist(owner) and reserve(wish) show and reserve other people's wishes.
 import { euro, parseLink, parsePrice } from './amazon.js';
+import { buildWishlistPdf } from './wishlist-pdf.js';
 
 // ---------- helpers ----------
 const $ = (s) => document.querySelector(s);
@@ -33,6 +34,8 @@ const ICON_PATHS = {
   cart: 'M4 5h2l2 10h10l2-7H7.2',
   people: 'M9 12a3.5 3.5 0 100-7 3.5 3.5 0 000 7zM3 20c.8-3.4 3.2-5 6-5s5.2 1.6 6 5',
   check: 'M5 12.5l4.5 4.5L19 7.5',
+  download: 'M12 4v11M7.5 10.5L12 15l4.5-4.5M5 19.5h14',
+  photo: 'M4 7h3l1.5-2h7L17 7h3v12H4zM12 16.5a3.5 3.5 0 100-7 3.5 3.5 0 000 7z',
 };
 function icon(name) {
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -94,7 +97,7 @@ async function load() {
     const [wishes, people, reservations] = await Promise.all([
       mn.db
         .from('wishes')
-        .select('id, title, note, url, image_url, price_cents, priority, created_at')
+        .select('id, title, note, url, image_url, image_path, price_cents, priority, created_at')
         .order('priority')
         .order('created_at', { ascending: false }),
       mn.db.rpc('people'),
@@ -160,22 +163,59 @@ function skeleton() {
   );
 }
 
+// ---------- pictures ----------
+// A picture the person uploaded lives in mn.files (shared scope, so the people who see the list can
+// load it) and is reached through a signed address that expires: made on demand, kept for a while.
+const pictureUrls = new Map();
+async function pictureUrl(path) {
+  const hit = pictureUrls.get(path);
+  if (hit && hit.until > Date.now()) return hit.url;
+  const mn = await ready;
+  const url = await mn.files.url(path, { shared: true, expiresIn: 3600 });
+  pictureUrls.set(path, { url, until: Date.now() + 50 * 60 * 1000 });
+  return url;
+}
+
+/** Any picture file (or blob) as a JPEG no larger than `maxEdge` pixels, on white. */
+async function toJpeg(source, maxEdge, quality) {
+  const bitmap = await createImageBitmap(source);
+  const scale = Math.min(1, maxEdge / Math.max(bitmap.width, bitmap.height));
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+  canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  bitmap.close?.();
+  const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', quality));
+  if (!blob) throw new Error('no jpeg');
+  return blob;
+}
+
 /**
- * The picture of a wish. The shopping list passes `image: false`: those images come from a copy of
- * the owner's image address, and loading it could tell the owner that (and by whom) the wish was
- * reserved, so it shows initials instead.
+ * The picture of a wish: the uploaded photo, else the link. The shopping list passes `image:
+ * false`: those images come from a copy of the owner's image address, and loading it could tell the
+ * owner that (and by whom) the wish was reserved, so it shows initials instead.
  */
 function thumb(item, { image = true } = {}) {
   const fallback = h('span', { class: 'mn-thumb', 'aria-hidden': 'true' }, initials(item.title));
-  if (!image || !item.image_url) return fallback;
+  if (!image || !(item.image_path || item.image_url)) return fallback;
   const img = h('img', {
     class: 'mn-thumb',
-    src: item.image_url,
     alt: '',
     loading: 'lazy',
     referrerpolicy: 'no-referrer',
   });
   img.addEventListener('error', () => img.replaceWith(fallback), { once: true });
+  if (item.image_path)
+    pictureUrl(item.image_path).then(
+      (url) => {
+        img.src = url;
+      },
+      () => img.replaceWith(fallback),
+    );
+  else img.src = item.image_url;
   return img;
 }
 
@@ -213,6 +253,12 @@ function renderMine(main, tools) {
         { type: 'button', class: 'mn-btn', onclick: share },
         icon('share'),
         t('mine.share'),
+      ),
+      h(
+        'button',
+        { type: 'button', class: 'mn-btn', 'data-pdf': true, onclick: () => void exportPdf() },
+        icon('download'),
+        t('mine.pdf'),
       ),
     );
   if (S.wishes.length === 0) {
@@ -582,6 +628,85 @@ async function setPurchased(r, bought) {
   await load();
 }
 
+/** The bytes of a wish's picture as a small JPEG, or null (no picture, or its site does not allow it). */
+async function pictureForPdf(wish) {
+  try {
+    const src = wish.image_path ? await pictureUrl(wish.image_path) : wish.image_url;
+    if (!src) return null;
+    const response = await fetch(src, { mode: 'cors', referrerPolicy: 'no-referrer' });
+    if (!response.ok) return null;
+    const jpeg = await toJpeg(await response.blob(), 700, 0.8);
+    return new Uint8Array(await jpeg.arrayBuffer());
+  } catch {
+    return null;
+  }
+}
+
+let exporting = false;
+/** The own list as a PDF with pictures, downloaded. */
+async function exportPdf() {
+  if (exporting || S.wishes.length === 0) return;
+  exporting = true;
+  const button = document.querySelector('[data-pdf]');
+  button?.setAttribute('aria-busy', 'true');
+  toast(t('toast.pdfBusy'));
+  try {
+    const mn = await ready;
+    const user = await mn.auth.user();
+    const meta = user?.user_metadata ?? {};
+    const name = String(meta.display_name || meta.name || user?.email?.split('@')[0] || '').trim();
+    const pictures = await Promise.all(S.wishes.map(pictureForPdf));
+    const today = new Date();
+    const bytes = buildWishlistPdf({
+      title: t('pdf.title'),
+      subtitle: t('pdf.subtitle', {
+        name: name || t('pdf.anonymous'),
+        count: t('wishes.count', { n: S.wishes.length }),
+        date: today.toLocaleDateString(locale(), { dateStyle: 'long' }),
+      }),
+      author: name,
+      wishes: S.wishes.map((wish, index) => ({
+        title: wish.title,
+        note: wish.note ?? '',
+        price:
+          wish.price_cents !== null && wish.price_cents !== undefined ? euro(wish.price_cents) : '',
+        priority: wish.priority,
+        priorityLabel: priorityLabel(wish.priority),
+        url: wish.url ?? '',
+        shop: wish.url ? shop(wish.url) : '',
+        linkLabel: t('pdf.link'),
+        image: pictures[index] ?? null,
+      })),
+      brand: t('pdf.brand'),
+      pageLabel: (page, pages) => t('pdf.page', { page, pages }),
+      empty: t('mine.emptyTitle'),
+      now: today,
+    });
+    const slug =
+      name
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '') || 'liste';
+    const file = new Blob([bytes], { type: 'application/pdf' });
+    const link = h('a', {
+      href: URL.createObjectURL(file),
+      download: `wunschliste-${slug}-${today.toISOString().slice(0, 10)}.pdf`,
+    });
+    document.body.append(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(link.href), 60_000);
+    toast(t('toast.pdfReady'));
+  } catch {
+    toast(t('toast.pdfFailed'));
+  } finally {
+    exporting = false;
+    button?.removeAttribute('aria-busy');
+  }
+}
+
 async function share() {
   await ready;
   const url = new URL(location.origin);
@@ -642,6 +767,50 @@ function openEditor(wish) {
     value: wish?.image_url ?? '',
   });
   const note = h('textarea', { name: 'note', rows: 3, maxlength: 1000 }, wish?.note ?? '');
+
+  // The photo: chosen from the device (gallery or camera), shrunk here, uploaded when saving.
+  let photo = null; // the new JPEG, when one was chosen
+  let removePhoto = false;
+  const preview = h('div', { class: 'photo-preview', hidden: true });
+  const photoInput = h('input', {
+    type: 'file',
+    accept: 'image/*',
+    class: 'photo-file',
+    'aria-label': t('editor.photoChoose'),
+  });
+  const photoRemove = h(
+    'button',
+    { type: 'button', class: 'mn-btn', hidden: true, onclick: () => clearPhoto() },
+    t('editor.photoRemove'),
+  );
+  const showPreview = (src) => {
+    preview.replaceChildren(h('img', { src, alt: '' }));
+    preview.hidden = false;
+    photoRemove.hidden = false;
+  };
+  const clearPhoto = () => {
+    photo = null;
+    removePhoto = true;
+    photoInput.value = '';
+    preview.replaceChildren();
+    preview.hidden = true;
+    photoRemove.hidden = true;
+  };
+  if (wish?.image_path) pictureUrl(wish.image_path).then(showPreview, () => undefined);
+  photoInput.addEventListener('change', async () => {
+    const file = photoInput.files?.[0];
+    if (!file) return;
+    try {
+      photo = await toJpeg(file, 1280, 0.82);
+      removePhoto = false;
+      showPreview(URL.createObjectURL(photo));
+      error.hidden = true;
+    } catch {
+      photo = null;
+      photoInput.value = '';
+      fail(t('editor.errPhoto'), photoInput);
+    }
+  });
   let priority = wish?.priority ?? 2;
   const seg = h(
     'div',
@@ -691,12 +860,20 @@ function openEditor(wish) {
     ),
     h(
       'details',
-      { class: 'mn-more', open: wish?.note || wish?.image_url ? true : null },
+      { class: 'mn-more', open: wish?.note || wish?.image_url || wish?.image_path ? true : null },
       h('summary', {}, t('editor.more')),
       h(
         'div',
         {},
         field(t('editor.note'), note, t('editor.noteHint')),
+        h(
+          'div',
+          { class: 'mn-field' },
+          h('span', {}, t('editor.photo')),
+          preview,
+          h('div', { class: 'photo-actions' }, photoInput, photoRemove),
+          h('span', { class: 'mn-hint' }, t('editor.photoHint')),
+        ),
         field(t('editor.image'), image, t('editor.imageHint')),
       ),
     ),
@@ -728,10 +905,28 @@ function openEditor(wish) {
       note: note.value.trim() || null,
     };
     const mn = await ready;
+    // The uploaded photo wins over a link; removing it leaves the link (if any).
+    let uploaded = null;
+    if (photo) {
+      uploaded = `wishes/${crypto.randomUUID()}.jpg`;
+      try {
+        await mn.files.upload(uploaded, photo, { shared: true, contentType: 'image/jpeg' });
+      } catch {
+        return fail(t('editor.errUpload'));
+      }
+      row.image_path = uploaded;
+      row.image_url = null;
+    } else if (removePhoto) row.image_path = null;
     const result = wish
       ? await mn.db.from('wishes').update(row).eq('id', wish.id)
       : await mn.db.from('wishes').insert(row);
-    if (result.error) return fail(t('editor.errSave'));
+    if (result.error) {
+      if (uploaded) mn.files.remove(uploaded, { shared: true }).catch(() => undefined);
+      return fail(t('editor.errSave'));
+    }
+    // The picture that was replaced or removed is not needed any more.
+    if (wish?.image_path && (uploaded || removePhoto))
+      mn.files.remove(wish.image_path, { shared: true }).catch(() => undefined);
     window.mnui.sheet.close();
     toast(t(wish ? 'toast.saved' : 'toast.added'));
     await load();
@@ -756,6 +951,8 @@ function openEditor(wish) {
             const mn = await ready;
             const { error: deleteError } = await mn.db.from('wishes').delete().eq('id', wish.id);
             if (deleteError) return fail(t('editor.errDelete'));
+            if (wish.image_path)
+              mn.files.remove(wish.image_path, { shared: true }).catch(() => undefined);
             window.mnui.sheet.close();
             toast(t('toast.deleted'));
             await load();

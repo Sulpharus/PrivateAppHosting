@@ -187,7 +187,8 @@ export function App() {
           loadAllData(client);
         });
         if (rt?.subscribe) {
-          unsubs.push(rt.subscribe());
+          const channel = rt.subscribe();
+          unsubs.push(() => void channel?.unsubscribe?.());
         }
 
         await loadAllData(client);
@@ -213,7 +214,23 @@ export function App() {
       const loadedItems = rawItems
         .map((r) => r.value)
         .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-      setItems(loadedItems);
+      // Signed addresses expire (an hour by default): never kept, made again on every load.
+      const withUrls = await Promise.all(
+        loadedItems.map(async (item) => ({
+          ...item,
+          photoUrl: item.photoPath
+            ? await client.files
+                .url(item.photoPath, { expiresIn: 86400 })
+                .catch(() => item.photoUrl)
+            : item.photoUrl,
+          receiptUrl: item.receiptPath
+            ? await client.files
+                .url(item.receiptPath, { expiresIn: 86400 })
+                .catch(() => item.receiptUrl)
+            : item.receiptUrl,
+        })),
+      );
+      setItems(withUrls);
 
       // Check warranties and notify
       checkAndNotifyExpiring(client, loadedItems);
@@ -648,7 +665,7 @@ export function App() {
         const pPath = `fotos/${id}/${Date.now()}_thumb.jpg`;
         await mn.files.upload(pPath, formPhotoFile, { contentType: formPhotoFile.type });
         photoPath = pPath;
-        photoUrl = await mn.files.url(pPath);
+        photoUrl = await mn.files.url(pPath, { expiresIn: 86400 });
       }
 
       // Upload bill/receipt if selected
@@ -656,7 +673,7 @@ export function App() {
         const rPath = `belege/${id}/${Date.now()}_${formReceiptFile.name}`;
         await mn.files.upload(rPath, formReceiptFile, { contentType: formReceiptFile.type });
         receiptPath = rPath;
-        receiptUrl = await mn.files.url(rPath);
+        receiptUrl = await mn.files.url(rPath, { expiresIn: 86400 });
         receiptName = formReceiptFile.name;
       }
 
@@ -687,7 +704,9 @@ export function App() {
       };
 
       // Store in mn.kv
-      await mn.kv.set(`item:${id}`, itemRecord);
+      // (the signed addresses are not stored: they expire, the paths are what counts)
+      const { photoUrl: _photoUrl, receiptUrl: _receiptUrl, ...stored } = itemRecord;
+      await mn.kv.set(`item:${id}`, stored);
 
       // Update state
       setItems((prev) => {
@@ -777,8 +796,8 @@ export function App() {
     if (!mn) return;
     try {
       await mn.kv.delete(`item:${item.id}`);
-      if (item.photoPath) await mn.files.delete(item.photoPath).catch(() => {});
-      if (item.receiptPath) await mn.files.delete(item.receiptPath).catch(() => {});
+      if (item.photoPath) await mn.files.remove(item.photoPath).catch(() => {});
+      if (item.receiptPath) await mn.files.remove(item.receiptPath).catch(() => {});
       setItems((prev) => prev.filter((i) => i.id !== item.id));
       showToast(`„${item.name}“ endgültig gelöscht`);
     } catch (e) {

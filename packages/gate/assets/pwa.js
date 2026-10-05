@@ -1,6 +1,7 @@
 // Added to every app page by the gate (ADR 0005): registers the app's service worker, which
 // keeps the app usable offline once it has been opened online, and ends the start screen
-// (#mn-splash, written into the page by the gate) when the app is ready.
+// (#mn-splash, written into the page by the gate) when the app is ready. The screen also hides
+// itself by CSS after 20 s (animation mns-giveup), should this script never run.
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/_mininode/sw.js', { scope: '/' }).catch(() => undefined);
@@ -15,7 +16,8 @@ if ('serviceWorker' in navigator) {
   const GRACE = 5000; // without the SDK's signal, content on screen is enough after this long
   const SLOW = 7000; // say so when it takes long
   const GIVE_UP = 20000; // never keep the app hidden
-  let signedIn = false;
+  // The event may have fired before this script ran (a fast module script): the SDK left a flag.
+  let signedIn = window.__mnReady === true;
   let done = false;
 
   // Something other than the screen itself is on the page: text, a canvas, a picture, a control.

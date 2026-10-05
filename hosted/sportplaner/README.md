@@ -79,6 +79,13 @@ across; photos are stored again in `mn.files`.
 Add an activity with a photo on the PC, open `sportplaner.mininode.app` on the phone and see it.
 Mark it as done, then check *Statistik*.
 
+## Several sports per offer
+
+*Sportart* takes several activities separated by commas ("Schwimmen, Sauna"). The field stays one text
+(`category`; older data keeps working), `sportsOf()` in `js/core.js` splits and tidies it (first spelling
+wins, `;` works too). Each sport is a chip in the details and a filter in the library, and the statistics
+share the cost of an offer between its sports. `test/render.test.js` covers it.
+
 ## Languages
 
 German and English (`i18n/de.json`, `i18n/en.json`, declared under `i18n` in `mininode.json`). The person's choice in Konto → Sprache applies; an unknown key falls back to German. New texts need a key in both files; `pnpm mininode doctor hosted/sportplaner` checks them (ADR 0017). Weekday and month names, sign-up and level labels come from the language, the stored values (`signup`, `level`, period labels such as `Kurs`) stay as they were. Money input accepts both `1.200,50` and `1,200.50`. `test/render.test.js` renders every view in both languages.

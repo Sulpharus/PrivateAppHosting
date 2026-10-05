@@ -208,7 +208,7 @@ export default function App() {
         email: currentUser.email || '',
         avatarUrl:
           currentUser.avatarUrl ||
-          `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(currentUser.username)}`,
+          avatarFor(currentUser.username),
         isCurrentUser: true,
         paymentInfo: userPaymentInfo,
       };
@@ -220,7 +220,7 @@ export default function App() {
           ? currentUser?.username || (lang === 'de' ? 'Ich' : 'You')
           : 'Member',
       email: '',
-      avatarUrl: `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(id)}`,
+      avatarUrl: avatarFor(id),
     };
   };
 
@@ -247,7 +247,7 @@ export default function App() {
                 email: user.email || '',
                 avatarUrl:
                   user.avatarUrl ||
-                  `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(user.username)}`,
+                  avatarFor(user.username),
                 isCurrentUser: true,
               },
               ...prev,
@@ -269,7 +269,7 @@ export default function App() {
         email: user.email || '',
         avatarUrl:
           user.avatarUrl ||
-          `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(user.username)}`,
+          avatarFor(user.username),
         isCurrentUser: true,
       };
 
@@ -277,6 +277,7 @@ export default function App() {
       if (savedMembers && savedMembers.length > 0) {
         const hasUser = savedMembers.some((m) => m.id === user.id);
         const finalMembers = hasUser ? savedMembers : [userMember, ...savedMembers];
+        if (!hasUser) await MiniNodeAPI.db.saveMembers([userMember]);
         setMembers(finalMembers);
       } else {
         setMembers([userMember]);
@@ -399,12 +400,28 @@ export default function App() {
       MiniNodeAPI.db.listSettlements(),
       MiniNodeAPI.db.listActivities(),
     ]);
-    if (m.length > 0) setMembers(m);
+    if (m.length > 0)
+      setMembers((prev) => {
+        const me = prev.find((x) => x.isCurrentUser && !m.some((y) => y.id === x.id));
+        return me ? [me, ...m] : m;
+      });
     setGroups(g);
     setExpenses(e);
     setSettlements(st);
     setActivities(act);
   };
+
+  useEffect(
+    () =>
+      MiniNodeAPI.onSaveError(() =>
+        triggerToast(
+          lang === 'de'
+            ? 'Speichern hat nicht geklappt. Prüfe die Verbindung.'
+            : 'Saving failed. Check your connection.',
+        ),
+      ),
+    [lang],
+  );
 
   useEffect(() => {
     if (!currentUser) return;
@@ -585,7 +602,7 @@ export default function App() {
             id: mId,
             name,
             email: `${name.toLowerCase().replace(/\s+/g, '')}@billthesplitter.app`,
-            avatarUrl: `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(name)}`,
+            avatarUrl: avatarFor(name),
           };
           newCreatedMembers.push(newM);
           extraMemberIds.push(mId);
@@ -632,14 +649,19 @@ export default function App() {
     try {
       setIsRoomConnecting(true);
       const currentUserId = currentUser?.id || 'user_me';
-      const existing = groups.find((g) => g.id === code);
+      // The record is read again just now: two people joining at the same time both end up in it.
+      const existing = await MiniNodeAPI.db.getGroup(code);
       if (existing) {
         const merged: Group = {
           ...existing,
           memberIds: Array.from(new Set([...existing.memberIds, currentUserId])),
         };
         await MiniNodeAPI.db.saveGroup(merged);
-        setGroups((prev) => prev.map((g) => (g.id === code ? merged : g)));
+        setGroups((prev) =>
+          prev.some((g) => g.id === code)
+            ? prev.map((g) => (g.id === code ? merged : g))
+            : [merged, ...prev],
+        );
         setSelectedGroupId(code);
         setCurrentView('group-detail');
         setJoinGroupCode('');
@@ -1422,7 +1444,7 @@ export default function App() {
       email:
         inviteEmail.trim() ||
         `${inviteName.trim().toLowerCase().replace(/\s+/g, '')}@billthesplitter.app`,
-      avatarUrl: `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(inviteName.trim())}`,
+      avatarUrl: avatarFor(inviteName.trim()),
     };
 
     const updatedMembers = [...members, newMember];

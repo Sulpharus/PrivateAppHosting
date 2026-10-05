@@ -11,6 +11,18 @@ const esc = (s) =>
     /[&<>"']/g,
     (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c],
   );
+// "Sportart" can name several activities, separated by commas ("Schwimmen, Sauna"). The field stays
+// one text (older data keeps working); these two read and tidy it.
+const sportsOf = (s) => {
+  const seen = new Map();
+  for (const part of String(s ?? '').split(/[,;]/)) {
+    const sport = part.trim();
+    // The first spelling wins ("Schwimmen, schwimmen" is one sport).
+    if (sport && !seen.has(sport.toLowerCase())) seen.set(sport.toLowerCase(), sport);
+  }
+  return [...seen.values()];
+};
+const normSports = (s) => sportsOf(s).join(', ');
 const pad = (n) => String(n).padStart(2, '0');
 const ymd = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 const parse = (s) => {

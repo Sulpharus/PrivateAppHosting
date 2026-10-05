@@ -150,7 +150,7 @@ function detailBodyHTML(a, ds) {
       `<div class="visit-add"><input type="date" id="visitdate" value="${td}" max="${td}" aria-label="${esc(tr('detail.visitDate'))}"><button class="btn" data-action="add-visit">${esc(tr('detail.enter'))}</button></div>`,
   ]);
   const chips = [
-    a.category && `<span class="chip">${esc(a.category)}</span>`,
+    ...sportsOf(a.category).map((sport) => `<span class="chip">${esc(sport)}</span>`),
     a.level && `<span class="chip plain">${esc(levelLabel(a.level))}</span>`,
   ].filter(Boolean);
   return `<h2 class="d-title" id="sheet-title">${esc(a.name)}</h2>${chips.length ? `<p class="d-meta">${chips.join('')}</p>` : ''}

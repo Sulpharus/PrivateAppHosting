@@ -6,6 +6,7 @@ import {
   splashHtml,
   splashLanguage,
   tileColour,
+  wantsSplash,
   webManifest,
   withPwaTags,
 } from './pwa.ts';
@@ -81,5 +82,14 @@ describe('start screen', () => {
     expect(moving).not.toMatch(/\b(width|height|left|top|margin)\s*:/);
     expect(SPLASH_CSS).toContain('prefers-color-scheme:dark');
     expect(SPLASH_CSS).toContain('prefers-reduced-motion:reduce');
+    // Hides itself even when pwa.js never runs.
+    expect(SPLASH_CSS).toContain('mns-giveup');
+  });
+
+  it('is for pages people open, not for frames inside an app', () => {
+    expect(wantsSplash('document')).toBe(true);
+    expect(wantsSplash('empty')).toBe(true);
+    expect(wantsSplash(null)).toBe(true);
+    expect(wantsSplash('iframe')).toBe(false);
   });
 });

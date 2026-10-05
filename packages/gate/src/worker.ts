@@ -4,7 +4,7 @@
 
 import { decide, isNavigation, supabaseGrantChecker } from './decide.ts';
 import { securityHeaders, withHeaders } from './headers.ts';
-import { appIcon, splashLanguage, webManifest, withPwaTags } from './pwa.ts';
+import { appIcon, splashLanguage, wantsSplash, webManifest, withPwaTags } from './pwa.ts';
 import { createVerifier, type Verifier } from './session.ts';
 
 export interface AppEnv {
@@ -129,7 +129,13 @@ export async function handleAppRequest(request: Request, env: AppEnv): Promise<R
 
   if (!isNavigation(request)) {
     // HTML fetched by the service worker (its offline copy of "/") gets the PWA tags too.
-    return withHeaders(withPwaTags(await env.ASSETS.fetch(request), app), headers);
+    return withHeaders(
+      withPwaTags(
+        await env.ASSETS.fetch(request),
+        wantsSplash(request.headers.get('Sec-Fetch-Dest')) ? app : undefined,
+      ),
+      headers,
+    );
   }
 
   const decision = await decide({
@@ -145,7 +151,7 @@ export async function handleAppRequest(request: Request, env: AppEnv): Promise<R
     case 'allow': {
       const response = withPwaTags(
         await env.ASSETS.fetch(request),
-        app,
+        wantsSplash(request.headers.get('Sec-Fetch-Dest')) ? app : undefined,
         splashLanguage(request.headers.get('Cookie')),
       );
       return withHeaders(response, { ...headers, 'Cache-Control': 'private, no-cache' });

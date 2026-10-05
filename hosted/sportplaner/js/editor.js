@@ -57,7 +57,7 @@ function openEditor(a) {
   removed = new Set();
   uploading = 0;
   S.sheet = { type: 'edit', isNew: !a };
-  const cats = [...new Set(S.acts.map((x) => x.category).filter(Boolean))].sort();
+  const cats = [...new Set(S.acts.flatMap((x) => sportsOf(x.category)))].sort();
   const v = (k) => esc(draft[k] || '');
   const opt = (val, label, cur) =>
     `<option value="${esc(val)}"${val === cur ? ' selected' : ''}>${esc(label)}</option>`;
@@ -73,7 +73,7 @@ function openEditor(a) {
     <div class="step" data-step="0">
       <fieldset><legend>${esc(tr('step.basics'))}</legend>
         <label class="f">${esc(tr('ed.name'))}<input name="name" value="${v('name')}" placeholder="${esc(tr('ed.namePh'))}" autocomplete="off" required></label>
-        <div class="two"><label class="f">${esc(tr('plan.sport'))}<input name="category" value="${v('category')}" list="cats" placeholder="${esc(tr('ed.sportPh'))}" autocomplete="off"></label>
+        <div class="two"><label class="f">${esc(tr('plan.sport'))}<input name="category" value="${v('category')}" list="cats" placeholder="${esc(tr('ed.sportPh'))}" autocomplete="off" aria-describedby="sporthint"><span class="hint flat" id="sporthint">${esc(tr('ed.sportHint'))}</span></label>
         <label class="f">${esc(tr('plan.provider'))}<input name="provider" value="${v('provider')}" list="provs" placeholder="${esc(tr('ed.providerPh'))}" autocomplete="off"></label></div>
         <datalist id="provs">${[...new Set(S.acts.map((x) => x.provider).filter(Boolean))]
           .sort()
@@ -897,6 +897,7 @@ function collectForm() {
     'notes',
   ])
     draft[k] = String(fd.get(k) || '').trim();
+  draft.category = normSports(draft.category);
   const vp = parseMoney(fd.get('visitPrice'));
   draft.visitPrice = vp > 0 ? vp : 0;
   draft.access = {

@@ -208,6 +208,7 @@ export function createMininode(config: MininodeConfig): Mininode {
         const user = await currentUser();
         if (user) {
           // The start screen of the platform (the gate's splash) waits for this.
+          (globalThis as { __mnReady?: boolean }).__mnReady = true;
           globalThis.dispatchEvent?.(new Event('mn:ready'));
           return user;
         }

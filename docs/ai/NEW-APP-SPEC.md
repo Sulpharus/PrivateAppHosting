@@ -81,6 +81,8 @@ const data = await mn.ai.json<Recipe[]>('Drei Rezepte mit Reis', jsonSchema);
 // Files (private per user; { shared: true } for shared files):
 await mn.files.upload('fotos/urlaub.jpg', file);
 const url = await mn.files.url('fotos/urlaub.jpg'); // signed URL, 1 h
+// A signed URL expires: never store it in kv or a table. Store the path and ask for the URL when
+// showing (`{ expiresIn: 86400 }` for longer). Delete with mn.files.remove(path), not "delete".
 const names = await mn.files.list('fotos');
 
 // Realtime (live updates between users of the app):
