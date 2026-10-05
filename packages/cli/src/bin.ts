@@ -28,7 +28,7 @@ const USAGE = `mininode <command>
                                     [--build] [--tidy] [--json file] [--report file]
   exempt <slug> [--skip]            Exempt an imported app from the linter, or from Biome entirely (publish step)
   submission fetch <id> --out <file>  Download an uploaded ZIP (workflow)
-  submission status <id> <status> [--result file] [--report file] [--pr url] [--review url] [--run url]
+  submission status <id> <status> [--result file] [--report file] [--pr url] [--review url] [--run url] [--only-if-pr url]
   library check <entry> <slug>      App-Bibliothek: check an install before the rollout
   library install <entry> <slug>    App-Bibliothek: register an installed program
   library remove <slug> <entry>     App-Bibliothek: disable a removed program
@@ -114,10 +114,12 @@ async function main(args: string[]): Promise<number> {
         const pr = flag(args, '--pr');
         const review = flag(args, '--review');
         const run = flag(args, '--run');
+        const onlyIfPr = flag(args, '--only-if-pr');
         await setSubmissionStatus(env, id, status as SubmissionStatus, result, report, {
           ...(pr ? { pr } : {}),
           ...(review ? { review } : {}),
           ...(run ? { run } : {}),
+          ...(onlyIfPr ? { onlyIfPr } : {}),
         });
         return 0;
       }

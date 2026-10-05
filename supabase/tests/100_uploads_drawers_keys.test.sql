@@ -24,7 +24,8 @@ select is((select count(*)::int from platform.submissions), 0, 'users do not see
 select tests.logout();
 select throws_ok($$insert into platform.submissions (kind, filename, size_bytes, storage_path, status) values ('webapp', 'x.zip', 1, 'x', 'bogus')$$,
   '23514', null, 'unknown states are refused');
-select lives_ok($$update platform.submissions set status = 'pr_open'$$, 'an upload can wait on its open pull request');
+update platform.submissions set status = 'pr_open' where filename = 'sentinel.zip';
+select is((select status from platform.submissions where filename = 'sentinel.zip'), 'pr_open', 'an upload can wait on its open pull request');
 select is((select public from storage.buckets where id = 'submissions'), false, 'the upload bucket is private');
 
 -- ---------- drawers ----------

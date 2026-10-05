@@ -5,8 +5,11 @@ name: Upload nach dem Pull Request
 # closed without a merge = "Ausgeblendet". Until then it shows "Pull Request offen", so a red CI
 # on the pull request is never reported as done.
 
+# pull_request_target: the workflow runs as defined on main, from the ref main (so a deployment
+# rule on the environments that allows only main still lets it run), and the pull request's own
+# files are never checked out.
 on:
-  pull_request:
+  pull_request_target:
     types: [closed]
     branches: [main]
 
@@ -42,7 +45,6 @@ jobs:
     runs-on: ubuntu-latest
     environment: ${{ needs.marker.outputs.env }}
     env:
-      SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
       SUPABASE_URL: ${{ needs.marker.outputs.env == 'production' && 'https://ojicmpgqvoyakigvubek.supabase.co' || 'https://ttgrtecdqouiogiwcjag.supabase.co' }}
       SUPABASE_PUBLISHABLE_KEY: ${{ needs.marker.outputs.env == 'production' && 'sb_publishable_jv1tZqYWg51sNxJ5-GjMMw_tZqa1s1C' || 'sb_publishable_zQfFz-ruNPkIQauwa253iw_4zOZmiOB' }}
       STAGING_DOMAIN: ${{ vars.STAGING_DOMAIN }}
@@ -62,8 +64,12 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # The key is only in the environment of the one step that needs it, not of the install.
       - name: Update the upload
+        env:
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
         run: |
           status=dismissed
           [ "$MERGED" = "true" ] && status=integrated
-          pnpm mininode submission status "$ID" "$status" --pr "$PR" --env "$DEPLOY_ENV"
+          # Only an upload that waits on exactly this pull request changes.
+          pnpm mininode submission status "$ID" "$status" --pr "$PR" --only-if-pr "$PR" --env "$DEPLOY_ENV"

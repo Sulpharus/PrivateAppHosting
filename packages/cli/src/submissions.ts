@@ -19,6 +19,11 @@ export interface StatusExtras {
   pr?: string;
   review?: string;
   run?: string;
+  /**
+   * Only change an upload that waits on this pull request (status `pr_open`, same `pr_url`):
+   * a merge event cannot move another upload, and a late write cannot undo a merge.
+   */
+  onlyIfPr?: string;
 }
 
 const BUCKET = 'submissions';
@@ -89,10 +94,12 @@ export async function setSubmissionStatus(
   report: string | null,
   extras: StatusExtras = {},
 ): Promise<void> {
-  const { error } = await client(envName)
+  let query = client(envName)
     .schema('platform')
     .from('submissions')
     .update(submissionPatch(status, result, report, extras))
     .eq('id', id);
+  if (extras.onlyIfPr) query = query.eq('status', 'pr_open').eq('pr_url', extras.onlyIfPr);
+  const { error } = await query;
   if (error) throw new Error(`updating the upload failed: ${error.message}`);
 }

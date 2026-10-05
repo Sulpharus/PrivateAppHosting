@@ -92,7 +92,7 @@ export function tidy(root: string, result: IntegrateResult): IntegrateResult {
   const count = /Found (\d+) errors?/.exec(`${after.stdout}${after.stderr}`)?.[1] ?? 'mehrere';
   // Lint rules can be switched off; a syntax or format error cannot. Check what is left when the
   // linter is off: if Biome still fails, only leaving the folder out helps.
-  const unreadable = biome(['--linter-enabled=false']).status !== 0;
+  const unreadable = biome(['--linter-enabled=false', '--assist-enabled=false']).status !== 0;
   // The exemption is a change to a root file: the trusted publish step makes it (`mininode
   // exempt <slug>`), not this build. Locally the file is changed right away.
   if (!process.env.CI) {

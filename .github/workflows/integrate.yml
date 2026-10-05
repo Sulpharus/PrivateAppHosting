@@ -202,14 +202,15 @@ jobs:
           git push origin "auto/$slug-$short"
           pr=$(gh pr create --base main --head "auto/$slug-$short" \
             --title "feat($slug): automatisch integriert" --body-file body.md)
+          # The status first: a quick auto-merge must not be overwritten by it afterwards.
+          pnpm mininode submission status "$SUBMISSION" pr_open \
+            --result artifacts/result/result.json --report artifacts/result/report.md \
+            --pr "$pr" --run "$RUN_URL" --env "$DEPLOY_ENV"
           if [ "$AUTOMERGE" = "true" ]; then
             # Merges when the required checks of main pass. Without such a rule on main (Settings →
             # Rules) or without "Allow auto-merge" this fails and the pull request just stays open.
             gh pr merge "$pr" --auto --merge || echo "auto-merge is not available; the pull request stays open"
           fi
-          pnpm mininode submission status "$SUBMISSION" pr_open \
-            --result artifacts/result/result.json --report artifacts/result/report.md \
-            --pr "$pr" --run "$RUN_URL" --env "$DEPLOY_ENV"
       - name: Hand over to the AI review
         if: env.CODE == '2'
         run: |
