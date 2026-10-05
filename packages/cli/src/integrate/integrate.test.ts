@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { stripExternalStyles } from './convert.ts';
 import { deriveName, integrate } from './index.ts';
 import { serverRoutes } from './inspect.ts';
+import type { IntegrateResult } from './types.ts';
 import { checkZipListing, UnpackError } from './unpack.ts';
 import { biomeSkip, lintExemption, tidy } from './verify.ts';
 
@@ -306,8 +307,8 @@ describe('helpers', () => {
     const root = join(import.meta.dirname, '../../../..');
     const slug = `zz-tidy-${Date.now().toString(36)}`;
     const app = join(root, 'hosted', slug);
-    const result = (extra = {}) => ({
-      status: 'integrated' as const,
+    const result = (): IntegrateResult => ({
+      status: 'integrated',
       slug,
       name: 'Tidy',
       framework: 'vite',
@@ -315,7 +316,6 @@ describe('helpers', () => {
       warnings: [],
       actions: [],
       outDir: app,
-      ...extra,
     });
     try {
       mkdirSync(join(app, 'src'), { recursive: true });
