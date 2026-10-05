@@ -1,6 +1,6 @@
 // Removes the Workers of hosted apps that no longer deploy to Cloudflare. Apps that are gone
 // from the repository entirely also get their registry row disabled. App data (kv, files,
-// tables) is kept; the admin deletes it in the Host Manager.
+// tables) is kept; Verwaltung → Apps → Löschen (`mininode uninstall --purge`) deletes it.
 
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';

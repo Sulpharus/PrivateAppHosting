@@ -7,6 +7,7 @@ import type { DeployEnv } from './deploy/environment.ts';
 import { deployApp, devApp, readVersion } from './deploy/index.ts';
 import { checkLibraryInstall, installLibraryApp, removeLibraryApp } from './deploy/library.ts';
 import { hostedTargets, pruneApps } from './deploy/prune.ts';
+import { dropExemptions, uninstallApp } from './deploy/uninstall.ts';
 import { type DoctorReport, doctor, hostedApps } from './doctor.ts';
 import { exportApp } from './export.ts';
 import { integrate, reportMarkdown } from './integrate/index.ts';
@@ -27,7 +28,8 @@ const USAGE = `mininode <command>
   export <app-dir> --out <dir>      Copy one app as a shareable project (no data, no keys)
   integrate <zip|dir> [--slug x]    Turn an export into hosted/<slug> by script (exit 2: needs review)
                                     [--build] [--tidy] [--json file] [--report file]
-  exempt <slug> [--skip]            Exempt an imported app from the linter, or from Biome entirely (publish step)
+  exempt <slug> [--skip|--remove]   Exempt an imported app from the linter, or from Biome entirely (publish step); --remove forgets it
+  uninstall <slug> [--purge] [--env]  Take an app offline (Worker deleted); --purge also deletes its data, files and registry entry
   submission fetch <id> --out <file>  Download an uploaded ZIP (workflow)
   submission status <id> <status> [--result file] [--report file] [--pr url] [--review url] [--run url] [--only-if-pr url]
   backup create --out <dir> [--no-files]   Copy the database and the stored files into a folder
@@ -95,8 +97,22 @@ async function main(args: string[]): Promise<number> {
     case 'exempt': {
       if (!target || !/^[a-z][a-z0-9-]{0,30}[a-z0-9]$/.test(target)) break;
       const path = join(ROOT, 'biome.json');
-      const change = args.includes('--skip') ? biomeSkip : lintExemption;
+      const change = args.includes('--remove')
+        ? dropExemptions
+        : args.includes('--skip')
+          ? biomeSkip
+          : lintExemption;
       writeFileSync(path, change(readFileSync(path, 'utf8'), target));
+      return 0;
+    }
+    case 'uninstall': {
+      if (!target) break;
+      const known = new Set(['uninstall', target, '--purge', '--env']);
+      const envValue = flag(args, '--env');
+      const stray = args.filter((arg) => !known.has(arg) && arg !== envValue);
+      if (stray.length > 0) throw new Error(`unknown option ${stray[0]} (use --purge or --env)`);
+      const result = await uninstallApp(envFlag(args), target, { purge: args.includes('--purge') });
+      console.log(JSON.stringify(result));
       return 0;
     }
     case 'submission': {

@@ -32,10 +32,14 @@ export async function listBuckets(client: SupabaseClient): Promise<BucketInfo[]>
     .sort((a, b) => a.id.localeCompare(b.id));
 }
 
-/** Every object of a bucket, folders walked. */
-export async function listObjects(client: SupabaseClient, bucket: string): Promise<ObjectInfo[]> {
+/** Every object of a bucket (or below the folder `prefix`), folders walked. */
+export async function listObjects(
+  client: SupabaseClient,
+  bucket: string,
+  prefix = '',
+): Promise<ObjectInfo[]> {
   const found: ObjectInfo[] = [];
-  const folders = [''];
+  const folders = [prefix];
   for (let folder = folders.shift(); folder !== undefined; folder = folders.shift()) {
     for (let offset = 0; ; offset += PAGE) {
       const { data, error } = await client.storage.from(bucket).list(folder, {
@@ -121,4 +125,16 @@ export async function inParallel<T>(
   };
   await Promise.all(Array.from({ length: Math.min(limit, items.length) }, lane));
   if (failure !== undefined) throw failure;
+}
+
+/** Deletes objects of a bucket, a hundred at a time. */
+export async function removeObjects(
+  client: SupabaseClient,
+  bucket: string,
+  names: string[],
+): Promise<void> {
+  for (let start = 0; start < names.length; start += 100) {
+    const { error } = await client.storage.from(bucket).remove(names.slice(start, start + 100));
+    if (error) throw new Error(`deleting files of ${bucket} failed: ${error.message}`);
+  }
 }
