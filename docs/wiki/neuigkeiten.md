@@ -11,6 +11,7 @@ Jede Änderung am System bekommt hier eine Zeile (siehe [Wissen aktuell halten](
 
 | Datum | Neu | Wo |
 | --- | --- | --- |
+| 05.10. | **App löschen: Entfernen-Pull-Request besteht CI**: er nimmt auch den e2e-Test der App mit, e2e startet nur noch vorhandene Apps | [App löschen](wiki:app-loeschen) |
 | 05.10. | **Sprachpakete nachrüsten**: fertiger Prompt in der KI-Werkstatt für Apps ohne Pakete; „Bestehende App übernehmen“ verlangt sie jetzt auch | Verwaltung → KI-Werkstatt, [Sprache und Formate](wiki:sprachen-formate) |
 | 05.10. | **Wissen**: Wiki und Startup-Guide in der Verwaltung; Regel und Test, dass sie mit dem System mitwachsen (ADR 0021) | Verwaltung → Wissen, [Wissen aktuell halten](wiki:wissen-pflegen) |
 | 05.10. | **Apps löschen**: Deaktivieren, Löschen ohne/mit Daten, Code-Entfernung per Pull Request; Kalender geschützt (ADR 0020) | Verwaltung → Apps → Löschen, [App löschen](wiki:app-loeschen) |

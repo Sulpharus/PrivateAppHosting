@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import { type BrowserContext, expect, type Page, test } from '@playwright/test';
 import { admin, cleanup, createUser, PASSWORD } from './seed.ts';
 
@@ -64,24 +65,28 @@ const gameLine = (intro: string) => (p: Page) =>
     .locator('#player')
     .filter({ hasText: new RegExp(`${intro}|You are playing as|Without a player name`) });
 
-const APPS: [slug: string, port: number, shows: (page: Page) => ReturnType<Page['locator']>][] = [
-  ['sportplaner', 8794, (p) => p.getByRole('button', { name: 'Library', exact: true })],
-  ['haushalt', 8795, (p) => p.getByRole('button', { name: 'Transactions', exact: true })],
-  ['wunschliste', 8796, (p) => p.getByRole('button', { name: 'My list', exact: true })],
-  ['medialog', 8797, (p) => p.getByRole('button', { name: 'Collection', exact: true }).first()],
-  ['memory', 8798, gameLine('Find all eight pairs in as few moves as you can.')],
-  ['kalender', 8799, (p) => p.getByRole('button', { name: 'Month', exact: true }).first()],
-  ['minensucher', 8800, gameLine('Uncover every safe square.')],
-  ['sudoku', 8801, gameLine('Every puzzle is generated fresh and has exactly one solution.')],
-  ['solitaer', 8802, gameLine('Move every card to the four foundations.')],
-  ['n2048', 8803, gameLine('Merge matching tiles until you reach 2048.')],
-  ['codeknacker', 8804, gameLine('Work out the secret code of four symbols.')],
+const ALL_APPS: [slug: string, port: number, shows: (page: Page) => ReturnType<Page['locator']>][] =
   [
-    'haushalts-inventar',
-    8805,
-    (p) => p.getByRole('button', { name: 'Inventory', exact: true }).first(),
-  ],
-];
+    ['sportplaner', 8794, (p) => p.getByRole('button', { name: 'Library', exact: true })],
+    ['haushalt', 8795, (p) => p.getByRole('button', { name: 'Transactions', exact: true })],
+    ['wunschliste', 8796, (p) => p.getByRole('button', { name: 'My list', exact: true })],
+    ['medialog', 8797, (p) => p.getByRole('button', { name: 'Collection', exact: true }).first()],
+    ['memory', 8798, gameLine('Find all eight pairs in as few moves as you can.')],
+    ['kalender', 8799, (p) => p.getByRole('button', { name: 'Month', exact: true }).first()],
+    ['minensucher', 8800, gameLine('Uncover every safe square.')],
+    ['sudoku', 8801, gameLine('Every puzzle is generated fresh and has exactly one solution.')],
+    ['solitaer', 8802, gameLine('Move every card to the four foundations.')],
+    ['n2048', 8803, gameLine('Merge matching tiles until you reach 2048.')],
+    ['codeknacker', 8804, gameLine('Work out the secret code of four symbols.')],
+    [
+      'haushalts-inventar',
+      8805,
+      (p) => p.getByRole('button', { name: 'Inventory', exact: true }).first(),
+    ],
+  ];
+
+// Apps that were uninstalled have no folder (and no server) any more.
+const APPS = ALL_APPS.filter(([slug]) => existsSync(`hosted/${slug}/mininode.json`));
 
 test('every hosted app follows the language of the profile', async ({ browser }) => {
   test.setTimeout(480_000);
