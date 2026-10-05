@@ -1,3 +1,4 @@
+import { UNINSTALL_PROTECTED_SLUGS } from '@mininode/manifest';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { useStepUp } from '../auth/StepUp.tsx';
@@ -281,7 +282,6 @@ export function Apps() {
         }`,
       );
       setRemoveOpen(false);
-      setTimeout(() => void load(), 5000);
       await load();
     } catch (err) {
       setRemoveError(err instanceof ApiError ? err.message : 'Das hat nicht geklappt.');
@@ -568,22 +568,23 @@ export function Apps() {
                       >
                         {app.status === 'disabled' ? 'Aktivieren' : 'Deaktivieren'}
                       </button>
-                      {app.kind !== 'link' && (
-                        <button
-                          type="button"
-                          className="button small danger"
-                          aria-label={`${app.name} löschen`}
-                          onClick={() => {
-                            setRemoveError(null);
-                            setPurge(true);
-                            setTyped('');
-                            setRemoveFor(app);
-                            setRemoveOpen(true);
-                          }}
-                        >
-                          Löschen
-                        </button>
-                      )}
+                      {app.kind !== 'link' &&
+                        !(UNINSTALL_PROTECTED_SLUGS as readonly string[]).includes(app.slug) && (
+                          <button
+                            type="button"
+                            className="button small danger"
+                            aria-label={`${app.name} löschen`}
+                            onClick={() => {
+                              setRemoveError(null);
+                              setPurge(true);
+                              setTyped('');
+                              setRemoveFor(app);
+                              setRemoveOpen(true);
+                            }}
+                          >
+                            Löschen
+                          </button>
+                        )}
                     </td>
                   </tr>
                 );
@@ -740,8 +741,9 @@ export function Apps() {
               <span>
                 <strong>Auch alle Daten löschen</strong>: Daten aller Nutzer in dieser App,
                 gespeicherte Dateien, Logo, Freigaben und Einstellungen. Das lässt sich nicht
-                rückgängig machen. Ohne Haken bleiben die Daten liegen, und die App lässt sich
-                später wieder einspielen.
+                rückgängig machen. Ohne Haken bleiben die Daten liegen; um die App später wieder
+                einzuspielen, lädst du sie neu hoch oder nimmst den Pull Request mit dem entfernten
+                Code zurück.
               </span>
             </label>
             {purge && (

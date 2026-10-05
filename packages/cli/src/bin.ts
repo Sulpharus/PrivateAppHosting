@@ -107,6 +107,10 @@ async function main(args: string[]): Promise<number> {
     }
     case 'uninstall': {
       if (!target) break;
+      const known = new Set(['uninstall', target, '--purge', '--env']);
+      const envValue = flag(args, '--env');
+      const stray = args.filter((arg) => !known.has(arg) && arg !== envValue);
+      if (stray.length > 0) throw new Error(`unknown option ${stray[0]} (use --purge or --env)`);
       const result = await uninstallApp(envFlag(args), target, { purge: args.includes('--purge') });
       console.log(JSON.stringify(result));
       return 0;

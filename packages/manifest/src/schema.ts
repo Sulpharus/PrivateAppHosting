@@ -18,6 +18,12 @@ export const RESERVED_SLUGS = [
   'www',
 ] as const;
 
+/**
+ * Apps the platform itself relies on (the calendar is the hub of the suite data and of the Google
+ * sync): they cannot be uninstalled from Verwaltung.
+ */
+export const UNINSTALL_PROTECTED_SLUGS = ['kalender'] as const;
+
 export const CURRENT_SPEC_VERSION = 1;
 
 export const slugSchema = z

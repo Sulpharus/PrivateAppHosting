@@ -5,7 +5,7 @@
 //     confirm must be the slug again (a typed confirmation, not a click)
 //     purge    true: the data goes too (schema, files, logo, registry entry); false: offline only
 
-import { RESERVED_SLUGS, slugSchema } from '@mininode/manifest';
+import { RESERVED_SLUGS, slugSchema, UNINSTALL_PROTECTED_SLUGS } from '@mininode/manifest';
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { type AppContext, problem, requireUser } from '../lib/auth.ts';
@@ -23,6 +23,12 @@ uninstall.post(
     const slug = slugSchema.safeParse(c.req.param('slug'));
     if (!slug.success || (RESERVED_SLUGS as readonly string[]).includes(slug.data))
       return problem(404, 'not_found', 'Diese App gibt es nicht.');
+    if ((UNINSTALL_PROTECTED_SLUGS as readonly string[]).includes(slug.data))
+      return problem(
+        400,
+        'protected',
+        'Diese App braucht die Plattform selbst (gemeinsame Daten, Kalender-Sync) und lässt sich nicht löschen. Du kannst sie deaktivieren.',
+      );
     const parsed = requestSchema.safeParse(await c.req.json().catch(() => null));
     if (!parsed.success) return problem(400, 'invalid_request', 'Ungültige Anfrage.');
     if (parsed.data.confirm !== slug.data)
@@ -48,31 +54,7 @@ uninstall.post(
       new URL(c.env.PORTAL_URL).hostname === 'mininode.app' ? 'production' : 'staging';
     const library = (app.manifest as { library?: string } | null)?.library;
 
-    // A program from the App-Bibliothek runs on the NucBox: that workflow stops it there.
-    if (library) {
-      const stopped = await dispatchWorkflow(c.env, 'library.yml', {
-        action: 'remove',
-        entry: library,
-        slug: slug.data,
-        environment,
-      });
-      if (stopped instanceof Response) return stopped;
-    }
-    const started = await dispatchWorkflow(c.env, 'uninstall-app.yml', {
-      slug: slug.data,
-      purge: String(parsed.data.purge),
-      environment,
-    });
-    if (started instanceof Response) return started;
-
-    // Offline at once; the workflow does the rest and can be repeated.
-    const { error: disableError } = await db
-      .schema('platform')
-      .from('apps')
-      .update({ status: 'disabled' })
-      .eq('slug', slug.data);
-    if (disableError) console.error(`disabling ${slug.data} failed: ${disableError.message}`);
-
+    // The audit row first: a destructive action leaves a trace even if a later step fails.
     const { error: auditError } = await db
       .schema('platform')
       .from('audit_log')
@@ -82,9 +64,39 @@ uninstall.post(
         action: 'app.uninstall_started',
         detail: { purge: parsed.data.purge, kind: app.kind, library: library ?? null },
       });
-    // The workflow already runs; a missing audit row must not turn that into an error.
     if (auditError)
-      console.error(`audit of the uninstall of ${slug.data} failed: ${auditError.message}`);
+      return problem(500, 'audit_failed', 'Das Löschen konnte nicht protokolliert werden.');
+
+    // The uninstall workflow first: it is the one that must run. A library program is stopped on the
+    // NucBox by a second workflow; if only that one fails to start, the answer says so.
+    const started = await dispatchWorkflow(c.env, 'uninstall-app.yml', {
+      slug: slug.data,
+      purge: String(parsed.data.purge),
+      environment,
+    });
+    if (started instanceof Response) return started;
+    if (library) {
+      const stopped = await dispatchWorkflow(c.env, 'library.yml', {
+        action: 'remove',
+        entry: library,
+        slug: slug.data,
+        environment,
+      });
+      if (stopped instanceof Response)
+        return problem(
+          502,
+          'library_not_started',
+          'Das Löschen läuft, aber der Container auf der NucBox wurde nicht angehalten (App-Bibliothek → Entfernen, noch einmal versuchen).',
+        );
+    }
+
+    // Offline at once; the workflow does the rest and can be repeated.
+    const { error: disableError } = await db
+      .schema('platform')
+      .from('apps')
+      .update({ status: 'disabled' })
+      .eq('slug', slug.data);
+    if (disableError) console.error(`disabling ${slug.data} failed: ${disableError.message}`);
 
     return c.json(
       {

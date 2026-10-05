@@ -8,7 +8,12 @@
 // Every step can be repeated: a run that stopped halfway is simply started again. The code in
 // hosted/<slug> is removed by the workflow's pull request, not here.
 
-import { appSchemaName, RESERVED_SLUGS, slugSchema } from '@mininode/manifest';
+import {
+  appSchemaName,
+  RESERVED_SLUGS,
+  slugSchema,
+  UNINSTALL_PROTECTED_SLUGS,
+} from '@mininode/manifest';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import postgres from 'postgres';
 import { listObjects, removeObjects } from '../backup/storage.ts';
@@ -42,6 +47,10 @@ export function uninstallableSlug(slug: string): string {
   if (!parsed.success) throw new Error(`invalid slug ${slug}`);
   if ((RESERVED_SLUGS as readonly string[]).includes(parsed.data))
     throw new Error(`${slug} is part of the platform and cannot be uninstalled`);
+  if ((UNINSTALL_PROTECTED_SLUGS as readonly string[]).includes(parsed.data))
+    throw new Error(
+      `${slug} is relied on by the platform (suite data, calendar sync) and cannot be uninstalled`,
+    );
   return parsed.data;
 }
 
@@ -78,7 +87,7 @@ async function hideLocally(databaseUrl: string, schema: string): Promise<void> {
   }
 }
 
-async function deleteWorker(
+export async function deleteWorker(
   envName: DeployEnv,
   slug: string,
   request: typeof fetch,
@@ -88,10 +97,29 @@ async function deleteWorker(
   const token = process.env.CLOUDFLARE_API_TOKEN;
   if (!account || !token)
     throw new Error('CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN are required');
-  const response = await request(
-    `https://api.cloudflare.com/client/v4/accounts/${account}/workers/scripts/${env.workerPrefix}${slug}?force=true`,
-    { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } },
-  );
+  const api = `https://api.cloudflare.com/client/v4/accounts/${account}`;
+  const headers = { Authorization: `Bearer ${token}` };
+  const name = `${env.workerPrefix}${slug}`;
+  // The custom domain (<slug>.<domain>) belongs to the Worker. It is detached explicitly: a
+  // hostname that stays claimed would make a later deploy of the same address fail.
+  const listed = await request(`${api}/workers/domains?service=${encodeURIComponent(name)}`, {
+    headers,
+  });
+  if (listed.ok) {
+    const body = (await listed.json()) as { result?: { id: string; hostname?: string }[] };
+    for (const domain of body.result ?? []) {
+      const gone = await request(`${api}/workers/domains/${domain.id}`, {
+        method: 'DELETE',
+        headers,
+      });
+      if (!gone.ok && gone.status !== 404)
+        throw new Error(`detaching ${domain.hostname ?? domain.id} failed: ${gone.status}`);
+    }
+  }
+  const response = await request(`${api}/workers/scripts/${name}?force=true`, {
+    method: 'DELETE',
+    headers,
+  });
   if (response.status === 404) return 'none';
   if (!response.ok) throw new Error(`deleting the Worker failed: ${response.status}`);
   return 'deleted';
@@ -152,41 +180,41 @@ export async function uninstallApp(
   // Data. The schema is hidden from the Data API before it is dropped.
   const schema = appSchemaName(slug);
   const databaseUrl = process.env.SUPABASE_DB_URL;
-  if (databaseUrl) {
-    const sql = postgres(databaseUrl, { max: 1, onnotice: () => {} });
-    let exists = false;
-    try {
-      const [row] = await sql<{ n: number }[]>`
-        select count(*)::int as n from pg_namespace where nspname = ${schema}`;
-      exists = (row?.n ?? 0) > 0;
-    } finally {
-      await sql.end();
-    }
-    if (exists) {
-      if (envName === 'local') await hideLocally(databaseUrl, schema);
-      else {
-        const projectRef = process.env.SUPABASE_PROJECT_REF;
-        const accessToken = process.env.SUPABASE_ACCESS_TOKEN;
-        if (!projectRef || !accessToken)
-          throw new Error(
-            'SUPABASE_PROJECT_REF and SUPABASE_ACCESS_TOKEN are required to hide the schema before it is dropped',
-          );
-        await unexposeSchemas({ projectRef, accessToken, schemas: [schema], fetcher: request });
-      }
-      const drop = postgres(databaseUrl, { max: 1, onnotice: () => {} });
-      try {
-        await drop.unsafe(`drop schema if exists "${schema.replaceAll('"', '""')}" cascade`);
-      } finally {
-        await drop.end();
-      }
-      result.schema = 'dropped';
-      log(`${slug}: schema ${schema} dropped`);
-    } else {
-      result.schema = 'none';
-    }
-  } else {
-    throw new Error('SUPABASE_DB_URL is required to delete the data');
+  if (!databaseUrl) throw new Error('SUPABASE_DB_URL is required to delete the data');
+  const probe = postgres(databaseUrl, { max: 1, onnotice: () => {} });
+  let exists = false;
+  try {
+    const [row] = await probe<{ n: number }[]>`
+      select count(*)::int as n from pg_namespace where nspname = ${schema}`;
+    exists = (row?.n ?? 0) > 0;
+  } finally {
+    await probe.end();
   }
+  if (exists) {
+    if (envName === 'local') await hideLocally(databaseUrl, schema);
+    else {
+      const projectRef = process.env.SUPABASE_PROJECT_REF;
+      const accessToken = process.env.SUPABASE_ACCESS_TOKEN;
+      if (!projectRef || !accessToken)
+        throw new Error(
+          'SUPABASE_PROJECT_REF and SUPABASE_ACCESS_TOKEN are required to hide the schema before it is dropped',
+        );
+      await unexposeSchemas({ projectRef, accessToken, schemas: [schema], fetcher: request });
+    }
+  }
+  const drop = postgres(databaseUrl, { max: 1, onnotice: () => {} });
+  try {
+    await drop.begin(async (tx) => {
+      await tx.unsafe(`drop schema if exists "${schema.replaceAll('"', '""')}" cascade`);
+      // The record of applied migrations has no foreign key to the app: left behind, a later
+      // deploy of the same address would think its tables exist.
+      await tx`delete from platform.app_migrations where app_slug = ${slug}`;
+    });
+  } finally {
+    await drop.end();
+  }
+  result.schema = exists ? 'dropped' : 'none';
+  if (exists) log(`${slug}: schema ${schema} dropped`);
 
   // Files: the app's folder in app-files and its logo.
   const names = (await listObjects(db, 'app-files', slug)).map((o) => o.name);

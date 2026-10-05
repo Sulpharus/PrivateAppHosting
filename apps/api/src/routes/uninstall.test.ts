@@ -108,10 +108,48 @@ describe('POST /admin/apps/:slug/uninstall', () => {
     const response = await post('kino', { purge: true, confirm: 'kino' });
     expect(response.status).toBe(202);
     expect(dispatches().map((d) => d.url.split('/workflows/')[1]?.split('/')[0])).toEqual([
-      'library.yml',
       'uninstall-app.yml',
+      'library.yml',
     ]);
     expect(((await response.json()) as { manual: string }).manual).toMatch(/NucBox/);
+  });
+
+  it('refuses the apps the platform relies on', async () => {
+    signedIn('admin');
+    row = { slug: 'kalender', kind: 'spa', manifest: {} };
+    const response = await post('kalender', { purge: true, confirm: 'kalender' });
+    expect(response.status).toBe(400);
+    expect(dispatches()).toEqual([]);
+  });
+
+  it('writes the audit row before it starts anything, and stops without it', async () => {
+    signedIn('admin');
+    vi.mocked(globalThis.fetch).mockImplementation(async (input, init) => {
+      const url = String(input instanceof Request ? input.url : input);
+      calls.push({ url, method: init?.method ?? 'GET', body: null });
+      if (url.includes('/rest/v1/audit_log')) return new Response(null, { status: 500 });
+      return Response.json([row]);
+    });
+    expect((await post('rezepte', { purge: true, confirm: 'rezepte' })).status).toBe(500);
+    expect(dispatches()).toEqual([]);
+  });
+
+  it('says when only the NucBox part could not be started', async () => {
+    signedIn('admin');
+    row = { slug: 'kino', kind: 'container', manifest: { library: 'jellyfin' } };
+    vi.mocked(globalThis.fetch).mockImplementation(async (input, init) => {
+      const url = String(input instanceof Request ? input.url : input);
+      calls.push({ url, method: init?.method ?? 'GET', body: null });
+      if (url.includes('/workflows/library.yml/')) return new Response(null, { status: 404 });
+      if (url.startsWith('https://api.github.com/')) return new Response(null, { status: 204 });
+      if (url.includes('/rest/v1/apps') && (init?.method ?? 'GET') === 'GET')
+        return Response.json([row]);
+      return new Response(null, { status: 201 });
+    });
+    const response = await post('kino', { purge: true, confirm: 'kino' });
+    expect(response.status).toBe(502);
+    expect(((await response.json()) as { error: string }).error).toBe('library_not_started');
+    expect(dispatches().some((d) => d.url.includes('uninstall-app.yml'))).toBe(true);
   });
 
   it('does not take the app offline when GitHub refuses the start', async () => {

@@ -98,12 +98,18 @@ export async function exposeSchemas(options: {
     throw new Error(`exposing schemas failed: ${response.status} ${await response.text()}`);
 }
 
-/** Takes app schemas out of the Data API's exposed schemas (before they are dropped). */
+/**
+ * Takes app schemas out of the Data API's exposed schemas (before they are dropped). Stops with an
+ * error unless the setting was really read, and confirms afterwards that the schemas are gone: a
+ * dropped schema that is still listed makes PostgREST fail for every request.
+ */
 export async function unexposeSchemas(options: {
   projectRef: string;
   accessToken: string;
   schemas: string[];
   fetcher?: typeof fetch;
+  /** Waits between the checks after the change (tests pass 0). */
+  settleMs?: number;
 }): Promise<void> {
   const fetcher = options.fetcher ?? fetch;
   const base = `https://api.supabase.com/v1/projects/${options.projectRef}/postgrest`;
@@ -111,11 +117,18 @@ export async function unexposeSchemas(options: {
     Authorization: `Bearer ${options.accessToken}`,
     'Content-Type': 'application/json',
   };
-  const current = (await (await fetcher(base, { headers })).json()) as { db_schema?: string };
-  const existing = (current.db_schema ?? 'public,graphql_public')
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean);
+  const read = async (): Promise<string[]> => {
+    const response = await fetcher(base, { headers });
+    if (!response.ok) throw new Error(`reading the exposed schemas failed: ${response.status}`);
+    const body = (await response.json()) as { db_schema?: unknown };
+    if (typeof body.db_schema !== 'string')
+      throw new Error('reading the exposed schemas failed: the answer has no db_schema');
+    return body.db_schema
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+  };
+  const existing = await read();
   const wanted = existing.filter((schema) => !options.schemas.includes(schema));
   if (wanted.length === existing.length) return;
   const response = await fetcher(base, {
@@ -125,4 +138,9 @@ export async function unexposeSchemas(options: {
   });
   if (!response.ok)
     throw new Error(`hiding schemas failed: ${response.status} ${await response.text()}`);
+  for (let attempt = 0; attempt < 5; attempt++) {
+    if ((await read()).every((schema) => !options.schemas.includes(schema))) return;
+    await new Promise((resolve) => setTimeout(resolve, options.settleMs ?? 1000));
+  }
+  throw new Error('the schemas are still exposed after the change; nothing was dropped');
 }

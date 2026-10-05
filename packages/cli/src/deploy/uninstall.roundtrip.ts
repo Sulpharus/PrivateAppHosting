@@ -41,6 +41,7 @@ describe.skipIf(!enabled)('uninstall', () => {
     await sql.unsafe(`create table "${schema(slug)}".notes (id int primary key)`);
     await sql.unsafe(`insert into "${schema(slug)}".notes values (1)`);
     await admin.schema('platform').from('app_kv').insert({ app_slug: slug, key: 'k', value: {} });
+    await sql`insert into platform.app_migrations (app_slug, filename, checksum) values (${slug}, '001.sql', 'x')`;
     for (const [bucket, name] of [
       ['app-files', `${slug}/shared/a.txt`],
       ['app-files', `${slug}/user-1/deep/b.txt`],
@@ -93,6 +94,13 @@ describe.skipIf(!enabled)('uninstall', () => {
     expect(await files(gone)).toBe(0);
     const kv = await admin.schema('platform').from('app_kv').select('key').eq('app_slug', gone);
     expect(kv.data).toEqual([]);
+    // The record of applied migrations goes too: a new app with this address starts from zero.
+    expect(await sql`select 1 from platform.app_migrations where app_slug = ${gone}`).toHaveLength(
+      0,
+    );
+    expect(await sql`select 1 from platform.app_migrations where app_slug = ${stays}`).toHaveLength(
+      1,
+    );
 
     expect(await rows(stays)).toBe(1);
     expect(await schemaExists(stays)).toBe(true);
