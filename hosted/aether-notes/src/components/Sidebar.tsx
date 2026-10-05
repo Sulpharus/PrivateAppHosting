@@ -33,14 +33,14 @@ export default function Sidebar({
   isDarkMode,
   onToggleDarkMode,
 }: SidebarProps) {
-  const { t, language, setLanguage } = useTranslation();
+  const { t } = useTranslation();
   const [portalUrl, setPortalUrl] = useState('/');
   useEffect(() => {
     MiniNode.portalUrl()
       .then(setPortalUrl)
       .catch(() => {});
   }, []);
-  const allApps = language === 'de' ? 'Alle Apps' : 'All apps';
+  const allApps = t('sidebar.allApps');
 
   return (
     <>
@@ -61,10 +61,10 @@ export default function Sidebar({
           <div className="flex items-center gap-2.5 min-w-0">
             <div className="min-w-0 flex-1">
               <h1 className="font-sans text-base text-primary font-bold leading-none tracking-tight truncate">
-                {language === 'de' ? 'Aether Notizen' : 'Aether Notes'}
+                {t('sidebar.aetherNotes')}
               </h1>
               <p className="font-sans text-[10px] text-on-surface-variant mt-1 font-medium select-none truncate">
-                {language === 'de' ? 'Achtsame Kontakte & Notizen' : 'Mindful contacts & notes'}
+                {t('sidebar.mindfulContactsNotes')}
               </p>
             </div>
           </div>
@@ -80,18 +80,11 @@ export default function Sidebar({
               local_fire_department
             </span>
             <span className="text-xs text-on-surface-variant font-medium">
-              {t('dailyStreak', 'Daily Streak')}
+              {t('ui.dailyStreak')}
             </span>
           </div>
           <span className="text-sm font-bold text-primary">
-            {streakCount}{' '}
-            {language === 'de'
-              ? streakCount === 1
-                ? 'Tag'
-                : 'Tage'
-              : streakCount === 1
-                ? 'Day'
-                : 'Days'}
+            {t('streak.days', { n: streakCount })}
           </span>
         </div>
 
@@ -101,7 +94,7 @@ export default function Sidebar({
           className="mx-2 mb-6 bg-primary text-on-primary hover:bg-primary/95 font-sans font-medium text-sm py-3 px-4 rounded-xl transition-all hover:scale-[1.02] duration-200 flex items-center justify-center gap-2 shadow-sm cursor-pointer select-none"
         >
           <span className="material-symbols-outlined text-lg">add</span>
-          {t('newNote', 'New Note')}
+          {t('ui.newNote')}
         </button>
 
         {/* Navigation Links */}
@@ -122,7 +115,7 @@ export default function Sidebar({
             >
               dashboard
             </span>
-            <span className="text-sm font-medium">{t('dashboard', 'Dashboard')}</span>
+            <span className="text-sm font-medium">{t('ui.dashboard')}</span>
           </button>
 
           {/* Notes Library */}
@@ -141,7 +134,7 @@ export default function Sidebar({
             >
               description
             </span>
-            <span className="text-sm font-medium">{t('notesLibrary', 'Notes Library')}</span>
+            <span className="text-sm font-medium">{t('ui.notesLibrary')}</span>
           </button>
 
           {/* Routines */}
@@ -160,7 +153,7 @@ export default function Sidebar({
             >
               rebase_edit
             </span>
-            <span className="text-sm font-medium">{t('routines', 'Routines')}</span>
+            <span className="text-sm font-medium">{t('ui.routines')}</span>
           </button>
 
           {/* People */}
@@ -179,7 +172,7 @@ export default function Sidebar({
             >
               group
             </span>
-            <span className="text-sm font-medium">{t('people', 'People')}</span>
+            <span className="text-sm font-medium">{t('ui.people')}</span>
           </button>
 
           {/* Contacts CRM */}
@@ -198,7 +191,7 @@ export default function Sidebar({
             >
               contact_page
             </span>
-            <span className="text-sm font-medium">{t('contactsCrm', 'Contacts CRM')}</span>
+            <span className="text-sm font-medium">{t('ui.contactsCrm')}</span>
           </button>
 
           {/* Combined Tasks Board */}
@@ -217,7 +210,7 @@ export default function Sidebar({
             >
               view_kanban
             </span>
-            <span className="text-sm font-medium">{t('workTasks', 'Tasks Board')}</span>
+            <span className="text-sm font-medium">{t('ui.workTasks')}</span>
           </button>
         </nav>
 
@@ -238,7 +231,7 @@ export default function Sidebar({
             >
               settings
             </span>
-            <span className="text-sm font-medium">{t('settingsTitle', 'Settings')}</span>
+            <span className="text-sm font-medium">{t('ui.settingsTitle')}</span>
           </button>
         </div>
       </aside>
@@ -275,16 +268,9 @@ export default function Sidebar({
             </span>
             <span className="text-[10px] font-bold text-primary">{streakCount}d</span>
           </div>
-          {/* Mobile Language Toggle */}
-          <button
-            onClick={() => setLanguage(language === 'en' ? 'de' : 'en')}
-            className="px-2.5 py-1 text-[9px] font-bold tracking-wide rounded-lg bg-surface-container-high/60 border border-outline-variant/15 text-on-surface-variant hover:text-on-surface select-none active:scale-95 transition-all cursor-pointer"
-          >
-            {language === 'en' ? 'DE' : 'EN'}
-          </button>
           <button
             onClick={() => setActiveTab('settings')}
-            aria-label={language === 'de' ? 'Einstellungen' : 'Settings'}
+            aria-label={t('sidebar.settings')}
             className="w-11 h-11 -mr-1.5 rounded-full flex items-center justify-center text-on-surface-variant hover:text-on-surface shrink-0"
           >
             <span className="material-symbols-outlined text-xl">settings</span>
@@ -305,9 +291,7 @@ export default function Sidebar({
           >
             dashboard
           </span>
-          <span className="font-sans text-[10px] font-medium mt-0.5">
-            {t('dashboardTab', 'Dashboard')}
-          </span>
+          <span className="font-sans text-[10px] font-medium mt-0.5">{t('ui.dashboardTab')}</span>
         </button>
 
         <button
@@ -321,9 +305,7 @@ export default function Sidebar({
           >
             description
           </span>
-          <span className="font-sans text-[10px] font-medium mt-0.5">
-            {language === 'de' ? 'Notizen' : 'Notes'}
-          </span>
+          <span className="font-sans text-[10px] font-medium mt-0.5">{t('sidebar.notes')}</span>
         </button>
 
         <div className="w-full flex justify-center -mt-6">
@@ -346,9 +328,7 @@ export default function Sidebar({
           >
             rebase_edit
           </span>
-          <span className="font-sans text-[10px] font-medium mt-0.5">
-            {language === 'de' ? 'Routinen' : 'Routines'}
-          </span>
+          <span className="font-sans text-[10px] font-medium mt-0.5">{t('sidebar.routines')}</span>
         </button>
 
         <button
@@ -362,7 +342,7 @@ export default function Sidebar({
           >
             group
           </span>
-          <span className="font-sans text-[10px] font-medium mt-0.5">{t('people', 'People')}</span>
+          <span className="font-sans text-[10px] font-medium mt-0.5">{t('ui.people')}</span>
         </button>
 
         <button
@@ -376,9 +356,7 @@ export default function Sidebar({
           >
             view_kanban
           </span>
-          <span className="font-sans text-[10px] font-medium mt-0.5">
-            {language === 'de' ? 'Aufgaben' : 'Tasks'}
-          </span>
+          <span className="font-sans text-[10px] font-medium mt-0.5">{t('sidebar.tasks')}</span>
         </button>
       </nav>
     </>

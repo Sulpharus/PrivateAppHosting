@@ -47,7 +47,7 @@ import type {
 } from './types';
 
 export default function App() {
-  const { language, setLanguage, t } = useTranslation();
+  const { setLanguage, t } = useTranslation();
   // Navigation State
   const [activeTab, setActiveTab] = useState<
     'dashboard' | 'library' | 'routines' | 'people' | 'contacts' | 'settings' | 'kanban'
@@ -703,7 +703,7 @@ export default function App() {
     if (!importedData || typeof importedData !== 'object') {
       return {
         count: 0,
-        error: language === 'de' ? 'Ungültiges Dateiformat' : 'Invalid file format',
+        error: t('app.invalidFileFormat'),
       };
     }
 
@@ -816,10 +816,10 @@ export default function App() {
           </span>
         </div>
         <h2 className="text-xl font-bold font-sans tracking-tight text-on-background mb-1">
-          Aether Notes
+          {t('app.name')}
         </h2>
         <p className="font-serif text-xs italic text-on-surface-variant/75 max-w-xs leading-normal">
-          Connecting to your secure host profile...
+          {t('app.connecting')}
         </p>
       </div>
     );
@@ -844,43 +844,11 @@ export default function App() {
       <main className="flex-1 w-full ml-0 md:ml-64 pt-16 md:pt-6 pb-20 md:pb-10 px-5 md:px-12 min-h-screen overflow-x-hidden relative">
         {/* Global Top-Right Quick Bar */}
         <div className="absolute top-4 right-5 md:top-6 md:right-12 hidden md:flex items-center gap-2.5 z-50 select-none">
-          {/* Language Toggle */}
-          <div className="flex bg-surface-container-high/60 border border-outline-variant/20 p-1 rounded-lg gap-1 items-center shadow-xs backdrop-blur-md">
-            <button
-              onClick={() => setLanguage('en')}
-              className={`px-2 py-1 rounded-md text-[9px] font-bold tracking-wide transition-all uppercase cursor-pointer ${
-                language === 'en'
-                  ? 'bg-primary text-on-primary shadow-2xs font-bold'
-                  : 'text-on-surface-variant hover:bg-surface-container-highest hover:text-on-surface'
-              }`}
-            >
-              EN
-            </button>
-            <button
-              onClick={() => setLanguage('de')}
-              className={`px-2 py-1 rounded-md text-[9px] font-bold tracking-wide transition-all uppercase cursor-pointer ${
-                language === 'de'
-                  ? 'bg-primary text-on-primary shadow-2xs font-bold'
-                  : 'text-on-surface-variant hover:bg-surface-container-highest hover:text-on-surface'
-              }`}
-            >
-              DE
-            </button>
-          </div>
-
           {/* Dark Mode Toggle */}
           <button
             onClick={handleToggleDarkMode}
             className="w-8 h-8 flex items-center justify-center rounded-lg bg-surface-container-high/60 border border-outline-variant/20 text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest transition-all duration-200 cursor-pointer shadow-xs backdrop-blur-md"
-            title={
-              language === 'de'
-                ? isDarkMode
-                  ? 'Lichtmodus'
-                  : 'Dunkelmodus'
-                : isDarkMode
-                  ? 'Light Mode'
-                  : 'Dark Mode'
-            }
+            title={isDarkMode ? t('app.lightMode') : t('app.darkMode')}
           >
             <span className="material-symbols-outlined text-[16px]">
               {isDarkMode ? 'light_mode' : 'dark_mode'}

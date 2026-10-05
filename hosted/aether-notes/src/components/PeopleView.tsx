@@ -37,7 +37,14 @@ export default function PeopleView({
   onAddPerson,
   onDeletePerson,
 }: PeopleViewProps) {
-  const { t, language } = useTranslation();
+  const { t } = useTranslation();
+  const categoryName = (filter: string) =>
+    ({
+      all: t('people.filterAll'),
+      Family: t('people.filterFamily'),
+      Friends: t('people.filterFriends'),
+      Colleagues: t('people.filterColleagues'),
+    })[filter] ?? filter;
   const [activeFilter, setActiveFilter] = useState<'all' | ConnectionCategory>('all');
   const [selectedPerson, setSelectedPerson] = useState<Person | null>(null);
 
@@ -519,9 +526,7 @@ export default function PeopleView({
       }
     }
 
-    triggerAlert(
-      language === 'de' ? 'Verbindung erfolgreich hinzugefügt!' : 'Connection linked successfully!',
-    );
+    triggerAlert(t('people.connectionLinkedSuccessfully'));
   };
 
   // Remove a bidirectional connection link
@@ -552,7 +557,7 @@ export default function PeopleView({
       }
     }
 
-    triggerAlert(language === 'de' ? 'Verbindung entfernt.' : 'Connection unlinked.');
+    triggerAlert(t('people.connectionUnlinked'));
   };
 
   const categories = useMemo(() => {
@@ -583,12 +588,10 @@ export default function PeopleView({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="font-sans text-3xl font-bold text-on-surface tracking-tight">
-            {language === 'de' ? 'Kontakte & Netzwerk' : 'Connections Profile'}
+            {t('people.connectionsProfile')}
           </h2>
           <p className="font-serif text-sm text-on-surface-variant mt-1.5 opacity-85">
-            {language === 'de'
-              ? 'Ein persönliches Nachschlagewerk für Dialoge, Meilensteine und Weggefährten.'
-              : 'A personal encyclopedia of dialogues, milestones, and companionship.'}
+            {t('people.aPersonalEncyclopediaOfDialogues')}
           </p>
         </div>
         <div className="flex items-center gap-2.5">
@@ -598,7 +601,7 @@ export default function PeopleView({
             className="bg-secondary/15 hover:bg-secondary/25 text-secondary border border-secondary/20 text-xs font-semibold py-2.5 px-4 rounded-xl flex items-center gap-1.5 shadow-sm transition-all duration-200 cursor-pointer shrink-0"
           >
             <span className="material-symbols-outlined text-sm">calendar_today</span>
-            {language === 'de' ? 'Treffen planen' : 'Schedule Meetup'}
+            {t('people.scheduleMeetup')}
           </button>
           <button
             id="btn-add-connection"
@@ -608,13 +611,7 @@ export default function PeopleView({
             <span className="material-symbols-outlined text-sm">
               {showAddForm ? 'close' : 'person_add'}
             </span>
-            {showAddForm
-              ? language === 'de'
-                ? 'Abbrechen'
-                : 'Cancel Profile'
-              : language === 'de'
-                ? 'Verbindung hinzufügen'
-                : 'Add Connection'}
+            {showAddForm ? t('people.cancelProfile') : t('people.addConnection')}
           </button>
         </div>
       </div>
@@ -630,7 +627,7 @@ export default function PeopleView({
           }`}
         >
           <span className="material-symbols-outlined text-base">grid_view</span>
-          {language === 'de' ? 'Profil-Verzeichnis' : 'Directory Grid'}
+          {t('people.directoryGrid')}
         </button>
         <button
           onClick={() => setViewMode('map')}
@@ -641,7 +638,7 @@ export default function PeopleView({
           }`}
         >
           <span className="material-symbols-outlined text-base">hub</span>
-          {language === 'de' ? 'Interaktive Netzwerkkarte' : 'Relationship Map'}
+          {t('people.relationshipMap')}
         </button>
       </div>
 
@@ -658,15 +655,12 @@ export default function PeopleView({
                   event_seat
                 </span>
                 <h3 className="font-serif text-base font-bold text-on-surface">
-                  {language === 'de'
-                    ? 'Treffen-Planer & Vorbereitungsboard'
-                    : 'Meetup Planner & Preparation Board'}
+                  {t('people.meetupPlannerPreparationBoard')}
                 </h3>
               </div>
               {peopleMeetups.length > 0 && (
                 <span className="font-mono text-[10px] bg-primary/10 text-primary font-bold px-2.5 py-0.5 rounded-full">
-                  {peopleMeetups.filter((m) => !m.completed).length}{' '}
-                  {language === 'de' ? 'ausstehend' : 'pending'}
+                  {peopleMeetups.filter((m) => !m.completed).length} {t('people.pending')}
                 </span>
               )}
             </div>
@@ -678,18 +672,14 @@ export default function PeopleView({
                     groups_3
                   </span>
                   <p className="font-serif text-xs text-on-surface-variant/75">
-                    {language === 'de'
-                      ? 'Keine geplanten Treffen mit Kontakten gefunden.'
-                      : 'No scheduled meetups with connections found.'}
+                    {t('people.noScheduledMeetupsWithConnections')}
                   </p>
                   <button
                     type="button"
                     onClick={handleOpenScheduleMeetup}
                     className="mt-2 text-primary hover:underline text-[11px] font-bold flex items-center gap-1 cursor-pointer"
                   >
-                    {language === 'de'
-                      ? 'Planen Sie Ihr erstes Treffen mit einem Kontakt'
-                      : 'Schedule your first meetup with a connection'}
+                    {t('people.scheduleYourFirstMeetupWith')}
                   </button>
                 </div>
               ) : (
@@ -724,7 +714,7 @@ export default function PeopleView({
                                 type="button"
                                 onClick={() => handleOpenEditMeetup(m)}
                                 className="p-1 hover:bg-surface-container rounded text-on-surface-variant/70 hover:text-primary transition-all cursor-pointer"
-                                title="Edit Meetup"
+                                title={t('meetups.edit')}
                               >
                                 <span className="material-symbols-outlined text-xs">edit</span>
                               </button>
@@ -732,7 +722,7 @@ export default function PeopleView({
                                 type="button"
                                 onClick={() => handleDeleteMeetupItem(m.id)}
                                 className="p-1 hover:bg-error/5 rounded text-on-surface-variant/70 hover:text-error transition-all cursor-pointer"
-                                title="Delete Meetup"
+                                title={t('meetups.delete')}
                               >
                                 <span className="material-symbols-outlined text-xs">delete</span>
                               </button>
@@ -794,7 +784,7 @@ export default function PeopleView({
                             </div>
                           ) : (
                             <div className="text-[9px] text-error/85 bg-error/5 border border-error/10 p-2 rounded-xl">
-                              Associated connections have been deleted.
+                              {t('meetups.connectionsDeleted')}
                             </div>
                           )}
                         </div>
@@ -802,7 +792,7 @@ export default function PeopleView({
                         {/* Preparation Notes */}
                         <div className="space-y-1">
                           <span className="text-[9px] font-bold uppercase text-on-surface-variant/75 tracking-wider block">
-                            Preparation & Notes
+                            {t('meetups.preparation')}
                           </span>
                           <div className="bg-surface-container/60 p-2.5 rounded-xl border border-outline-variant/10 min-h-[48px] max-h-[70px] overflow-y-auto">
                             <p className="text-[10px] text-on-surface-variant/90 leading-relaxed font-serif italic whitespace-pre-line">
@@ -826,7 +816,7 @@ export default function PeopleView({
                             </div>
                           ) : (
                             <span className="text-[9px] text-on-surface-variant/60 italic">
-                              Location unassigned
+                              {t('meetups.locationUnassigned')}
                             </span>
                           )}
 
@@ -856,12 +846,6 @@ export default function PeopleView({
           <div className="flex flex-wrap gap-2.5">
             {categories.map((filter) => {
               const isActive = activeFilter === filter;
-              const categoryTranslation: Record<string, string> = {
-                all: 'Alle',
-                Family: 'Familie',
-                Friends: 'Freunde',
-                Colleagues: 'Kollegen',
-              };
               return (
                 <button
                   id={`filter-chip-${filter}`}
@@ -873,11 +857,7 @@ export default function PeopleView({
                       : 'border-outline-variant text-on-surface-variant hover:bg-surface-container-high'
                   }`}
                 >
-                  {language === 'de'
-                    ? categoryTranslation[filter] || filter
-                    : filter === 'all'
-                      ? 'All'
-                      : filter}
+                  {categoryName(filter)}
                 </button>
               );
             })}
@@ -892,9 +872,7 @@ export default function PeopleView({
             >
               <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-outline-variant/15 pb-3 gap-3">
                 <h3 className="font-sans text-sm font-bold text-primary">
-                  {language === 'de'
-                    ? 'Neuer Tagebucheintrag für eine Verbindung'
-                    : 'New Connection Diary Entry'}
+                  {t('people.newConnectionDiaryEntry')}
                 </h3>
 
                 {/* Small Tab bar */}
@@ -908,7 +886,7 @@ export default function PeopleView({
                         : 'text-on-surface-variant hover:bg-surface-container-high'
                     }`}
                   >
-                    {language === 'de' ? 'Treffen & Biografie' : 'Meetups & General Info'}
+                    {t('people.meetupsGeneralInfo')}
                   </button>
                   <button
                     type="button"
@@ -919,7 +897,7 @@ export default function PeopleView({
                         : 'text-on-surface-variant hover:bg-surface-container-high'
                     }`}
                   >
-                    {language === 'de' ? 'Adresse & Kontakt' : 'Address & Contact'}
+                    {t('people.addressContact')}
                   </button>
                   <button
                     type="button"
@@ -930,7 +908,7 @@ export default function PeopleView({
                         : 'text-on-surface-variant hover:bg-surface-container-high'
                     }`}
                   >
-                    {language === 'de' ? 'Hobbys & Persönliches' : 'Hobbies & Personal'}
+                    {t('people.hobbiesPersonal')}
                   </button>
                 </div>
               </div>
@@ -940,41 +918,35 @@ export default function PeopleView({
                   <>
                     <div>
                       <label className="block text-xs font-semibold text-on-surface-variant mb-1 font-sans">
-                        {language === 'de' ? 'Vollständiger Name *' : 'Full Name *'}
+                        {t('people.fullName')}
                       </label>
                       <input
                         required
                         value={newName}
                         onChange={(e) => setNewName(e.target.value)}
-                        placeholder={language === 'de' ? 'z.B. Max Mustermann' : 'e.g. John Doe'}
+                        placeholder={t('people.eGJohnDoe')}
                         className="w-full bg-surface-container-lowest border border-outline-variant/20 px-3 py-2 rounded-xl text-sm font-sans focus:outline-primary placeholder:text-on-surface-variant/40 text-on-surface"
                       />
                     </div>
 
                     <div>
                       <label className="block text-xs font-semibold text-on-surface-variant mb-1 font-sans">
-                        {language === 'de' ? 'Kategorie der Verbindung' : 'Connection Category'}
+                        {t('people.connectionCategory')}
                       </label>
                       <select
                         value={newCategory}
                         onChange={(e) => setNewCategory(e.target.value)}
                         className="w-full bg-surface-container-lowest border border-outline-variant/20 px-3 py-2.5 rounded-xl text-sm font-sans focus:outline-primary text-on-surface mb-2"
                       >
-                        <option value="Family">{language === 'de' ? 'Familie' : 'Family'}</option>
-                        <option value="Friends">{language === 'de' ? 'Freunde' : 'Friends'}</option>
-                        <option value="Colleagues">
-                          {language === 'de' ? 'Kollegen' : 'Colleagues'}
-                        </option>
+                        <option value="Family">{t('people.family')}</option>
+                        <option value="Friends">{t('people.friends')}</option>
+                        <option value="Colleagues">{t('people.colleagues')}</option>
                         {customCategories.map((cat) => (
                           <option key={cat} value={cat}>
                             {cat}
                           </option>
                         ))}
-                        <option value="__custom__">
-                          {language === 'de'
-                            ? '+ Eigene Kategorie erstellen...'
-                            : '+ Create Custom Category...'}
-                        </option>
+                        <option value="__custom__">{t('people.createCustomCategory')}</option>
                       </select>
 
                       {newCategory === '__custom__' && (
@@ -983,11 +955,7 @@ export default function PeopleView({
                           required
                           value={newCustomCategoryInput}
                           onChange={(e) => setNewCustomCategoryInput(e.target.value)}
-                          placeholder={
-                            language === 'de'
-                              ? 'Eigene Kategorie eingeben...'
-                              : 'Enter custom category name...'
-                          }
+                          placeholder={t('people.enterCustomCategoryName')}
                           className="w-full bg-surface-container-lowest border border-outline-variant/20 px-3 py-2 rounded-xl text-xs font-sans focus:outline-primary text-on-surface mt-1.5"
                         />
                       )}
@@ -995,15 +963,13 @@ export default function PeopleView({
 
                     <div className="md:col-span-2">
                       <label className="block text-xs font-semibold text-on-surface-variant mb-1.5 font-sans">
-                        {language === 'de'
-                          ? 'Verbindungsbild (Aus Galerie hochladen)'
-                          : 'Connection Picture (Upload from Camera Roll)'}
+                        {t('people.connectionPictureUploadFromCamera')}
                       </label>
                       <div className="flex items-center gap-4 bg-surface-container-lowest p-3 rounded-xl border border-outline-variant/15">
                         <div className="w-14 h-14 rounded-full overflow-hidden flex items-center justify-center bg-surface-container-high/50 border border-outline-variant/20 shrink-0 select-none">
                           {newAvatarUrl ? (
                             <img
-                              alt="Preview"
+                              alt={t('people.avatarPreview')}
                               className="w-full h-full object-cover"
                               src={newAvatarUrl}
                             />
@@ -1016,7 +982,7 @@ export default function PeopleView({
                         <div className="flex-1">
                           <label className="inline-flex items-center gap-2 px-3.5 py-2 bg-primary/10 hover:bg-primary/15 text-primary text-xs font-semibold rounded-xl cursor-pointer transition-colors border border-primary/10">
                             <span className="material-symbols-outlined text-sm">photo_camera</span>
-                            <span>{language === 'de' ? 'Foto hochladen' : 'Upload Photo'}</span>
+                            <span>{t('people.uploadPhoto')}</span>
                             <input
                               type="file"
                               accept="image/*"
@@ -1030,13 +996,11 @@ export default function PeopleView({
                               onClick={() => setNewAvatarUrl('')}
                               className="ml-3 text-xs text-error font-semibold hover:underline"
                             >
-                              {language === 'de' ? 'Entfernen' : 'Remove'}
+                              {t('people.remove')}
                             </button>
                           )}
                           <p className="text-[10px] text-on-surface-variant/65 mt-1 leading-none">
-                            {language === 'de'
-                              ? 'Foto aufnehmen oder hochladen. Wird direkt zentriert.'
-                              : 'Take photo or upload image. Will center directly.'}
+                            {t('people.takePhotoOrUploadImage')}
                           </p>
                         </div>
                       </div>
@@ -1044,18 +1008,12 @@ export default function PeopleView({
 
                     <div className="md:col-span-2">
                       <label className="block text-xs font-semibold text-on-surface-variant mb-1 font-sans">
-                        {language === 'de'
-                          ? 'Persönliche Notizen / Zusammenfassung zum Hintergrund'
-                          : 'Personal Diary Notes / Background Summary'}
+                        {t('people.personalDiaryNotesBackgroundSummary')}
                       </label>
                       <textarea
                         value={newNotes}
                         onChange={(e) => setNewNotes(e.target.value)}
-                        placeholder={
-                          language === 'de'
-                            ? 'Gartenrezepte austauschen, minimalistische Holzkonstruktionen...'
-                            : 'Exchange gardening recipes, minimalist timber wood layouts...'
-                        }
+                        placeholder={t('people.exchangeGardeningRecipesMinimalistTimber')}
                         rows={3}
                         className="w-full bg-surface-container-lowest border border-outline-variant/20 px-3 py-2 rounded-xl text-sm font-sans focus:outline-primary placeholder:text-on-surface-variant/40 text-on-surface"
                       />
@@ -1063,18 +1021,12 @@ export default function PeopleView({
 
                     <div className="md:col-span-2">
                       <label className="block text-xs font-semibold text-on-surface-variant mb-1 font-sans">
-                        {language === 'de'
-                          ? 'Treffen-Plan / Ideen für zukünftige Treffen'
-                          : 'Meetup Plan / Future Meetup Ideas'}
+                        {t('people.meetupPlanFutureMeetupIdeas')}
                       </label>
                       <textarea
                         value={newMeetupPlan}
                         onChange={(e) => setNewMeetupPlan(e.target.value)}
-                        placeholder={
-                          language === 'de'
-                            ? 'z.B. Treffen am nächsten Dienstag im Botanischen Garten planen. Kopie der Entwürfe mitbringen.'
-                            : 'e.g. Plan to meet next Tuesday at the Botanical Gardens. Bring copy of the blueprint designs.'
-                        }
+                        placeholder={t('people.eGPlanToMeet')}
                         rows={3}
                         className="w-full bg-surface-container-lowest border border-outline-variant/20 px-3 py-2 rounded-xl text-sm font-sans focus:outline-primary placeholder:text-on-surface-variant/40 text-on-surface"
                       />
@@ -1086,40 +1038,32 @@ export default function PeopleView({
                   <>
                     <div>
                       <label className="block text-xs font-semibold text-on-surface-variant mb-1 font-sans">
-                        {language === 'de' ? 'E-Mail-Adresse' : 'Email Address'}
+                        {t('people.emailAddress')}
                       </label>
                       <input
                         type="email"
                         value={newEmail}
                         onChange={(e) => setNewEmail(e.target.value)}
-                        placeholder={
-                          language === 'de'
-                            ? 'z.B. kontakt@example.com'
-                            : 'e.g. contact@example.com'
-                        }
+                        placeholder={t('people.eGContactExampleCom')}
                         className="w-full bg-surface-container-lowest border border-outline-variant/20 px-3 py-2 rounded-xl text-sm font-sans focus:outline-primary placeholder:text-on-surface-variant/40 text-on-surface"
                       />
                     </div>
 
                     <div>
                       <label className="block text-xs font-semibold text-on-surface-variant mb-1 font-sans">
-                        {language === 'de' ? 'Beruf / Tätigkeit / Rolle' : 'Job Role / Occupation'}
+                        {t('people.jobRoleOccupation')}
                       </label>
                       <input
                         value={newJob}
                         onChange={(e) => setNewJob(e.target.value)}
-                        placeholder={
-                          language === 'de'
-                            ? 'z.B. Leitender Architekt, Kunstgärtner'
-                            : 'e.g. Lead Architect, Craft Botanist'
-                        }
+                        placeholder={t('people.eGLeadArchitectCraft')}
                         className="w-full bg-surface-container-lowest border border-outline-variant/20 px-3 py-2 rounded-xl text-sm font-sans focus:outline-primary placeholder:text-on-surface-variant/40 text-on-surface"
                       />
                     </div>
 
                     <div>
                       <label className="block text-xs font-semibold text-on-surface-variant mb-1 font-sans">
-                        {language === 'de' ? 'Telefonnummer' : 'Phone Number'}
+                        {t('people.phoneNumber')}
                       </label>
                       <input
                         type="tel"
@@ -1132,16 +1076,12 @@ export default function PeopleView({
 
                     <div className="md:col-span-2">
                       <label className="block text-xs font-semibold text-on-surface-variant mb-1 font-sans">
-                        {language === 'de' ? 'Postanschrift' : 'Postal Address'}
+                        {t('people.postalAddress')}
                       </label>
                       <textarea
                         value={newAddress}
                         onChange={(e) => setNewAddress(e.target.value)}
-                        placeholder={
-                          language === 'de'
-                            ? 'z.B. Whisper Wood Lane 123, 10001 Cozy Hills'
-                            : 'e.g. 123 Whisper Wood Lane, Cozy Hills, NY 10001'
-                        }
+                        placeholder={t('people.eG123WhisperWood')}
                         rows={2}
                         className="w-full bg-surface-container-lowest border border-outline-variant/20 px-3 py-2 rounded-xl text-sm font-sans focus:outline-primary placeholder:text-on-surface-variant/40 text-on-surface"
                       />
@@ -1153,124 +1093,84 @@ export default function PeopleView({
                   <>
                     <div className="md:col-span-2">
                       <label className="block text-xs font-semibold text-on-surface-variant mb-1 font-sans">
-                        {language === 'de'
-                          ? 'Aktivitäten & Dinge, die sie mögen'
-                          : 'Activities & Things They Like'}
+                        {t('people.activitiesThingsTheyLike')}
                       </label>
                       <input
                         value={newLikes}
                         onChange={(e) => setNewLikes(e.target.value)}
-                        placeholder={
-                          language === 'de'
-                            ? 'z.B. Zeremonieller Matcha, analoge Fotografie, Radfahren'
-                            : 'e.g. Ceremonial matcha, film photography, bicycling'
-                        }
+                        placeholder={t('people.eGCeremonialMatchaFilm')}
                         className="w-full bg-surface-container-lowest border border-outline-variant/20 px-3 py-2 rounded-xl text-sm font-sans focus:outline-primary placeholder:text-on-surface-variant/40 text-on-surface"
                       />
                     </div>
 
                     <div className="md:col-span-2">
                       <label className="block text-xs font-semibold text-on-surface-variant mb-1 font-sans">
-                        {language === 'de'
-                          ? 'Lieblingsfarbe / Farb-Motto'
-                          : 'Favorite Color / Color Slogan'}
+                        {t('people.favoriteColorColorSlogan')}
                       </label>
                       <input
                         value={newFavoriteColor}
                         onChange={(e) => setNewFavoriteColor(e.target.value)}
-                        placeholder={
-                          language === 'de'
-                            ? 'z.B. Salbeiholz, Indigoblau, #4A5D4E'
-                            : 'e.g. Sage Wood, Indigo, #4A5D4E'
-                        }
+                        placeholder={t('people.eGSageWoodIndigo')}
                         className="w-full bg-surface-container-lowest border border-outline-variant/20 px-3 py-2 rounded-xl text-sm font-sans focus:outline-primary placeholder:text-on-surface-variant/40 text-on-surface"
                       />
                     </div>
 
                     <div className="md:col-span-2">
                       <label className="block text-xs font-semibold text-on-surface-variant mb-1 font-sans">
-                        {language === 'de'
-                          ? 'Haustier-Profile & Begleiter-Infos'
-                          : 'Pet Profiles & Companion Info'}
+                        {t('people.petProfilesCompanionInfo')}
                       </label>
                       <input
                         value={newPetsInfo}
                         onChange={(e) => setNewPetsInfo(e.target.value)}
-                        placeholder={
-                          language === 'de'
-                            ? 'z.B. Ein Golden Retriever namens Barnaby (liebt Apportieren)'
-                            : 'e.g. A golden retriever named Barnaby (loves playing catch)'
-                        }
+                        placeholder={t('people.eGAGoldenRetriever')}
                         className="w-full bg-surface-container-lowest border border-outline-variant/20 px-3 py-2 rounded-xl text-sm font-sans focus:outline-primary placeholder:text-on-surface-variant/40 text-on-surface"
                       />
                     </div>
 
                     <div>
                       <label className="block text-xs font-semibold text-on-surface-variant mb-1 font-sans">
-                        {language === 'de'
-                          ? 'Kaffee- / Tee- & Getränkevorlieben'
-                          : 'Coffee / Tea & Drink Preference'}
+                        {t('people.coffeeTeaDrinkPreference')}
                       </label>
                       <input
                         value={newCoffeePreference}
                         onChange={(e) => setNewCoffeePreference(e.target.value)}
-                        placeholder={
-                          language === 'de'
-                            ? 'z.B. Flat White mit Hafermilch, Earl Grey mit Zitrone'
-                            : 'e.g. Flat White with oat milk, Earl Grey with lemon'
-                        }
+                        placeholder={t('people.eGFlatWhiteWith')}
                         className="w-full bg-surface-container-lowest border border-outline-variant/20 px-3 py-2 rounded-xl text-sm font-sans focus:outline-primary placeholder:text-on-surface-variant/40 text-on-surface"
                       />
                     </div>
 
                     <div>
                       <label className="block text-xs font-semibold text-on-surface-variant mb-1 font-sans">
-                        {language === 'de'
-                          ? 'Persönlichkeitstyp (MBTI / Vibe-Motto)'
-                          : 'Personality Type (MBTI / Vibe Slogan)'}
+                        {t('people.personalityTypeMbtiVibeSlogan')}
                       </label>
                       <input
                         value={newPersonalityType}
                         onChange={(e) => setNewPersonalityType(e.target.value)}
-                        placeholder={
-                          language === 'de'
-                            ? 'z.B. INFJ (Achtsamer Helfer), Extrovertierter Organisator'
-                            : 'e.g. INFJ (Thoughtful helper), Extroverted organizer'
-                        }
+                        placeholder={t('people.eGInfjThoughtfulHelper')}
                         className="w-full bg-surface-container-lowest border border-outline-variant/20 px-3 py-2 rounded-xl text-sm font-sans focus:outline-primary placeholder:text-on-surface-variant/40 text-on-surface"
                       />
                     </div>
 
                     <div>
                       <label className="block text-xs font-semibold text-on-surface-variant mb-1 font-sans">
-                        {language === 'de' ? 'Geburtstag / Jahrestag' : 'Birthday / Anniversary'}
+                        {t('people.birthdayAnniversary')}
                       </label>
                       <input
                         value={newBirthday}
                         onChange={(e) => setNewBirthday(e.target.value)}
-                        placeholder={
-                          language === 'de'
-                            ? 'z.B. 23. November, 14. Mai'
-                            : 'e.g. November 23rd, 05-14'
-                        }
+                        placeholder={t('people.eGNovember23rd05')}
                         className="w-full bg-surface-container-lowest border border-outline-variant/20 px-3 py-2 rounded-xl text-sm font-sans focus:outline-primary placeholder:text-on-surface-variant/40 text-on-surface"
                       />
                     </div>
 
                     <div className="md:col-span-2">
                       <label className="block text-xs font-semibold text-on-surface-variant mb-1 font-sans">
-                        {language === 'de'
-                          ? 'Geschenkideen & Wunschliste'
-                          : 'Gift Ideas & Wishlist'}
+                        {t('people.giftIdeasWishlist')}
                       </label>
                       <textarea
                         value={newGiftIdeas}
                         onChange={(e) => setNewGiftIdeas(e.target.value)}
-                        placeholder={
-                          language === 'de'
-                            ? 'z.B. Liebt Füllfederhalter, Premium-Tee-Auswahl, gemütliche Socken'
-                            : 'e.g. Loves custom fountain pens, premium tea samplers, cozy socks'
-                        }
+                        placeholder={t('people.eGLovesCustomFountain')}
                         rows={2}
                         className="w-full bg-surface-container-lowest border border-outline-variant/20 px-3 py-2 rounded-xl text-sm font-sans focus:outline-primary placeholder:text-on-surface-variant/40 text-on-surface"
                       />
@@ -1278,52 +1178,36 @@ export default function PeopleView({
 
                     <div className="md:col-span-2">
                       <label className="block text-xs font-semibold text-on-surface-variant mb-1 font-sans">
-                        {language === 'de' ? 'Lieblingsgericht / Küche' : 'Favorite Food / Cuisine'}
+                        {t('people.favoriteFoodCuisine')}
                       </label>
                       <input
                         value={newFavoriteFood}
                         onChange={(e) => setNewFavoriteFood(e.target.value)}
-                        placeholder={
-                          language === 'de'
-                            ? 'z.B. Selbstgemachtes Sauerteigbrot, vegane Zimtschnecken, Sushi'
-                            : 'e.g. Homemade sourdough, vegan cinnamon rolls, artisan pizza'
-                        }
+                        placeholder={t('people.eGHomemadeSourdoughVegan')}
                         className="w-full bg-surface-container-lowest border border-outline-variant/20 px-3 py-2 rounded-xl text-sm font-sans focus:outline-primary placeholder:text-on-surface-variant/40 text-on-surface"
                       />
                     </div>
 
                     <div className="md:col-span-2">
                       <label className="block text-xs font-semibold text-on-surface-variant mb-1 font-sans">
-                        {language === 'de'
-                          ? 'Themen zum Vermeiden / Sensible Themen'
-                          : 'Topics to Avoid / Sensitive Topics'}
+                        {t('people.topicsToAvoidSensitiveTopics')}
                       </label>
                       <input
                         value={newSensitiveTopics}
                         onChange={(e) => setNewSensitiveTopics(e.target.value)}
-                        placeholder={
-                          language === 'de'
-                            ? 'z.B. Arbeitsstress, Politik, Familientrubel'
-                            : 'e.g. Work stress, political debates, personal relationship issues'
-                        }
+                        placeholder={t('people.eGWorkStressPolitical')}
                         className="w-full bg-surface-container-lowest border border-outline-variant/20 px-3 py-2 rounded-xl text-sm font-sans focus:outline-primary placeholder:text-on-surface-variant/40 text-on-surface"
                       />
                     </div>
 
                     <div className="md:col-span-2">
                       <label className="block text-xs font-semibold text-on-surface-variant mb-1 font-sans">
-                        {language === 'de'
-                          ? 'Gemeinsame Meilensteine / Lebensziele'
-                          : 'Shared Milestones & Life Goals Together'}
+                        {t('people.sharedMilestonesLifeGoalsTogether')}
                       </label>
                       <textarea
                         value={newSharedGoals}
                         onChange={(e) => setNewSharedGoals(e.target.value)}
-                        placeholder={
-                          language === 'de'
-                            ? 'z.B. Nach Norwegen reisen, ein Tiny House bauen, zusammen weite Wanderungen machen'
-                            : 'e.g. Travel to Norway together, build a wood cabin, do long-distance hikes'
-                        }
+                        placeholder={t('people.eGTravelToNorway')}
                         rows={2}
                         className="w-full bg-surface-container-lowest border border-outline-variant/20 px-3 py-2 rounded-xl text-sm font-sans focus:outline-primary placeholder:text-on-surface-variant/40 text-on-surface"
                       />
@@ -1336,7 +1220,7 @@ export default function PeopleView({
                 type="submit"
                 className="self-end bg-primary hover:bg-primary/95 text-on-primary text-xs font-semibold px-5 py-2.5 rounded-xl transition-all shadow-sm cursor-pointer"
               >
-                {language === 'de' ? 'Tagebuch-Persona erstellen' : 'Create Diary Persona'}
+                {t('people.createDiaryPersona')}
               </button>
             </form>
           )}
@@ -1362,7 +1246,7 @@ export default function PeopleView({
                     className="absolute top-3 right-3 bg-error text-on-error p-1.5 px-2.5 rounded-xl flex items-center gap-1.5 transition-all shadow-md z-20 animate-fade-in"
                   >
                     <span className="text-[9px] font-sans font-black uppercase tracking-wider">
-                      Clear?
+                      {t('people.clearQuestion')}
                     </span>
                     <button
                       onClick={(e) => {
@@ -1372,7 +1256,7 @@ export default function PeopleView({
                       }}
                       className="bg-surface-bright text-error font-sans text-[10px] font-bold px-1.5 py-0.5 rounded-lg hover:bg-surface-container transition-all active:scale-90 cursor-pointer"
                     >
-                      Yes
+                      {t('common.yes')}
                     </button>
                     <button
                       onClick={(e) => {
@@ -1381,7 +1265,7 @@ export default function PeopleView({
                       }}
                       className="text-on-error hover:bg-white/10 font-sans text-[10px] font-semibold px-1.5 py-0.5 rounded-lg transition-all cursor-pointer"
                     >
-                      No
+                      {t('common.no')}
                     </button>
                   </div>
                 ) : (
@@ -1391,7 +1275,7 @@ export default function PeopleView({
                       setPersonIdPendingDelete(person.id);
                     }}
                     className="absolute top-3 right-3 sm:opacity-0 group-hover:opacity-100 p-2 hover:bg-error/10 hover:text-error text-on-surface-variant/55 rounded-xl transition-all duration-200 cursor-pointer flex items-center justify-center active:scale-95 z-10"
-                    title="Delete Profile"
+                    title={t('people.deleteProfile')}
                   >
                     <span className="material-symbols-outlined text-[18px] font-bold">delete</span>
                   </button>
@@ -1460,7 +1344,7 @@ export default function PeopleView({
 
             {filteredPeople.length === 0 && (
               <div className="col-span-full py-12 text-center bg-surface-container-low/45 border border-dashed border-outline-variant/40 rounded-2xl text-sm italic text-on-surface-variant/70">
-                No contacts recorded in this category yet.
+                {t('people.noneInCategory')}
               </div>
             )}
           </div>
@@ -1495,9 +1379,7 @@ export default function PeopleView({
                     account_circle
                   </span>
                   <h3 className="font-sans text-sm font-bold text-primary uppercase tracking-widest leading-none">
-                    {language === 'de'
-                      ? 'Profil-Inspektor der Verbindung'
-                      : 'Diary Profile Inspector'}
+                    {t('people.diaryProfileInspector')}
                   </h3>
                 </div>
                 <button
@@ -1531,7 +1413,7 @@ export default function PeopleView({
                       <input
                         value={editName}
                         onChange={(e) => setEditName(e.target.value)}
-                        placeholder="Name"
+                        placeholder={t('people.namePlaceholder')}
                         className="w-full bg-transparent border-none text-lg font-bold text-on-surface focus:outline-none focus:ring-0 select-text font-sans p-0 m-0"
                       />
                       <div className="flex flex-col gap-1.5 items-start mt-1">
@@ -1540,21 +1422,15 @@ export default function PeopleView({
                           onChange={(e) => setEditCategory(e.target.value)}
                           className="bg-secondary/10 text-secondary text-[10px] font-sans font-bold uppercase tracking-wider rounded-lg px-2 py-0.5 border border-transparent focus:ring-0 cursor-pointer focus:outline-none"
                         >
-                          <option value="Family">{language === 'de' ? 'Familie' : 'Family'}</option>
-                          <option value="Friends">
-                            {language === 'de' ? 'Freunde' : 'Friends'}
-                          </option>
-                          <option value="Colleagues">
-                            {language === 'de' ? 'Kollegen' : 'Colleagues'}
-                          </option>
+                          <option value="Family">{t('people.family')}</option>
+                          <option value="Friends">{t('people.friends')}</option>
+                          <option value="Colleagues">{t('people.colleagues')}</option>
                           {customCategories.map((cat) => (
                             <option key={cat} value={cat}>
                               {cat}
                             </option>
                           ))}
-                          <option value="__custom__">
-                            {language === 'de' ? '+ Eigene erstellen...' : '+ Create Custom...'}
-                          </option>
+                          <option value="__custom__">{t('people.createCustom')}</option>
                         </select>
 
                         {editCategory === '__custom__' && (
@@ -1563,7 +1439,7 @@ export default function PeopleView({
                             required
                             value={editCustomCategoryInput}
                             onChange={(e) => setEditCustomCategoryInput(e.target.value)}
-                            placeholder={language === 'de' ? 'Kategoriename' : 'Category Name'}
+                            placeholder={t('people.categoryName')}
                             className="w-full max-w-[150px] bg-surface-container border border-outline-variant/20 px-2 py-1 rounded-md text-[10px] font-sans focus:outline-primary text-on-surface"
                           />
                         )}
@@ -1582,7 +1458,7 @@ export default function PeopleView({
                           : 'text-on-surface-variant hover:bg-surface-container-high'
                       }`}
                     >
-                      {language === 'de' ? 'Treffen & Bio' : 'Meetups & Bio'}
+                      {t('people.meetupsBio')}
                     </button>
                     <button
                       type="button"
@@ -1593,7 +1469,7 @@ export default function PeopleView({
                           : 'text-on-surface-variant hover:bg-surface-container-high'
                       }`}
                     >
-                      {language === 'de' ? 'Kontakt' : 'Contact'}
+                      {t('people.contact')}
                     </button>
                     <button
                       type="button"
@@ -1604,7 +1480,7 @@ export default function PeopleView({
                           : 'text-on-surface-variant hover:bg-surface-container-high'
                       }`}
                     >
-                      {language === 'de' ? 'Hobbys' : 'Hobbies'}
+                      {t('people.hobbies')}
                     </button>
                     <button
                       type="button"
@@ -1615,7 +1491,7 @@ export default function PeopleView({
                           : 'text-on-surface-variant hover:bg-surface-container-high'
                       }`}
                     >
-                      {language === 'de' ? 'Beziehungen' : 'Connections'}
+                      {t('people.connections')}
                     </button>
                   </div>
                   {/* Profile attributes inputs grouped by active tab */}
@@ -1624,15 +1500,13 @@ export default function PeopleView({
                       <>
                         <div>
                           <label className="block text-on-surface-variant font-bold uppercase tracking-wider mb-1.5 font-sans text-[10px]">
-                            {language === 'de'
-                              ? 'Verbindungsbild (Aus Galerie hochladen)'
-                              : 'Connection Picture (Upload from Camera Roll)'}
+                            {t('people.connectionPictureUploadFromCamera')}
                           </label>
                           <div className="flex items-center gap-3 bg-surface-container-low p-2.5 rounded-xl border border-outline-variant/15">
                             <div className="w-12 h-12 rounded-full overflow-hidden flex items-center justify-center bg-surface-container border border-outline-variant/20 shrink-0 select-none">
                               {editAvatarUrl ? (
                                 <img
-                                  alt="Preview"
+                                  alt={t('people.avatarPreview')}
                                   className="w-full h-full object-cover"
                                   src={editAvatarUrl}
                                 />
@@ -1647,9 +1521,7 @@ export default function PeopleView({
                                 <span className="material-symbols-outlined text-xs">
                                   photo_camera
                                 </span>
-                                <span>
-                                  {language === 'de' ? 'Bild auswählen' : 'Choose Picture'}
-                                </span>
+                                <span>{t('people.choosePicture')}</span>
                                 <input
                                   type="file"
                                   accept="image/*"
@@ -1663,7 +1535,7 @@ export default function PeopleView({
                                   onClick={() => setEditAvatarUrl('')}
                                   className="ml-2.5 text-[11px] text-error font-semibold hover:underline"
                                 >
-                                  {language === 'de' ? 'Entfernen' : 'Remove'}
+                                  {t('people.remove')}
                                 </button>
                               )}
                             </div>
@@ -1672,18 +1544,12 @@ export default function PeopleView({
 
                         <div>
                           <label className="block text-on-surface-variant font-bold uppercase tracking-wider mb-1 font-sans text-[10px]">
-                            {language === 'de'
-                              ? 'Biografische Notizen zur Verbindung'
-                              : 'Biographical Connection Notes'}
+                            {t('people.biographicalConnectionNotes')}
                           </label>
                           <textarea
                             value={editNotes}
                             onChange={(e) => setEditNotes(e.target.value)}
-                            placeholder={
-                              language === 'de'
-                                ? 'Erzähle seine Geschichte, z.B. arbeitet im lokalen Möbeldesign...'
-                                : 'Tell his story e.g. works in local furniture design...'
-                            }
+                            placeholder={t('people.tellHisStoryEG')}
                             rows={3}
                             className="w-full bg-surface-container-low border border-outline-variant/15 p-2.5 rounded-xl text-xs font-sans focus:outline-primary placeholder:text-on-surface-variant/30 select-text text-on-surface leading-normal text-on-surface"
                           />
@@ -1691,18 +1557,12 @@ export default function PeopleView({
 
                         <div>
                           <label className="block text-on-surface-variant font-bold uppercase tracking-wider mb-1 font-sans text-[10px]">
-                            {language === 'de'
-                              ? 'Treffen-Plan / Ideen für zukünftige Treffen'
-                              : 'Meetup Plan / Future Meetup Ideas'}
+                            {t('people.meetupPlanFutureMeetupIdeas')}
                           </label>
                           <textarea
                             value={editMeetupPlan}
                             onChange={(e) => setEditMeetupPlan(e.target.value)}
-                            placeholder={
-                              language === 'de'
-                                ? 'z.B. Treffen am nächsten Dienstag im Botanischen Garten planen.'
-                                : 'e.g. Plan to meet next Tuesday at the Botanical Gardens.'
-                            }
+                            placeholder={t('people.eGPlanToMeet2')}
                             rows={3}
                             className="w-full bg-surface-container-low border border-outline-variant/15 p-2.5 rounded-xl text-xs font-sans focus:outline-primary placeholder:text-on-surface-variant/30 select-text text-on-surface leading-normal font-medium text-on-surface"
                           />
@@ -1714,39 +1574,33 @@ export default function PeopleView({
                       <>
                         <div>
                           <label className="block text-on-surface-variant font-bold uppercase tracking-wider mb-1 font-sans text-[10px]">
-                            {language === 'de' ? 'E-Mail-Adresse' : 'Email Address'}
+                            {t('people.emailAddress')}
                           </label>
                           <input
                             type="email"
                             value={editEmail}
                             onChange={(e) => setEditEmail(e.target.value)}
-                            placeholder="contact@example.com"
+                            placeholder={t('people.emailPlaceholder')}
                             className="w-full bg-surface-container-low border border-outline-variant/15 p-2.5 rounded-xl text-xs font-sans focus:outline-primary placeholder:text-on-surface-variant/30 select-text text-on-surface font-medium"
                           />
                         </div>
 
                         <div>
                           <label className="block text-on-surface-variant font-bold uppercase tracking-wider mb-1 font-sans text-[10px]">
-                            {language === 'de'
-                              ? 'Beruf / Tätigkeit / Rolle'
-                              : 'Job / Occupation / Role'}
+                            {t('people.jobOccupationRole')}
                           </label>
                           <input
                             type="text"
                             value={editJob}
                             onChange={(e) => setEditJob(e.target.value)}
-                            placeholder={
-                              language === 'de'
-                                ? 'z.B. Leitender Architekt, Kunstgärtner'
-                                : 'e.g. Lead Architect, Craft Botanist'
-                            }
+                            placeholder={t('people.eGLeadArchitectCraft')}
                             className="w-full bg-surface-container-low border border-outline-variant/15 p-2.5 rounded-xl text-xs font-sans focus:outline-primary placeholder:text-on-surface-variant/30 select-text text-on-surface font-medium"
                           />
                         </div>
 
                         <div>
                           <label className="block text-on-surface-variant font-bold uppercase tracking-wider mb-1 font-sans text-[10px]">
-                            {language === 'de' ? 'Telefonnummer' : 'Phone Number'}
+                            {t('people.phoneNumber')}
                           </label>
                           <input
                             type="tel"
@@ -1759,16 +1613,12 @@ export default function PeopleView({
 
                         <div>
                           <label className="block text-on-surface-variant font-bold uppercase tracking-wider mb-1 font-sans text-[10px]">
-                            {language === 'de' ? 'Postanschrift' : 'Postal Address'}
+                            {t('people.postalAddress')}
                           </label>
                           <textarea
                             value={editAddress}
                             onChange={(e) => setEditAddress(e.target.value)}
-                            placeholder={
-                              language === 'de'
-                                ? 'z.B. Whisper Wood Lane 123, 10001 Cozy Hills'
-                                : '123 Whisper Wood Lane'
-                            }
+                            placeholder={t('people.123WhisperWoodLane')}
                             rows={2}
                             className="w-full bg-surface-container-low border border-outline-variant/15 p-2.5 rounded-xl text-xs font-sans focus:outline-primary placeholder:text-on-surface-variant/30 select-text text-on-surface leading-normal font-medium"
                           />
@@ -1780,126 +1630,84 @@ export default function PeopleView({
                       <>
                         <div>
                           <label className="block text-on-surface-variant font-bold uppercase tracking-wider mb-1 font-sans text-[10px]">
-                            {language === 'de'
-                              ? 'Aktivitäten & Dinge, die sie mögen'
-                              : 'Hobbies & What they like'}
+                            {t('people.hobbiesWhatTheyLike')}
                           </label>
                           <input
                             value={editLikes}
                             onChange={(e) => setEditLikes(e.target.value)}
-                            placeholder={
-                              language === 'de'
-                                ? 'z.B. Zeremonieller Matcha, analoge Fotografie, Radfahren'
-                                : 'Matcha powder, raw woodworking, running'
-                            }
+                            placeholder={t('people.matchaPowderRawWoodworkingRunning')}
                             className="w-full bg-surface-container-low border border-outline-variant/15 p-2.5 rounded-xl text-xs font-sans focus:outline-primary placeholder:text-on-surface-variant/30 select-text text-on-surface font-medium"
                           />
                         </div>
 
                         <div>
                           <label className="block text-on-surface-variant font-bold uppercase tracking-wider mb-1 font-sans text-[10px]">
-                            {language === 'de'
-                              ? 'Lieblingsfarbe / Farb-Motto'
-                              : 'Favourite Color Slogan'}
+                            {t('people.favouriteColorSlogan')}
                           </label>
                           <input
                             value={editFavoriteColor}
                             onChange={(e) => setEditFavoriteColor(e.target.value)}
-                            placeholder={
-                              language === 'de'
-                                ? 'z.B. Salbeiholz, Indigoblau'
-                                : 'Sage Wood, Deep Blue'
-                            }
+                            placeholder={t('people.sageWoodDeepBlue')}
                             className="w-full bg-surface-container-low border border-outline-variant/15 p-2.5 rounded-xl text-xs font-sans focus:outline-primary placeholder:text-on-surface-variant/30 select-text text-on-surface font-medium"
                           />
                         </div>
 
                         <div>
                           <label className="block text-on-surface-variant font-bold uppercase tracking-wider mb-1 font-sans text-[10px]">
-                            {language === 'de'
-                              ? 'Haustier-Profile & Begleiter-Infos'
-                              : 'Pets Profile & Companion Info'}
+                            {t('people.petsProfileCompanionInfo')}
                           </label>
                           <input
                             value={editPetsInfo}
                             onChange={(e) => setEditPetsInfo(e.target.value)}
-                            placeholder={
-                              language === 'de'
-                                ? 'z.B. Ein Frettchen namens Ziggy'
-                                : 'e.g. A tiny ferret called Ziggy'
-                            }
+                            placeholder={t('people.eGATinyFerret')}
                             className="w-full bg-surface-container-low border border-outline-variant/15 p-2.5 rounded-xl text-xs font-sans focus:outline-primary placeholder:text-on-surface-variant/30 select-text text-on-surface font-medium"
                           />
                         </div>
 
                         <div>
                           <label className="block text-on-surface-variant font-bold uppercase tracking-wider mb-1 font-sans text-[10px]">
-                            {language === 'de'
-                              ? 'Kaffee- / Tee- & Getränkevorlieben'
-                              : 'Coffee / Tea & Drink Preference'}
+                            {t('people.coffeeTeaDrinkPreference')}
                           </label>
                           <input
                             value={editCoffeePreference}
                             onChange={(e) => setEditCoffeePreference(e.target.value)}
-                            placeholder={
-                              language === 'de'
-                                ? 'z.B. Flat White mit Hafermilch, Earl Grey mit Zitrone'
-                                : 'e.g. Flat White with oat milk, Earl Grey with lemon'
-                            }
+                            placeholder={t('people.eGFlatWhiteWith')}
                             className="w-full bg-surface-container-low border border-outline-variant/15 p-2.5 rounded-xl text-xs font-sans focus:outline-primary placeholder:text-on-surface-variant/30 select-text text-on-surface font-medium"
                           />
                         </div>
 
                         <div>
                           <label className="block text-on-surface-variant font-bold uppercase tracking-wider mb-1 font-sans text-[10px]">
-                            {language === 'de'
-                              ? 'Persönlichkeitstyp (MBTI / Vibe-Motto)'
-                              : 'Personality Type (MBTI / Vibe Slogan)'}
+                            {t('people.personalityTypeMbtiVibeSlogan')}
                           </label>
                           <input
                             value={editPersonalityType}
                             onChange={(e) => setEditPersonalityType(e.target.value)}
-                            placeholder={
-                              language === 'de'
-                                ? 'z.B. INFJ (Achtsamer Helfer), Extrovertierter Organisator'
-                                : 'e.g. INFJ (Thoughtful helper), Extroverted organizer'
-                            }
+                            placeholder={t('people.eGInfjThoughtfulHelper')}
                             className="w-full bg-surface-container-low border border-outline-variant/15 p-2.5 rounded-xl text-xs font-sans focus:outline-primary placeholder:text-on-surface-variant/30 select-text text-on-surface font-medium"
                           />
                         </div>
 
                         <div>
                           <label className="block text-on-surface-variant font-bold uppercase tracking-wider mb-1 font-sans text-[10px]">
-                            {language === 'de'
-                              ? 'Geburtstag / Jahrestag'
-                              : 'Birthday / Anniversary'}
+                            {t('people.birthdayAnniversary')}
                           </label>
                           <input
                             value={editBirthday}
                             onChange={(e) => setEditBirthday(e.target.value)}
-                            placeholder={
-                              language === 'de'
-                                ? 'z.B. 23. November, 14. Mai'
-                                : 'e.g. November 23rd, 05-14'
-                            }
+                            placeholder={t('people.eGNovember23rd05')}
                             className="w-full bg-surface-container-low border border-outline-variant/15 p-2.5 rounded-xl text-xs font-sans focus:outline-primary placeholder:text-on-surface-variant/30 select-text text-on-surface font-medium"
                           />
                         </div>
 
                         <div>
                           <label className="block text-on-surface-variant font-bold uppercase tracking-wider mb-1 font-sans text-[10px]">
-                            {language === 'de'
-                              ? 'Geschenkideen & Wunschliste'
-                              : 'Gift Ideas & Wishlist'}
+                            {t('people.giftIdeasWishlist')}
                           </label>
                           <textarea
                             value={editGiftIdeas}
                             onChange={(e) => setEditGiftIdeas(e.target.value)}
-                            placeholder={
-                              language === 'de'
-                                ? 'z.B. Liebt Füllfederhalter, Premium-Tee-Auswahl, gemütliche Socken'
-                                : 'e.g. Loves custom fountain pens, premium tea samplers, cozy socks'
-                            }
+                            placeholder={t('people.eGLovesCustomFountain')}
                             rows={2}
                             className="w-full bg-surface-container-low border border-outline-variant/15 p-2.5 rounded-xl text-xs font-sans focus:outline-primary placeholder:text-on-surface-variant/30 select-text text-on-surface font-medium leading-normal"
                           />
@@ -1907,54 +1715,36 @@ export default function PeopleView({
 
                         <div>
                           <label className="block text-on-surface-variant font-bold uppercase tracking-wider mb-1 font-sans text-[10px]">
-                            {language === 'de'
-                              ? 'Lieblingsgericht / Küche'
-                              : 'Favorite Food / Cuisine'}
+                            {t('people.favoriteFoodCuisine')}
                           </label>
                           <input
                             value={editFavoriteFood}
                             onChange={(e) => setEditFavoriteFood(e.target.value)}
-                            placeholder={
-                              language === 'de'
-                                ? 'z.B. Selbstgemachtes Sauerteigbrot, vegane Zimtschnecken, Sushi'
-                                : 'e.g. Homemade sourdough, vegan cinnamon rolls, artisan pizza'
-                            }
+                            placeholder={t('people.eGHomemadeSourdoughVegan')}
                             className="w-full bg-surface-container-low border border-outline-variant/15 p-2.5 rounded-xl text-xs font-sans focus:outline-primary placeholder:text-on-surface-variant/30 select-text text-on-surface font-medium"
                           />
                         </div>
 
                         <div>
                           <label className="block text-on-surface-variant font-bold uppercase tracking-wider mb-1 font-sans text-[10px]">
-                            {language === 'de'
-                              ? 'Themen zum Vermeiden / Sensible Themen'
-                              : 'Topics to Avoid / Sensitive Topics'}
+                            {t('people.topicsToAvoidSensitiveTopics')}
                           </label>
                           <input
                             value={editSensitiveTopics}
                             onChange={(e) => setEditSensitiveTopics(e.target.value)}
-                            placeholder={
-                              language === 'de'
-                                ? 'z.B. Arbeitsstress, Politik, Familientrubel'
-                                : 'e.g. Work stress, political debates, personal relationship issues'
-                            }
+                            placeholder={t('people.eGWorkStressPolitical')}
                             className="w-full bg-surface-container-low border border-outline-variant/15 p-2.5 rounded-xl text-xs font-sans focus:outline-primary placeholder:text-on-surface-variant/30 select-text text-on-surface font-medium"
                           />
                         </div>
 
                         <div>
                           <label className="block text-on-surface-variant font-bold uppercase tracking-wider mb-1 font-sans text-[10px]">
-                            {language === 'de'
-                              ? 'Gemeinsame Meilensteine / Lebensziele'
-                              : 'Shared Milestones & Life Goals Together'}
+                            {t('people.sharedMilestonesLifeGoalsTogether')}
                           </label>
                           <textarea
                             value={editSharedGoals}
                             onChange={(e) => setEditSharedGoals(e.target.value)}
-                            placeholder={
-                              language === 'de'
-                                ? 'z.B. Nach Norwegen reisen, ein Tiny House bauen, zusammen weite Wanderungen machen'
-                                : 'e.g. Travel to Norway together, build a wood cabin, do long-distance hikes'
-                            }
+                            placeholder={t('people.eGTravelToNorway')}
                             rows={2}
                             className="w-full bg-surface-container-low border border-outline-variant/15 p-2.5 rounded-xl text-xs font-sans focus:outline-primary placeholder:text-on-surface-variant/30 select-text text-on-surface font-medium leading-normal"
                           />
@@ -1967,17 +1757,13 @@ export default function PeopleView({
                         {/* Connection List */}
                         <div>
                           <label className="block text-on-surface-variant font-bold uppercase tracking-wider mb-2 font-sans text-[10px]">
-                            {language === 'de'
-                              ? 'Bestehende Verbindungen'
-                              : 'Established Connections'}
+                            {t('people.establishedConnections')}
                           </label>
 
                           {!selectedPerson.connections ||
                           selectedPerson.connections.length === 0 ? (
                             <div className="bg-surface-container-low/50 border border-dashed border-outline-variant/30 p-4 rounded-2xl text-center text-on-surface-variant/75 italic">
-                              {language === 'de'
-                                ? 'Noch keine Verbindungen eingerichtet.'
-                                : 'No relationship connections established yet.'}
+                              {t('people.noRelationshipConnectionsEstablishedYet')}
                             </div>
                           ) : (
                             <div className="space-y-2 max-h-[160px] overflow-y-auto pr-1 scrollbar-thin">
@@ -1996,9 +1782,7 @@ export default function PeopleView({
                                         setEditFormTab('connections');
                                       }}
                                       className="flex items-center gap-2.5 cursor-pointer flex-1 min-w-0 group"
-                                      title={
-                                        language === 'de' ? 'Profil wechseln' : 'Switch profile'
-                                      }
+                                      title={t('people.switchProfile')}
                                     >
                                       <div className="w-8 h-8 rounded-full overflow-hidden bg-surface-container-high flex items-center justify-center select-none shrink-0 border border-outline-variant/15 text-[10px] font-bold text-primary group-hover:ring-2 group-hover:ring-primary/20 transition-all">
                                         {otherPerson.avatarUrl ? (
@@ -2030,11 +1814,7 @@ export default function PeopleView({
                                         handleRemoveConnection(selectedPerson.id, conn.targetId)
                                       }
                                       className="p-1.5 hover:bg-error/10 hover:text-error text-on-surface-variant/60 rounded-lg transition-all cursor-pointer shrink-0"
-                                      title={
-                                        language === 'de'
-                                          ? 'Verbindung aufheben'
-                                          : 'Unlink connection'
-                                      }
+                                      title={t('people.unlinkConnection')}
                                     >
                                       <span className="material-symbols-outlined text-base">
                                         link_off
@@ -2050,9 +1830,7 @@ export default function PeopleView({
                         {/* Add Connection Form inside Modal */}
                         <div className="bg-surface-container-low/55 p-3.5 rounded-2xl border border-outline-variant/15 space-y-3">
                           <span className="text-[10px] font-bold uppercase text-primary/80 tracking-wider block">
-                            {language === 'de'
-                              ? 'Neue Verbindung knüpfen'
-                              : 'Link New Relationship'}
+                            {t('people.linkNewRelationship')}
                           </span>
 
                           {people.filter(
@@ -2061,9 +1839,7 @@ export default function PeopleView({
                               !selectedPerson.connections?.some((c) => c.targetId === p.id),
                           ).length === 0 ? (
                             <p className="text-[11px] text-on-surface-variant/70 italic">
-                              {language === 'de'
-                                ? 'Bereits mit allen Personen im Verzeichnis verbunden!'
-                                : 'Already connected to all other people in the directory!'}
+                              {t('people.alreadyConnectedToAllOther')}
                             </p>
                           ) : (
                             <div className="space-y-3">
@@ -2071,7 +1847,7 @@ export default function PeopleView({
                                 {/* Dropdown for other people */}
                                 <div>
                                   <label className="block text-[9px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">
-                                    {language === 'de' ? 'Zielperson' : 'Target Person'}
+                                    {t('people.targetPerson')}
                                   </label>
                                   <select
                                     value={modalConnectTargetId}
@@ -2079,11 +1855,7 @@ export default function PeopleView({
                                     required
                                     className="w-full bg-surface-bright border border-outline-variant/20 px-2 py-1.5 rounded-lg text-[11px] font-sans focus:outline-primary text-on-surface"
                                   >
-                                    <option value="">
-                                      {language === 'de'
-                                        ? '-- Auswählen --'
-                                        : '-- Choose Person --'}
-                                    </option>
+                                    <option value="">{t('people.choosePerson')}</option>
                                     {people
                                       .filter(
                                         (p) =>
@@ -2103,31 +1875,19 @@ export default function PeopleView({
                                 {/* Relationship Type Selection */}
                                 <div>
                                   <label className="block text-[9px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">
-                                    {language === 'de' ? 'Beziehungstyp' : 'Relationship Type'}
+                                    {t('people.relationshipType')}
                                   </label>
                                   <select
                                     value={modalConnectType}
                                     onChange={(e) => setModalConnectType(e.target.value)}
                                     className="w-full bg-surface-bright border border-outline-variant/20 px-2 py-1.5 rounded-lg text-[11px] font-sans focus:outline-primary text-on-surface"
                                   >
-                                    <option value="Friend">
-                                      {language === 'de' ? 'Freund/in' : 'Friend'}
-                                    </option>
-                                    <option value="Colleague">
-                                      {language === 'de' ? 'Kollege/in' : 'Colleague'}
-                                    </option>
-                                    <option value="Family">
-                                      {language === 'de' ? 'Familie' : 'Family'}
-                                    </option>
-                                    <option value="Mentor">
-                                      {language === 'de' ? 'Mentor/in' : 'Mentor'}
-                                    </option>
-                                    <option value="Partner">
-                                      {language === 'de' ? 'Partner/in' : 'Partner'}
-                                    </option>
-                                    <option value="Custom">
-                                      {language === 'de' ? 'Eigener Typ...' : 'Custom type...'}
-                                    </option>
+                                    <option value="Friend">{t('people.friend')}</option>
+                                    <option value="Colleague">{t('people.colleague')}</option>
+                                    <option value="Family">{t('people.family')}</option>
+                                    <option value="Mentor">{t('people.mentor')}</option>
+                                    <option value="Partner">{t('people.partner')}</option>
+                                    <option value="Custom">{t('people.customType')}</option>
                                   </select>
                                 </div>
                               </div>
@@ -2140,11 +1900,7 @@ export default function PeopleView({
                                     value={modalConnectCustomType}
                                     onChange={(e) => setModalConnectCustomType(e.target.value)}
                                     required
-                                    placeholder={
-                                      language === 'de'
-                                        ? 'z.B. Sandkastenfreund'
-                                        : 'e.g. Co-author, Cousin'
-                                    }
+                                    placeholder={t('people.eGCoAuthorCousin')}
                                     className="w-full bg-surface-bright border border-outline-variant/20 px-2.5 py-1.5 rounded-lg text-[11px] font-sans focus:outline-primary text-on-surface"
                                   />
                                 </div>
@@ -2153,19 +1909,13 @@ export default function PeopleView({
                               {/* Connection Details description */}
                               <div>
                                 <label className="block text-[9px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">
-                                  {language === 'de'
-                                    ? 'Verbindungsdetails (Optional)'
-                                    : 'Connection Details (Optional)'}
+                                  {t('people.connectionDetailsOptional')}
                                 </label>
                                 <input
                                   type="text"
                                   value={modalConnectDesc}
                                   onChange={(e) => setModalConnectDesc(e.target.value)}
-                                  placeholder={
-                                    language === 'de'
-                                      ? 'z.B. Kennen uns aus der Grundschule'
-                                      : 'e.g. Met at Berlin conference'
-                                  }
+                                  placeholder={t('people.eGMetAtBerlin')}
                                   className="w-full bg-surface-bright border border-outline-variant/20 px-2.5 py-1.5 rounded-lg text-[11px] font-sans focus:outline-primary text-on-surface"
                                 />
                               </div>
@@ -2194,7 +1944,7 @@ export default function PeopleView({
                                 className="w-full bg-primary disabled:opacity-50 hover:bg-primary/95 text-on-primary text-[11px] font-bold py-2 rounded-xl transition-all shadow-xs cursor-pointer flex items-center justify-center gap-1"
                               >
                                 <span className="material-symbols-outlined text-[14px]">link</span>
-                                {language === 'de' ? 'Verbindung verknüpfen' : 'Link Connection'}
+                                {t('people.linkConnection')}
                               </button>
                             </div>
                           )}
@@ -2209,7 +1959,7 @@ export default function PeopleView({
                       className="bg-primary/10 hover:bg-primary/15 text-primary text-xs font-semibold px-4 py-2 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1"
                     >
                       <span className="material-symbols-outlined text-sm">save_as</span>
-                      {language === 'de' ? 'Biografie speichern' : 'Save Bio Records'}
+                      {t('people.saveBioRecords')}
                     </button>
                   </div>
                 </div>
@@ -2223,20 +1973,14 @@ export default function PeopleView({
                   >
                     <h4 className="text-xs font-bold text-primary uppercase tracking-wider font-sans leading-none flex items-center gap-1 select-none">
                       <span className="material-symbols-outlined text-sm">chat</span>
-                      {language === 'de'
-                        ? 'Gespräche / Momente protokollieren'
-                        : 'Log Dialogues / Moments'}
+                      {t('people.logDialoguesMoments')}
                     </h4>
 
                     <textarea
                       required
                       value={logNoteInput}
                       onChange={(e) => setLogNoteInput(e.target.value)}
-                      placeholder={
-                        language === 'de'
-                          ? 'Wir sprachen über Sauerteig-Starter, Garten-Layout oder Updates zum Project Phoenix...'
-                          : 'We talked about sourdough bread starters, gardening layout, or Project Phoenix updates...'
-                      }
+                      placeholder={t('people.weTalkedAboutSourdoughBread')}
                       rows={2}
                       className="w-full bg-surface-bright border border-outline-variant/20 p-2.5 rounded-xl text-xs font-sans focus:outline-primary placeholder:text-on-surface-variant/40 select-text text-on-surface"
                     />
@@ -2259,7 +2003,7 @@ export default function PeopleView({
                         className="w-full sm:w-auto self-end bg-primary hover:bg-primary/95 text-on-primary text-xs font-semibold px-4 py-2.5 rounded-xl cursor-pointer flex items-center justify-center gap-1 shrink-0"
                       >
                         <span className="material-symbols-outlined text-xs">add</span>
-                        {language === 'de' ? 'Moment loggen' : 'Log Momento'}
+                        {t('people.logMomento')}
                       </button>
                     </div>
                   </form>
@@ -2267,9 +2011,7 @@ export default function PeopleView({
                   {/* Scrolled Feed representing historic dialogue logs */}
                   <div className="flex-1 flex flex-col min-h-0 space-y-1">
                     <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-wider font-sans select-none border-b border-outline-variant/10 pb-1 shrink-0">
-                      {language === 'de'
-                        ? 'Chronologische Protokollhistorie'
-                        : 'Chronological Log History'}
+                      {t('people.chronologicalLogHistory')}
                     </label>
 
                     <div className="flex-1 overflow-y-auto pr-1 space-y-2">
@@ -2295,7 +2037,7 @@ export default function PeopleView({
                               type="button"
                               onClick={() => handleDeleteLogItem(log.id)}
                               className="opacity-0 group-hover/log:opacity-100 p-1 hover:bg-error/10 hover:text-error rounded-full text-on-surface-variant/40 transition-all cursor-pointer flex items-center justify-center"
-                              title={language === 'de' ? 'Memo löschen' : 'Delete Memo'}
+                              title={t('people.deleteMemo')}
                             >
                               <span className="material-symbols-outlined text-[14px]">delete</span>
                             </button>
@@ -2303,9 +2045,7 @@ export default function PeopleView({
                         ))
                       ) : (
                         <div className="py-6 text-center text-on-surface-variant/50 text-xs italic">
-                          {language === 'de'
-                            ? 'Keine Gesprächshistorie archiviert. Nutze das obige Feld, um Momente hinzuzufügen.'
-                            : 'No dialogue histories archived. Use the tool above to add connection moments.'}
+                          {t('people.noDialogueHistoriesArchivedUse')}
                         </div>
                       )}
                     </div>
@@ -2318,7 +2058,7 @@ export default function PeopleView({
                 {showProfileDeleteConfirm ? (
                   <div className="flex items-center gap-2 animate-fade-in">
                     <span className="text-[10px] font-sans font-bold text-error uppercase tracking-wider">
-                      {language === 'de' ? 'Unwiderruflich löschen?' : 'Permanent delete?'}
+                      {t('people.permanentDelete')}
                     </span>
                     <button
                       onClick={() => {
@@ -2327,14 +2067,14 @@ export default function PeopleView({
                       }}
                       className="bg-error hover:bg-error/95 text-on-error py-1.5 px-3.5 rounded-xl font-sans text-xs font-bold select-none cursor-pointer transition-all active:scale-95 duration-100"
                     >
-                      {language === 'de' ? 'Löschen bestätigen' : 'Confirm Delete'}
+                      {t('people.confirmDelete')}
                     </button>
                     <button
                       type="button"
                       onClick={() => setShowProfileDeleteConfirm(false)}
                       className="bg-surface-bright hover:bg-surface-container-high border border-outline-variant/35 py-1.5 px-3 rounded-xl font-sans text-xs font-semibold select-none cursor-pointer text-on-surface"
                     >
-                      {language === 'de' ? 'Abbrechen' : 'Cancel'}
+                      {t('people.cancel')}
                     </button>
                   </div>
                 ) : (
@@ -2344,7 +2084,7 @@ export default function PeopleView({
                     className="text-error/85 hover:text-error bg-error/10 hover:bg-error/15 py-2 px-3.5 rounded-xl font-sans text-xs font-semibold select-none flex items-center gap-1 cursor-pointer transition-all active:scale-95 duration-100"
                   >
                     <span className="material-symbols-outlined text-sm">delete_forever</span>
-                    {language === 'de' ? 'Profil löschen' : 'Delete Profile'}
+                    {t('people.deleteProfile')}
                   </button>
                 )}
 
@@ -2352,7 +2092,7 @@ export default function PeopleView({
                   onClick={() => setSelectedPerson(null)}
                   className="text-on-surface text-xs font-bold bg-surface-bright hover:bg-surface-container-high border border-outline-variant/35 px-5 py-2.5 rounded-xl transition-all cursor-pointer"
                 >
-                  {language === 'de' ? 'Inspektion beenden' : 'Finished Inspection'}
+                  {t('people.finishedInspection')}
                 </button>
               </footer>
             </div>
@@ -2371,12 +2111,8 @@ export default function PeopleView({
                 <h3 className="font-serif text-lg font-bold text-on-surface flex items-center gap-2">
                   <span className="material-symbols-outlined text-primary">event</span>
                   {editingMeetup
-                    ? language === 'de'
-                      ? 'Geplantes Treffen bearbeiten'
-                      : 'Modify Scheduled Meetup'
-                    : language === 'de'
-                      ? 'Neues Treffen planen'
-                      : 'Schedule New Meetup'}
+                    ? t('people.modifyScheduledMeetup')
+                    : t('people.scheduleNewMeetup')}
                 </h3>
                 <button
                   type="button"
@@ -2393,18 +2129,12 @@ export default function PeopleView({
               <div className="space-y-3">
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold uppercase text-on-surface-variant tracking-wider">
-                    {language === 'de'
-                      ? 'Titel / Ziel des Treffens *'
-                      : 'Meetup Title / Objective *'}
+                    {t('people.meetupTitleObjective')}
                   </label>
                   <input
                     type="text"
                     required
-                    placeholder={
-                      language === 'de'
-                        ? 'z.B. Tee & Sauerteig Verkostung'
-                        : 'e.g. Tea & Sourdough Tasting Sync'
-                    }
+                    placeholder={t('people.eGTeaSourdoughTasting')}
                     value={meetupTitle}
                     onChange={(e) => setMeetupTitle(e.target.value)}
                     className="w-full bg-surface-container-lowest border border-outline-variant/30 rounded-xl p-2.5 text-xs text-on-surface focus:outline-primary placeholder:text-on-surface-variant/30 font-medium"
@@ -2413,16 +2143,12 @@ export default function PeopleView({
 
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-bold uppercase text-on-surface-variant tracking-wider block">
-                    {language === 'de'
-                      ? 'Mit Netzwerk-Verbindungen * (Eine oder mehrere)'
-                      : 'With Network Connections * (Select one or more)'}
+                    {t('people.withNetworkConnectionsSelectOne')}
                   </label>
                   <div className="max-h-36 overflow-y-auto border border-outline-variant/30 rounded-xl bg-surface-container p-2 space-y-1 scrollbar-thin">
                     {people.length === 0 ? (
                       <p className="text-[11px] text-on-surface-variant italic p-2">
-                        {language === 'de'
-                          ? 'Keine Verbindungen verfügbar. Bitte zuerst eine Verbindung hinzufügen.'
-                          : 'No connections available. Please add a connection first.'}
+                        {t('people.noConnectionsAvailablePleaseAdd')}
                       </p>
                     ) : (
                       people.map((p) => {
@@ -2459,7 +2185,7 @@ export default function PeopleView({
                 <div className="grid grid-cols-2 gap-3.5">
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold uppercase text-on-surface-variant tracking-wider">
-                      {language === 'de' ? 'Datum *' : 'Date *'}
+                      {t('people.date')}
                     </label>
                     <input
                       type="date"
@@ -2472,7 +2198,7 @@ export default function PeopleView({
 
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold uppercase text-on-surface-variant tracking-wider">
-                      {language === 'de' ? 'Uhrzeit' : 'Time'}
+                      {t('people.time')}
                     </label>
                     <input
                       type="time"
@@ -2485,15 +2211,11 @@ export default function PeopleView({
 
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold uppercase text-on-surface-variant tracking-wider">
-                    {language === 'de' ? 'Ort des Treffens' : 'Meetup Location'}
+                    {t('people.meetupLocation')}
                   </label>
                   <input
                     type="text"
-                    placeholder={
-                      language === 'de'
-                        ? 'Cottage Coffee, Raum 4 oder virtueller Link'
-                        : 'Cottage Coffee, Room 4, or Virtual Link'
-                    }
+                    placeholder={t('people.cottageCoffeeRoom4Or')}
                     value={meetupLocation}
                     onChange={(e) => setMeetupLocation(e.target.value)}
                     className="w-full bg-surface-container border border-outline-variant/30 rounded-xl p-2.5 text-xs text-on-surface focus:outline-primary placeholder:text-on-surface-variant/30 font-medium"
@@ -2502,17 +2224,11 @@ export default function PeopleView({
 
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold uppercase text-on-surface-variant tracking-wider">
-                    {language === 'de'
-                      ? 'Vorbereitungsnotizen & Ziele'
-                      : 'Preparation Notes & Objectives'}
+                    {t('people.preparationNotesObjectives')}
                   </label>
                   <textarea
                     rows={3}
-                    placeholder={
-                      language === 'de'
-                        ? 'Welche Dinge solltest du mitbringen? Vorbereitungsfragen oder Tagesordnungspunkte?'
-                        : 'What items should you bring? Any questions to prepare or agendas to outline?'
-                    }
+                    placeholder={t('people.whatItemsShouldYouBring')}
                     value={meetupPrepNotes}
                     onChange={(e) => setMeetupPrepNotes(e.target.value)}
                     className="w-full bg-surface-container border border-outline-variant/30 rounded-xl p-2.5 text-xs text-on-surface focus:outline-primary placeholder:text-on-surface-variant/30 font-medium"
@@ -2529,19 +2245,13 @@ export default function PeopleView({
                   }}
                   className="px-4 py-2 rounded-xl border border-outline-variant text-xs text-on-surface hover:bg-surface-container transition-all cursor-pointer"
                 >
-                  {language === 'de' ? 'Abbrechen' : 'Cancel'}
+                  {t('people.cancel')}
                 </button>
                 <button
                   type="submit"
                   className="px-5 py-2 bg-primary hover:bg-primary/95 text-on-primary rounded-xl text-xs font-semibold transition-all shadow-xs cursor-pointer"
                 >
-                  {editingMeetup
-                    ? language === 'de'
-                      ? 'Änderungen speichern'
-                      : 'Save Changes'
-                    : language === 'de'
-                      ? 'Treffen planen'
-                      : 'Schedule Meetup'}
+                  {editingMeetup ? t('people.saveChanges') : t('people.scheduleMeetup')}
                 </button>
               </div>
             </form>

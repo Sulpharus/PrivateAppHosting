@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { type BrowserContext, expect, type Page, test } from '@playwright/test';
-import { admin, cleanup, createUser, PASSWORD } from './seed.ts';
+import { admin, cleanup, createUser, grant, PASSWORD } from './seed.ts';
 
 // The language switch (ADR 0017): chosen once in the portal, mirrored into the mn-lang cookie, and
 // followed by every hosted app that has a language package.
@@ -10,6 +10,8 @@ let userId = '';
 
 test.beforeAll(async () => {
   userId = await createUser(email, 'user', 'Lena');
+  // Apps that an admin has to grant (access.default is false).
+  if (existsSync('hosted/aether-notes/mininode.json')) await grant(userId, 'aether-notes');
 });
 
 test.afterAll(async () => {
@@ -78,6 +80,7 @@ const ALL_APPS: [slug: string, port: number, shows: (page: Page) => ReturnType<P
     ['solitaer', 8802, gameLine('Move every card to the four foundations.')],
     ['n2048', 8803, gameLine('Merge matching tiles until you reach 2048.')],
     ['codeknacker', 8804, gameLine('Work out the secret code of four symbols.')],
+    ['aether-notes', 8806, (p) => p.getByRole('button', { name: /Notes Library/ }).first()],
     [
       'haushalts-inventar',
       8805,

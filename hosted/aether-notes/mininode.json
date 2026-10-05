@@ -18,5 +18,9 @@
   "build": {
     "command": "pnpm build",
     "output": "dist"
+  },
+  "i18n": {
+    "languages": ["de", "en"],
+    "default": "de"
   }
 }

@@ -13,7 +13,7 @@ interface CelebrationModalProps {
 }
 
 export default function CelebrationModal({ isOpen, onClose, streakDays }: CelebrationModalProps) {
-  const { language } = useTranslation();
+  const { t } = useTranslation();
 
   useEffect(() => {
     if (isOpen) {
@@ -42,35 +42,24 @@ export default function CelebrationModal({ isOpen, onClose, streakDays }: Celebr
 
         {/* Celebratory Message */}
         <h3 className="font-sans text-xl font-bold text-primary tracking-tight">
-          {language === 'de' ? 'Ein perfekter Rhythmus' : 'A Perfect Rhythm'}
+          {t('celebration.aPerfectRhythm')}
         </h3>
         <p className="font-serif text-sm text-on-surface-variant mt-2 leading-relaxed">
-          {language === 'de'
-            ? 'Die Rhythmen von heute sind wunderbar ausgeglichen. Jede Routine wurde mit stiller Präsenz erfüllt.'
-            : 'The rhythms of today are beautifully balanced. Every routine has been met with quiet presence.'}
+          {t('celebration.theRhythmsOfTodayAre')}
         </p>
 
         {/* Streak Counter display */}
         <div className="my-6 px-6 py-3 bg-primary/5 border border-primary/20 rounded-2xl w-full">
           <p className="text-[10px] font-sans font-bold uppercase tracking-widest text-primary">
-            {language === 'de' ? 'Klarheits-Serie' : 'Clarity Streak'}
+            {t('celebration.clarityStreak')}
           </p>
           <p className="text-3xl font-sans font-black text-primary mt-1">
-            {streakDays}{' '}
-            {language === 'de'
-              ? streakDays === 1
-                ? 'Tag'
-                : 'Tage'
-              : streakDays === 1
-                ? 'Day'
-                : 'Days'}
+            {t('streak.days', { n: streakDays })}
           </p>
         </div>
 
         <p className="font-serif text-xs text-on-surface-variant/70 italic px-4 leading-normal mb-6">
-          {language === 'de'
-            ? '"Geduld ist das ruhige Akzeptieren, dass die Dinge in einer anderen Reihenfolge geschehen können als der, die man sich vorgestellt hat."'
-            : '"Patience is the calm acceptance that things can happen in a different order than the one you have in mind."'}
+          {t('celebration.patienceIsTheCalmAcceptance')}
         </p>
 
         {/* Action button */}
@@ -78,9 +67,7 @@ export default function CelebrationModal({ isOpen, onClose, streakDays }: Celebr
           onClick={onClose}
           className="w-full bg-primary hover:bg-primary/95 text-on-primary font-sans text-xs font-semibold py-3 px-6 rounded-xl transition-all shadow-sm cursor-pointer select-none hover:scale-[1.02] active:scale-95 duration-100"
         >
-          {language === 'de'
-            ? 'Achtsam durchatmen & fortfahren'
-            : 'Take a Mindful Breath & Continue'}
+          {t('celebration.takeAMindfulBreathContinue')}
         </button>
       </div>
     </div>

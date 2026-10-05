@@ -25,7 +25,7 @@ export default function RoutinesView({
   streakCount,
   onStartNewDay,
 }: RoutinesViewProps) {
-  const { t, language } = useTranslation();
+  const { t } = useTranslation();
   const [showAddForm, setShowAddForm] = useState(false);
   const [showNewDayModal, setShowNewDayModal] = useState(false);
   const [alertMessage, setAlertMessage] = useState<string | null>(null);
@@ -150,7 +150,7 @@ export default function RoutinesView({
               onDeleteRoutine(routine.id);
             }}
             className="md:opacity-0 group-hover:opacity-100 p-1.5 hover:bg-error/10 hover:text-error rounded-full transition-all text-on-surface-variant/60 cursor-pointer flex items-center justify-center active:scale-90"
-            title="Delete Routine"
+            title={t('routines.delete')}
           >
             <span className="material-symbols-outlined text-[16px] font-bold">delete</span>
           </button>
@@ -164,12 +164,10 @@ export default function RoutinesView({
       <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="font-sans text-3xl text-on-surface font-bold tracking-tight">
-            {language === 'de' ? 'Tägliche Rhythmen' : 'Daily Rhythms'}
+            {t('routines.dailyRhythms')}
           </h2>
           <p className="font-serif text-sm text-on-surface-variant mt-1.5 opacity-85">
-            {language === 'de'
-              ? 'Eine sanfte Zeitplan-Checkliste für entschleunigtes und achtsames Leben.'
-              : 'A gentle schedules checklist designed for offline slow and intentional living.'}
+            {t('routines.aGentleSchedulesChecklistDesigned')}
           </p>
         </div>
         <button
@@ -177,13 +175,7 @@ export default function RoutinesView({
           className="bg-primary hover:bg-primary/95 text-on-primary text-xs font-semibold py-2.5 px-4 rounded-xl flex items-center gap-1.5 shadow-sm transition-all duration-200 cursor-pointer shrink-0"
         >
           <span className="material-symbols-outlined text-sm">{showAddForm ? 'close' : 'add'}</span>
-          {showAddForm
-            ? language === 'de'
-              ? 'Abbrechen'
-              : 'Cancel Routine'
-            : language === 'de'
-              ? 'Routine hinzufügen'
-              : 'Add Routine'}
+          {showAddForm ? t('routines.cancelRoutine') : t('routines.addRoutine')}
         </button>
       </header>
 
@@ -192,7 +184,7 @@ export default function RoutinesView({
         <div className="space-y-1.5 text-center sm:text-left">
           <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-1">
             <h4 className="font-sans text-sm font-bold text-primary uppercase tracking-wider">
-              {language === 'de' ? 'Heutige Klarheit' : "Today's Clarity"}
+              {t('routines.todaySClarity')}
             </h4>
             <div className="flex items-center justify-center gap-1 px-2.5 py-0.5 bg-primary/10 text-primary rounded-full text-[10px] font-bold w-fit mx-auto sm:mx-0">
               <span
@@ -202,18 +194,14 @@ export default function RoutinesView({
                 local_fire_department
               </span>
               <span>
-                {streakCount} {language === 'de' ? 'Tage Serie' : 'Day Streak'}
+                {streakCount} {t('routines.dayStreak')}
               </span>
             </div>
           </div>
           <p className="font-serif text-sm text-on-surface-variant max-w-sm">
             {totalRoutines === 0
-              ? language === 'de'
-                ? 'Sie haben noch keine Routinen definiert. Planen Sie Ihre Zyklen für Morgen, Nachmittag und Abend, um Ihre Serie aufzubauen!'
-                : "You haven't defined any routines yet. Plan your morning, afternoon, and evening cycles to begin building your streak!"
-              : language === 'de'
-                ? `Sie haben ${completedRoutines} von ${totalRoutines} rhythmischen Zyklen abgeschlossen. Ein tiefer Atemzug bringt Klarheit.`
-                : `You've completed ${completedRoutines} of your ${totalRoutines} rhythmic cycles. Taking a breath builds clarity.`}
+              ? t('routines.youHavenTDefinedAny')
+              : t('routines.youVeCompletedOfYour', { completedRoutines, totalRoutines })}
           </p>
         </div>
 
@@ -251,7 +239,7 @@ export default function RoutinesView({
                   className="bg-primary hover:bg-primary/95 text-on-primary text-xs font-bold py-2.5 px-4 rounded-xl flex items-center justify-center gap-1.5 shadow-md hover:scale-[1.02] active:scale-95 transition-all duration-200 cursor-pointer animate-pulse"
                 >
                   <span className="material-symbols-outlined text-xs">celebration</span>
-                  {language === 'de' ? 'Nächsten Tag starten' : 'Start Next Day'}
+                  {t('routines.startNextDay')}
                 </button>
               ) : (
                 <button
@@ -260,7 +248,7 @@ export default function RoutinesView({
                   className="bg-surface border border-outline-variant/30 hover:bg-surface-container text-on-surface-variant text-xs font-semibold py-2.5 px-4 rounded-xl flex items-center justify-center gap-1.5 hover:scale-[1.01] active:scale-95 transition-all duration-200 cursor-pointer"
                 >
                   <span className="material-symbols-outlined text-xs">skip_next</span>
-                  {language === 'de' ? 'Neuer Tag Reset' : 'New Day Reset'}
+                  {t('routines.newDayReset')}
                 </button>
               )}
             </div>
@@ -275,60 +263,50 @@ export default function RoutinesView({
           className="p-6 bg-surface-container-low rounded-2xl border border-outline-variant/30 flex flex-col gap-4 animate-fade-in"
         >
           <h3 className="font-sans text-sm font-bold text-primary">
-            {language === 'de' ? 'Neue achtsame Routine' : 'New Mindful Routine'}
+            {t('routines.newMindfulRoutine')}
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-semibold text-on-surface-variant mb-1 font-sans">
-                {language === 'de' ? 'Titel / Name' : 'Title / Name'}
+                {t('routines.titleName')}
               </label>
               <input
                 required
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder={
-                  language === 'de'
-                    ? 'z.B. Zehn Minuten Yoga, Nachmittagsspaziergang'
-                    : 'e.g. Ten Minute Yoga, Afternoon Walk'
-                }
+                placeholder={t('routines.eGTenMinuteYoga')}
                 className="w-full bg-surface-container-lowest border border-outline-variant/20 px-3 py-2 rounded-xl text-sm font-sans focus:outline-primary placeholder:text-on-surface-variant/40"
               />
             </div>
             <div>
               <label className="block text-xs font-semibold text-on-surface-variant mb-1 font-sans">
-                {language === 'de'
-                  ? 'Beschreibung / Achtsame Eingabe'
-                  : 'Description / Mindful Prompt'}
+                {t('routines.descriptionMindfulPrompt')}
               </label>
               <input
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder={
-                  language === 'de'
-                    ? 'z.B. Warme Sonne einatmen, Gelenke dehnen'
-                    : 'e.g. Inhale warm sun, stretch joints'
-                }
+                placeholder={t('routines.eGInhaleWarmSun')}
                 className="w-full bg-surface-container-lowest border border-outline-variant/20 px-3 py-2 rounded-xl text-sm font-sans focus:outline-primary placeholder:text-on-surface-variant/40"
               />
             </div>
             <div>
               <label className="block text-xs font-semibold text-on-surface-variant mb-1 font-sans">
-                {language === 'de' ? 'Zeitlicher Ablauf' : 'Timeline Block'}
+                {t('routines.timelineBlock')}
               </label>
               <select
                 value={timeOfDay}
                 onChange={(e) => setTimeOfDay(e.target.value as RoutineTimeOfDay)}
                 className="w-full bg-surface-container-lowest border border-outline-variant/20 px-3 py-2 rounded-xl text-sm font-sans focus:outline-primary text-on-surface"
               >
-                <option value="Morning">{language === 'de' ? 'Morgen' : 'Morning'}</option>
-                <option value="Afternoon">{language === 'de' ? 'Nachmittag' : 'Afternoon'}</option>
-                <option value="Evening">{language === 'de' ? 'Abend' : 'Evening'}</option>
+                <option value="Morning">{t('routines.morning')}</option>
+                <option value="Afternoon">{t('routines.afternoon')}</option>
+                <option value="Evening">{t('routines.evening')}</option>
               </select>
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className="block text-xs font-semibold text-on-surface-variant mb-1 font-sans">
-                  {language === 'de' ? 'Uhrzeit-Label' : 'Time Label'}
+                  {t('routines.timeLabel')}
                 </label>
                 <input
                   value={timeLabel}
@@ -339,12 +317,12 @@ export default function RoutinesView({
               </div>
               <div>
                 <label className="block text-xs font-semibold text-on-surface-variant mb-1 font-sans">
-                  {language === 'de' ? 'Dauer' : 'Duration (mins)'}
+                  {t('routines.durationMins')}
                 </label>
                 <input
                   value={duration}
                   onChange={(e) => setDuration(e.target.value)}
-                  placeholder="15 mins"
+                  placeholder={t('routines.durationPlaceholder')}
                   className="w-full bg-surface-container-lowest border border-outline-variant/20 px-3 py-2 rounded-xl text-sm font-sans focus:outline-primary placeholder:text-on-surface-variant/40"
                 />
               </div>
@@ -354,7 +332,7 @@ export default function RoutinesView({
             type="submit"
             className="self-end bg-primary hover:bg-primary/95 text-on-primary text-xs font-semibold px-5 py-2.5 rounded-xl transition-all cursor-pointer"
           >
-            {language === 'de' ? 'Routine planen' : 'Schedule Routine'}
+            {t('routines.scheduleRoutine')}
           </button>
         </form>
       )}
@@ -363,15 +341,13 @@ export default function RoutinesView({
       <section className="flex flex-col gap-4">
         <h3 className="font-sans text-sm font-semibold text-primary flex items-center gap-2 border-b border-surface-variant/50 pb-2 uppercase tracking-widest select-none">
           <span className="material-symbols-outlined text-lg">wb_twilight</span>
-          {language === 'de' ? 'Morgen-Rhythmen' : 'Morning Rhythms'}
+          {t('routines.morningRhythms')}
         </h3>
         <div className="flex flex-col gap-3">
           {morningRoutines.map(renderRoutineCard)}
           {morningRoutines.length === 0 && (
             <p className="font-sans text-xs text-on-surface-variant/60 italic pl-2">
-              {language === 'de'
-                ? 'Keine Morgen-Rhythmen aufgezeichnet.'
-                : 'No morning routines recorded.'}
+              {t('routines.noMorningRoutinesRecorded')}
             </p>
           )}
         </div>
@@ -381,15 +357,13 @@ export default function RoutinesView({
       <section className="flex flex-col gap-4">
         <h3 className="font-sans text-sm font-semibold text-primary flex items-center gap-2 border-b border-surface-variant/50 pb-2 uppercase tracking-widest select-none">
           <span className="material-symbols-outlined text-lg">light_mode</span>
-          {language === 'de' ? 'Nachmittag-Rhythmen' : 'Afternoon Rhythms'}
+          {t('routines.afternoonRhythms')}
         </h3>
         <div className="flex flex-col gap-3">
           {afternoonRoutines.map(renderRoutineCard)}
           {afternoonRoutines.length === 0 && (
             <p className="font-sans text-xs text-on-surface-variant/60 italic pl-2">
-              {language === 'de'
-                ? 'Keine Nachmittag-Rhythmen aufgezeichnet.'
-                : 'No afternoon routines recorded.'}
+              {t('routines.noAfternoonRoutinesRecorded')}
             </p>
           )}
         </div>
@@ -399,15 +373,13 @@ export default function RoutinesView({
       <section className="flex flex-col gap-4">
         <h3 className="font-sans text-sm font-semibold text-primary flex items-center gap-2 border-b border-surface-variant/50 pb-2 uppercase tracking-widest select-none">
           <span className="material-symbols-outlined text-lg">nights_stay</span>
-          {language === 'de' ? 'Abend-Rhythmen' : 'Evening Rhythms'}
+          {t('routines.eveningRhythms')}
         </h3>
         <div className="flex flex-col gap-3">
           {eveningRoutines.map(renderRoutineCard)}
           {eveningRoutines.length === 0 && (
             <p className="font-sans text-xs text-on-surface-variant/60 italic pl-2">
-              {language === 'de'
-                ? 'Keine Abend-Rhythmen geplant.'
-                : 'No evening routines scheduled.'}
+              {t('routines.noEveningRoutinesScheduled')}
             </p>
           )}
         </div>
@@ -437,11 +409,11 @@ export default function RoutinesView({
               <div>
                 <h3 className="font-serif text-lg font-bold text-on-surface">
                   {completedRoutines === totalRoutines
-                    ? t('newDayModalTitle', 'A New Day Awaits!')
-                    : t('newDayModalResetTitle', 'Reset Rhythms?')}
+                    ? t('ui.newDayModalTitle')
+                    : t('ui.newDayModalResetTitle')}
                 </h3>
                 <p className="text-[10px] uppercase font-bold tracking-wider text-on-surface-variant font-sans">
-                  {language === 'de' ? 'TÄGLICHES ZYKLUS-MANAGEMENT' : 'Daily Cycle Management'}
+                  {t('routines.dailyCycleManagement')}
                 </p>
               </div>
             </div>
@@ -449,11 +421,11 @@ export default function RoutinesView({
             <div className="space-y-3 font-sans">
               {completedRoutines === totalRoutines ? (
                 <p className="text-xs text-on-surface-variant leading-relaxed font-serif italic">
-                  {t('newDayModalSuccess', 'Magnificent work!')}
+                  {t('ui.newDayModalSuccess')}
                 </p>
               ) : (
                 <p className="text-xs text-on-surface-variant leading-relaxed font-serif italic">
-                  {t('newDayModalWarning', 'Are you sure you want to advance?')}
+                  {t('ui.newDayModalWarning')}
                 </p>
               )}
             </div>
@@ -464,7 +436,7 @@ export default function RoutinesView({
                 onClick={() => setShowNewDayModal(false)}
                 className="px-4 py-2 rounded-xl border border-outline-variant text-xs font-semibold text-on-surface hover:bg-surface-container transition-all cursor-pointer"
               >
-                {t('cancel', 'Cancel')}
+                {t('ui.cancel')}
               </button>
               <button
                 type="button"
@@ -476,12 +448,8 @@ export default function RoutinesView({
                   // Trigger local notification feedback
                   setAlertMessage(
                     completedAll
-                      ? language === 'de'
-                        ? 'Glückwunsch zum Abschluss des heutigen Rhythmus!'
-                        : "Congratulations on completing today's rhythm!"
-                      : language === 'de'
-                        ? 'Neuer Tag gestartet. Serie zurückgesetzt.'
-                        : 'New day initialized. Daily streak reset.',
+                      ? t('routines.congratulationsOnCompletingTodayS')
+                      : t('routines.newDayInitializedDailyStreak'),
                   );
                   setTimeout(() => setAlertMessage(null), 4000);
                 }}
@@ -492,8 +460,8 @@ export default function RoutinesView({
                 }`}
               >
                 {completedRoutines === totalRoutines
-                  ? t('beginTomorrowsRhythm', "Begin Tomorrow's Rhythm")
-                  : t('resetDayAndStreak', 'Reset Day & Streak')}
+                  ? t('ui.beginTomorrowsRhythm')
+                  : t('ui.resetDayAndStreak')}
               </button>
             </div>
           </div>

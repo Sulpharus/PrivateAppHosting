@@ -38,7 +38,7 @@ export default function RelationshipMap({
   onRemoveConnection,
   onSelectPerson,
 }: RelationshipMapProps) {
-  const { language } = useTranslation();
+  const { t } = useTranslation();
   const svgRef = useRef<SVGSVGElement | null>(null);
 
   // Graph customizability state (like Obsidian)
@@ -55,12 +55,12 @@ export default function RelationshipMap({
   const [connectionDesc, setConnectionDesc] = useState<string>('');
 
   const connectionTypeOptions = [
-    { value: 'Friend', label_en: 'Friend', label_de: 'Freund/in' },
-    { value: 'Colleague', label_en: 'Colleague', label_de: 'Kollege/Kollegin' },
-    { value: 'Family', label_en: 'Family', label_de: 'Familie' },
-    { value: 'Mentor', label_en: 'Mentor', label_de: 'Mentor/in' },
-    { value: 'Partner', label_en: 'Partner', label_de: 'Partner/in' },
-    { value: 'Custom', label_en: 'Custom Type...', label_de: 'Eigener Typ...' },
+    { value: 'Friend', label: t('relationshipMap.typeFriend') },
+    { value: 'Colleague', label: t('relationshipMap.typeColleague') },
+    { value: 'Family', label: t('relationshipMap.typeFamily') },
+    { value: 'Mentor', label: t('relationshipMap.typeMentor') },
+    { value: 'Partner', label: t('relationshipMap.typePartner') },
+    { value: 'Custom', label: t('relationshipMap.typeCustom') },
   ];
 
   // Colors based on category
@@ -487,11 +487,7 @@ export default function RelationshipMap({
     e.preventDefault();
     if (!person1Id || !person2Id) return;
     if (person1Id === person2Id) {
-      alert(
-        language === 'de'
-          ? 'Eine Person kann sich nicht mit sich selbst verbinden!'
-          : 'A person cannot connect with themselves!',
-      );
+      alert(t('relationshipMap.aPersonCannotConnectWith'));
       return;
     }
 
@@ -532,23 +528,21 @@ export default function RelationshipMap({
           <div className="flex items-center gap-2 border-b border-outline-variant/10 pb-2">
             <span className="material-symbols-outlined text-primary text-lg">settings_suggest</span>
             <h4 className="text-xs font-bold uppercase tracking-wider text-on-surface">
-              {language === 'de' ? 'Graph-Anpassung' : 'Graph Settings'}
+              {t('relationshipMap.graphSettings')}
             </h4>
           </div>
 
           {/* Search box */}
           <div className="space-y-1">
             <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">
-              {language === 'de' ? 'Suche im Graph' : 'Search Node'}
+              {t('relationshipMap.searchNode')}
             </label>
             <div className="relative">
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={
-                  language === 'de' ? 'z.B. Julia, Familie...' : 'e.g. Julia, Colleagues...'
-                }
+                placeholder={t('relationshipMap.eGJuliaColleagues')}
                 className="w-full bg-surface-bright border border-outline-variant/20 pl-8 pr-3 py-1.5 rounded-xl text-xs font-sans focus:outline-primary placeholder:text-on-surface-variant/40 text-on-surface"
               />
               <span className="material-symbols-outlined text-sm text-on-surface-variant/45 absolute left-2.5 top-2.5">
@@ -568,7 +562,7 @@ export default function RelationshipMap({
           {/* Charge / Gravity repulsion */}
           <div className="space-y-1">
             <div className="flex justify-between text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">
-              <span>{language === 'de' ? 'Knotenabstoßung' : 'Node Repulsion'}</span>
+              <span>{t('relationshipMap.nodeRepulsion')}</span>
               <span className="font-mono text-primary">{Math.abs(repulsionStrength)}</span>
             </div>
             <input
@@ -585,7 +579,7 @@ export default function RelationshipMap({
           {/* Link distance */}
           <div className="space-y-1">
             <div className="flex justify-between text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">
-              <span>{language === 'de' ? 'Verbindungsdistanz' : 'Link Distance'}</span>
+              <span>{t('relationshipMap.linkDistance')}</span>
               <span className="font-mono text-primary">{linkDistance}px</span>
             </div>
             <input
@@ -607,9 +601,7 @@ export default function RelationshipMap({
               onChange={(e) => setShowLabels(e.target.checked)}
               className="w-4 h-4 rounded-md border-outline-variant text-primary focus:ring-primary/20 accent-primary cursor-pointer"
             />
-            <span>
-              {language === 'de' ? 'Verbindungstypen anzeigen' : 'Show Relationship Labels'}
-            </span>
+            <span>{t('relationshipMap.showRelationshipLabels')}</span>
           </label>
         </div>
 
@@ -618,22 +610,20 @@ export default function RelationshipMap({
           <div className="flex items-center gap-2 border-b border-outline-variant/10 pb-2">
             <span className="material-symbols-outlined text-primary text-lg">join_inner</span>
             <h4 className="text-xs font-bold uppercase tracking-wider text-on-surface">
-              {language === 'de' ? 'Schnelle Verbindung' : 'Link Network'}
+              {t('relationshipMap.linkNetwork')}
             </h4>
           </div>
 
           {people.length < 2 ? (
             <p className="text-[11px] text-on-surface-variant/70 italic leading-relaxed">
-              {language === 'de'
-                ? 'Fügen Sie mindestens zwei Personen zu Ihrem Netzwerk hinzu, um Beziehungen zu verknüpfen.'
-                : 'Please add at least two people to your network directory to establish relationship links.'}
+              {t('relationshipMap.pleaseAddAtLeastTwo')}
             </p>
           ) : (
             <form onSubmit={handleConnectSubmit} className="space-y-3.5 text-xs">
               {/* Person 1 Selection */}
               <div>
                 <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">
-                  {language === 'de' ? 'Person 1' : 'Connect Person'}
+                  {t('relationshipMap.connectPerson')}
                 </label>
                 <select
                   value={person1Id}
@@ -654,7 +644,7 @@ export default function RelationshipMap({
               {/* Person 2 Selection */}
               <div>
                 <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">
-                  {language === 'de' ? 'Verbinden mit...' : 'With Person...'}
+                  {t('relationshipMap.withPerson')}
                 </label>
                 <select
                   value={person2Id}
@@ -662,9 +652,7 @@ export default function RelationshipMap({
                   required
                   className="w-full bg-surface-bright border border-outline-variant/20 px-2.5 py-1.5 rounded-xl font-sans focus:outline-primary text-on-surface"
                 >
-                  <option value="">
-                    {language === 'de' ? '-- Auswählen --' : '-- Choose Person --'}
-                  </option>
+                  <option value="">{t('relationshipMap.choosePerson')}</option>
                   {remainingTargetPeople.map((p) => (
                     <option key={p.id} value={p.id}>
                       {p.name}
@@ -673,9 +661,7 @@ export default function RelationshipMap({
                 </select>
                 {remainingTargetPeople.length === 0 && person1Id && (
                   <p className="text-[9px] text-primary/75 italic mt-1 font-serif">
-                    {language === 'de'
-                      ? 'Bereits mit allen verknüpft!'
-                      : 'Already connected to everyone!'}
+                    {t('relationshipMap.alreadyConnectedToEveryone')}
                   </p>
                 )}
               </div>
@@ -683,7 +669,7 @@ export default function RelationshipMap({
               {/* Relationship Type selection */}
               <div>
                 <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">
-                  {language === 'de' ? 'Beziehungstyp' : 'Relationship Type'}
+                  {t('relationshipMap.relationshipType')}
                 </label>
                 <select
                   value={connectionType}
@@ -692,7 +678,7 @@ export default function RelationshipMap({
                 >
                   {connectionTypeOptions.map((opt) => (
                     <option key={opt.value} value={opt.value}>
-                      {language === 'de' ? opt.label_de : opt.label_en}
+                      {opt.label}
                     </option>
                   ))}
                 </select>
@@ -706,11 +692,7 @@ export default function RelationshipMap({
                     value={customType}
                     onChange={(e) => setCustomType(e.target.value)}
                     required
-                    placeholder={
-                      language === 'de'
-                        ? 'z.B. Sandkastenfreund, Koautor'
-                        : 'e.g. Mentor, Co-author'
-                    }
+                    placeholder={t('relationshipMap.eGMentorCoAuthor')}
                     className="w-full bg-surface-bright border border-outline-variant/20 px-3 py-1.5 rounded-xl font-sans focus:outline-primary text-on-surface"
                   />
                 </div>
@@ -719,17 +701,13 @@ export default function RelationshipMap({
               {/* Connection Description */}
               <div>
                 <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">
-                  {language === 'de' ? 'Details (Optional)' : 'Details (Optional)'}
+                  {t('relationshipMap.detailsOptional')}
                 </label>
                 <input
                   type="text"
                   value={connectionDesc}
                   onChange={(e) => setConnectionDesc(e.target.value)}
-                  placeholder={
-                    language === 'de'
-                      ? 'z.B. Kennen uns seit der Uni'
-                      : 'e.g. Met at Berlin design expo'
-                  }
+                  placeholder={t('relationshipMap.eGMetAtBerlin')}
                   className="w-full bg-surface-bright border border-outline-variant/20 px-3 py-1.5 rounded-xl font-sans focus:outline-primary text-on-surface"
                 />
               </div>
@@ -740,7 +718,7 @@ export default function RelationshipMap({
                 className="w-full bg-primary disabled:opacity-50 hover:bg-primary/95 text-on-primary text-xs font-bold py-2 rounded-xl transition-all shadow-sm cursor-pointer flex items-center justify-center gap-1"
               >
                 <span className="material-symbols-outlined text-sm">link</span>
-                {language === 'de' ? 'Verbindung verknüpfen' : 'Establish Link'}
+                {t('relationshipMap.establishLink')}
               </button>
             </form>
           )}
@@ -758,47 +736,45 @@ export default function RelationshipMap({
             >
               hub
             </span>
-            {language === 'de' ? 'Interaktive Netzwerkkarte' : 'Interactive Mind Network Map'}
+            {t('relationshipMap.interactiveMindNetworkMap')}
           </h3>
           <p className="text-[10px] text-on-surface-variant/70 italic max-w-xs leading-normal ml-1">
-            {language === 'de'
-              ? 'Ziehen Sie Knoten, um die Anordnung anzupassen. Bewegen Sie die Maus über einen Knoten, um nahe Verbindungen zu beleuchten. Klicken Sie, um das Profil zu öffnen.'
-              : 'Drag nodes to reposition. Hover over nodes to highlight active branches. Click any node to open their companion profile.'}
+            {t('relationshipMap.dragNodesToRepositionHover')}
           </p>
         </div>
 
         {/* Categories Legend Overlay */}
         <div className="absolute bottom-4 left-4 z-10 bg-surface-bright/80 backdrop-blur-xs p-3 rounded-2xl border border-outline-variant/15 shadow-xs flex flex-col gap-1.5 text-[9px] font-sans font-bold text-on-surface-variant select-none">
           <span className="text-[8px] uppercase tracking-wider text-on-surface-variant/50 border-b border-outline-variant/10 pb-1 mb-1">
-            {language === 'de' ? 'Legende (Farben)' : 'Category Keys'}
+            {t('relationshipMap.categoryKeys')}
           </span>
           <div className="flex items-center gap-1.5">
             <span
               className="w-2.5 h-2.5 rounded-full inline-block"
               style={{ backgroundColor: '#f43f5e' }}
             ></span>
-            <span>{language === 'de' ? 'Familie' : 'Family'}</span>
+            <span>{t('relationshipMap.family')}</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span
               className="w-2.5 h-2.5 rounded-full inline-block"
               style={{ backgroundColor: '#10b981' }}
             ></span>
-            <span>{language === 'de' ? 'Freunde' : 'Friends'}</span>
+            <span>{t('relationshipMap.friends')}</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span
               className="w-2.5 h-2.5 rounded-full inline-block"
               style={{ backgroundColor: '#3b82f6' }}
             ></span>
-            <span>{language === 'de' ? 'Kollegen' : 'Colleagues'}</span>
+            <span>{t('relationshipMap.colleagues')}</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span
               className="w-2.5 h-2.5 rounded-full inline-block"
               style={{ backgroundColor: '#8b5cf6' }}
             ></span>
-            <span>{language === 'de' ? 'Andere/Eigene' : 'Custom Categories'}</span>
+            <span>{t('relationshipMap.customCategories')}</span>
           </div>
         </div>
 
@@ -807,21 +783,21 @@ export default function RelationshipMap({
           <button
             onClick={() => handleZoom(1.3)}
             className="w-8 h-8 rounded-xl bg-surface-bright hover:bg-surface-container border border-outline-variant/15 text-on-surface-variant hover:text-on-surface shadow-xs flex items-center justify-center transition-all cursor-pointer select-none active:scale-90"
-            title="Zoom In"
+            title={t('relationshipMap.zoomIn')}
           >
             <span className="material-symbols-outlined text-sm font-bold">add</span>
           </button>
           <button
             onClick={() => handleZoom(0.7)}
             className="w-8 h-8 rounded-xl bg-surface-bright hover:bg-surface-container border border-outline-variant/15 text-on-surface-variant hover:text-on-surface shadow-xs flex items-center justify-center transition-all cursor-pointer select-none active:scale-90"
-            title="Zoom Out"
+            title={t('relationshipMap.zoomOut')}
           >
             <span className="material-symbols-outlined text-sm font-bold">remove</span>
           </button>
           <button
             onClick={() => handleZoom(0)}
             className="w-8 h-8 rounded-xl bg-surface-bright hover:bg-surface-container border border-outline-variant/15 text-on-surface-variant hover:text-on-surface shadow-xs flex items-center justify-center transition-all cursor-pointer select-none active:scale-90"
-            title="Recenter Camera"
+            title={t('relationshipMap.recenter')}
           >
             <span className="material-symbols-outlined text-sm font-bold">home</span>
           </button>

@@ -36,7 +36,7 @@ export default function KanbanView({
   onUpdateTask,
   onDeleteTask,
 }: KanbanViewProps) {
-  const { t, language } = useTranslation();
+  const { t } = useTranslation();
 
   // Filters & Searching
   const [searchTerm, setSearchTerm] = useState('');
@@ -133,9 +133,7 @@ export default function KanbanView({
         checklistItems: formChecklist.length > 0 ? formChecklist : undefined,
       };
       onUpdateTask(updated);
-      triggerToast(
-        language === 'de' ? 'Aufgabe erfolgreich aktualisiert!' : 'Task updated successfully!',
-      );
+      triggerToast(t('kanban.taskUpdatedSuccessfully'));
     } else {
       // Add
       onAddTask({
@@ -148,7 +146,7 @@ export default function KanbanView({
         tags: parsedTags.length > 0 ? parsedTags : undefined,
         checklistItems: formChecklist.length > 0 ? formChecklist : undefined,
       });
-      triggerToast(language === 'de' ? 'Aufgabe zur Tafel hinzugefügt!' : 'Task added to board!');
+      triggerToast(t('kanban.taskAddedToBoard'));
     }
 
     setIsModalOpen(false);
@@ -213,17 +211,13 @@ export default function KanbanView({
       onUpdateTask(updated);
       const colName =
         order[nextIndex] === 'todo'
-          ? t('todo', 'To Do')
+          ? t('ui.todo')
           : order[nextIndex] === 'in_progress'
-            ? t('inProgress', 'In Progress')
+            ? t('ui.inProgress')
             : order[nextIndex] === 'review'
-              ? language === 'de'
-                ? 'Überprüfung'
-                : 'Review'
-              : t('completed', 'Completed');
-      triggerToast(
-        language === 'de' ? `Aufgabe verschoben nach "${colName}"` : `Task shifted to "${colName}"`,
-      );
+              ? t('kanban.review')
+              : t('ui.completed');
+      triggerToast(t('kanban.taskShiftedTo', { colName }));
     }
   };
 
@@ -253,28 +247,28 @@ export default function KanbanView({
   const cols: { id: KanbanColumn; name: string; color: string; border: string; bg: string }[] = [
     {
       id: 'todo',
-      name: t('todo', 'To Do'),
+      name: t('ui.todo'),
       color: 'text-neutral-500',
       border: 'border-l-neutral-400',
       bg: 'bg-neutral-500/5',
     },
     {
       id: 'in_progress',
-      name: t('inProgress', 'In Progress'),
+      name: t('ui.inProgress'),
       color: 'text-amber-600',
       border: 'border-l-amber-500',
       bg: 'bg-amber-500/5',
     },
     {
       id: 'review',
-      name: language === 'de' ? 'Überprüfung' : 'Review',
+      name: t('kanban.review'),
       color: 'text-indigo-600',
       border: 'border-l-indigo-500',
       bg: 'bg-indigo-500/5',
     },
     {
       id: 'done',
-      name: t('completed', 'Completed'),
+      name: t('ui.completed'),
       color: 'text-emerald-600',
       border: 'border-l-emerald-500',
       bg: 'bg-emerald-500/5',
@@ -309,13 +303,10 @@ export default function KanbanView({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="font-sans text-3xl font-bold text-on-surface tracking-tight">
-            {t('tasksTitle', 'Tasks & Priorities')}
+            {t('ui.tasksTitle')}
           </h2>
           <p className="font-serif text-sm text-on-surface-variant mt-1.5 opacity-85">
-            {t(
-              'tasksSubtitle',
-              'Manage your personal and work priorities seamlessly in one place.',
-            )}
+            {t('ui.tasksSubtitle')}
           </p>
         </div>
         <button
@@ -323,7 +314,7 @@ export default function KanbanView({
           className="bg-primary hover:bg-primary/95 text-on-primary text-xs font-semibold py-2.5 px-4 rounded-xl flex items-center gap-1.5 shadow-sm transition-all duration-200 cursor-pointer shrink-0"
         >
           <Plus className="w-4 h-4" />
-          {t('addTask', 'Add Task')}
+          {t('ui.addTask')}
         </button>
       </div>
 
@@ -336,7 +327,7 @@ export default function KanbanView({
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder={language === 'de' ? 'Aufgaben durchsuchen...' : 'Search tasks...'}
+            placeholder={t('kanban.searchTasks')}
             className="w-full bg-surface-bright border border-outline-variant/20 px-10 py-2 rounded-xl text-xs font-sans focus:outline-primary placeholder:text-on-surface-variant/40 select-text text-on-surface font-medium"
           />
         </div>
@@ -353,7 +344,7 @@ export default function KanbanView({
                   : 'text-on-surface-variant hover:bg-surface-container-high'
               }`}
             >
-              {t('allTasks', 'All Tasks')}
+              {t('ui.allTasks')}
             </button>
             <button
               onClick={() => setCategoryFilter('work')}
@@ -364,7 +355,7 @@ export default function KanbanView({
               }`}
             >
               <Briefcase className="w-3 h-3" />
-              {t('workCategory', 'Work')}
+              {t('ui.workCategory')}
             </button>
             <button
               onClick={() => setCategoryFilter('personal')}
@@ -375,24 +366,24 @@ export default function KanbanView({
               }`}
             >
               <Heart className="w-3 h-3" />
-              {t('personalCategory', 'Personal')}
+              {t('ui.personalCategory')}
             </button>
           </div>
 
           {/* Priority dropdown wrapper */}
           <div className="flex items-center gap-1.5 bg-surface-bright border border-outline-variant/15 px-3 py-1.5 rounded-xl">
             <span className="text-[10px] font-semibold text-on-surface-variant select-none">
-              {language === 'de' ? 'Priorität:' : 'Priority:'}
+              {t('kanban.priority')}
             </span>
             <select
               value={priorityFilter}
               onChange={(e) => setPriorityFilter(e.target.value as any)}
               className="bg-transparent border-none text-[10px] text-on-surface font-bold focus:outline-none focus:ring-0 p-0 m-0 cursor-pointer"
             >
-              <option value="all">{language === 'de' ? 'Alle Stufen' : 'All Levels'}</option>
-              <option value="high">🌋 {t('high', 'High')}</option>
-              <option value="medium">⚡ {t('medium', 'Medium')}</option>
-              <option value="low">🌱 {t('low', 'Low')}</option>
+              <option value="all">{t('kanban.allLevels')}</option>
+              <option value="high">🌋 {t('ui.high')}</option>
+              <option value="medium">⚡ {t('ui.medium')}</option>
+              <option value="low">🌱 {t('ui.low')}</option>
             </select>
           </div>
 
@@ -475,7 +466,7 @@ export default function KanbanView({
                       <button
                         onClick={() => handleOpenEdit(task)}
                         className="absolute top-3 right-8 opacity-0 group-hover:opacity-100 p-1.5 hover:bg-primary/10 text-on-surface-variant/60 hover:text-primary rounded-lg transition-all cursor-pointer flex items-center justify-center z-10"
-                        title={language === 'de' ? 'Details bearbeiten' : 'Edit Task Details'}
+                        title={t('kanban.editTaskDetails')}
                       >
                         <Edit2 className="w-3.5 h-3.5" />
                       </button>
@@ -484,26 +475,24 @@ export default function KanbanView({
                       {pendingDeleteId === task.id ? (
                         <div className="absolute inset-0 bg-surface-bright rounded-xl p-3 flex flex-col justify-center items-center text-center z-20 animate-fade-in border border-error/20">
                           <p className="text-[10px] font-sans font-bold text-error uppercase tracking-widest mb-2">
-                            {language === 'de' ? 'Karte löschen?' : 'Erase Task Card?'}
+                            {t('kanban.eraseTaskCard')}
                           </p>
                           <div className="flex items-center gap-2">
                             <button
                               onClick={() => {
                                 onDeleteTask(task.id);
                                 setPendingDeleteId(null);
-                                triggerToast(
-                                  language === 'de' ? 'Aufgabe gelöscht' : 'Task deleted',
-                                );
+                                triggerToast(t('kanban.taskDeleted'));
                               }}
                               className="bg-error hover:bg-error/95 text-on-error py-1 px-2.5 rounded-lg text-[10px] font-bold cursor-pointer"
                             >
-                              {language === 'de' ? 'Ja, löschen' : 'Yes, Delete'}
+                              {t('kanban.yesDelete')}
                             </button>
                             <button
                               onClick={() => setPendingDeleteId(null)}
                               className="bg-surface-container hover:bg-surface-container-high border border-outline-variant/20 text-on-surface py-1 px-2.5 rounded-lg text-[10px] font-semibold cursor-pointer"
                             >
-                              {t('cancel', 'Cancel')}
+                              {t('ui.cancel')}
                             </button>
                           </div>
                         </div>
@@ -511,7 +500,7 @@ export default function KanbanView({
                         <button
                           onClick={() => setPendingDeleteId(task.id)}
                           className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 p-1.5 hover:bg-error/10 text-on-surface-variant/60 hover:text-error rounded-lg transition-all cursor-pointer flex items-center justify-center"
-                          title="Erase Card"
+                          title={t('kanban.eraseCard')}
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -542,8 +531,8 @@ export default function KanbanView({
                             )}
                             <span>
                               {task.category === 'personal'
-                                ? t('personalCategory', 'Personal')
-                                : t('workCategory', 'Work')}
+                                ? t('ui.personalCategory')
+                                : t('ui.workCategory')}
                             </span>
                           </span>
                         </div>
@@ -573,7 +562,7 @@ export default function KanbanView({
                               <div className="mt-4 space-y-2 border-t border-outline-variant/10 pt-3">
                                 {/* progress */}
                                 <div className="flex items-center justify-between text-[9px] text-on-surface-variant/70 font-black tracking-wider uppercase leading-none">
-                                  <span>{language === 'de' ? 'Meilensteine' : 'Milestones'}</span>
+                                  <span>{t('kanban.milestones')}</span>
                                   <span>
                                     {completedCount}/{totalCount} ({progressPercent}%)
                                   </span>
@@ -663,13 +652,13 @@ export default function KanbanView({
                             disabled={column.id === 'todo'}
                             onClick={() => handleMoveColumn(task, 'left')}
                             className="bg-surface-container hover:bg-surface-container-high border border-outline-variant/15 p-1 rounded-lg text-on-surface-variant/85 disabled:opacity-30 disabled:hover:bg-surface-container transition-all cursor-pointer flex items-center justify-center select-none shrink-0"
-                            title="Shift Left"
+                            title={t('kanban.shiftLeft')}
                           >
                             <ChevronLeft className="w-3 h-3" />
                           </button>
 
                           <span className="text-[8px] tracking-widest font-black uppercase text-on-surface-variant/45">
-                            {language === 'de' ? 'Status' : 'Status Shift'}
+                            {t('kanban.statusShift')}
                           </span>
 
                           {/* Right toggle arrow */}
@@ -677,7 +666,7 @@ export default function KanbanView({
                             disabled={column.id === 'done'}
                             onClick={() => handleMoveColumn(task, 'right')}
                             className="bg-surface-container hover:bg-surface-container-high border border-outline-variant/15 p-1 rounded-lg text-on-surface-variant/85 disabled:opacity-30 disabled:hover:bg-surface-container transition-all cursor-pointer flex items-center justify-center select-none shrink-0"
-                            title="Shift Right"
+                            title={t('kanban.shiftRight')}
                           >
                             <ChevronRight className="w-3 h-3" />
                           </button>
@@ -688,7 +677,7 @@ export default function KanbanView({
                 ) : (
                   <div className="py-10 text-center bg-surface-container-low/30 border border-dashed border-outline-variant/20 rounded-xl text-[11px] italic text-on-surface-variant/50 flex flex-col items-center justify-center gap-2">
                     <CheckCircle className="w-5 h-5 text-outline opacity-30 mt-1" />
-                    {language === 'de' ? 'Spalte leer' : 'Column Empty'}
+                    {t('kanban.columnEmpty')}
                   </div>
                 )}
               </div>
@@ -712,13 +701,7 @@ export default function KanbanView({
               <div className="flex items-center gap-2 text-primary font-bold text-xs uppercase tracking-widest leading-none">
                 <FolderDot className="w-4 h-4" />
                 <span>
-                  {editingTask
-                    ? language === 'de'
-                      ? 'Aufgabe bearbeiten'
-                      : 'Edit Task Card'
-                    : language === 'de'
-                      ? 'Neue Aufgabe erstellen'
-                      : 'Record New Task Card'}
+                  {editingTask ? t('kanban.editTaskCard') : t('kanban.recordNewTaskCard')}
                 </span>
               </div>
               <button
@@ -737,17 +720,13 @@ export default function KanbanView({
               {/* Task Title */}
               <div>
                 <label className="block text-on-surface-variant font-bold uppercase tracking-wider mb-1 font-sans text-[10px]">
-                  {t('taskTitle', 'Task Title *')}
+                  {t('ui.taskTitle')}
                 </label>
                 <input
                   required
                   value={formTitle}
                   onChange={(e) => setFormTitle(e.target.value)}
-                  placeholder={
-                    language === 'de'
-                      ? 'z.B., Projektentwurf abschließen'
-                      : 'e.g., Complete architectural sketch specs'
-                  }
+                  placeholder={t('kanban.eGCompleteArchitecturalSketch')}
                   className="w-full bg-surface-container-low border border-outline-variant/15 p-2.5 rounded-xl text-xs font-sans focus:outline-primary placeholder:text-on-surface-variant/30 select-text text-on-surface font-medium"
                 />
               </div>
@@ -755,7 +734,7 @@ export default function KanbanView({
               {/* Category selector */}
               <div>
                 <label className="block text-on-surface-variant font-bold uppercase tracking-wider mb-1.5 font-sans text-[10px]">
-                  {t('categoryLabel', 'Category *')}
+                  {t('ui.categoryLabel')}
                 </label>
                 <div className="grid grid-cols-2 gap-2.5">
                   <button
@@ -768,7 +747,7 @@ export default function KanbanView({
                     }`}
                   >
                     <Briefcase className="w-4 h-4" />
-                    <span>{t('workCategory', 'Work')}</span>
+                    <span>{t('ui.workCategory')}</span>
                   </button>
                   <button
                     type="button"
@@ -780,7 +759,7 @@ export default function KanbanView({
                     }`}
                   >
                     <Heart className="w-4 h-4" />
-                    <span>{t('personalCategory', 'Personal')}</span>
+                    <span>{t('ui.personalCategory')}</span>
                   </button>
                 </div>
               </div>
@@ -789,31 +768,31 @@ export default function KanbanView({
               <div className="grid grid-cols-2 gap-3.5">
                 <div>
                   <label className="block text-on-surface-variant font-bold uppercase tracking-wider mb-1 font-sans text-[10px]">
-                    {t('statusLabel', 'Status *')}
+                    {t('ui.statusLabel')}
                   </label>
                   <select
                     value={formColumn}
                     onChange={(e) => setFormColumn(e.target.value as KanbanColumn)}
                     className="w-full bg-surface-container-low border border-outline-variant/15 p-2.5 rounded-xl text-xs font-sans focus:outline-primary text-on-surface font-medium"
                   >
-                    <option value="todo">{t('todo', 'To Do')}</option>
-                    <option value="in_progress">{t('inProgress', 'In Progress')}</option>
-                    <option value="review">{language === 'de' ? 'Überprüfung' : 'Review'}</option>
-                    <option value="done">{t('completed', 'Completed')}</option>
+                    <option value="todo">{t('ui.todo')}</option>
+                    <option value="in_progress">{t('ui.inProgress')}</option>
+                    <option value="review">{t('kanban.review')}</option>
+                    <option value="done">{t('ui.completed')}</option>
                   </select>
                 </div>
                 <div>
                   <label className="block text-on-surface-variant font-bold uppercase tracking-wider mb-1 font-sans text-[10px]">
-                    {t('priorityLabel', 'Priority *')}
+                    {t('ui.priorityLabel')}
                   </label>
                   <select
                     value={formPriority}
                     onChange={(e) => setFormPriority(e.target.value as any)}
                     className="w-full bg-surface-container-low border border-outline-variant/15 p-2.5 rounded-xl text-xs font-sans focus:outline-primary text-on-surface font-medium"
                   >
-                    <option value="high">🌋 {t('high', 'High')}</option>
-                    <option value="medium">⚡ {t('medium', 'Medium')}</option>
-                    <option value="low">🌱 {t('low', 'Low')}</option>
+                    <option value="high">🌋 {t('ui.high')}</option>
+                    <option value="medium">⚡ {t('ui.medium')}</option>
+                    <option value="low">🌱 {t('ui.low')}</option>
                   </select>
                 </div>
               </div>
@@ -821,7 +800,7 @@ export default function KanbanView({
               {/* Due Date */}
               <div>
                 <label className="block text-on-surface-variant font-bold uppercase tracking-wider mb-1 font-sans text-[10px]">
-                  {language === 'de' ? 'Fälligkeitsdatum (Optional)' : 'Deadline Date (Optional)'}
+                  {t('kanban.deadlineDateOptional')}
                 </label>
                 <input
                   type="date"
@@ -834,14 +813,12 @@ export default function KanbanView({
               {/* Tags Comma string */}
               <div>
                 <label className="block text-on-surface-variant font-bold uppercase tracking-wider mb-1 font-sans text-[10px]">
-                  {language === 'de'
-                    ? 'Schlagworte / Tags (kommagetrennt)'
-                    : 'Labels / Tags (comma-separated)'}
+                  {t('kanban.labelsTagsCommaSeparated')}
                 </label>
                 <input
                   value={formTagsString}
                   onChange={(e) => setFormTagsString(e.target.value)}
-                  placeholder="e.g. Phoenix, Acoustics, Writing"
+                  placeholder={t('kanban.tagsPlaceholder')}
                   className="w-full bg-surface-container-low border border-outline-variant/15 p-2.5 rounded-xl text-xs font-sans focus:outline-primary placeholder:text-on-surface-variant/35 text-on-surface select-text font-medium"
                 />
               </div>
@@ -849,16 +826,12 @@ export default function KanbanView({
               {/* Description textarea */}
               <div>
                 <label className="block text-on-surface-variant font-bold uppercase tracking-wider mb-1 font-sans text-[10px]">
-                  {t('taskDescription', 'Description')}
+                  {t('ui.taskDescription')}
                 </label>
                 <textarea
                   value={formDescription}
                   onChange={(e) => setFormDescription(e.target.value)}
-                  placeholder={
-                    language === 'de'
-                      ? 'Beschreiben Sie wichtige Ergebnisse oder Details...'
-                      : 'Describe key outcomes, team coordination pointers...'
-                  }
+                  placeholder={t('kanban.describeKeyOutcomesTeamCoordination')}
                   rows={3}
                   className="w-full bg-surface-container-low border border-outline-variant/15 p-2.5 rounded-xl text-xs font-sans focus:outline-primary placeholder:text-on-surface-variant/30 text-on-surface select-text leading-normal"
                 />
@@ -867,7 +840,7 @@ export default function KanbanView({
               {/* Subtask Checklist Creator */}
               <div className="border-t border-outline-variant/10 pt-4 mt-1">
                 <label className="block text-on-surface-variant font-bold uppercase tracking-wider mb-2 font-sans text-[10px]">
-                  {language === 'de' ? 'Teilschritte / Meilensteine' : 'Sub-Checklist / Milestones'}
+                  {t('kanban.subChecklistMilestones')}
                 </label>
 
                 {formChecklist.length > 0 && (
@@ -914,9 +887,7 @@ export default function KanbanView({
                     value={newSubTaskText}
                     onChange={(e) => setNewSubTaskText(e.target.value)}
                     onKeyDown={handleFormChecklistKeyDown}
-                    placeholder={
-                      language === 'de' ? 'Teilschritt hinzufügen...' : 'Add milestone sub-task...'
-                    }
+                    placeholder={t('kanban.addMilestoneSubTask')}
                     className="flex-1 bg-surface-container-low border border-outline-variant/15 px-3 py-2 rounded-xl text-xs font-sans focus:outline-primary placeholder:text-on-surface-variant/35 text-on-surface font-medium"
                   />
                   <button
@@ -924,7 +895,7 @@ export default function KanbanView({
                     onClick={() => handleFormChecklistAdd()}
                     className="bg-primary/10 hover:bg-primary/15 text-primary text-[10px] font-bold px-3 py-2 rounded-xl transition-all cursor-pointer shrink-0"
                   >
-                    {language === 'de' ? 'Hinzufügen' : 'Add Item'}
+                    {t('kanban.addItem')}
                   </button>
                 </div>
               </div>
@@ -936,13 +907,13 @@ export default function KanbanView({
                   onClick={() => setIsModalOpen(false)}
                   className="text-on-surface text-xs font-semibold bg-surface-bright hover:bg-surface-container border border-outline-variant/25 px-4 py-2 rounded-xl transition-all cursor-pointer"
                 >
-                  {language === 'de' ? 'Verwerfen' : 'Discard'}
+                  {t('kanban.discard')}
                 </button>
                 <button
                   type="submit"
                   className="bg-primary hover:bg-primary/95 text-on-primary text-xs font-semibold px-4.5 py-2 rounded-xl transition-all cursor-pointer"
                 >
-                  {t('saveTask', 'Save Task')}
+                  {t('ui.saveTask')}
                 </button>
               </div>
             </form>

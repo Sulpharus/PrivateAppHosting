@@ -39,37 +39,18 @@ export default function DashboardView({
   // Get time of day greeting
   const getGreeting = () => {
     const hours = new Date().getHours();
-    if (language === 'de') {
-      if (hours < 12) return `Guten Morgen, ${settings.userName}.`;
-      if (hours < 17) return `Guten Tag, ${settings.userName}.`;
-      return `Guten Abend, ${settings.userName}.`;
-    } else {
-      if (hours < 12) return `Good Morning, ${settings.userName}.`;
-      if (hours < 17) return `Good Afternoon, ${settings.userName}.`;
-      return `Good Evening, ${settings.userName}.`;
-    }
+    const name = settings.userName;
+    if (hours < 12) return t('dashboard.greetingMorning', { name });
+    if (hours < 17) return t('dashboard.greetingDay', { name });
+    return t('dashboard.greetingEvening', { name });
   };
 
   // Get greeting subtitle based on hour
   const getSubtitle = () => {
     const hours = new Date().getHours();
-    if (language === 'de') {
-      if (hours < 12) {
-        return 'Die Luft ist frisch. Atmen Sie tief ein, brühen Sie sich eine warme Tasse Kaffee auf und lassen Sie Ihre Gedanken heute auf der Seite freien Lauf.';
-      }
-      if (hours < 17) {
-        return 'Die Sonne steht warm und hoch. Machen Sie eine achtsame Pause, verlangsamen Sie Ihr Tempo und reflektieren Sie die Momente Ihres Nachmittags.';
-      }
-      return 'Das Licht wird sanfter. Lassen Sie den Tag ausklingen, zählen Sie Ihre stillen Funken der Dankbarkeit und genießen Sie die Stille des Abends.';
-    } else {
-      if (hours < 12) {
-        return 'The air is crisp. Take a deep breath, brew a warm cup of coffee, and let your thoughts unfold onto the page today.';
-      }
-      if (hours < 17) {
-        return 'The sun is warm and high. Take a mindful pause, slow down your pace, and reflect on the moments of your afternoon.';
-      }
-      return 'The light begins to soften. Wind down your day, count your quiet sparks of gratitude, and enjoy the silence of evening.';
-    }
+    if (hours < 12) return t('dashboard.subtitleMorning');
+    if (hours < 17) return t('dashboard.subtitleDay');
+    return t('dashboard.subtitleEvening');
   };
 
   // Calculate upcoming reminders & follow-ups across CRM and Tasks
@@ -99,15 +80,15 @@ export default function DashboardView({
           let statusText = `${c.followUpDate}`;
           if (diffDays < 0) {
             status = 'overdue';
-            statusText = t('overdue', 'Overdue');
+            statusText = t('ui.overdue');
           } else if (diffDays === 0) {
             status = 'today';
-            statusText = t('dueToday', 'Due Today');
+            statusText = t('ui.dueToday');
           } else if (diffDays === 1) {
             status = 'tomorrow';
-            statusText = t('dueTomorrow', 'Tomorrow');
+            statusText = t('ui.dueTomorrow');
           } else {
-            statusText = language === 'de' ? `In ${diffDays} T.` : `In ${diffDays}d`;
+            statusText = t('dashboard.inD', { diffDays });
           }
 
           list.push({
@@ -118,9 +99,7 @@ export default function DashboardView({
               c.followUpNote ||
               (c.company
                 ? `${c.role ? `${c.role} · ` : ''}${c.company}`
-                : language === 'de'
-                  ? 'Wiedervorlage / Kontakt aufnehmen'
-                  : 'Follow-up touchpoint'),
+                : t('dashboard.followUpTouchpoint')),
             date: c.followUpDate,
             status,
             statusText,
@@ -141,15 +120,15 @@ export default function DashboardView({
           let statusText = m.date;
           if (diffDays < 0) {
             status = 'overdue';
-            statusText = t('overdue', 'Overdue');
+            statusText = t('ui.overdue');
           } else if (diffDays === 0) {
             status = 'today';
-            statusText = t('dueToday', 'Today');
+            statusText = t('ui.dueToday');
           } else if (diffDays === 1) {
             status = 'tomorrow';
-            statusText = t('dueTomorrow', 'Tomorrow');
+            statusText = t('ui.dueTomorrow');
           } else {
-            statusText = language === 'de' ? `In ${diffDays} T.` : `In ${diffDays}d`;
+            statusText = t('dashboard.inD', { diffDays });
           }
 
           const ids = m.contactIds || (m.contactId ? [m.contactId] : []);
@@ -161,8 +140,8 @@ export default function DashboardView({
           list.push({
             id: `m-mu-${m.id}`,
             type: 'meetup',
-            title: m.title || (language === 'de' ? `Treffen: ${withName}` : `Meetup: ${withName}`),
-            subtitle: `${m.time ? `${m.time} · ` : ''}${m.location || (language === 'de' ? 'Ort unbestimmt' : 'Location unassigned')}${withName ? ` (${withName})` : ''}`,
+            title: m.title || t('dashboard.meetup', { withName }),
+            subtitle: `${m.time ? `${m.time} · ` : ''}${m.location || t('dashboard.locationUnassigned')}${withName ? ` (${withName})` : ''}`,
             date: m.date,
             status,
             statusText,
@@ -183,24 +162,22 @@ export default function DashboardView({
           let statusText = task.dueDate;
           if (diffDays < 0) {
             status = 'overdue';
-            statusText = t('overdue', 'Overdue');
+            statusText = t('ui.overdue');
           } else if (diffDays === 0) {
             status = 'today';
-            statusText = t('dueToday', 'Due Today');
+            statusText = t('ui.dueToday');
           } else if (diffDays === 1) {
             status = 'tomorrow';
-            statusText = t('dueTomorrow', 'Tomorrow');
+            statusText = t('ui.dueTomorrow');
           } else {
-            statusText = language === 'de' ? `In ${diffDays} T.` : `In ${diffDays}d`;
+            statusText = t('dashboard.inD', { diffDays });
           }
 
           list.push({
             id: `k-task-${task.id}`,
             type: 'task',
             title: task.title,
-            subtitle:
-              task.description ||
-              (language === 'de' ? `Status: ${task.column}` : `Status: ${task.column}`),
+            subtitle: task.description || t('dashboard.status', { column: task.column }),
             date: task.dueDate,
             status,
             statusText,
@@ -257,18 +234,12 @@ export default function DashboardView({
               notifications_active
             </span>
             <h3 className="font-sans text-xl text-on-surface font-semibold tracking-tight">
-              {t('upcomingReminders', 'Upcoming Reminders')}
+              {t('ui.upcomingReminders')}
             </h3>
             {urgentRemindersCount > 0 && (
               <span className="bg-error/15 text-error text-[10px] font-bold px-2 py-0.5 rounded-full border border-error/20">
                 {urgentRemindersCount}{' '}
-                {urgentRemindersCount === 1
-                  ? language === 'de'
-                    ? 'fällig'
-                    : 'due'
-                  : language === 'de'
-                    ? 'fällig'
-                    : 'due'}
+                {urgentRemindersCount === 1 ? t('dashboard.due') : t('dashboard.due')}
               </span>
             )}
           </div>
@@ -276,7 +247,7 @@ export default function DashboardView({
             onClick={() => onNavigateToTab('contacts')}
             className="font-sans text-xs font-semibold text-primary hover:underline underline-offset-4 cursor-pointer select-none"
           >
-            {t('viewInCrm', 'Open in CRM')}
+            {t('ui.viewInCrm')}
           </button>
         </div>
 
@@ -347,18 +318,13 @@ export default function DashboardView({
           <div className="p-5 bg-surface-container-low/70 rounded-2xl border border-dashed border-outline-variant/30 flex items-center justify-between gap-4 text-xs text-on-surface-variant select-none">
             <div className="flex items-center gap-2.5">
               <span className="material-symbols-outlined text-primary text-base">check_circle</span>
-              <span>
-                {t(
-                  'noUpcomingReminders',
-                  'No pending reminders or follow-ups. Everything is in peaceful order.',
-                )}
-              </span>
+              <span>{t('ui.noUpcomingReminders')}</span>
             </div>
             <button
               onClick={() => onNavigateToTab('contacts')}
               className="text-[11px] font-bold text-primary hover:underline underline-offset-4 cursor-pointer shrink-0"
             >
-              + {language === 'de' ? 'Wiedervorlage planen' : 'Schedule follow-up'}
+              + {t('dashboard.scheduleFollowUp')}
             </button>
           </div>
         )}
@@ -370,11 +336,11 @@ export default function DashboardView({
         <section className="md:col-span-5 flex flex-col gap-4">
           <div className="flex items-center justify-between">
             <h3 className="font-sans text-xl text-on-surface font-semibold tracking-tight">
-              {language === 'de' ? 'Heutige Rituale' : "Today's Rituals"}
+              {t('dashboard.todaySRituals')}
             </h3>
             <button
               onClick={onAddQuickRoutine}
-              aria-label="Add routine"
+              aria-label={t('dashboard.addRoutine')}
               className="text-primary hover:bg-primary-container/10 p-2 rounded-full transition-all duration-300 cursor-pointer active:scale-90"
             >
               <span className="material-symbols-outlined text-lg">add</span>
@@ -416,9 +382,7 @@ export default function DashboardView({
             ))}
             {rituals.length === 0 && (
               <div className="p-8 text-center bg-surface-container-low rounded-2xl border border-dashed border-outline-variant/50 text-on-surface-variant/70 text-sm">
-                {language === 'de'
-                  ? 'Keine Rituale für heute geplant.'
-                  : 'No rituals scheduled for today.'}
+                {t('dashboard.noRitualsScheduledForToday')}
               </div>
             )}
           </div>
@@ -428,13 +392,13 @@ export default function DashboardView({
         <section className="md:col-span-7 flex flex-col gap-4">
           <div className="flex items-center justify-between">
             <h3 className="font-sans text-xl text-on-surface font-semibold tracking-tight">
-              {language === 'de' ? 'Kürzliche Gedanken' : 'Recent Thoughts'}
+              {t('dashboard.recentThoughts')}
             </h3>
             <button
               onClick={() => onNavigateToTab('library')}
               className="font-sans text-xs font-semibold text-primary hover:underline underline-offset-4 cursor-pointer select-none"
             >
-              {language === 'de' ? 'Alle anzeigen' : 'View All'}
+              {t('dashboard.viewAll')}
             </button>
           </div>
 
@@ -459,13 +423,10 @@ export default function DashboardView({
                       ))}
                     </div>
                     <span className="font-sans text-[10px] text-outline/65">
-                      {new Date(largeNote.createdAt).toLocaleDateString(
-                        language === 'de' ? 'de-DE' : undefined,
-                        {
-                          month: 'short',
-                          day: 'numeric',
-                        },
-                      )}
+                      {new Date(largeNote.createdAt).toLocaleDateString(window.mnI18n.locale, {
+                        month: 'short',
+                        day: 'numeric',
+                      })}
                     </span>
                   </div>
                   <div>
@@ -480,9 +441,7 @@ export default function DashboardView({
               </div>
             ) : (
               <div className="col-span-1 sm:col-span-2 p-10 bg-surface-container-low text-center rounded-2xl border border-dashed border-outline-variant/40 text-sm text-on-surface-variant/80">
-                {language === 'de'
-                  ? 'Ihr Gedankenspeicher ist leer. Klicken Sie auf Neue Notiz, um zu beginnen.'
-                  : 'Your sandbox of thoughts is empty. Click New Note to begin.'}
+                {t('dashboard.yourSandboxOfThoughtsIs')}
               </div>
             )}
 
@@ -512,13 +471,10 @@ export default function DashboardView({
                   </p>
                 </div>
                 <span className="font-sans text-[10px] text-outline/65 mt-4 self-start select-none">
-                  {new Date(squareNote1.createdAt).toLocaleDateString(
-                    language === 'de' ? 'de-DE' : undefined,
-                    {
-                      month: 'short',
-                      day: 'numeric',
-                    },
-                  )}
+                  {new Date(squareNote1.createdAt).toLocaleDateString(window.mnI18n.locale, {
+                    month: 'short',
+                    day: 'numeric',
+                  })}
                 </span>
               </div>
             )}
@@ -548,13 +504,10 @@ export default function DashboardView({
                   </p>
                 </div>
                 <span className="font-sans text-[10px] text-outline/65 mt-4 self-start select-none">
-                  {new Date(squareNote2.createdAt).toLocaleDateString(
-                    language === 'de' ? 'de-DE' : undefined,
-                    {
-                      month: 'short',
-                      day: 'numeric',
-                    },
-                  )}
+                  {new Date(squareNote2.createdAt).toLocaleDateString(window.mnI18n.locale, {
+                    month: 'short',
+                    day: 'numeric',
+                  })}
                 </span>
               </div>
             )}

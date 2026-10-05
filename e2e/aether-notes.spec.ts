@@ -55,8 +55,8 @@ test('greets the account name, has no name settings, and keeps contacts in the a
     .click();
   await expect(page.getByText('Speicher eingeschränkt')).toHaveCount(0);
   await page.getByRole('button', { name: 'Neuer Kontakt' }).click();
-  await page.getByPlaceholder('Ada Lovelace').fill('Erika Muster');
-  await page.getByRole('button', { name: 'Save Profile' }).click();
+  await page.getByPlaceholder('Erika Mustermann').fill('Erika Muster');
+  await page.getByRole('button', { name: 'Profil speichern' }).click();
   await page.reload();
   await page
     .getByRole('button', { name: /CRM & Kontakte/ })
