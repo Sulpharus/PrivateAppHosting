@@ -7,7 +7,7 @@ import { stripExternalStyles } from './convert.ts';
 import { deriveName, integrate } from './index.ts';
 import { serverRoutes } from './inspect.ts';
 import { checkZipListing, UnpackError } from './unpack.ts';
-import { lintExemption } from './verify.ts';
+import { biomeSkip, lintExemption } from './verify.ts';
 
 let dir: string;
 beforeEach(() => {
@@ -291,5 +291,12 @@ describe('helpers', () => {
       linter: { enabled: false },
     });
     expect(lintExemption(once, 'sentinel')).toBe(once);
+  });
+
+  it('leaves an app out of Biome entirely once, for code Biome cannot read', () => {
+    const base = JSON.stringify({ files: { includes: ['**', '!graphify-out'] } });
+    const once = biomeSkip(base, 'splitter');
+    expect(JSON.parse(once).files.includes).toEqual(['**', '!graphify-out', '!hosted/splitter']);
+    expect(biomeSkip(once, 'splitter')).toBe(once);
   });
 });

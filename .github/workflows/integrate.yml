@@ -7,10 +7,12 @@ name: Web-App einbauen
 #   build    (NO secrets)  `mininode integrate` rewrites the export, checks it with doctor and
 #                          builds it. The export's own build code (PostCSS and Tailwind configs,
 #                          dependencies) runs only here, with no token and no key in reach.
-#   publish  (secrets)     success: branch auto/<slug>-<id> and a pull request, or a push to main
-#                          with the repository variable INTEGRATE_AUTOMERGE=true (the deploy then
-#                          starts). The script could not finish: branch review/<id> with the ZIP
-#                          and the report, and an issue labelled `ai-review` (integrate-app skill).
+#   publish  (secrets)     success: branch auto/<slug>-<id> and a pull request (status "Pull Request
+#                          offen"; pr-merged.yml sets "Eingebaut" on the merge). With the repository
+#                          variable INTEGRATE_AUTOMERGE=true the PR is set to auto-merge, which
+#                          waits for the required checks of main. The script could not finish:
+#                          branch review/<id> with the ZIP and the report, and an issue labelled
+#                          `ai-review` (integrate-app skill).
 #
 # Pushes made with the default token do not start other workflows. Set the secret INTEGRATE_TOKEN
 # (contents and pull requests: write) so CI and the deploy run on what this creates.
@@ -165,7 +167,13 @@ jobs:
           # Root files are made here, in the job that does not run the export's code.
           pnpm install --lockfile-only --ignore-scripts
           if [ "$(jq -r '.lintExempt // false' artifacts/result/result.json)" = "true" ]; then
-            pnpm mininode exempt "$slug"
+            # Code that Biome cannot read at all (a syntax error) is left out of Biome entirely;
+            # turning the linter off would not stop `pnpm lint` from failing on it.
+            if [ "$(jq -r '.biomeSkip // false' artifacts/result/result.json)" = "true" ]; then
+              pnpm mininode exempt "$slug" --skip
+            else
+              pnpm mininode exempt "$slug"
+            fi
             pnpm exec biome format --write biome.json
           fi
           git config user.name "mininode-integrate"
@@ -179,18 +187,29 @@ jobs:
             -m "Built by mininode integrate from an upload in Verwaltung. See hosted/$slug/README.md."
           # The report contains names taken from the upload: show it as code, not as markup.
           fence=$(printf '\140\140\140')
-          { echo "Automatisch eingebaut (Verwaltung → Hochladen). Bericht:"; echo "${fence}text"; sed "s/${fence}/'''/g" artifacts/result/report.md; echo "$fence"; } > body.md
+          # The marker lets pr-merged.yml find the upload again when the pull request is merged.
+          {
+            echo "<!-- mininode-submission id=$SUBMISSION env=$DEPLOY_ENV -->"
+            echo "Automatisch eingebaut (Verwaltung → Hochladen). Bericht:"
+            echo "${fence}text"
+            sed "s/${fence}/'''/g" artifacts/result/report.md
+            echo "$fence"
+            echo
+            echo "Mergen erst, wenn alle Prüfungen grün sind."
+          } > body.md
+          # Never straight to main: CI has to see the app first. The upload shows "Pull Request
+          # offen" until the merge (pr-merged.yml turns it into "Eingebaut").
+          git push origin "auto/$slug-$short"
+          pr=$(gh pr create --base main --head "auto/$slug-$short" \
+            --title "feat($slug): automatisch integriert" --body-file body.md)
           if [ "$AUTOMERGE" = "true" ]; then
-            git push origin "HEAD:refs/heads/main"
-            pr=""
-          else
-            git push origin "auto/$slug-$short"
-            pr=$(gh pr create --base main --head "auto/$slug-$short" \
-              --title "feat($slug): automatisch integriert" --body-file body.md)
+            # Merges when the required checks of main pass. Without such a rule on main (Settings →
+            # Rules) or without "Allow auto-merge" this fails and the pull request just stays open.
+            gh pr merge "$pr" --auto --merge || echo "auto-merge is not available; the pull request stays open"
           fi
-          pnpm mininode submission status "$SUBMISSION" integrated \
+          pnpm mininode submission status "$SUBMISSION" pr_open \
             --result artifacts/result/result.json --report artifacts/result/report.md \
-            ${pr:+--pr "$pr"} --run "$RUN_URL" --env "$DEPLOY_ENV"
+            --pr "$pr" --run "$RUN_URL" --env "$DEPLOY_ENV"
       - name: Hand over to the AI review
         if: env.CODE == '2'
         run: |

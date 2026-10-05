@@ -5,6 +5,7 @@ export type SubmissionStatus =
   | 'integrating'
   | 'installing'
   | 'integrated'
+  | 'pr_open'
   | 'installed'
   | 'needs_review'
   | 'failed'
@@ -37,6 +38,7 @@ export const STATUS_LABEL: Record<SubmissionStatus, string> = {
   queued: 'Wartet',
   integrating: 'Wird eingebaut',
   installing: 'Wird installiert',
+  pr_open: 'Pull Request offen',
   integrated: 'Eingebaut',
   installed: 'Installiert',
   needs_review: 'Braucht Prüfung',

@@ -9,6 +9,7 @@ import type { IntegrateResult } from './integrate/types.ts';
 export type SubmissionStatus =
   | 'integrating'
   | 'integrated'
+  | 'pr_open'
   | 'needs_review'
   | 'failed'
   | 'dismissed'

@@ -14,6 +14,7 @@ import {
   parseManifest,
   usedKeys,
 } from '@mininode/manifest';
+import { scanText } from './export.ts';
 
 export type Severity = 'error' | 'warning';
 
@@ -157,6 +158,52 @@ function checkSources(
       rule: 'sdk-required',
       message: 'ai is configured but the SDK is not used',
     });
+  }
+}
+
+/** Image and font files are not text; everything else is read as text when it has no NUL byte. */
+const NON_TEXT = /\.(png|jpe?g|gif|webp|avif|ico|woff2?|ttf|otf|pdf|mp[34]|webm|wasm)$/i;
+
+/**
+ * What would stop `mininode export` (and the CI test that exports every hosted app): secrets,
+ * identifiers of this instance and personal email addresses, such as the sample people an AI
+ * tool puts into demo data. Finding them here keeps them out of main.
+ */
+function checkExportable(dir: string, findings: Finding[]): void {
+  for (const file of walk(dir)) {
+    if (NON_TEXT.test(file)) continue;
+    const buffer = readFileSync(file);
+    if (buffer.includes(0)) continue;
+    const rel = relative(dir, file).split('\\').join('/');
+    const seen = new Set<string>();
+    // Vendored third-party code carries its authors' addresses (as in the export); keys still count.
+    const emails = !rel.startsWith('vendor/') && !rel.includes('/vendor/');
+    for (const found of scanText(rel, buffer.toString('utf8'), [], { emails })) {
+      const key = `${found.rule}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      findings.push({
+        severity: 'error',
+        rule: 'export-scan',
+        file: `${rel}:${found.line}`,
+        message: `contains ${found.rule}; remove it or use an @example.com address, otherwise the app cannot be exported`,
+      });
+    }
+  }
+}
+
+/** The gate serves /_mininode/*; a copy in the app (a stand-in SDK or kit) would shadow it. */
+function checkReservedPaths(dir: string, findings: Finding[]): void {
+  for (const reserved of ['public/_mininode', '_mininode']) {
+    if (existsSync(join(dir, reserved))) {
+      findings.push({
+        severity: 'error',
+        rule: 'reserved-path',
+        file: reserved,
+        message:
+          'the platform serves /_mininode/ (SDK, App Kit, language helper) itself; delete this folder, a copy here is a stand-in that fakes the login and the data',
+      });
+    }
   }
 }
 
@@ -369,6 +416,8 @@ export function doctor(dir: string): DoctorReport {
     });
   }
   checkLayout(dir, manifest, findings);
+  checkReservedPaths(dir, findings);
+  checkExportable(dir, findings);
   const keysUsed = new Set<string>();
   checkSources(dir, manifest, findings, keysUsed);
   checkI18n(dir, manifest, keysUsed, findings);

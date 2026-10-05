@@ -156,6 +156,33 @@ describe('doctor', () => {
   });
 });
 
+describe('doctor: what the export and the platform refuse', () => {
+  it('finds personal email addresses in sample data, but not example.com', () => {
+    const dir = app({
+      ...healthy,
+      'src/data.ts': "export const people = [{ email: 'max@beispiel.de' }, { email: 'a@example.com' }];",
+    });
+    const found = doctor(dir).findings.filter((f) => f.rule === 'export-scan');
+    expect(found).toHaveLength(1);
+    expect(found[0]?.message).toContain('max@beispiel.de');
+    expect(found[0]?.file).toBe('src/data.ts:1');
+  });
+
+  it('refuses a stand-in /_mininode/ folder inside the app', () => {
+    const dir = app({ ...healthy, 'public/_mininode/sdk.js': '// fake sdk' });
+    expect(rules(dir)).toContain('reserved-path');
+  });
+
+  it('does not scan images, fonts or dependencies', () => {
+    const dir = app({
+      ...healthy,
+      'node_modules/lib/index.js': "const a = 'someone@private.de';",
+      'public/logo.png': 'someone@private.de',
+    });
+    expect(rules(dir)).toEqual([]);
+  });
+});
+
 describe('stripComments', () => {
   it('drops line and block comments but keeps URLs and strings', async () => {
     const { stripComments } = await import('./doctor.ts');

@@ -25,6 +25,7 @@ interface UploadConfig {
 }
 
 const TONE: Record<string, string> = {
+  pr_open: 'accent',
   integrated: 'ok',
   installed: 'ok',
   needs_review: 'bad',
@@ -339,12 +340,17 @@ function SubmissionCard({
         )}
       </p>
 
+      {row.status === 'pr_open' && (
+        <p>
+          Die App liegt als Pull Request bereit, ist aber noch nicht eingebaut. Merge erst, wenn
+          alle Prüfungen dort grün sind; danach veröffentlicht der Deploy sie und der Upload steht
+          auf „Eingebaut“.
+        </p>
+      )}
       {row.status === 'integrated' && (
         <p>
-          {row.pr_url
-            ? 'Die App liegt als Pull Request bereit. Prüfen und mergen, dann veröffentlicht der Deploy sie.'
-            : 'Die App ist veröffentlicht.'}{' '}
-          Zugriff vergibst du unter <Link to="/admin/apps">Apps</Link>.
+          Der Pull Request ist gemergt, der Deploy veröffentlicht die App. Zugriff vergibst du
+          unter <Link to="/admin/apps">Apps</Link>.
         </p>
       )}
       {row.status === 'installed' && (
