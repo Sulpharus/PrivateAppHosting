@@ -97,3 +97,32 @@ export async function exposeSchemas(options: {
   if (!response.ok)
     throw new Error(`exposing schemas failed: ${response.status} ${await response.text()}`);
 }
+
+/** Takes app schemas out of the Data API's exposed schemas (before they are dropped). */
+export async function unexposeSchemas(options: {
+  projectRef: string;
+  accessToken: string;
+  schemas: string[];
+  fetcher?: typeof fetch;
+}): Promise<void> {
+  const fetcher = options.fetcher ?? fetch;
+  const base = `https://api.supabase.com/v1/projects/${options.projectRef}/postgrest`;
+  const headers = {
+    Authorization: `Bearer ${options.accessToken}`,
+    'Content-Type': 'application/json',
+  };
+  const current = (await (await fetcher(base, { headers })).json()) as { db_schema?: string };
+  const existing = (current.db_schema ?? 'public,graphql_public')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const wanted = existing.filter((schema) => !options.schemas.includes(schema));
+  if (wanted.length === existing.length) return;
+  const response = await fetcher(base, {
+    method: 'PATCH',
+    headers,
+    body: JSON.stringify({ db_schema: wanted.join(',') }),
+  });
+  if (!response.ok)
+    throw new Error(`hiding schemas failed: ${response.status} ${await response.text()}`);
+}

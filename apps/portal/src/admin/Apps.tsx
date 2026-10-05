@@ -83,6 +83,12 @@ export function Apps() {
   const [exportError, setExportError] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
   const [exported, setExported] = useState<{ text: string; runs: string } | null>(null);
+  const [removeFor, setRemoveFor] = useState<AppRow | null>(null);
+  const [removeOpen, setRemoveOpen] = useState(false);
+  const [removeError, setRemoveError] = useState<string | null>(null);
+  const [removing, setRemoving] = useState(false);
+  const [purge, setPurge] = useState(true);
+  const [typed, setTyped] = useState('');
 
   const load = useCallback(async () => {
     const [rows, cats, users] = await Promise.all([
@@ -252,6 +258,35 @@ export function Apps() {
       setExportError(err instanceof ApiError ? err.message : 'Das hat nicht geklappt.');
     } finally {
       setExporting(false);
+    }
+  };
+
+  const startRemove = async () => {
+    const app = removeFor;
+    if (!app || typed !== app.slug) return;
+    setRemoveError(null);
+    setRemoving(true);
+    try {
+      const { manual } = await run(() =>
+        api<{ manual: string | null }>(`/admin/apps/${app.slug}/uninstall`, {
+          method: 'POST',
+          body: { purge, confirm: typed },
+        }),
+      );
+      setNotice(
+        `${app.name} wird gelöscht und ist schon offline. ${
+          purge ? 'Die Daten werden mitgelöscht. ' : 'Die Daten bleiben erhalten. '
+        }Das dauert etwa eine Minute; der Code wird in einem Pull Request entfernt, den du mergen musst.${
+          manual ? ` ${manual}` : ''
+        }`,
+      );
+      setRemoveOpen(false);
+      setTimeout(() => void load(), 5000);
+      await load();
+    } catch (err) {
+      setRemoveError(err instanceof ApiError ? err.message : 'Das hat nicht geklappt.');
+    } finally {
+      setRemoving(false);
     }
   };
 
@@ -533,6 +568,22 @@ export function Apps() {
                       >
                         {app.status === 'disabled' ? 'Aktivieren' : 'Deaktivieren'}
                       </button>
+                      {app.kind !== 'link' && (
+                        <button
+                          type="button"
+                          className="button small danger"
+                          aria-label={`${app.name} löschen`}
+                          onClick={() => {
+                            setRemoveError(null);
+                            setPurge(true);
+                            setTyped('');
+                            setRemoveFor(app);
+                            setRemoveOpen(true);
+                          }}
+                        >
+                          Löschen
+                        </button>
+                      )}
                     </td>
                   </tr>
                 );
@@ -654,6 +705,82 @@ export function Apps() {
               </button>
               <button type="submit" className="button small primary" disabled={exporting}>
                 {exporting ? 'Wird gestartet …' : 'Exportieren'}
+              </button>
+            </div>
+          </form>
+        )}
+      </Dialog>
+
+      <Dialog
+        open={removeOpen}
+        title={`${removeFor?.name ?? ''} löschen`}
+        onClose={() => setRemoveOpen(false)}
+      >
+        {removeFor && (
+          <form
+            key={removeFor.slug}
+            className="stack"
+            style={{ gap: 12 }}
+            onSubmit={(event) => {
+              event.preventDefault();
+              void startRemove();
+            }}
+          >
+            <p>
+              Die App wird sofort abgeschaltet und ihr Server bei Cloudflare gelöscht. Ihr Code wird
+              in einem Pull Request aus dem Repository entfernt (den du mergen musst, sonst bringt
+              ein späterer Deploy sie zurück).
+            </p>
+            <label className="row" style={{ gap: 8, alignItems: 'flex-start' }}>
+              <input
+                type="checkbox"
+                checked={purge}
+                onChange={(event) => setPurge(event.target.checked)}
+              />
+              <span>
+                <strong>Auch alle Daten löschen</strong>: Daten aller Nutzer in dieser App,
+                gespeicherte Dateien, Logo, Freigaben und Einstellungen. Das lässt sich nicht
+                rückgängig machen. Ohne Haken bleiben die Daten liegen, und die App lässt sich
+                später wieder einspielen.
+              </span>
+            </label>
+            {purge && (
+              <p className="muted">
+                Tipp: Erstelle vorher unter <Link to="/admin/backups">Sicherung</Link> eine
+                Sicherung, falls du Daten behalten willst.
+              </p>
+            )}
+            {removeFor.library && (
+              <p className="muted">
+                Programm aus der App-Bibliothek: der Container wird auf der NucBox gestoppt, sein
+                Datenordner dort bleibt liegen.
+              </p>
+            )}
+            <label className="field">
+              Tippe <span className="mono">{removeFor.slug}</span> zur Bestätigung
+              <input
+                value={typed}
+                onChange={(event) => setTyped(event.target.value)}
+                spellCheck={false}
+                autoCapitalize="off"
+                autoComplete="off"
+              />
+            </label>
+            {removeError && (
+              <p className="error" role="alert">
+                {removeError}
+              </p>
+            )}
+            <div className="row row-end">
+              <button type="button" className="button small" onClick={() => setRemoveOpen(false)}>
+                Abbrechen
+              </button>
+              <button
+                type="submit"
+                className="button small danger"
+                disabled={removing || typed !== removeFor.slug}
+              >
+                {removing ? 'Wird gestartet …' : purge ? 'Endgültig löschen' : 'Entfernen'}
               </button>
             </div>
           </form>

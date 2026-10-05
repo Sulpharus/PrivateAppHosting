@@ -105,7 +105,7 @@ Calendar (ADR 0004); *Dein Konto → Google* shows the state and can revoke it.
 `hosted/sportplaner` (sports offers, planned participation, visits and costs; photos in
 `mn.files`) and `hosted/haushalt` (household budget with bank CSV import, standing orders and the
 automatic transfer into the income tax forms) deploy with every run. Apps removed from `hosted/`
-are pruned: their Workers are deleted and their registry rows disabled (data is kept).
+are pruned: their Workers are deleted and their registry rows disabled (data is kept). To delete an app with its data use Verwaltung → Apps → Löschen (`uninstall.md`).
 
 ## 5. First deploy and first login
 
