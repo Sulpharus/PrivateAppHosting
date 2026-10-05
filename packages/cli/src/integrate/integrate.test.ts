@@ -335,5 +335,6 @@ describe('helpers', () => {
       rmSync(app, { recursive: true, force: true });
       vi.unstubAllEnvs();
     }
-  });
+    // Biome runs several times: slow on a busy CI runner, so the default 5 s is too tight.
+  }, 60_000);
 });
