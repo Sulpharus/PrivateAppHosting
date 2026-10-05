@@ -1,0 +1,28 @@
+{
+  "$schema": "https://mininode.app/schema/mininode.json",
+  "specVersion": 1,
+  "slug": "bill-the-splitter",
+  "name": "Bill the Splitter",
+  "description": "Gruppenabrechnung mit Belegfotos, Fristen, Push-Erinnerungen, Orten, PDF-Export und Direct Pay.",
+  "kind": "spa",
+  "target": "cloudflare",
+  "access": {
+    "default": false
+  },
+  "data": {
+    "mode": "group"
+  },
+  "build": {
+    "command": "pnpm build",
+    "output": "dist"
+  },
+  "ai": {
+    "models": ["gemini-flash"],
+    "monthlyBudgetEur": 2,
+    "maxOutputTokens": 500
+  },
+  "i18n": {
+    "languages": ["de", "en"],
+    "default": "de"
+  }
+}

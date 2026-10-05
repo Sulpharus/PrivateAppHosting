@@ -39,6 +39,23 @@ const SECRET_RULES: [string, RegExp][] = [
 const PUBLIC_EMAIL =
   /@example\.(com|org|net)$|^noreply@|^41898282\+github-actions\[bot\]@users\.noreply\.github\.com$/i;
 const EMAIL = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g;
+/** Image and font files are not text; everything else is read as text when it has no NUL byte. */
+export const NON_TEXT = /\.(png|jpe?g|gif|webp|avif|ico|woff2?|ttf|otf|pdf|mp[34]|webm|wasm)$/i;
+
+/**
+ * Sample people an AI tool writes into demo data (`max@beispiel.de`) become `max@example.com`, the
+ * form the export accepts. Returns how many addresses were changed.
+ */
+export function anonymiseEmails(text: string): { text: string; count: number } {
+  let count = 0;
+  const next = text.replace(EMAIL, (address) => {
+    if (PUBLIC_EMAIL.test(address)) return address;
+    count += 1;
+    return `${address.slice(0, address.indexOf('@'))}@example.com`;
+  });
+  return { text: next, count };
+}
+
 /** Commit names that are services, not people. */
 const SERVICE_NAMES = /^(GitHub|Claude|github-actions(\[bot\])?|dependabot(\[bot\])?|web-flow)$/i;
 

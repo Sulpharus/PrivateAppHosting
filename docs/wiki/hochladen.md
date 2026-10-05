@@ -25,7 +25,8 @@ Verwaltung → Apps → **Hochladen** (ADR 0013). Ein Feld nimmt zwei Arten Date
 ## Was das Skript selbst kann
 
 Vite/React- und AI-Studio-Exporte (auch mit `window.MiniNode` und `localStorage`-Daten), reines HTML, Exporte mit schon
-vorhandener `mininode.json`. Es führt dieselben Prüfungen wie CI aus: `doctor` (inklusive Suche nach Geheimnissen, privaten
+vorhandener `mininode.json` (dort räumt es auf, was Generatoren regelmäßig falsch machen: unbekannte Schlüssel wie `accent`, den
+Platzhalter `neue-app`, `npm run build`, das `package.json` von AI Studio, Beispiel-Mailadressen). Es führt dieselben Prüfungen wie CI aus: `doctor` (inklusive Suche nach Geheimnissen, privaten
 Kennungen, echten Mail-Adressen in Demo-Daten und untergeschobenem `/_mininode/`-Ordner), Build und Biome (Code, den Biome
 nicht lesen kann, wird ganz von Biome ausgenommen).
 
@@ -33,7 +34,8 @@ nicht lesen kann, wird ganz von Biome ausgenommen).
 
 Eigene Server-Routen, KI-Anbieter-SDKs oder Schlüssel im Browser, IndexedDB, eigenes Firebase/Supabase, WebSockets, CDN-Skripte
 oder Import-Maps, Inline-Ereignisse, unbekannte Vite-Plugins, Next.js, Python, Docker, ein Installer im ZIP, eine bereits
-vergebene Adresse. Dann sagst du Claude Code: **„arbeite die ai-review-Issues ab“** (Skill `integrate-app`). Der Lauf baut die App
+vergebene Adresse, ein Name oder eine Adresse, die nur ein Platzhalter ist („Neue App“), eine eigene Ersatzdatei für das Plattform-Gerüst
+(`FallbackMiniNodeClient`, `window.MiniNode`, Code, der `window.mininode` liest, ohne das SDK zu laden). Dann sagst du Claude Code: **„arbeite die ai-review-Issues ab“** (Skill `integrate-app`). Der Lauf baut die App
 nach `hosted/<name>`, öffnet einen Pull Request mit `Closes #<Issue>` und räumt den Branch ab. Mit dem Schließen des Issues steht die
 App in der Liste als eingebaut. In der Liste kopiert **Prüfauftrag kopieren** eine fertige Aufgabe für Claude.
 

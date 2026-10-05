@@ -144,8 +144,16 @@ describe('integrate: Vite / AI Studio exports', () => {
   it('does not overwrite an existing app', () => {
     const { input, hosted } = project(studio());
     mkdirSync(join(hosted, 'sentinel'), { recursive: true });
+    writeFileSync(join(hosted, 'sentinel/mininode.json'), '{}');
     const result = integrate({ input, root: dir, hostedDir: hosted });
     expect(result.reasons.map((r) => r.code)).toEqual(['slug_exists']);
+  });
+
+  it('does not mistake the leftovers of a removed app for an app', () => {
+    const { input, hosted } = project(studio());
+    mkdirSync(join(hosted, 'sentinel/node_modules'), { recursive: true });
+    const result = integrate({ input, root: dir, hostedDir: hosted });
+    expect(result.status).toBe('integrated');
   });
 });
 
@@ -251,6 +259,142 @@ describe('integrate: guards for what an export brings along', () => {
     expect(
       JSON.parse(readFileSync(join(hosted, 'offen/mininode.json'), 'utf8')).access.default,
     ).toBe(false);
+  });
+});
+
+describe('integrate: what generators get wrong in their own manifest', () => {
+  const generated = (extra: Record<string, unknown> = {}) => ({
+    'mininode.json': JSON.stringify({
+      specVersion: 1,
+      slug: 'neue-app',
+      name: 'Neue App',
+      description: 'Garantien und Belege',
+      accent: 'beige',
+      kind: 'static',
+      target: 'cloudflare',
+      ...extra,
+    }),
+    'index.html': '<html><head><title>Garantie-Box – Belege</title></head></html>',
+    'README.md': '# x\n',
+    'data.js': 'const sample = "max@beispiel.de"; const own = "x@example.com";',
+  });
+
+  it('drops unknown keys, names the app after its title and anonymises sample addresses', () => {
+    const { input, hosted } = project(generated());
+    const result = integrate({ input, root: dir, hostedDir: hosted });
+    expect(result).toMatchObject({ status: 'integrated', slug: 'garantie-box' });
+    const manifest = JSON.parse(readFileSync(join(hosted, 'garantie-box/mininode.json'), 'utf8'));
+    expect(manifest).not.toHaveProperty('accent');
+    expect(manifest).toMatchObject({ slug: 'garantie-box', name: 'Garantie-Box' });
+    expect(readFileSync(join(hosted, 'garantie-box/data.js'), 'utf8')).toBe(
+      'const sample = "max@example.com"; const own = "x@example.com";',
+    );
+    expect(result.actions.join(' ')).toContain('accent');
+    expect(result.warnings.join(' ')).toContain('@example.com');
+  });
+
+  it('cleans the package of a Vite app with a manifest and brings the icon font along', () => {
+    const { input, hosted } = project({
+      'mininode.json': JSON.stringify({
+        specVersion: 1,
+        slug: 'ikonen',
+        name: 'Ikonen',
+        description: 'x',
+        kind: 'spa',
+        target: 'cloudflare',
+        data: { mode: 'private' },
+        build: { command: 'npm run build', output: 'dist' },
+      }),
+      'package.json': JSON.stringify({
+        name: 'react-example',
+        dependencies: { react: '^19.0.1', express: '^4.21.2', vite: '^6.2.3' },
+      }),
+      'index.html':
+        '<html><head><title>Ikonen</title><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"></head><body><div id="root"></div><script type="module" src="/src/main.tsx"></script></body></html>',
+      'src/main.tsx':
+        'import { mininode } from "@mininode/sdk";\nconst x = <span className="material-symbols-outlined">home</span>;\n',
+      'server.ts': 'app.listen(3000)',
+      'README.md': '# x\n',
+    });
+    const result = integrate({ input, root: dir, hostedDir: hosted });
+    expect(result).toMatchObject({ status: 'integrated', slug: 'ikonen' });
+    const out = join(hosted, 'ikonen');
+    const pkg = JSON.parse(readFileSync(join(out, 'package.json'), 'utf8'));
+    expect(pkg.name).toBe('@mininode-hosted/ikonen');
+    expect(pkg.dependencies).toMatchObject({ '@mininode/sdk': 'workspace:*' });
+    expect(pkg.dependencies).toHaveProperty('material-symbols');
+    expect(pkg.dependencies).not.toHaveProperty('express');
+    expect(existsSync(join(out, 'server.ts'))).toBe(false);
+    expect(readFileSync(join(out, 'src/main.tsx'), 'utf8')).toMatch(
+      /^import 'material-symbols\/outlined\.css';/,
+    );
+    expect(readFileSync(join(out, 'index.html'), 'utf8')).not.toContain('fonts.googleapis.com');
+    expect(JSON.parse(readFileSync(join(out, 'mininode.json'), 'utf8')).build.command).toBe(
+      'pnpm build',
+    );
+    expect(result.warnings.join(' ')).toContain('subset-icons');
+  });
+
+  it('sends an app with its own stand-in for the platform client to review', () => {
+    const { input, hosted } = project({
+      'mininode.json': JSON.stringify({
+        specVersion: 1,
+        slug: 'ersatz',
+        name: 'Ersatz',
+        description: 'x',
+        kind: 'static',
+        target: 'cloudflare',
+        data: { mode: 'private' },
+      }),
+      'index.html':
+        '<html><body><script src="/_mininode/sdk.js"></script><script src="app.js"></script></body></html>',
+      'app.js':
+        'class FallbackMiniNodeClient { get() { return localStorage.getItem("x"); } }\nconst mn = await window.mininode.mininode();',
+      'README.md': '# x\n',
+    });
+    const result = integrate({ input, root: dir, hostedDir: hosted });
+    expect(result.status).toBe('needs_review');
+    expect(result.reasons.map((r) => r.code)).toContain('doctor_stand-in-sdk');
+    expect(existsSync(join(hosted, 'ersatz'))).toBe(false);
+  });
+
+  it('refuses code that reads window.mininode on a page that never loads the SDK', () => {
+    const { input, hosted } = project({
+      'mininode.json': JSON.stringify({
+        specVersion: 1,
+        slug: 'ohne-sdk',
+        name: 'Ohne SDK',
+        description: 'x',
+        kind: 'static',
+        target: 'cloudflare',
+        data: { mode: 'private' },
+      }),
+      'index.html': '<html><body><script src="app.js"></script></body></html>',
+      'app.js': 'const mn = await window.mininode.mininode();',
+      'README.md': '# x\n',
+    });
+    const result = integrate({ input, root: dir, hostedDir: hosted });
+    expect(result.reasons.map((r) => r.code)).toContain('doctor_sdk-not-loaded');
+  });
+
+  it('sends an app without any name to review instead of hosting it as "neue-app"', () => {
+    const { input, hosted } = project({
+      ...generated(),
+      'index.html': '<html><head><title>Neue App</title></head></html>',
+    });
+    const result = integrate({ input, root: dir, hostedDir: hosted });
+    expect(result.status).toBe('needs_review');
+    expect(result.reasons.map((r) => r.code)).toContain('placeholder_name');
+    expect(existsSync(join(hosted, 'neue-app'))).toBe(false);
+  });
+
+  it('takes an address given by the caller for a nameless app', () => {
+    const { input, hosted } = project({
+      ...generated(),
+      'index.html': '<html><head><title>Neue App</title></head></html>',
+    });
+    const result = integrate({ input, root: dir, hostedDir: hosted, slug: 'inventar' });
+    expect(result).toMatchObject({ status: 'integrated', slug: 'inventar', name: 'Inventar' });
   });
 });
 

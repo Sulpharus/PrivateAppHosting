@@ -18,8 +18,7 @@ import type {
 export const INITIAL_SETTINGS: UserSettings = {
   userName: 'Alex',
   userTitle: 'Achtsame Kontakte & Notizen',
-  avatarUrl:
-    'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=160&auto=format&fit=crop&q=80',
+  avatarUrl: '',
   streakDays: 0,
   pushEnabled: true,
 };

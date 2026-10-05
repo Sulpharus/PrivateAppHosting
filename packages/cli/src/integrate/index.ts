@@ -1,7 +1,7 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
-import { MANIFEST_FILENAME, RESERVED_SLUGS, slugify, slugSchema } from '@mininode/manifest';
+import { RESERVED_SLUGS, slugify, slugSchema } from '@mininode/manifest';
 import { doctor } from '../doctor.ts';
 import {
   type ConvertContext,
@@ -38,7 +38,19 @@ const GENERIC_NAMES = new Set([
   'vite-react-typescript-starter',
 ]);
 
-/** The name an export goes by: AI Studio metadata, page title, package name, then the file name. */
+/**
+ * Names an AI tool leaves in when the brief gave none ("Neue App", the file name of an upload):
+ * not a name to host an app under.
+ */
+const PLACEHOLDER =
+  /^(neue[- ]?app|new[- ]?app|my[- ]?app|meine[- ]?app|upload|export|download|untitled|app)$/i;
+export const isPlaceholder = (value: string | undefined): boolean =>
+  !value || PLACEHOLDER.test(value.trim());
+
+/**
+ * The name an export goes by: its own mininode.json, AI Studio metadata, page title, package name,
+ * then the file name. A placeholder name is skipped.
+ */
 export function deriveName(inspection: Inspection, origin: string): string {
   const fromFile = basename(origin)
     .replace(/\.zip$/i, '')
@@ -46,12 +58,15 @@ export function deriveName(inspection: Inspection, origin: string): string {
   const title = inspection.title?.split(/\s[–—|-]\s/)[0]?.trim();
   const pkgName = inspection.pkg?.name;
   const candidates = [
+    inspection.manifest?.name,
     inspection.metadata.name,
     title,
     pkgName && !GENERIC_NAMES.has(pkgName) ? pkgName : undefined,
     fromFile,
   ];
-  const name = candidates.find((candidate) => candidate && slugify(candidate).length >= 2);
+  const name = candidates.find(
+    (candidate) => candidate && !isPlaceholder(candidate) && slugify(candidate).length >= 2,
+  );
   return (name ?? 'Neue App').trim();
 }
 
@@ -100,22 +115,45 @@ export function integrate(options: IntegrateOptions): IntegrateResult {
     if (inspection.blockers.length > 0)
       return finish({ reasons: inspection.blockers, warnings: inspection.warnings }, base);
 
-    const name = shorten(deriveName(inspection, options.input), 40);
-    const manifestSlug =
-      inspection.framework === 'mininode'
-        ? (
-            JSON.parse(readFileSync(join(inspection.root, MANIFEST_FILENAME), 'utf8')) as {
-              slug?: string;
-            }
-          ).slug
-        : undefined;
-    const slug = options.slug ?? manifestSlug ?? slugify(name);
+    const derived = deriveName(inspection, options.input);
+    // An address given by the caller names an app that has no name of its own.
+    const name = shorten(
+      options.slug && isPlaceholder(derived)
+        ? options.slug
+            .split('-')
+            .map((word) => `${word.charAt(0).toUpperCase()}${word.slice(1)}`)
+            .join(' ')
+        : derived,
+      40,
+    );
+    const manifestSlug = inspection.manifest?.slug;
+    // A placeholder address ("neue-app") is replaced by the one the name gives; with no name
+    // either, a person decides what the app is called.
+    const slug =
+      options.slug ??
+      (manifestSlug && !isPlaceholder(manifestSlug) ? manifestSlug : undefined) ??
+      slugify(name);
+    if (!options.slug && isPlaceholder(slug))
+      return finish(
+        {
+          name,
+          reasons: [
+            {
+              code: 'placeholder_name',
+              message:
+                'Die App hat keinen eigenen Namen („Neue App“ oder der Name der Datei). Gib mit --slug eine Adresse an oder benenne die App im Export.',
+            },
+          ],
+        },
+        base,
+      );
     const slugProblem = slugIssue(slug);
     if (slugProblem) return finish({ name, reasons: [slugProblem] }, base);
 
     const hosted = options.hostedDir ?? join(options.root, 'hosted');
     const outDir = join(hosted, slug);
-    if (existsSync(outDir))
+    // A folder without a manifest is no app: leftovers of a removed one (build output, caches).
+    if (existsSync(join(outDir, 'mininode.json')))
       return finish(
         {
           name,
@@ -164,7 +202,11 @@ export function integrate(options: IntegrateOptions): IntegrateResult {
     }
 
     const report = doctor(outDir);
-    const errors = report.findings.filter((finding) => finding.severity === 'error');
+    // A stand-in for the platform client is only a warning for apps already in the repository, but a
+    // new upload with one is not finished: where it takes over, nothing reaches the account.
+    const errors = report.findings.filter(
+      (finding) => finding.severity === 'error' || finding.rule === 'stand-in-sdk',
+    );
     if (errors.length > 0) {
       removeOutput(outDir);
       return finish(

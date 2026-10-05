@@ -14,7 +14,7 @@ import {
   parseManifest,
   usedKeys,
 } from '@mininode/manifest';
-import { scanText } from './export.ts';
+import { NON_TEXT, scanText } from './export.ts';
 
 export type Severity = 'error' | 'warning';
 
@@ -66,6 +66,10 @@ function* walk(dir: string): Generator<string> {
   }
 }
 
+/** `class FallbackMiniNodeClient`, `LocalMiniNodeShim`, `const mockMininode = …`. */
+const STAND_IN =
+  /\b(?:class|function|const|let)\s+(?:\w*(?:Fallback|Shim|Mock|Fake|Stub|Local)\w*(?:MiniNode|Mininode)\w*|\w*(?:MiniNode|Mininode)\w*(?:Fallback|Shim|Mock|Fake|Stub)\w*)\b/;
+
 function checkSources(
   dir: string,
   manifest: Manifest,
@@ -74,6 +78,10 @@ function checkSources(
 ): void {
   const clientSide = manifest.target === 'cloudflare' || manifest.target === 'vercel';
   let usesSdk = false;
+  // `window.mininode` only exists where /_mininode/sdk.js is loaded: an app that reads it without
+  // loading the script (a Vite app has to import the package) runs on whatever fallback it has.
+  let readsWindowSdk = false;
+  let usesMiniNodeGlobal = false;
 
   for (const file of walk(dir)) {
     if (!SOURCE_EXTENSIONS.test(file) && !file.endsWith('.json') && !file.endsWith('.env'))
@@ -94,7 +102,18 @@ function checkSources(
     if (!SOURCE_EXTENSIONS.test(file)) continue;
     const code = file.endsWith('.html') ? text : stripComments(text);
 
-    if (/@mininode\/sdk|window\.mininode|\/_mininode\/sdk\.js/.test(code)) usesSdk = true;
+    if (/@mininode\/sdk|\/_mininode\/sdk\.js/.test(code)) usesSdk = true;
+    if (/window\.mininode/.test(code)) readsWindowSdk = true;
+    if (clientSide && STAND_IN.test(code)) {
+      findings.push({
+        severity: 'warning',
+        rule: 'stand-in-sdk',
+        file: rel,
+        message:
+          'defines its own stand-in for the platform client (a fallback or shim): where it takes over, data stays in this browser and never reaches the account; use the SDK directly',
+      });
+    }
+    if (/\bwindow\.MiniNode\b|\)\.MiniNode\b/.test(code)) usesMiniNodeGlobal = true;
     for (const key of usedKeys(code)) keysUsed.add(key);
 
     if (clientSide) {
@@ -134,6 +153,19 @@ function checkSources(
             'loads scripts from a CDN; bundle them (the CSP only allows same-origin scripts)',
         });
       }
+      if (
+        /<link\b[^>]*\bhref=["']https?:\/\/[^"']+["'][^>]*>/i.test(code) &&
+        /rel=["']stylesheet["']/i.test(code) &&
+        rel.endsWith('.html')
+      ) {
+        findings.push({
+          severity: 'warning',
+          rule: 'external-assets',
+          file: rel,
+          message:
+            'loads a stylesheet or font from another site; the CSP blocks it (icon names then show as plain text). Self-host it: npm package @fontsource-variable/<font>, icons with scripts/subset-icons.py',
+        });
+      }
       if (/\blocalStorage\.(setItem|getItem)/.test(code) && manifest.data.mode !== 'none') {
         findings.push({
           severity: 'warning',
@@ -145,14 +177,26 @@ function checkSources(
     }
   }
 
-  if (manifest.data.mode !== 'none' && clientSide && !usesSdk) {
+  if (clientSide && readsWindowSdk && !usesSdk) {
+    findings.push({
+      severity: 'error',
+      rule: 'sdk-not-loaded',
+      message:
+        'reads window.mininode but never loads it: add <script src="/_mininode/sdk.js"></script> to the page, or import { mininode } from "@mininode/sdk" (Vite apps); without it the app silently runs on its own fallback',
+    });
+  }
+  if (manifest.data.mode !== 'none' && clientSide && !usesSdk && !readsWindowSdk) {
     findings.push({
       severity: 'error',
       rule: 'sdk-required',
-      message: `data mode "${manifest.data.mode}" needs @mininode/sdk (import it or load /_mininode/sdk.js)`,
+      message: `data mode "${manifest.data.mode}" needs @mininode/sdk (import it or load /_mininode/sdk.js)${
+        usesMiniNodeGlobal
+          ? '; window.MiniNode is not a platform API for apps with their own mininode.json: import { mininode } from "@mininode/sdk" and use mn.auth and mn.kv'
+          : ''
+      }`,
     });
   }
-  if (manifest.ai && clientSide && !usesSdk) {
+  if (manifest.ai && clientSide && !usesSdk && !readsWindowSdk) {
     findings.push({
       severity: 'error',
       rule: 'sdk-required',
@@ -160,9 +204,6 @@ function checkSources(
     });
   }
 }
-
-/** Image and font files are not text; everything else is read as text when it has no NUL byte. */
-const NON_TEXT = /\.(png|jpe?g|gif|webp|avif|ico|woff2?|ttf|otf|pdf|mp[34]|webm|wasm)$/i;
 
 /**
  * What would stop `mininode export` (and the CI test that exports every hosted app): secrets,

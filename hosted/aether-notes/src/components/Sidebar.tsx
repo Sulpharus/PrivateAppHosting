@@ -21,6 +21,19 @@ interface SidebarProps {
   onToggleDarkMode: () => void;
 }
 
+/** The profile picture, or the first letter of the name when there is none. */
+function AvatarFace({ url, name }: { url?: string; name?: string }) {
+  if (url)
+    return (
+      <img alt="" className="w-full h-full object-cover" src={url} referrerPolicy="no-referrer" />
+    );
+  return (
+    <span className="w-full h-full flex items-center justify-center text-sm font-bold text-primary select-none">
+      {(name ?? '?').trim().charAt(0).toUpperCase() || '?'}
+    </span>
+  );
+}
+
 export default function Sidebar({
   activeTab,
   setActiveTab,
@@ -42,12 +55,7 @@ export default function Sidebar({
         <div className="flex items-center justify-between px-2 py-6 mb-4 min-w-0">
           <div className="flex items-center gap-2.5 min-w-0">
             <div className="w-9 h-9 rounded-full bg-primary-container overflow-hidden shrink-0 ring-2 ring-primary-container/10">
-              <img
-                alt="User profile"
-                className="w-full h-full object-cover"
-                src={settings.avatarUrl}
-                referrerPolicy="no-referrer"
-              />
+              <AvatarFace url={settings.avatarUrl} name={settings.userName} />
             </div>
             <div className="min-w-0 flex-1">
               <h1 className="font-sans text-base text-primary font-bold leading-none tracking-tight truncate">
@@ -267,12 +275,7 @@ export default function Sidebar({
             onClick={() => setActiveTab('settings')}
             className="w-8 h-8 rounded-full bg-surface-container-high overflow-hidden border border-outline-variant/30 shrink-0"
           >
-            <img
-              alt="User profile"
-              className="w-full h-full object-cover"
-              src={settings.avatarUrl}
-              referrerPolicy="no-referrer"
-            />
+            <AvatarFace url={settings.avatarUrl} name={settings.userName} />
           </button>
         </div>
       </header>

@@ -244,17 +244,6 @@ export default function DashboardView({
             {getSubtitle()}
           </p>
         </div>
-
-        {/* Atmospheric Image */}
-        <div className="w-full h-48 md:h-64 rounded-2xl overflow-hidden relative shadow-sm group">
-          <img
-            alt="Atmospheric desk space with natural warm lighting"
-            className="w-full h-full object-cover transform scale-100 group-hover:scale-[1.03] transition-transform duration-1000 ease-in-out select-none"
-            src="https://lh3.googleusercontent.com/aida-public/AB6AXuCxPGE8cPoAB74qyHWuuAyS6xv7N3ahGjrpkSZSxKSqxNOVYYUGqSHZvxXxe0v4Uym9DMnq4hGOUwSQF1oTu8HJCVksHCaq-9hTIuXRdsxvEIzKv9_fVS4Jqw4D3nKVkVUHOQ-dDLIesgyVxRNk2rOVi36RuOHAapp8J397RxqNinsU_YvdrY4gb4Cj3Jj4QOlBgt4wQ503cRpWt8dqBYzE-ERDK4XI3BAmPvLMlzWJT4jKU4z7-T7Kk1Lw4k9rMyHwfFBJO8cheV-q"
-            referrerPolicy="no-referrer"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/5 to-transparent mix-blend-overlay"></div>
-        </div>
       </section>
 
       {/* Reminders & Follow-Ups Section */}

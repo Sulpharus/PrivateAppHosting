@@ -27,4 +27,14 @@ Reference: `fixtures/ai-studio/` (input → expected).
    - Image generation, live audio and tool calling are not proxied yet: remove the feature or
      mark the app `ai`-less and tell the admin in the PR.
 5. **Bootstrap** `mn` in `main.tsx` before rendering; pass it down.
-6. Continue with [common steps](common-steps.md).
+6. **Fonts and icons:** exports load Google Fonts and *Material Symbols* from `fonts.googleapis.com`;
+   the CSP blocks both (the icon names then show as plain text and the layout falls apart). Fonts:
+   `@fontsource-variable/<font>` imported in `main.tsx`, family names `"<Font> Variable"` in the CSS.
+   Icons: `python3 scripts/subset-icons.py hosted/<slug>` and
+   `<link rel="stylesheet" href="/fonts/material-symbols.css">` in `index.html`. Remove images that
+   point to `lh3.googleusercontent.com/aida-public/…` (they expire).
+7. **Exports that bring their own client:** many AI Studio exports with a `mininode.json` come with a
+   `src/mininode.ts` that wraps `window.mininode` and falls back to `localStorage`/IndexedDB, or
+   invents `window.MiniNode`. Replace it by the SDK (`import { mininode } from '@mininode/sdk'`) and
+   keep its public functions so the screens stay as they are.
+8. Continue with [common steps](common-steps.md).
