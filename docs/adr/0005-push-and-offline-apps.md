@@ -80,3 +80,18 @@ online-only; apps show those views read-only offline.
   dropped with a console warning rather than blocking the queue.
 - On shared devices, the local copy lives in a database per user; signing out of an app also
   clears the app's cached pages.
+
+## Update: one start screen for every app (October 2026)
+
+The system's launch screen showed the generated icon (a letter on a coloured tile) and the page
+stayed blank until the app had loaded. The gate now writes a **start screen** into the first bytes
+of every app page (`splashHtml` in `packages/gate/src/pwa.ts`): the MiniNode mark, the app's name, a
+progress bar and the brand, in light and dark mode, German or English as the person chose
+(`mn-lang`). `pwa.js` removes it when the app is ready: the SDK signals `mn:ready` once
+`mn.auth.requireLogin()` returned and the page has content, never before 450 ms (no flash), after
+5 s with content alone, after 20 s regardless (a hint appears after 7 s). Only `transform` and
+`opacity` move; no motion with `prefers-reduced-motion`. The manifest's `background_color` is the
+screen's colour (`#f3f1ec`), so the system's launch screen hands over without a jump. The page
+cache and the service worker keep the screen with the page. A page that links its own manifest (the
+portal) is left alone.
+

@@ -23,6 +23,14 @@ Zugriffsprüfung läuft online), gehashte Dateien aus dem Zwischenspeicher: eine
 Jedes Deploy stempelt eine neue Version, damit alte Zwischenspeicher verschwinden. **Du siehst eine Änderung nicht?** Meist ist es eine
 zwischengespeicherte App-Version: neu laden oder die App neu öffnen.
 
+## Startbildschirm
+
+Jede App öffnet mit demselben Startbildschirm: das MiniNode-Zeichen, der Name der App, ein Fortschrittsbalken (hell und dunkel,
+deutsch oder englisch wie im Portal gewählt, keine Bewegung bei „Bewegung reduzieren“). Er steht schon im ersten Byte der Seite und
+verschwindet, sobald die Person angemeldet ist und die App etwas zeigt, nach höchstens 20 Sekunden in jedem Fall. Bei langsamer
+Verbindung erscheint nach 7 Sekunden ein Hinweis. Die Hintergrundfarbe passt zum Startbild des Betriebssystems (ADR 0005). Apps
+müssen dafür nichts tun.
+
 ## Offline-Daten (`mn.kv`)
 
 Das SDK hält eine lokale Kopie je App und Person (IndexedDB), schreibt Änderungen in eine Warteschlange und überträgt sie bei Verbindung;

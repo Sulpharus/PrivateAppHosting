@@ -65,3 +65,33 @@ test('an app works offline and syncs what was entered offline', async ({ page, c
     })
     .toBe(3);
 });
+
+test('every app opens with the same start screen, which goes away when the app is ready', async ({
+  page,
+}) => {
+  const email = `${run}-splash@example.com`;
+  await createUser(email, 'user', 'Sina');
+  await page.goto(`http://localhost:5173/login?next=${encodeURIComponent(APP)}`);
+  await page.getByLabel('E-Mail').fill(email);
+  await page.getByLabel('Passwort', { exact: true }).fill(PASSWORD);
+  await page.getByRole('button', { name: 'Anmelden', exact: true }).click();
+  await expect(page.locator('#count')).toHaveText('1');
+
+  // The gate writes it into the page itself, so it paints before any script of the app ran.
+  const html = await (
+    await page.request.get(`${APP}/`, {
+      headers: { Accept: 'text/html', 'Sec-Fetch-Mode': 'navigate' },
+    })
+  ).text();
+  expect(html).toMatch(/<body[^>]*><div id="mn-splash"/);
+  expect(html).toContain('class="mns-name">Hallo');
+  expect(html).toContain('MiniNode');
+
+  // The app is ready (signed in, content on the page): the screen is gone.
+  await expect(page.locator('#mn-splash')).toHaveCount(0, { timeout: 15_000 });
+  await expect(page.locator('#count')).toBeVisible();
+
+  // The launch screen of the system uses the same background colour.
+  const manifest = await (await page.request.get(`${APP}/_mininode/manifest.webmanifest`)).json();
+  expect(manifest.background_color).toBe('#f3f1ec');
+});
