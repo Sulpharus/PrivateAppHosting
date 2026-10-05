@@ -25,8 +25,8 @@ deaktivieren.
    zur Bestätigung eintippen.
 3. Die App ist sofort offline. Der Workflow **App löschen** (`uninstall-app.yml`) löscht den Cloudflare-Server und (mit Daten) die Tabellen,
    Dateien und den Eintrag, danach öffnet er einen **Pull Request**, der `hosted/<name>` entfernt.
-4. **Diesen Pull Request mergen** (nach grünen Prüfungen). Sonst bringt ein späterer vollständiger Deploy die App zurück. Wird CI rot, weil
-   etwas anderes die App erwähnt (ein e2e-Test, ein Dokument), korrigierst du das im selben Pull Request.
+4. **Diesen Pull Request mergen** (nach grünen Prüfungen). Sonst bringt ein späterer vollständiger Deploy die App zurück. Der Pull Request entfernt auch den e2e-Test der App
+   (`e2e/<name>.spec.ts`), und die e2e-Konfiguration startet nur Apps, die es noch gibt. Wird CI trotzdem rot, weil etwas anderes die App erwähnt, korrigierst du das im selben Pull Request.
 
 ## Was genau gelöscht wird (mit Daten)
 

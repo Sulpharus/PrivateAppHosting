@@ -104,11 +104,13 @@ jobs:
           branch="auto/remove-$SLUG-$GITHUB_RUN_ID"
           git checkout -b "$branch"
           git rm -r -q "hosted/$SLUG"
+          # The app's own end-to-end spec would fail without the app (its server is gone).
+          git rm -q --ignore-unmatch "e2e/$SLUG.spec.ts"
           pnpm mininode exempt "$SLUG" --remove
           pnpm install --lockfile-only --ignore-scripts
           pnpm exec biome format --write biome.json
           git add -A pnpm-lock.yaml biome.json
-          bad=$(git diff --cached --name-only | grep -vE "^(hosted/$SLUG/|pnpm-lock\.yaml$|biome\.json$)" || true)
+          bad=$(git diff --cached --name-only | grep -vE "^(hosted/$SLUG/|e2e/$SLUG\.spec\.ts$|pnpm-lock\.yaml$|biome\.json$)" || true)
           [ -z "$bad" ] || { echo "unexpected files: $bad" >&2; exit 1; }
           git commit -m "chore($SLUG): remove the app" \
             -m "Uninstalled from Verwaltung → Apps (purge: $PURGE). The Worker is deleted; this removes the code so no deploy brings the app back."

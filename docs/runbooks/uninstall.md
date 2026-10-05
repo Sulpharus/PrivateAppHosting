@@ -9,7 +9,7 @@ Verwaltung → Apps → **Löschen** next to the app (ADR 0020). Link tiles have
    undone. Make a backup first if you may want them (Verwaltung → Sicherung, `backups.md`).
 2. The app is offline immediately. The workflow *App löschen* deletes its Worker at Cloudflare and,
    with the data option, its database schema, files and registry entry.
-3. A pull request *chore(<slug>): App entfernen* removes `hosted/<slug>`. **Merge it** (after the
+3. A pull request *chore(<slug>): App entfernen* removes `hosted/<slug>` and `e2e/<slug>.spec.ts` (the e2e config only starts apps that exist). **Merge it** (after the
    checks): until then a full deploy would bring the app back. If CI is red because something else
    still mentions the app (an e2e test, a document), fix that in the same pull request.
 
