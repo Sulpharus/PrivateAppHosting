@@ -1,4 +1,4 @@
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { type BrowserContext, expect, type Page, test } from '@playwright/test';
 import { admin, cleanup, createUser, PASSWORD } from './seed.ts';
 
@@ -85,8 +85,13 @@ const ALL_APPS: [slug: string, port: number, shows: (page: Page) => ReturnType<P
     ],
   ];
 
-// Apps that were uninstalled have no folder (and no server) any more.
-const APPS = ALL_APPS.filter(([slug]) => existsSync(`hosted/${slug}/mininode.json`));
+// Apps that were uninstalled have no folder (and no server) any more, and an app integrated without
+// language packages (it is German only until it gets them) has nothing to switch.
+const hasLanguages = (slug: string) => {
+  const file = `hosted/${slug}/mininode.json`;
+  return existsSync(file) && 'i18n' in JSON.parse(readFileSync(file, 'utf8'));
+};
+const APPS = ALL_APPS.filter(([slug]) => hasLanguages(slug));
 
 test('every hosted app follows the language of the profile', async ({ browser }) => {
   test.setTimeout(480_000);
