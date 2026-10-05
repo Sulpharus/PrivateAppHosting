@@ -5,9 +5,10 @@ import design from '../../../../docs/ai/DESIGN-SYSTEM.md?raw';
 import language from '../../../../docs/ai/LANGUAGE-PACKAGES.md?raw';
 import spec from '../../../../docs/ai/NEW-APP-SPEC.md?raw';
 import specShort from '../../../../docs/ai/NEW-APP-SPEC.short.md?raw';
+import retrofitLanguage from '../../../../docs/ai/RETROFIT-LANGUAGE.md?raw';
 import kitCss from '../../../../packages/ui/kit/ui.css?raw';
 import kitJs from '../../../../packages/ui/kit/ui.js?raw';
-import { type Library, parsePart, sortParts } from './prompts.ts';
+import { type Library, parsePart, retrofitLanguagePrompt, sortParts } from './prompts.ts';
 
 const types = import.meta.glob('../../../../docs/ai/prompts/types/*.md', {
   query: '?raw',
@@ -68,6 +69,14 @@ export const FILES: BuildFile[] = [
     description:
       'Deutsche und englische Texte jeder App: Dateien, Einbau, Stilregeln, Glossar und Prüfliste. Im Prompt-Ersteller schon enthalten.',
     content: language,
+    type: 'text/markdown',
+  },
+  {
+    name: 'RETROFIT-LANGUAGE-PROMPT.md',
+    title: 'Prompt: Sprachpakete nachrüsten',
+    description:
+      'Fertiger Auftrag für eine KI, die einer schon laufenden App die deutschen und englischen Sprachpakete hinzufügt, ohne sonst etwas zu ändern. Den Code der App anhängen oder einfügen. Enthält die ganze Anleitung.',
+    content: retrofitLanguagePrompt(retrofitLanguage, language),
     type: 'text/markdown',
   },
   {

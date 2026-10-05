@@ -19,6 +19,8 @@ Last updated: 2026-10-02 (third session; language switch added).
    it reports.
 5. Work only on the session's designated branch, and open a draft PR. Never merge without the
    owner's explicit "mergen".
+6. Keep the wiki current: every change a person can see or operate updates `docs/wiki/` in the
+   same commit (`CLAUDE.md`, "Knowledge (wiki)").
 
 Where things are documented:
 
@@ -29,6 +31,7 @@ Where things are documented:
 | Operations: setup, NucBox, keys, Kalender, App-Bibliothek, app export, restore | `docs/runbooks/` (index in its README) |
 | Building apps with AI: spec, design system, prompt modules, playbooks | `docs/ai/` |
 | Shared data types (suite) | `docs/suite/data-types.md` |
+| Concepts, how-tos, first steps (German, for the owner) | `docs/wiki/`, shown in Verwaltung → Wissen |
 | Each app and package | its `README.md` |
 
 ## Recently shipped
@@ -55,9 +58,10 @@ Where things are documented:
 | Gemeinsame Daten | One aligned table (Datentyp, App, Grund, Angefragt, Freigabe); sort by open requests first, type or app; filter "Nur noch offene"; write priority below | `apps/portal/src/admin/Suite.tsx` |
 | Verwaltung menu | "Hochladen" is a button in Apps; Apps has a switch Apps / Gaming Hub and sorts by name, category, own drawer or status; "Hardware-Server" holds Auslastung (was NucBox), Remote-Apps and App-Bibliothek (old URLs redirect) | `apps/portal/src/admin/{Apps,Hardware,AdminLayout}.tsx` |
 | KI-Werkstatt | Features in 7 collapsible groups with search; 19 new feature modules (money, dates, editor, drag sort, AI chat/vision, roles, comments, accessibility, errors, testing, migration, game save/touch/generator/kit, container, remote program, library entry) and 2 new types (Server-Dienst, Programm) | `docs/ai/prompts/`, `apps/portal/src/admin/{Workshop,prompts}.ts(x)` |
-| Language switch | Per person in Konto → "Sprache / Language" (de/en, profile + `mn-lang` cookie); every hosted app has `i18n/de.json` + `en.json`; new apps must ship both; doctor checks them | ADR 0017, `docs/ai/LANGUAGE-PACKAGES.md`, `packages/ui/kit/i18n.js`, `e2e/language.spec.ts` |
+| Language switch | Per person in Konto → "Sprache / Language" (de/en, profile + `mn-lang` cookie); every hosted app has `i18n/de.json` + `en.json`; new apps must ship both; doctor checks them; the KI-Werkstatt has a ready prompt to retrofit them (`docs/ai/RETROFIT-LANGUAGE.md`) | ADR 0017, `docs/ai/LANGUAGE-PACKAGES.md`, `packages/ui/kit/i18n.js`, `e2e/language.spec.ts` |
 | App logos | Verwaltung → Apps uploads a logo per app (bucket `app-icons`); deploy picks up `icon.svg`; prompt module "App-Logo"; tile buttons in their own row | ADR 0018, `apps/portal/src/lib/appIcon.ts`, `packages/cli/src/deploy/icon.ts`, `e2e/app-icons.spec.ts` |
 | Haushaltsinventar | Upload review `ee7721bb` (AI Studio "Steward") rebuilt on the platform: items with photo, receipt, warranty, owner, households, service dates and reminders (`mn.push`), backups that restore, Excel report; data mode `shared-account`, rose accent | `hosted/haushalts-inventar`, `e2e/haushalts-inventar.spec.ts` |
+| Wissen | Verwaltung → Wissen: Wiki (34 German articles, search, generated reference pages for apps, workflows, commands, ADRs, runbooks) and a Startup-Guide checklist; the rule and a CI test keep it current | ADR 0021, `docs/wiki/`, `apps/portal/src/admin/{Wiki,Guide}.tsx`, `apps/portal/src/lib/wiki*.ts`, `e2e/wiki.spec.ts` |
 | Backups | Verwaltung → Sicherung: one password-protected archive (accounts with passwords, platform and app data, files, settings) made by `backup.yml`, downloaded from the page; `mininode backup create|verify|restore`; restore tested by a round trip on the local stack | ADR 0019, `docs/runbooks/backups.md`, `packages/cli/src/backup`, `apps/api/src/routes/backups.ts`, `e2e/backups.spec.ts` |
 | Uninstall | Verwaltung → Apps → Löschen: typed address, optional deletion of all data; `uninstall-app.yml` deletes the Worker (and schema, files, registry entry) and opens a pull request that removes `hosted/<slug>`; `mininode uninstall` | ADR 0020, `docs/runbooks/uninstall.md`, `packages/cli/src/deploy/uninstall.ts`, `e2e/uninstall.spec.ts` |
 | German formats | Date, month and time inputs as German parts in every browser; full dates as "01. Okt. 2026"; German numbers | `packages/ui/kit/ui.js`, `docs/ai/DESIGN-SYSTEM.md` §8 |

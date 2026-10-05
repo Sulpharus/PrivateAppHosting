@@ -1627,3 +1627,227 @@ code,
 .workshop-group .workshop-checks {
   padding: 4px 14px 10px;
 }
+
+/* ---------- Wissen: Wiki and Startup-Guide (Verwaltung) ---------- */
+
+.wiki-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.wiki-link {
+  gap: 4px;
+  text-decoration: none;
+  color: var(--ink);
+  min-height: 44px;
+}
+
+.wiki-link:hover {
+  border-color: var(--accent-text);
+}
+
+.wiki-toc {
+  gap: 6px;
+}
+
+.wiki-toc a {
+  display: inline-block;
+  padding: 10px 0;
+}
+
+.wiki-toc ul {
+  margin: 0;
+  padding-left: 18px;
+  columns: 2 220px;
+}
+
+.wiki-prose {
+  line-height: 1.65;
+}
+
+.wiki-prose > * {
+  margin-block: 0;
+}
+
+.wiki-prose > * + * {
+  margin-top: 12px;
+}
+
+/* Text keeps a readable line length; tables and code may use the whole width. */
+.wiki-prose > p,
+.wiki-prose > ul,
+.wiki-prose > ol,
+.wiki-prose > blockquote {
+  max-width: 74ch;
+}
+
+.wiki-prose h2 {
+  font-size: 24px;
+  margin-top: 28px;
+  scroll-margin-top: 80px;
+}
+
+.wiki-prose h3 {
+  font-size: 18px;
+  margin-top: 20px;
+  scroll-margin-top: 80px;
+}
+
+.wiki-prose h4 {
+  font-size: 16px;
+  font-family: var(--font-display);
+  margin-top: 16px;
+}
+
+.wiki-prose ul,
+.wiki-prose ol {
+  padding-left: 22px;
+}
+
+.wiki-prose li + li {
+  margin-top: 4px;
+}
+
+.wiki-prose code {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 1px 5px;
+}
+
+.wiki-prose pre {
+  margin: 0;
+  padding: 12px 14px;
+  overflow-x: auto;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-l);
+}
+
+.wiki-prose pre code {
+  background: none;
+  border: 0;
+  padding: 0;
+}
+
+.wiki-prose blockquote {
+  margin: 0;
+  padding: 8px 14px;
+  border-left: 3px solid var(--accent-text);
+  background: var(--surface);
+  border-radius: 0 var(--radius-l) var(--radius-l) 0;
+}
+
+.wiki-prose hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+}
+
+.wiki-table {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-l);
+  background: var(--surface);
+}
+
+.wiki-table table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.wiki-table th,
+.wiki-table td {
+  padding: 8px 12px;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--line);
+}
+
+.wiki-table th {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.wiki-table tr:last-child td {
+  border-bottom: 0;
+}
+
+.wiki-foot {
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.guide-bar {
+  appearance: none;
+  width: 100%;
+  height: 8px;
+  border: 0;
+  border-radius: 4px;
+  overflow: hidden;
+  background: var(--line);
+  color: var(--accent-text);
+}
+
+.guide-bar::-webkit-progress-bar {
+  background: var(--line);
+}
+
+.guide-bar::-webkit-progress-value {
+  background: var(--accent-text);
+}
+
+.guide-bar::-moz-progress-bar {
+  background: var(--accent-text);
+}
+
+.guide-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.guide-step.is-done .guide-title strong {
+  text-decoration: line-through;
+  color: var(--muted);
+}
+
+.guide-head {
+  gap: 8px;
+  align-items: center;
+}
+
+.guide-check {
+  display: grid;
+  place-items: center;
+  min-width: 44px;
+  min-height: 44px;
+}
+
+.guide-check input {
+  width: 22px;
+  height: 22px;
+}
+
+.guide-title {
+  flex: 1;
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  min-height: 44px;
+  padding: 0 4px;
+  background: none;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  border-radius: var(--radius-l);
+}

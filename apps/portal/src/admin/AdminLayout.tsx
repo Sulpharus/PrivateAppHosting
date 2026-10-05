@@ -17,6 +17,11 @@ const LINKS: [string, string][] = [
   ['/admin/backups', 'Sicherung'],
 ];
 
+const KNOWLEDGE: [string, string][] = [
+  ['/admin/wiki', 'Wiki'],
+  ['/admin/guide', 'Startup-Guide'],
+];
+
 const EXTERNAL: [string, string][] = [
   ['https://dash.cloudflare.com/', 'Cloudflare (Deploys, DNS, Logs)'],
   ['https://supabase.com/dashboard/projects', 'Supabase (Datenbank)'],
@@ -43,6 +48,12 @@ export function AdminLayout() {
                   <span className="sr-only"> fehlen</span>
                 </span>
               )}
+            </NavLink>
+          ))}
+          <span className="group">Wissen</span>
+          {KNOWLEDGE.map(([to, label]) => (
+            <NavLink key={to} to={to}>
+              {label}
             </NavLink>
           ))}
           <span className="group">Weitere Dashboards</span>

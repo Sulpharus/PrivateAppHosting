@@ -24,7 +24,7 @@ const USAGE = `mininode <command>
   deploy <app-dir> [--env staging]  Build, migrate, deploy and register one app
   deploy --changed <base-ref>       Deploy every app changed since <base-ref>
   changed <base-ref>                List hosted apps changed since <base-ref>
-  prune [--env staging] [--dry-run] Delete Workers of apps removed from hosted/, disable them
+  prune [--env staging] [--dry-run]  Delete Workers of apps removed from hosted/, disable them
   export <app-dir> --out <dir>      Copy one app as a shareable project (no data, no keys)
   integrate <zip|dir> [--slug x]    Turn an export into hosted/<slug> by script (exit 2: needs review)
                                     [--build] [--tidy] [--json file] [--report file]
@@ -32,6 +32,7 @@ const USAGE = `mininode <command>
   uninstall <slug> [--purge] [--env]  Take an app offline (Worker deleted); --purge also deletes its data, files and registry entry
   submission fetch <id> --out <file>  Download an uploaded ZIP (workflow)
   submission status <id> <status> [--result file] [--report file] [--pr url] [--review url] [--run url] [--only-if-pr url]
+                                    Report the state of an upload (workflow)
   backup create --out <dir> [--no-files]   Copy the database and the stored files into a folder
   backup verify <dir>               Check a backup folder against its checksums
   backup restore <dir> [--yes] [--confirm <db host>] [--no-database] [--no-storage] [--force]

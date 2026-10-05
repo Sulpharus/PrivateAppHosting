@@ -41,6 +41,19 @@ export interface Brief {
   embedKit: boolean;
 }
 
+/**
+ * The prompt for adding the language packages to an app that already exists: the task
+ * (docs/ai/RETROFIT-LANGUAGE.md) followed by the full guide, so that any AI tool can follow it
+ * without reading the repository.
+ */
+export function retrofitLanguagePrompt(task: string, language: string): string {
+  const guide = language
+    .trim()
+    .replace(/^# .*\n+/, '')
+    .replace(/^## (\d+)\. /gm, '### $1. ');
+  return `${task.trim()}\n\n## The language package guide\n\n${guide}\n`;
+}
+
 /** The collapsible groups of features in the composer, in this order. */
 export const MODULE_GROUPS: { id: string; label: string; hint: string }[] = [
   { id: 'daten', label: 'Daten und Inhalte', hint: 'Eingeben, speichern, finden, drucken' },

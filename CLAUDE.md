@@ -15,6 +15,7 @@ cloud session. Read it at the start of a session, and update it before the sessi
 - `supabase/`: migrations and pgTAP tests
 - `infra/`: Cloudflare and NucBox configuration
 - `docs/ai/`: specs and playbooks for AI-built apps
+- `docs/wiki/`: the knowledge base shown in Verwaltung → Wissen (Wiki and Startup-Guide), in German
 
 ## Commands
 
@@ -47,6 +48,22 @@ graphify affected "decide"               # what breaks if this changes
 
 `graphify-out/GRAPH_REPORT.md` lists hubs and subsystems. The graph notes the commit it was
 built from; run `pnpm kb` after structural changes and commit `graphify-out/` with them.
+
+## Knowledge (wiki): keep it current
+
+`docs/wiki/` is the owner's knowledge base, shown in Verwaltung → Wissen (Wiki and Startup-Guide).
+**Every change that a person can see, operate or run updates it in the same commit:**
+
+- the article that covers it (`docs/wiki/*.md`, German, Markdown with front matter; how:
+  `docs/wiki/wissen-pflegen.md`);
+- `neuigkeiten.md`: one line with the date and where to find it;
+- `startup-guide.md` when it is a first step for the owner; `fehlerbehebung.md` for a failure that
+  was solved; `docs/ai/NEW-APP-SPEC.md` and `docs/ai/prompts/` when apps can use it.
+
+A new Verwaltung page, an `apps/*` or `packages/*` folder, or an ADR must be named in an article:
+`apps/portal/src/lib/wiki.test.ts` fails otherwise. Apps, workflows, CLI commands, ADRs and
+runbooks appear on the generated reference pages by themselves. The test cannot tell whether a text
+is still true: check it. The `reviewer` subagent asks for this too.
 
 ## Rules
 
