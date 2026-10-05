@@ -92,9 +92,6 @@ export default function ContactsView({
   // Dropdown for linking existing notes
   const [selectedNoteIdToLink, setSelectedNoteIdToLink] = useState('');
 
-  // Check if MiniNode is present
-  const isMiniNodeAbsent = typeof window === 'undefined' || !(window as any).MiniNode;
-
   // Helpers to check follow-up dates (Local Time sv-SE is YYYY-MM-DD)
   const getFollowUpStatus = (dateStr?: string | null) => {
     if (!dateStr) return null;
@@ -379,7 +376,7 @@ export default function ContactsView({
         <div className="flex items-center gap-2.5">
           <button
             onClick={handleOpenScheduleMeetup}
-            disabled={isMiniNodeAbsent || contacts.length === 0}
+            disabled={contacts.length === 0}
             className="bg-secondary/15 hover:bg-secondary/25 text-secondary border border-secondary/20 disabled:opacity-50 text-xs font-semibold px-4 py-3 rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer select-none"
           >
             <span className="material-symbols-outlined text-base">calendar_today</span>
@@ -387,7 +384,6 @@ export default function ContactsView({
           </button>
           <button
             onClick={handleOpenAddContact}
-            disabled={isMiniNodeAbsent}
             className="bg-primary hover:bg-primary/95 text-on-primary disabled:opacity-50 text-xs font-semibold px-4.5 py-3 rounded-xl transition-all shadow-sm active:scale-95 duration-100 flex items-center justify-center gap-2 cursor-pointer select-none"
           >
             <span className="material-symbols-outlined text-base">person_add</span>
@@ -396,218 +392,199 @@ export default function ContactsView({
         </div>
       </header>
 
-      {/* MiniNode Guard Fallback */}
-      {isMiniNodeAbsent && (
-        <div className="p-4.5 rounded-2xl border border-error/20 bg-error/5 flex items-start gap-3 select-none">
-          <span className="material-symbols-outlined text-error text-xl shrink-0">warning</span>
-          <div>
-            <h4 className="text-xs font-bold text-error uppercase tracking-wider">
-              {language === 'de' ? 'Speicher eingeschränkt' : 'Storage Restricted'}
-            </h4>
-            <p className="text-xs text-on-surface-variant mt-1 leading-normal">
-              {language === 'de'
-                ? 'Kontakte erfordern eine MiniNode-DB-Verbindung. Bitte melden Sie sich an oder führen Sie die Anwendung in der MiniNode-Laufzeit aus, um diesen Tab zu aktivieren.'
-                : 'Contacts require MiniNode DB persistence. Please sign in or mount within the MiniNode runtime to enable this tab.'}
-            </p>
-          </div>
-        </div>
-      )}
-
       {/* MEETUPS HORIZONTAL SIDESCROLLABLE BOARD */}
-      {!isMiniNodeAbsent && (
-        <section className="bg-surface-container-low border border-outline-variant/15 rounded-3xl p-5 space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span
-                className="material-symbols-outlined text-primary text-xl"
-                style={{ fontVariationSettings: "'FILL' 1" }}
-              >
-                event_seat
-              </span>
-              <h2 className="font-serif text-base font-bold text-on-surface">
-                {language === 'de'
-                  ? 'Treffen-Planer & Vorbereitungsboard'
-                  : 'Meetup Planner & Preparation Board'}
-              </h2>
-            </div>
-            {meetups.length > 0 && (
-              <span className="font-mono text-[10px] bg-primary/10 text-primary font-bold px-2.5 py-0.5 rounded-full">
-                {meetups.filter((m) => !m.completed).length}{' '}
-                {language === 'de' ? 'ausstehend' : 'pending'}
-              </span>
-            )}
+      <section className="bg-surface-container-low border border-outline-variant/15 rounded-3xl p-5 space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span
+              className="material-symbols-outlined text-primary text-xl"
+              style={{ fontVariationSettings: "'FILL' 1" }}
+            >
+              event_seat
+            </span>
+            <h2 className="font-serif text-base font-bold text-on-surface">
+              {language === 'de'
+                ? 'Treffen-Planer & Vorbereitungsboard'
+                : 'Meetup Planner & Preparation Board'}
+            </h2>
           </div>
+          {meetups.length > 0 && (
+            <span className="font-mono text-[10px] bg-primary/10 text-primary font-bold px-2.5 py-0.5 rounded-full">
+              {meetups.filter((m) => !m.completed).length}{' '}
+              {language === 'de' ? 'ausstehend' : 'pending'}
+            </span>
+          )}
+        </div>
 
-          <div className="flex overflow-x-auto gap-4 pb-3 scrollbar-thin scroll-smooth select-none min-h-[170px]">
-            {meetups.length === 0 ? (
-              <div className="w-full flex flex-col items-center justify-center py-6 border border-dashed border-outline-variant/30 rounded-2xl bg-surface-container-lowest text-center">
-                <span className="material-symbols-outlined text-on-surface-variant/40 text-3xl mb-1.5">
-                  groups_3
-                </span>
-                <p className="font-serif text-xs text-on-surface-variant/75">
-                  {language === 'de'
-                    ? 'Keine geplanten Treffen gefunden.'
-                    : 'No scheduled meetups found.'}
-                </p>
-                <button
-                  onClick={handleOpenScheduleMeetup}
-                  disabled={contacts.length === 0}
-                  className="mt-2 text-primary hover:underline text-[11px] font-bold flex items-center gap-1"
-                >
-                  {language === 'de'
-                    ? 'Planen Sie Ihr erstes Treffen mit einem Kontakt'
-                    : 'Schedule your first meetup with a contact'}
-                </button>
-              </div>
-            ) : (
-              meetups
-                .sort(
-                  (a, b) =>
-                    a.date.localeCompare(b.date) || (a.time || '').localeCompare(b.time || ''),
-                )
-                .map((m) => {
-                  const linkedIds = m.contactIds || (m.contactId ? [m.contactId] : []);
-                  const linkedContacts = contacts.filter((c) => linkedIds.includes(c.id));
+        <div className="flex overflow-x-auto gap-4 pb-3 scrollbar-thin scroll-smooth select-none min-h-[170px]">
+          {meetups.length === 0 ? (
+            <div className="w-full flex flex-col items-center justify-center py-6 border border-dashed border-outline-variant/30 rounded-2xl bg-surface-container-lowest text-center">
+              <span className="material-symbols-outlined text-on-surface-variant/40 text-3xl mb-1.5">
+                groups_3
+              </span>
+              <p className="font-serif text-xs text-on-surface-variant/75">
+                {language === 'de'
+                  ? 'Keine geplanten Treffen gefunden.'
+                  : 'No scheduled meetups found.'}
+              </p>
+              <button
+                onClick={handleOpenScheduleMeetup}
+                disabled={contacts.length === 0}
+                className="mt-2 text-primary hover:underline text-[11px] font-bold flex items-center gap-1"
+              >
+                {language === 'de'
+                  ? 'Planen Sie Ihr erstes Treffen mit einem Kontakt'
+                  : 'Schedule your first meetup with a contact'}
+              </button>
+            </div>
+          ) : (
+            meetups
+              .sort(
+                (a, b) =>
+                  a.date.localeCompare(b.date) || (a.time || '').localeCompare(b.time || ''),
+              )
+              .map((m) => {
+                const linkedIds = m.contactIds || (m.contactId ? [m.contactId] : []);
+                const linkedContacts = contacts.filter((c) => linkedIds.includes(c.id));
 
-                  return (
-                    <div
-                      key={m.id}
-                      className={`w-80 shrink-0 rounded-2xl border p-4.5 flex flex-col justify-between gap-3.5 transition-all text-left bg-surface-container-lowest ${
-                        m.completed
-                          ? 'border-outline-variant/20 opacity-65 grayscale-30 shadow-xs'
-                          : 'border-primary/20 shadow-sm hover:border-primary/45 hover:shadow-md'
-                      }`}
-                    >
-                      {/* Top Header */}
-                      <div className="space-y-1.5 min-w-0">
-                        <div className="flex items-start justify-between gap-2">
-                          <h3
-                            className={`font-serif text-xs font-bold leading-tight truncate text-on-surface ${m.completed ? 'line-through text-on-surface-variant' : ''}`}
-                          >
-                            {m.title}
-                          </h3>
-                          <div className="flex items-center gap-1 shrink-0">
-                            <button
-                              onClick={() => handleOpenEditMeetup(m)}
-                              className="p-1 hover:bg-surface-container rounded text-on-surface-variant/70 hover:text-primary transition-all cursor-pointer"
-                              title="Edit Meetup"
-                            >
-                              <span className="material-symbols-outlined text-xs">edit</span>
-                            </button>
-                            <button
-                              onClick={() => handleDeleteMeetupItem(m.id)}
-                              className="p-1 hover:bg-error/5 rounded text-on-surface-variant/70 hover:text-error transition-all cursor-pointer"
-                              title="Delete Meetup"
-                            >
-                              <span className="material-symbols-outlined text-xs">delete</span>
-                            </button>
-                          </div>
-                        </div>
-
-                        {/* Date & Time Badge */}
-                        <div className="flex items-center gap-2 text-[10px] font-sans font-semibold text-primary/85 bg-primary/5 rounded-lg px-2 py-0.5 w-max">
-                          <span className="material-symbols-outlined text-sm">schedule</span>
-                          <span>
-                            {m.date} {m.time ? `@ ${m.time}` : ''}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Contact Info Row */}
-                      <div className="space-y-1">
-                        <span className="text-[9px] font-bold uppercase text-on-surface-variant/75 tracking-wider block">
-                          Connections ({linkedContacts.length})
-                        </span>
-                        {linkedContacts.length > 0 ? (
-                          <div className="flex flex-wrap gap-1.5 max-h-[76px] overflow-y-auto pr-1">
-                            {linkedContacts.map((lc) => {
-                              const initials = lc.name
-                                ? lc.name
-                                    .split(' ')
-                                    .map((n) => n[0])
-                                    .join('')
-                                    .slice(0, 2)
-                                    .toUpperCase()
-                                : '??';
-                              return (
-                                <div
-                                  key={lc.id}
-                                  className="flex items-center gap-1.5 p-1.5 pl-2 pr-2.5 bg-surface-container/50 hover:bg-surface-container rounded-lg cursor-pointer duration-100 border border-outline-variant/10 min-w-0 max-w-full"
-                                  onClick={() => {
-                                    setSelectedContact(lc);
-                                    setShowAddContactForm(false);
-                                  }}
-                                  title={`View Profile for ${lc.name}`}
-                                >
-                                  <div className="w-5 h-5 shrink-0 rounded-full bg-primary-container/40 text-primary flex items-center justify-center font-bold text-[8px] uppercase">
-                                    {initials}
-                                  </div>
-                                  <span className="text-[10px] font-bold text-on-surface truncate leading-none">
-                                    {lc.name}
-                                  </span>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        ) : (
-                          <div className="text-[9px] text-error/85 bg-error/5 border border-error/10 p-2 rounded-xl">
-                            Associated contacts have been deleted.
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Preparation Notes */}
-                      <div className="space-y-1">
-                        <span className="text-[9px] font-bold uppercase text-on-surface-variant/75 tracking-wider block">
-                          Preparation & Notes
-                        </span>
-                        <div className="bg-surface-container/60 p-2.5 rounded-xl border border-outline-variant/10 min-h-[48px] max-h-[70px] overflow-y-auto">
-                          <p className="text-[10px] text-on-surface-variant/90 leading-relaxed font-serif italic whitespace-pre-line">
-                            {m.preparationNotes ||
-                              'No notes added. Click edit to compile what you might need to prepare for this meetup.'}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Location & Toggle Complete */}
-                      <div className="flex items-center justify-between gap-2 border-t border-outline-variant/10 pt-2.5 mt-1">
-                        {m.location ? (
-                          <div
-                            className="flex items-center gap-1 min-w-0 text-[10px] text-on-surface-variant/85"
-                            title={m.location}
-                          >
-                            <span className="material-symbols-outlined text-xs text-secondary">
-                              pin_drop
-                            </span>
-                            <span className="truncate">{m.location}</span>
-                          </div>
-                        ) : (
-                          <span className="text-[9px] text-on-surface-variant/60 italic">
-                            Location unassigned
-                          </span>
-                        )}
-
-                        <button
-                          onClick={() => handleToggleMeetupCompleted(m)}
-                          className={`px-3 py-1 rounded-lg text-[9px] font-bold transition-all flex items-center gap-1 cursor-pointer border ${
-                            m.completed
-                              ? 'bg-secondary/5 text-secondary border-secondary/15 hover:bg-secondary/10'
-                              : 'bg-primary text-on-primary border-transparent hover:bg-primary/90'
-                          }`}
+                return (
+                  <div
+                    key={m.id}
+                    className={`w-80 shrink-0 rounded-2xl border p-4.5 flex flex-col justify-between gap-3.5 transition-all text-left bg-surface-container-lowest ${
+                      m.completed
+                        ? 'border-outline-variant/20 opacity-65 grayscale-30 shadow-xs'
+                        : 'border-primary/20 shadow-sm hover:border-primary/45 hover:shadow-md'
+                    }`}
+                  >
+                    {/* Top Header */}
+                    <div className="space-y-1.5 min-w-0">
+                      <div className="flex items-start justify-between gap-2">
+                        <h3
+                          className={`font-serif text-xs font-bold leading-tight truncate text-on-surface ${m.completed ? 'line-through text-on-surface-variant' : ''}`}
                         >
-                          <span className="material-symbols-outlined text-[10px] font-bold">
-                            {m.completed ? 'undo' : 'check'}
-                          </span>
-                          {m.completed ? 'Reopen' : 'Done'}
-                        </button>
+                          {m.title}
+                        </h3>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            onClick={() => handleOpenEditMeetup(m)}
+                            className="p-1 hover:bg-surface-container rounded text-on-surface-variant/70 hover:text-primary transition-all cursor-pointer"
+                            title="Edit Meetup"
+                          >
+                            <span className="material-symbols-outlined text-xs">edit</span>
+                          </button>
+                          <button
+                            onClick={() => handleDeleteMeetupItem(m.id)}
+                            className="p-1 hover:bg-error/5 rounded text-on-surface-variant/70 hover:text-error transition-all cursor-pointer"
+                            title="Delete Meetup"
+                          >
+                            <span className="material-symbols-outlined text-xs">delete</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Date & Time Badge */}
+                      <div className="flex items-center gap-2 text-[10px] font-sans font-semibold text-primary/85 bg-primary/5 rounded-lg px-2 py-0.5 w-max">
+                        <span className="material-symbols-outlined text-sm">schedule</span>
+                        <span>
+                          {m.date} {m.time ? `@ ${m.time}` : ''}
+                        </span>
                       </div>
                     </div>
-                  );
-                })
-            )}
-          </div>
-        </section>
-      )}
+
+                    {/* Contact Info Row */}
+                    <div className="space-y-1">
+                      <span className="text-[9px] font-bold uppercase text-on-surface-variant/75 tracking-wider block">
+                        Connections ({linkedContacts.length})
+                      </span>
+                      {linkedContacts.length > 0 ? (
+                        <div className="flex flex-wrap gap-1.5 max-h-[76px] overflow-y-auto pr-1">
+                          {linkedContacts.map((lc) => {
+                            const initials = lc.name
+                              ? lc.name
+                                  .split(' ')
+                                  .map((n) => n[0])
+                                  .join('')
+                                  .slice(0, 2)
+                                  .toUpperCase()
+                              : '??';
+                            return (
+                              <div
+                                key={lc.id}
+                                className="flex items-center gap-1.5 p-1.5 pl-2 pr-2.5 bg-surface-container/50 hover:bg-surface-container rounded-lg cursor-pointer duration-100 border border-outline-variant/10 min-w-0 max-w-full"
+                                onClick={() => {
+                                  setSelectedContact(lc);
+                                  setShowAddContactForm(false);
+                                }}
+                                title={`View Profile for ${lc.name}`}
+                              >
+                                <div className="w-5 h-5 shrink-0 rounded-full bg-primary-container/40 text-primary flex items-center justify-center font-bold text-[8px] uppercase">
+                                  {initials}
+                                </div>
+                                <span className="text-[10px] font-bold text-on-surface truncate leading-none">
+                                  {lc.name}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="text-[9px] text-error/85 bg-error/5 border border-error/10 p-2 rounded-xl">
+                          Associated contacts have been deleted.
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Preparation Notes */}
+                    <div className="space-y-1">
+                      <span className="text-[9px] font-bold uppercase text-on-surface-variant/75 tracking-wider block">
+                        Preparation & Notes
+                      </span>
+                      <div className="bg-surface-container/60 p-2.5 rounded-xl border border-outline-variant/10 min-h-[48px] max-h-[70px] overflow-y-auto">
+                        <p className="text-[10px] text-on-surface-variant/90 leading-relaxed font-serif italic whitespace-pre-line">
+                          {m.preparationNotes ||
+                            'No notes added. Click edit to compile what you might need to prepare for this meetup.'}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Location & Toggle Complete */}
+                    <div className="flex items-center justify-between gap-2 border-t border-outline-variant/10 pt-2.5 mt-1">
+                      {m.location ? (
+                        <div
+                          className="flex items-center gap-1 min-w-0 text-[10px] text-on-surface-variant/85"
+                          title={m.location}
+                        >
+                          <span className="material-symbols-outlined text-xs text-secondary">
+                            pin_drop
+                          </span>
+                          <span className="truncate">{m.location}</span>
+                        </div>
+                      ) : (
+                        <span className="text-[9px] text-on-surface-variant/60 italic">
+                          Location unassigned
+                        </span>
+                      )}
+
+                      <button
+                        onClick={() => handleToggleMeetupCompleted(m)}
+                        className={`px-3 py-1 rounded-lg text-[9px] font-bold transition-all flex items-center gap-1 cursor-pointer border ${
+                          m.completed
+                            ? 'bg-secondary/5 text-secondary border-secondary/15 hover:bg-secondary/10'
+                            : 'bg-primary text-on-primary border-transparent hover:bg-primary/90'
+                        }`}
+                      >
+                        <span className="material-symbols-outlined text-[10px] font-bold">
+                          {m.completed ? 'undo' : 'check'}
+                        </span>
+                        {m.completed ? 'Reopen' : 'Done'}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })
+          )}
+        </div>
+      </section>
 
       {/* MEETUP FORM MODAL DIALOG */}
       {showScheduleMeetupForm && (

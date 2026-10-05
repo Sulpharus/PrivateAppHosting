@@ -216,22 +216,8 @@ export default function App() {
 
     initGate();
 
-    // Listen for sign-out/sign-in changes to force reload state safely
-    const unsubscribe = MiniNode.auth.onChange(async (u) => {
-      if (!u && !isLoading) {
-        setIsLoading(true);
-        setCurrentUser(null);
-        const reUser = await MiniNode.auth.requireLogin();
-        if (isMounted) {
-          setCurrentUser(reUser);
-          bootstrap(reUser, isMounted);
-        }
-      }
-    });
-
     return () => {
       isMounted = false;
-      unsubscribe();
     };
   }, []);
 

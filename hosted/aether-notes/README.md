@@ -26,7 +26,8 @@ Achtsames CRM für Kontakte, Notizen, Routinen und Aufgaben auf der MiniNode-Pla
 ## Datenspeicherung & MiniNode
 
 - **Modus**: `private` (jeder Benutzer hat seine eigenen, isolierten Daten).
-- **SDK**: Nutzt `mn.kv` zur Speicherung aller Einträge und `mn.push` / `mn.notify` für Erinnerungen.
+- **Name**: Kommt immer aus dem MiniNode-Konto (Anzeigename, sonst E-Mail vor dem @); es gibt weder Profilbild noch Namensfelder.
+- **SDK**: Nutzt `@mininode/sdk` direkt (kein eigener Ersatz-Client), mit `mn.kv` zur Speicherung aller Einträge und `mn.push` / `mn.notify` für Erinnerungen.
 - **Offline-Fähigkeit**: Unterstützt lokales Caching und nahtlosen Betrieb ohne aktive Internetverbindung.
 
 ## Darstellung (Oktober 2026)

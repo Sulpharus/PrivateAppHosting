@@ -7,6 +7,7 @@ import type React from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from '../contexts/TranslationContext';
+import { MiniNode } from '../mininode';
 import type { ConnectionCategory, Person, PersonInteractionLog } from '../types';
 import RelationshipMap from './RelationshipMap';
 
@@ -55,10 +56,7 @@ export default function PeopleView({
   const [newCategory, setNewCategory] = useState<ConnectionCategory>('Family');
   const [newCustomCategoryInput, setNewCustomCategoryInput] = useState('');
   const [editCustomCategoryInput, setEditCustomCategoryInput] = useState('');
-  const [customCategories, setCustomCategories] = useState<string[]>(() => {
-    const saved = localStorage.getItem('aether_custom_categories');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [customCategories, setCustomCategories] = useState<string[]>([]);
 
   const [newAvatarUrl, setNewAvatarUrl] = useState('');
   const [newNotes, setNewNotes] = useState('');
@@ -117,10 +115,26 @@ export default function PeopleView({
   const [showProfileDeleteConfirm, setShowProfileDeleteConfirm] = useState(false);
 
   // Meetups State, Form Fields, and Storage Sync
-  const [peopleMeetups, setPeopleMeetups] = useState<PersonMeetup[]>(() => {
-    const saved = localStorage.getItem('aether_people_meetups');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [peopleMeetups, setPeopleMeetups] = useState<PersonMeetup[]>([]);
+  // Both lists live in the account (mn.kv); nothing is written before they were read.
+  const [listsLoaded, setListsLoaded] = useState(false);
+  useEffect(() => {
+    let live = true;
+    Promise.all([
+      MiniNode.db.getItem('aether_custom_categories'),
+      MiniNode.db.getItem('aether_people_meetups'),
+    ])
+      .then(([categories, meetups]) => {
+        if (!live) return;
+        if (Array.isArray(categories)) setCustomCategories(categories);
+        if (Array.isArray(meetups)) setPeopleMeetups(meetups);
+        setListsLoaded(true);
+      })
+      .catch((err) => console.error('Could not load the lists of the people view:', err));
+    return () => {
+      live = false;
+    };
+  }, []);
 
   const [showScheduleMeetupForm, setShowScheduleMeetupForm] = useState(false);
   const [editingMeetup, setEditingMeetup] = useState<PersonMeetup | null>(null);
@@ -135,8 +149,12 @@ export default function PeopleView({
   const [meetupPrepNotes, setMeetupPrepNotes] = useState('');
 
   useEffect(() => {
-    localStorage.setItem('aether_people_meetups', JSON.stringify(peopleMeetups));
-  }, [peopleMeetups]);
+    if (listsLoaded) MiniNode.db.setItem('aether_people_meetups', peopleMeetups);
+  }, [peopleMeetups, listsLoaded]);
+
+  useEffect(() => {
+    if (listsLoaded) MiniNode.db.setItem('aether_custom_categories', customCategories);
+  }, [customCategories, listsLoaded]);
 
   const handleOpenScheduleMeetup = () => {
     setMeetupTitle('');
@@ -278,7 +296,6 @@ export default function PeopleView({
         if (!customCategories.includes(trimmed)) {
           const updated = [...customCategories, trimmed];
           setCustomCategories(updated);
-          localStorage.setItem('aether_custom_categories', JSON.stringify(updated));
         }
       } else {
         finalCategory = 'Family';
@@ -371,7 +388,6 @@ export default function PeopleView({
         if (!customCategories.includes(trimmed)) {
           const updated = [...customCategories, trimmed];
           setCustomCategories(updated);
-          localStorage.setItem('aether_custom_categories', JSON.stringify(updated));
         }
       } else {
         finalCategory = selectedPerson.category;
