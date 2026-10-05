@@ -27,7 +27,7 @@ const translations: Record<Language, Record<string, string>> = {
 
     // Settings Tab
     settingsTitle: 'Space Settings',
-    settingsSubtitle: 'Configure your slow-living workspace, profile identity, and streak levels.',
+    settingsSubtitle: 'Appearance, backup and reset of your slow-living workspace.',
     profileSection: 'Profile Identity',
     usernameLabel: 'Username / Handle',
     userTitleLabel: 'Space Title / Subtitle',
@@ -202,8 +202,7 @@ const translations: Record<Language, Record<string, string>> = {
 
     // Settings Tab
     settingsTitle: 'Bereichs-Einstellungen',
-    settingsSubtitle:
-      'Konfiguriere deinen Slow-Living-Arbeitsbereich, deine Profilidentität und Serien-Level.',
+    settingsSubtitle: 'Erscheinungsbild, Sicherung und Zurücksetzen deines Arbeitsbereichs.',
     profileSection: 'Profil-Identität',
     usernameLabel: 'Benutzername / Kürzel',
     userTitleLabel: 'Bereichs-Titel / Untertitel',

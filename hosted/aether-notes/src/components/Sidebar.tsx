@@ -21,19 +21,6 @@ interface SidebarProps {
   onToggleDarkMode: () => void;
 }
 
-/** The profile picture, or the first letter of the name when there is none. */
-function AvatarFace({ url, name }: { url?: string; name?: string }) {
-  if (url)
-    return (
-      <img alt="" className="w-full h-full object-cover" src={url} referrerPolicy="no-referrer" />
-    );
-  return (
-    <span className="w-full h-full flex items-center justify-center text-sm font-bold text-primary select-none">
-      {(name ?? '?').trim().charAt(0).toUpperCase() || '?'}
-    </span>
-  );
-}
-
 export default function Sidebar({
   activeTab,
   setActiveTab,
@@ -54,15 +41,12 @@ export default function Sidebar({
         {/* Brand Header */}
         <div className="flex items-center justify-between px-2 py-6 mb-4 min-w-0">
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-9 h-9 rounded-full bg-primary-container overflow-hidden shrink-0 ring-2 ring-primary-container/10">
-              <AvatarFace url={settings.avatarUrl} name={settings.userName} />
-            </div>
             <div className="min-w-0 flex-1">
               <h1 className="font-sans text-base text-primary font-bold leading-none tracking-tight truncate">
                 {language === 'de' ? 'Aether Notizen' : 'Aether Notes'}
               </h1>
               <p className="font-sans text-[10px] text-on-surface-variant mt-1 font-medium select-none truncate">
-                {settings.userTitle}
+                {language === 'de' ? 'Achtsame Kontakte & Notizen' : 'Mindful contacts & notes'}
               </p>
             </div>
           </div>
@@ -273,9 +257,10 @@ export default function Sidebar({
           </button>
           <button
             onClick={() => setActiveTab('settings')}
-            className="w-8 h-8 rounded-full bg-surface-container-high overflow-hidden border border-outline-variant/30 shrink-0"
+            aria-label={language === 'de' ? 'Einstellungen' : 'Settings'}
+            className="w-11 h-11 -mr-1.5 rounded-full flex items-center justify-center text-on-surface-variant hover:text-on-surface shrink-0"
           >
-            <AvatarFace url={settings.avatarUrl} name={settings.userName} />
+            <span className="material-symbols-outlined text-xl">settings</span>
           </button>
         </div>
       </header>

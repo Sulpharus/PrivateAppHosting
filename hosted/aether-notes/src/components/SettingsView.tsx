@@ -20,8 +20,6 @@ import type {
 } from '../types';
 
 interface SettingsViewProps {
-  settings: UserSettings;
-  onSaveSettings: (settings: UserSettings) => void;
   onResetApp: () => void;
   isDarkMode: boolean;
   onToggleDarkMode: () => void;
@@ -40,8 +38,6 @@ interface SettingsViewProps {
 }
 
 export default function SettingsView({
-  settings,
-  onSaveSettings,
   onResetApp,
   isDarkMode,
   onToggleDarkMode,
@@ -49,30 +45,11 @@ export default function SettingsView({
   onImportBackup,
 }: SettingsViewProps) {
   const { t, language } = useTranslation();
-  const [userName, setUserName] = useState(settings.userName);
-  const [userTitle, setUserTitle] = useState(settings.userTitle);
-
-  const [savedStatus, setSavedStatus] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [confirmText, setConfirmText] = useState('');
   const [importStatus, setImportStatus] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!userName.trim()) return;
-
-    onSaveSettings({
-      userName: userName.trim(),
-      userTitle: userTitle.trim() || 'Mindful Thinking',
-      avatarUrl: settings.avatarUrl,
-      streakDays: settings.streakDays,
-    });
-
-    setSavedStatus(true);
-    setTimeout(() => setSavedStatus(false), 3000);
-  };
 
   const handleExportBackup = () => {
     exportMiniNodeBackup(workspaceData);
@@ -131,45 +108,12 @@ export default function SettingsView({
         <p className="font-serif text-sm text-on-surface-variant mt-1.5 opacity-85">
           {t(
             'settingsSubtitle',
-            'Konfiguriere deinen Slow-Living-Arbeitsbereich, deine Profilidentität und Daten.',
+            'Erscheinungsbild, Sicherung und Zurücksetzen deines Arbeitsbereichs.',
           )}
         </p>
       </div>
 
-      <form
-        onSubmit={handleSubmit}
-        className="flex flex-col gap-6 bg-surface-container-low p-6 md:p-8 rounded-2xl border border-outline-variant/30 shadow-sm"
-      >
-        {/* Name Fields */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="space-y-1">
-            <label className="block text-xs font-semibold text-on-surface-variant uppercase tracking-wider font-sans">
-              {t('usernameLabel', 'Username / Handle')}
-            </label>
-            <input
-              required
-              type="text"
-              value={userName}
-              onChange={(e) => setUserName(e.target.value)}
-              placeholder="z.B. Alex"
-              className="w-full bg-surface-container-lowest border border-outline-variant/20 px-3.5 py-2.5 rounded-xl text-sm font-sans focus:outline-primary select-text text-on-surface"
-            />
-          </div>
-
-          <div className="space-y-1">
-            <label className="block text-xs font-semibold text-on-surface-variant uppercase tracking-wider font-sans">
-              {t('userTitleLabel', 'Space Title / Subtitle')}
-            </label>
-            <input
-              type="text"
-              value={userTitle}
-              onChange={(e) => setUserTitle(e.target.value)}
-              placeholder="z.B. Mindful Thinking"
-              className="w-full bg-surface-container-lowest border border-outline-variant/20 px-3.5 py-2.5 rounded-xl text-sm font-sans focus:outline-primary select-text text-on-surface"
-            />
-          </div>
-        </div>
-
+      <div className="flex flex-col gap-6 bg-surface-container-low p-6 md:p-8 rounded-2xl border border-outline-variant/30 shadow-sm">
         {/* Workspace Aesthetic Theme Configuration */}
         <div className="space-y-3 pt-4 border-t border-outline-variant/15">
           <label className="block text-xs font-semibold text-on-surface-variant uppercase tracking-wider font-sans">
@@ -233,24 +177,7 @@ export default function SettingsView({
             </button>
           </div>
         </div>
-
-        {/* Buttons submission */}
-        <div className="flex items-center justify-between mt-2 border-t border-outline-variant/10 pt-4">
-          <button
-            type="submit"
-            className="bg-primary hover:bg-primary/95 text-on-primary text-xs font-semibold px-5 py-2.5 rounded-xl transition-all shadow-sm cursor-pointer select-none active:scale-95 duration-100"
-          >
-            {t('saveSettings', 'Save Workspace')}
-          </button>
-
-          {savedStatus && (
-            <span className="text-primary font-sans text-xs font-semibold flex items-center gap-1 shrink-0 animate-pulse">
-              <span className="material-symbols-outlined text-xs">done_all</span>
-              {language === 'de' ? 'Sicher gespeichert!' : 'Saved Securely!'}
-            </span>
-          )}
-        </div>
-      </form>
+      </div>
 
       {/* MiniNode Data & Backup Section */}
       <div className="bg-surface-container-low p-6 md:p-8 rounded-2xl border border-outline-variant/30 flex flex-col gap-4 shadow-sm">

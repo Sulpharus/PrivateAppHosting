@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import CelebrationModal from './components/CelebrationModal';
 import ContactsView from './components/ContactsView';
 import DashboardView from './components/DashboardView';
@@ -27,6 +27,7 @@ import {
   INITIAL_SETTINGS,
 } from './data';
 import {
+  accountName,
   cancelMiniNodeReminder,
   MiniNode,
   type MiniNodeUser,
@@ -63,7 +64,12 @@ export default function App() {
   const [contacts, setContacts] = useState<Contact[]>(INITIAL_CONTACTS);
   const [interactions, setInteractions] = useState<Interaction[]>(INITIAL_INTERACTIONS);
   const [meetups, setMeetups] = useState<Meetup[]>(INITIAL_MEETUPS);
-  const [settings, setSettings] = useState<UserSettings>(INITIAL_SETTINGS);
+  const [stored, setSettings] = useState<UserSettings>(INITIAL_SETTINGS);
+  // The name is the person's MiniNode account; nothing about it is stored or edited in this app.
+  const settings = useMemo<UserSettings>(
+    () => ({ ...stored, userName: accountName(currentUser), userTitle: '', avatarUrl: '' }),
+    [stored, currentUser],
+  );
   const [kanbanTasks, setKanbanTasks] = useState<KanbanTask[]>(INITIAL_KANBAN_TASKS);
   const [journalEntries, setJournalEntries] = useState<JournalEntry[]>(INITIAL_JOURNAL_ENTRIES);
 
@@ -705,11 +711,6 @@ export default function App() {
     });
   };
 
-  const handleSaveSettings = async (nextSettings: UserSettings) => {
-    setSettings(nextSettings);
-    await MiniNode.db.setItem('aether_settings_v1', nextSettings);
-  };
-
   const handleImportBackup = async (
     importedData: any,
   ): Promise<{ count: number; error?: string }> => {
@@ -969,8 +970,6 @@ export default function App() {
 
         {activeTab === 'settings' && (
           <SettingsView
-            settings={settings}
-            onSaveSettings={handleSaveSettings}
             onResetApp={handleResetToDefaults}
             isDarkMode={isDarkMode}
             onToggleDarkMode={handleToggleDarkMode}

@@ -100,7 +100,7 @@ class FallbackMiniNodeClient implements MiniNodeClient {
         this._user = {
           id: 'user-aether',
           email: 'alex@example.com',
-          name: 'Alex',
+          name: 'Nutzer',
           isGuest: false,
         };
         localStorage.setItem('mn_user', JSON.stringify(this._user));
@@ -109,7 +109,7 @@ class FallbackMiniNodeClient implements MiniNodeClient {
       this._user = {
         id: 'user-aether',
         email: 'alex@example.com',
-        name: 'Alex',
+        name: 'Nutzer',
         isGuest: false,
       };
     }
@@ -123,7 +123,7 @@ class FallbackMiniNodeClient implements MiniNodeClient {
   auth = {
     requireLogin: async (): Promise<MiniNodeUser> => {
       if (!this._user) {
-        this._user = { id: 'user-aether', email: 'alex@example.com', name: 'Alex' };
+        this._user = { id: 'user-aether', email: 'alex@example.com', name: 'Nutzer' };
         localStorage.setItem('mn_user', JSON.stringify(this._user));
         this._notifyAuth();
       }
@@ -306,6 +306,12 @@ export async function getMiniNode(): Promise<MiniNodeClient> {
 }
 
 export const mininode = getMiniNode;
+
+/** The name to greet: the person's MiniNode account name (display name, else the part of the e-mail before @). */
+export function accountName(user: MiniNodeUser | null): string {
+  const name = (user?.username || user?.name || user?.email?.split('@')[0] || '').trim();
+  return name || 'Nutzer';
+}
 
 const fallbackSingleton = new FallbackMiniNodeClient();
 
