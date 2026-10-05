@@ -117,7 +117,16 @@ function detailBodyHTML(a, ds) {
       `<p>${esc(tr('detail.perVisit', { price: eur(+a.visitPrice) }))}${cp ? ` <span class="muted">${esc(tr('detail.notCounted'))}</span>` : ''}</p>`,
     ...S.plans
       .filter((p) => (p.activities || []).includes(a.id))
-      .map((p) => `<p>${esc(p.name)} <span class="muted">${esc(planSummary(p))}</span></p>`),
+      .map(
+        (p) =>
+          `<p>${esc(p.name)} <span class="muted">${esc(planSummary(p))}</span>${quotaActivityLines(
+            p,
+            a,
+            todayStr(),
+          )
+            .map((line) => `<br><span class="quota-use">${esc(line)}</span>`)
+            .join('')}</p>`,
+      ),
   ].filter(Boolean);
   if (costLines.length) facts.push([tr('fact.cost'), costLines.join('')]);
   if (a.level) facts.push([tr('fact.level'), `<p>${esc(levelLabel(a.level))}</p>`]);

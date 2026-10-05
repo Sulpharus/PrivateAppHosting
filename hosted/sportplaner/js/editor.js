@@ -146,7 +146,7 @@ function openEditor(a) {
                   )
                   .map(
                     (p) =>
-                      `<label><input type="checkbox" name="memberof" value="${esc(p.id)}"${(p.activities || []).includes(draft.id) ? ' checked' : ''}><span>${esc(p.name)}<small>${esc([planSummary(p), p.provider].filter(Boolean).join(', '))}</small></span></label>`,
+                      `<label><input type="checkbox" name="memberof" value="${esc(p.id)}"${quotaOn(p) ? ` data-q="ql_${esc(p.id)}"` : ''}${(p.activities || []).includes(draft.id) ? ' checked' : ''}><span>${esc(p.name)}<small>${esc([planSummary(p), p.provider].filter(Boolean).join(', '))}</small></span></label>${quotaOn(p) ? quotaFieldsHTML(p, draft.id, `ql_${p.id}`, planQuota(p).mode, (p.activities || []).includes(draft.id)) : ''}`,
                   )
                   .join('')}</div>
             <p class="hint indent">${esc(tr('ed.memberLinkHint'))}</p>`
@@ -906,6 +906,12 @@ function collectForm() {
     membership: fd.has('acc_member'),
   };
   draft._memberOf = fd.getAll('memberof');
+  // What each ticked membership with credits or a quota asks for this activity.
+  draft._links = {};
+  for (const id of draft._memberOf) {
+    const plan = S.plans.find((x) => x.id === id);
+    if (plan && quotaOn(plan)) draft._links[id] = readQuotaLink(fd, `ql_${id}`);
+  }
   draft.equipment = String(fd.get('equipment') || '')
     .split(',')
     .map((x) => x.trim())
@@ -1028,7 +1034,16 @@ async function saveDraftNow() {
     if (geoProblem === 'offline') toast(tr('ed.addressUnchecked'));
   } else if (geoProblem) return fail(geoProblem, 3);
   const memberOf = draft._memberOf || [];
+  const links = draft._links || {};
   delete draft._memberOf;
+  delete draft._links;
+  // A membership with credits needs to know what this activity costs.
+  if (draft.access && draft.access.membership)
+    for (const id of memberOf) {
+      const plan = S.plans.find((x) => x.id === id);
+      if (plan && planQuota(plan).mode === 'credits' && !(links[id] && links[id].credits > 0))
+        return fail(tr('quota.errCredits', { plan: plan.name }), 2);
+    }
   const act = { ...draft },
     isNew = S.sheet.isNew;
   delete act.blocks;
@@ -1045,12 +1060,17 @@ async function saveDraftNow() {
       for (const p of S.plans) {
         const has = (p.activities || []).includes(act.id),
           want = memberOf.includes(p.id);
-        if (has !== want)
+        const nextLinks = { ...(p.links || {}) };
+        if (want && quotaOn(p) && links[p.id]) nextLinks[act.id] = links[p.id];
+        else delete nextLinks[act.id];
+        const linkChanged = JSON.stringify(nextLinks) !== JSON.stringify(p.links || {});
+        if (has !== want || linkChanged)
           await persistPlan({
             ...p,
             activities: want
-              ? [...(p.activities || []), act.id]
+              ? [...new Set([...(p.activities || []), act.id])]
               : (p.activities || []).filter((x) => x !== act.id),
+            links: nextLinks,
           }).catch(() => toast(tr('ed.planUpdateFailed')));
       }
     }

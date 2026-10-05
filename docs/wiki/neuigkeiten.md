@@ -11,6 +11,7 @@ Jede Änderung am System bekommt hier eine Zeile (siehe [Wissen aktuell halten](
 
 | Datum | Neu | Wo |
 | --- | --- | --- |
+| 05.10. | **Sportplaner: Credits und Kontingente** für Mitgliedschaften wie Urban Sports Club oder ClassPass: Credits pro Monat oder maximale Besuche (pro Monat/Tag) beim Tarif, Kosten bzw. Monatslimit je Aktivität beim Verknüpfen, Hinweis bei Überschreitung und Verbrauch des Monats in Statistik und Details | App Sportplaner |
 | 05.10. | **Wunschliste**: Fotos direkt hochladen (nicht nur per Link) und die Liste als schön gestaltetes **PDF mit Bildern** exportieren („Als PDF“) | App Wunschliste |
 | 05.10. | **Sportplaner**: bei *Sportart* mehrere Sportarten mit Komma eintragen („Schwimmen, Sauna“); Filter, Chips und Statistik zählen jede einzeln | App Sportplaner |
 | 05.10. | **Einheitlicher Startbildschirm** für alle Apps (statt nur dem Buchstaben-Icon): Zeichen, Name, Fortschritt, hell/dunkel, DE/EN | [Benachrichtigungen, Push und Offline](wiki:push-offline) |

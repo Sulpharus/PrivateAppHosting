@@ -4,6 +4,7 @@ import { cleanup, createUser, PASSWORD } from './seed.ts';
 // hosted/sportplaner behind its local gate: private activities in mn.kv, photos in mn.files.
 const run = `e2es${Date.now().toString(36)}`;
 const APP = 'http://localhost:8794';
+const shots = process.env.SCREENSHOT_DIR;
 // A 2×2 red PNG, enough for the resize-and-upload path.
 const PNG = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAEElEQVR4nGP4z8AARAwQCgAf7gP9i18U1AAAAABJRU5ErkJggg==',
@@ -284,5 +285,86 @@ test('addresses are checked and shown on the map', async ({ browser }) => {
   await expect(page.getByText('1 Angebot mit Adresse')).toBeVisible();
   await expect(page.locator('.pin')).toHaveCount(1);
   await expect(page.locator('.map-pop').getByText('Beachvolleyball')).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
+test('a membership with credits asks what an activity costs and counts the month', async ({
+  browser,
+}) => {
+  test.setTimeout(120_000);
+  const email = `${run}-credits@example.com`;
+  await createUser(email, 'user', 'Cora');
+  const page = await (await browser.newContext()).newPage();
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  await page.goto(APP);
+  await page.getByLabel('E-Mail').fill(email);
+  await page.getByLabel('Passwort', { exact: true }).fill(PASSWORD);
+  await page.getByRole('button', { name: 'Anmelden', exact: true }).click();
+  await expect(page.getByText('Deine Bibliothek ist leer')).toBeVisible();
+
+  // The membership: ten credits a month.
+  await page.getByRole('button', { name: 'Statistik' }).click();
+  await page.getByRole('button', { name: 'Tarif hinzufügen' }).first().click();
+  const plan = page.getByRole('dialog');
+  await plan.getByLabel('Name', { exact: true }).first().fill('ClassPass');
+  await plan.getByLabel('Betrag pro Zahlung in €').fill('49');
+  await plan.getByLabel('Die Mitgliedschaft hat …').selectOption('credits');
+  await plan.getByLabel('Credits pro Monat').fill('10');
+  if (shots) {
+    await plan.getByLabel('Credits pro Monat').scrollIntoViewIfNeeded();
+    await plan
+      .locator('fieldset', { hasText: 'Credits oder Kontingent' })
+      .screenshot({ path: `${shots}/sportplaner-tarif-credits.png` });
+  }
+  await plan.getByRole('button', { name: 'Tarif anlegen' }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page.getByText('0 von 10 Credits im', { exact: false })).toBeVisible();
+
+  // An activity that belongs to it: asked for the credits, refused without them.
+  await page.getByRole('button', { name: 'Bibliothek' }).first().click();
+  await page.getByRole('button', { name: 'Aktivität hinzufügen' }).first().click();
+  const dialog = page.getByRole('dialog');
+  await dialog.getByLabel('Name', { exact: true }).fill('Yoga Flow');
+  for (let i = 0; i < 2; i++)
+    await dialog.getByRole('button', { name: 'Weiter', exact: true }).click();
+  await dialog.getByLabel('Erfordert Mitgliedschaft').check();
+  await dialog.getByLabel('ClassPass').check();
+  await expect(dialog.getByLabel('Credits pro Besuch')).toBeVisible();
+  if (shots) {
+    await dialog.locator('.quota-link').scrollIntoViewIfNeeded();
+    await dialog
+      .locator('.quota-link')
+      .screenshot({ path: `${shots}/sportplaner-aktivitaet-credits.png` });
+  }
+  await dialog.getByRole('button', { name: 'Weiter', exact: true }).click();
+  await dialog.getByRole('button', { name: 'Anlegen', exact: true }).click();
+  await expect(dialog.getByText(/ClassPass arbeitet mit Credits/)).toBeVisible();
+  await dialog.getByLabel('Credits pro Besuch').fill('4');
+  await dialog.getByRole('button', { name: 'Weiter', exact: true }).click();
+  await dialog.getByRole('button', { name: 'Anlegen', exact: true }).click();
+  await expect(page.getByRole('dialog').getByRole('heading', { name: 'Yoga Flow' })).toBeVisible();
+  await expect(page.getByText('Ein Besuch kostet 4 Credits.')).toBeVisible();
+
+  // Three visits are 12 credits: the third goes beyond the ten.
+  const today = page.getByRole('dialog').locator('#visitdate');
+  const day = (n: number) => {
+    const d = new Date();
+    d.setDate(Math.max(1, d.getDate() - n));
+    return d.toISOString().slice(0, 10);
+  };
+  const enter = page.getByRole('dialog').getByRole('button', { name: 'Eintragen' });
+  const first = new Date();
+  const sameMonth = (n: number) => day(n).slice(0, 7) === first.toISOString().slice(0, 7);
+  const dates = [0, 1, 2].map(day).filter((d, i) => sameMonth(i));
+  test.skip(dates.length < 3, 'needs three days in the current month');
+  for (const [i, d] of dates.entries()) {
+    await today.fill(d);
+    await enter.click();
+    // The detail is rebuilt after each entry: wait for it before the next one.
+    await expect(page.locator('#sheet-root .visits .tag')).toHaveCount(i + 1);
+  }
+  await expect(page.getByText(/Credits von ClassPass überschritten: 12 von 10/)).toBeVisible();
+  await expect(page.getByText(/12 von 10 Credits im .* verbraucht, 0 übrig\./)).toBeVisible();
   expect(errors).toEqual([]);
 });

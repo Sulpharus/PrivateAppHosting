@@ -90,6 +90,7 @@ const H = {
     if (!a) return;
     const ds = S.sheet.date,
       done = new Set(a.done || []);
+    const adding = !done.has(ds);
     done.has(ds) ? done.delete(ds) : done.add(ds);
     try {
       // attended means it took place
@@ -98,6 +99,7 @@ const H = {
         done: [...done].sort(),
         cancelled: (a.cancelled || []).filter((x) => !done.has(x)),
       });
+      if (adding) warnQuota(a, ds);
     } catch {
       toast(tr('error.update'));
     }

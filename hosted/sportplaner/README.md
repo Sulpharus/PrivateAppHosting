@@ -86,6 +86,20 @@ Mark it as done, then check *Statistik*.
 wins, `;` works too). Each sport is a chip in the details and a filter in the library, and the statistics
 share the cost of an offer between its sports. `test/render.test.js` covers it.
 
+## Memberships with credits or an allowance
+
+For providers like Urban Sports Club or ClassPass. In the tariff editor ("Credits oder Kontingent") a
+membership either has **credits** (a number per month; each activity costs some) or an **allowance**
+(maximum visits per month), plus an optional maximum of visits **per day** over all its activities. When an
+activity is created or edited and a membership with such a limit is ticked ("Erfordert Mitgliedschaft"),
+the editor asks for the activity's part: what a visit costs in credits (required), and/or how often it may
+be visited per month (optional). The tariff editor asks the same for each activity it applies to. Stored on
+the plan as `quota = { mode, month, day }` and `links[activityId] = { credits, month }` (`js/quota.js`,
+also read from backups). Every visit that is entered is checked: it is saved anyway, and a message says
+what it goes beyond (credits, the month's allowance, the day, the activity's own limit). The tariff cards
+in *Statistik* and the activity details show the use of the current month ("8 von 10 Credits im Oktober,
+2 übrig"). `test/render.test.js` and `e2e/sportplaner.spec.ts` cover it.
+
 ## Languages
 
 German and English (`i18n/de.json`, `i18n/en.json`, declared under `i18n` in `mininode.json`). The person's choice in Konto → Sprache applies; an unknown key falls back to German. New texts need a key in both files; `pnpm mininode doctor hosted/sportplaner` checks them (ADR 0017). Weekday and month names, sign-up and level labels come from the language, the stored values (`signup`, `level`, period labels such as `Kurs`) stay as they were. Money input accepts both `1.200,50` and `1,200.50`. `test/render.test.js` renders every view in both languages.
