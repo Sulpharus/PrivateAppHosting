@@ -18,7 +18,7 @@ import {
 import { parseIcs, toIcs } from './ics.js';
 import { appName, COLORS, itemsFor, onDay, SELF, sourcesFrom, spanOf } from './items.js';
 import { isoWeek, layoutDay, monthGrid, startOfWeek } from './layout.js';
-import { geocode, initMap, mapView } from './map.js';
+import { geocode, initMap, mapView, reasonOf } from './map.js';
 import { validPoint } from './route.js';
 import { buildRule, describeRule, occurrenceKey, parseRule } from './rrule.js';
 
@@ -1764,8 +1764,8 @@ async function openEditor(item, opts = {}) {
             coords = { lat: hit.lat, lon: hit.lon, q: text };
             placeNote.textContent = t('editor.placeFound', { place: hit.label });
           } else placeNote.textContent = t('editor.placeNone');
-        } catch {
-          placeNote.textContent = t('editor.placeOffline');
+        } catch (err) {
+          placeNote.textContent = `${t('editor.placeOffline')} ${reasonOf(err)}`;
         } finally {
           e.currentTarget.disabled = false;
         }
