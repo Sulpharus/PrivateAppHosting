@@ -58,7 +58,15 @@ test('events with a place show on the map with the way between them', async ({ p
   await page.evaluate(
     async ({ day }) => {
       const mn = await (
-        window as unknown as { mininode: { mininode(): Promise<any> } }
+        window as unknown as {
+          mininode: {
+            mininode(): Promise<{
+              suite: {
+                type(t: string): { upsert(fields: Record<string, unknown>): Promise<unknown> };
+              };
+            }>;
+          };
+        }
       ).mininode.mininode();
       const at = (h: number, m: number) =>
         new Date(
