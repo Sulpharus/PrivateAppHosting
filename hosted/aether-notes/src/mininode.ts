@@ -108,7 +108,7 @@ export const MiniNode = {
       const rows = await (await platform())
         .api('nominatim')
         .json<NominatimRow[]>(
-          `/search?format=jsonv2&limit=5&addressdetails=1&accept-language=${window.mnI18n.lang}&q=${encodeURIComponent(query.trim())}`,
+          `/search?format=jsonv2&limit=5&addressdetails=1&accept-language=${encodeURIComponent(window.mnI18n.lang)}&q=${encodeURIComponent(query.trim())}`,
         );
       return (Array.isArray(rows) ? rows : [])
         .map((row) => ({

@@ -21,7 +21,8 @@ Achtsames CRM für Kontakte, Notizen, Routinen und Aufgaben auf der MiniNode-Pla
   - Prioritätsstufen und Fälligkeitstermine.
 - **Karte**: Wohnorte aus den Adressen von Kontakten und Personen als Markierungen, **Heatmap** oder nach Orten gruppiert,
   „Wer wohnt in der Nähe?“ um den eigenen Wohnort oder den Ort eines Treffens (Umkreis, Entfernung, Route). Adressen werden
-  einmal gesucht (Nominatim) und im Konto gemerkt (`aether_geo`).
+  einmal gesucht (Nominatim) und im Konto gemerkt (`aether_geo`). Datenschutz: Dafür gehen die Adresstexte an den öffentlichen
+  Dienst OpenStreetMap Nominatim (über den MiniNode-Proxy); Kartenkacheln laden vom gewählten Anbieter.
 - **Treffen im Kalender**: Treffen mit Datum erscheinen als `event`-Datensätze (Quellschlüssel `meetup:<id>` / `people:<id>`)
   im Kalender, mit Ort und Koordinaten für dessen Kartenansicht (`src/suite.ts`).
 - **Daten & Sicherung**:

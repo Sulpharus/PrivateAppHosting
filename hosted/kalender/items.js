@@ -141,7 +141,7 @@ export function itemsFor(
         recurring: Boolean(rule),
         occurrence: rule ? occurrenceKey(start) : null,
         sourceId: source?.id ?? sourceOf(r),
-        color: r.data?.color ?? source?.color ?? 'gray',
+        color: COLORS.includes(r.data?.color) ? r.data.color : (source?.color ?? 'gray'),
         cancelled: r.data?.status === 'cancelled' || r.data?.plan_status === 'cancelled',
         editable:
           r.type === 'event' &&

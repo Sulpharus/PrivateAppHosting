@@ -51,7 +51,7 @@ export default function Sidebar({
   return (
     <>
       {/* Desktop Side Navigation (hidden md:flex) */}
-      <aside className="hidden md:flex fixed left-0 top-0 h-full w-64 border-r border-outline-variant/30 flex-col p-4 bg-surface-container-low z-40">
+      <aside className="hidden md:flex fixed left-0 top-0 h-full w-64 overflow-y-auto border-r border-outline-variant/30 flex-col p-4 bg-surface-container-low z-40">
         <a
           href={portalUrl}
           className="mx-2 mt-2 inline-flex min-h-11 items-center gap-1.5 self-start rounded-lg px-2 text-xs font-semibold text-on-surface-variant hover:text-primary focus-visible:outline-2 focus-visible:outline-primary"

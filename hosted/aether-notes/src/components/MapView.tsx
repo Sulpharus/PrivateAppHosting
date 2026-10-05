@@ -86,8 +86,25 @@ const initials = (name: string) =>
 
 const escapeHtml = (text: string) => text.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
+/** Whether the app is in its dark theme (the class on <html>, which the toggle sets). */
+function useDark(): boolean {
+  const [dark, setDark] = useState(() => document.documentElement.classList.contains('dark'));
+  useEffect(() => {
+    const watch = new MutationObserver(() =>
+      setDark(document.documentElement.classList.contains('dark')),
+    );
+    watch.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    return () => watch.disconnect();
+  }, []);
+  return dark;
+}
+
 export default function MapView({ contacts, people, meetups }: Props) {
   const { t } = useTranslation();
+  const dark = useDark();
+  const tiles = useRef<L.Layer | null>(null);
+  const fitted = useRef('');
+  const pointOfId = useRef<Map<string, Point>>(new Map());
   const [prefs, setPrefs] = useState<Prefs>(DEFAULTS);
   const [prefsLoaded, setPrefsLoaded] = useState(false);
   const [tick, setTick] = useState(0); // new points arrived
@@ -250,20 +267,33 @@ export default function MapView({ contacts, people, meetups }: Props) {
     };
   }, []);
 
+  // the base map: its own effect, so a new point or a slider never reloads the tiles
+  useEffect(() => {
+    const m = map.current;
+    if (!m) return;
+    tiles.current?.remove();
+    const spec = TILES[prefs.layer === 'auto' ? (dark ? 'dark' : 'light') : prefs.layer];
+    tiles.current = L.tileLayer(spec.url, {
+      maxZoom: spec.max,
+      attribution: spec.attr,
+      subdomains: 'abcd',
+    }).addTo(m);
+    tiles.current.bringToBack?.();
+  }, [prefs.layer, dark]);
+
+  // pins or heat, the circle around the centre
   useEffect(() => {
     const m = map.current;
     if (!m) return;
     for (const layer of layers.current) layer.remove();
     layers.current = [];
     markers.current = new Map();
-    const dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const spec = TILES[prefs.layer === 'auto' ? (dark ? 'dark' : 'light') : prefs.layer];
+    pointOfId.current = new Map(shown.map((e) => [e.id, e.point]));
     const add = (layer: L.Layer) => {
       layer.addTo(m);
       layers.current.push(layer);
       return layer;
     };
-    add(L.tileLayer(spec.url, { maxZoom: spec.max, attribution: spec.attr, subdomains: 'abcd' }));
     const bounds: [number, number][] = shown.map((e) => [e.point.lat, e.point.lon]);
     if (prefs.mode === 'heat') {
       add(
@@ -278,9 +308,9 @@ export default function MapView({ contacts, people, meetups }: Props) {
           icon: L.divIcon({
             className: 'aether-pin-wrap',
             html: `<span class="aether-pin" aria-hidden="true"><span>${escapeHtml(initials(e.name))}</span></span>`,
-            iconSize: [34, 34],
-            iconAnchor: [17, 34],
-            popupAnchor: [0, -30],
+            iconSize: [44, 44],
+            iconAnchor: [22, 40],
+            popupAnchor: [0, -36],
           }),
           title: e.name,
           alt: e.name,
@@ -297,23 +327,27 @@ export default function MapView({ contacts, people, meetups }: Props) {
       add(
         L.circle([centerPoint.point.lat, centerPoint.point.lon], {
           radius: prefs.radiusKm * 1000,
-          color: '#2f6f8f',
-          weight: 2,
-          fillOpacity: 0.06,
+          className: 'aether-radius',
         }),
       );
       bounds.push([centerPoint.point.lat, centerPoint.point.lon]);
     }
-    if (bounds.length)
+    // fit the view when what is shown changes (filter, mode, centre), not on every new point
+    const key = `${prefs.mode}|${group}|${prefs.center}`;
+    if (bounds.length && (fitted.current !== key || fitted.current === '')) {
       m.fitBounds(L.latLngBounds(bounds), { padding: [40, 40], maxZoom: 13, animate: false });
+      fitted.current = key;
+    }
     m.invalidateSize({ animate: false });
-  }, [shown, prefs.layer, prefs.mode, prefs.heat, prefs.radiusKm, centerPoint]);
+  }, [shown, prefs.mode, prefs.heat, prefs.radiusKm, prefs.center, group, centerPoint]);
 
   const focus = (id: string) => {
+    if (!map.current) return;
     const marker = markers.current.get(id);
-    if (!marker || !map.current) return;
-    map.current.setView(marker.getLatLng(), Math.max(map.current.getZoom(), 14));
-    marker.openPopup();
+    const point = pointOfId.current.get(id);
+    if (!point) return;
+    map.current.setView([point.lat, point.lon], Math.max(map.current.getZoom(), 14));
+    marker?.openPopup();
   };
 
   const findHome = async () => {

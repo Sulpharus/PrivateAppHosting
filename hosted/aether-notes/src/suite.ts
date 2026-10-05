@@ -67,7 +67,10 @@ function wantedOf(
       starts_at: starts.toISOString(),
       ends_at: ends.toISOString(),
       place_name: (meetup.location ?? '').trim().slice(0, 300) || null,
-      data: { all_day: timed ? null : true, description: description || null },
+      data: {
+        all_day: timed ? null : true,
+        description: description || null,
+      },
     },
   };
 }
@@ -107,6 +110,11 @@ async function sync() {
       () => undefined,
     );
 
+    // the place text each record was last written with (to tell an edit in the Kalender from ours)
+    const written = ((await MiniNode.db.getItem('aether_suite_places')) ?? {}) as Record<
+      string,
+      string | null
+    >;
     const events = await MiniNode.events();
     const mine = (await events.list({ limit: 5000 })).filter(
       (r) => r.source_app === 'aether-notes',
@@ -117,8 +125,19 @@ async function sync() {
     for (const [key, w] of wanted) {
       if (!w) continue;
       const point = pointOf(w.fields.place_name);
-      const fields: Wanted = { ...w.fields, lat: point?.lat ?? null, lon: point?.lon ?? null };
       const rec = byKey.get(key);
+      let fields: Wanted = { ...w.fields, lat: point?.lat ?? null, lon: point?.lon ?? null };
+      if (rec) {
+        // The place was changed in the Kalender (Aether's own text is still the one written last):
+        // that change stays. A point that is only unknown here does not wipe a known one either.
+        if (
+          rec.data?.aether_place === w.fields.place_name &&
+          rec.place_name !== w.fields.place_name
+        )
+          fields = { ...fields, place_name: rec.place_name, lat: rec.lat, lon: rec.lon };
+        else if (!point && rec.place_name === w.fields.place_name)
+          fields = { ...fields, lat: rec.lat, lon: rec.lon };
+      }
       const unchanged =
         rec &&
         same(rec.title, fields.title) &&
@@ -128,11 +147,16 @@ async function sync() {
         same(rec.lon, fields.lon) &&
         same(rec.data?.description, fields.data.description);
       if (!unchanged) jobs.push(() => events.upsert(fields, { sourceKey: key }));
+      written[key] = w.fields.place_name;
     }
-    // meetups that are gone (or too old to matter) leave the Kalender
+    // Meetups that are gone leave the Kalender (old ones stay as history). Only when the lists were
+    // really read: a device that is offline with an empty local copy must not empty the Kalender.
+    const listsRead =
+      navigator.onLine && Object.keys(crm).length + (peopleMeetups?.length ?? 0) > 0;
     for (const rec of mine)
-      if (!wanted.has(rec.source_key ?? '')) jobs.push(() => events.delete(rec.id));
+      if (listsRead && !wanted.has(rec.source_key ?? '')) jobs.push(() => events.delete(rec.id));
     const queue = [...jobs];
+    await MiniNode.db.setItem('aether_suite_places', written).catch(() => undefined);
     const worker = async () => {
       for (let job = queue.shift(); job; job = queue.shift()) await job();
     };

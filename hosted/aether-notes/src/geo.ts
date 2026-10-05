@@ -28,17 +28,30 @@ export function distanceM(a: Point, b: Point): number {
 let cache: Cache | null = null;
 let saveTimer: ReturnType<typeof setTimeout> | undefined;
 
-export async function loadGeo(): Promise<Cache> {
-  if (cache) return cache;
-  const stored = (await MiniNode.db.getItem(KEY)) as Cache | undefined;
-  cache = stored && typeof stored === 'object' ? stored : {};
-  return cache;
+let loading: Promise<Cache> | null = null;
+export function loadGeo(): Promise<Cache> {
+  loading ??= MiniNode.db
+    .getItem(KEY)
+    .then((stored) => {
+      const known = stored && typeof stored === 'object' ? (stored as Cache) : {};
+      cache = { ...known, ...(cache ?? {}) };
+      return cache;
+    })
+    .catch(() => {
+      loading = null; // read again next time
+      return (cache ??= {});
+    });
+  return loading;
 }
 
 function saveSoon() {
   clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
-    if (cache) void MiniNode.db.setItem(KEY, cache).catch(() => undefined);
+    if (!cache) return;
+    // the newest 500 places are kept
+    const entries = Object.entries(cache);
+    if (entries.length > 500) cache = Object.fromEntries(entries.slice(-500));
+    void MiniNode.db.setItem(KEY, cache).catch(() => undefined);
   }, 1500);
 }
 
