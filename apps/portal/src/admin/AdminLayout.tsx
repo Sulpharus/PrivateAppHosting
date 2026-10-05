@@ -14,6 +14,7 @@ const LINKS: [string, string][] = [
   ['/admin/api-keys', 'API-Schlüssel'],
   ['/admin/suite', 'Gemeinsame Daten'],
   ['/admin/workshop', 'KI-Werkstatt'],
+  ['/admin/backups', 'Sicherung'],
 ];
 
 const EXTERNAL: [string, string][] = [

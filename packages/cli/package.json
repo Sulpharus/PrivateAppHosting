@@ -11,12 +11,14 @@
   },
   "scripts": {
     "typecheck": "tsc -p .",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:roundtrip": "vitest run --config vitest.roundtrip.config.ts"
   },
   "dependencies": {
     "@mininode/manifest": "workspace:*",
     "@supabase/supabase-js": "2.117.1",
     "postgres": "3.4.9",
+    "zod": "4.6.5",
     "@mininode/gate": "workspace:*",
     "@mininode/sdk": "workspace:*",
     "@mininode/ui": "workspace:*"

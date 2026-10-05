@@ -9,6 +9,7 @@ mininode changed <base-ref>                List hosted apps changed since <base-
 mininode prune [--env staging] [--dry-run] Delete Workers of apps gone from hosted/ (--force if empty)
 mininode export <app-dir> --out <dir>      One app as a shareable folder; stops on keys and private data (ADR 0012)
 mininode integrate <zip|dir> [--slug x] [--build] [--tidy] [--json f] [--report f]  Export → hosted/<slug> by script; exit 2 = needs review (ADR 0013)
+mininode backup create --out <dir> | verify <dir> | restore <dir> [--yes]  Full backup folder and restore (ADR 0019)
 mininode submission fetch|status <id> …    Uploads from Verwaltung (used by integrate.yml)
 mininode library check|install <entry> <slug> [--env]  App-Bibliothek: check, register (ADR 0011)
 mininode library remove <slug> <entry> [--env]  App-Bibliothek: disable a removed program

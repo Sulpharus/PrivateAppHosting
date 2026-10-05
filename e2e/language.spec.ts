@@ -1,4 +1,4 @@
-import { expect, type Page, test } from '@playwright/test';
+import { type BrowserContext, expect, type Page, test } from '@playwright/test';
 import { admin, cleanup, createUser, PASSWORD } from './seed.ts';
 
 // The language switch (ADR 0017): chosen once in the portal, mirrored into the mn-lang cookie, and
@@ -29,6 +29,11 @@ async function languageOf(id: string): Promise<string | undefined> {
   return data?.language;
 }
 
+// The portal writes the cookie after the profile update, so a test has to wait for it too.
+async function cookieOf(context: BrowserContext): Promise<string | undefined> {
+  return (await context.cookies()).find((c) => c.name === 'mn-lang')?.value;
+}
+
 test('the account page switches the language and keeps it in the profile and the cookie', async ({
   page,
   context,
@@ -45,29 +50,32 @@ test('the account page switches the language and keeps it in the profile and the
   await english.click();
   await expect(english).toHaveAttribute('aria-pressed', 'true');
   await expect.poll(() => languageOf(userId)).toBe('en');
-  expect((await context.cookies()).find((c) => c.name === 'mn-lang')?.value).toBe('en');
+  await expect.poll(() => cookieOf(context)).toBe('en');
 
   await page.getByRole('button', { name: 'Deutsch' }).click();
   await expect.poll(() => languageOf(userId)).toBe('de');
-  expect((await context.cookies()).find((c) => c.name === 'mn-lang')?.value).toBe('de');
+  await expect.poll(() => cookieOf(context)).toBe('de');
 });
+
+// The line under a game's title is the intro until the SDK connects, then the player greeting
+// (kit/game.js); both are English, and which one is on screen depends on the speed of the run.
+const gameLine = (intro: string) => (p: Page) =>
+  p
+    .locator('#player')
+    .filter({ hasText: new RegExp(`${intro}|You are playing as|Without a player name`) });
 
 const APPS: [slug: string, port: number, shows: (page: Page) => ReturnType<Page['locator']>][] = [
   ['sportplaner', 8794, (p) => p.getByRole('button', { name: 'Library', exact: true })],
   ['haushalt', 8795, (p) => p.getByRole('button', { name: 'Transactions', exact: true })],
   ['wunschliste', 8796, (p) => p.getByRole('button', { name: 'My list', exact: true })],
   ['medialog', 8797, (p) => p.getByRole('button', { name: 'Collection', exact: true }).first()],
-  ['memory', 8798, (p) => p.getByText('Find all eight pairs in as few moves as you can.')],
+  ['memory', 8798, gameLine('Find all eight pairs in as few moves as you can.')],
   ['kalender', 8799, (p) => p.getByRole('button', { name: 'Month', exact: true }).first()],
-  ['minensucher', 8800, (p) => p.getByText('Uncover every safe square.')],
-  [
-    'sudoku',
-    8801,
-    (p) => p.getByText('Every puzzle is generated fresh and has exactly one solution.'),
-  ],
-  ['solitaer', 8802, (p) => p.getByText('Move every card to the four foundations.')],
-  ['n2048', 8803, (p) => p.getByText('Merge matching tiles until you reach 2048.')],
-  ['codeknacker', 8804, (p) => p.getByText('Work out the secret code of four symbols.')],
+  ['minensucher', 8800, gameLine('Uncover every safe square.')],
+  ['sudoku', 8801, gameLine('Every puzzle is generated fresh and has exactly one solution.')],
+  ['solitaer', 8802, gameLine('Move every card to the four foundations.')],
+  ['n2048', 8803, gameLine('Merge matching tiles until you reach 2048.')],
+  ['codeknacker', 8804, gameLine('Work out the secret code of four symbols.')],
   [
     'haushalts-inventar',
     8805,

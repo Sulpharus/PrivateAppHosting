@@ -109,6 +109,8 @@ jobs:
           exit 1
       - run: pnpm db:test
       - run: pnpm test:integration
+      - name: Backup and restore round trip (empties the database, so on its own)
+        run: pnpm test:roundtrip
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm e2e
       - uses: actions/upload-artifact@v4

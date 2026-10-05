@@ -11,3 +11,4 @@
 9. [uploads.md](uploads.md): upload web apps from Verwaltung, script-first integration, AI review queue
 10. [programs.md](programs.md): install programs on the PC/server from Verwaltung, large installers
 11. [releases.md](releases.md): cloud, PC/server and complete packages per version
+12. [backups.md](backups.md): full backup from Verwaltung, password-protected, and how to restore it

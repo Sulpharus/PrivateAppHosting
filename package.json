@@ -20,6 +20,7 @@
     "db:test": "supabase test db",
     "db:lint": "supabase db lint --level warning",
     "test:integration": "scripts/with-local-supabase.sh turbo run test",
+    "test:roundtrip": "MININODE_ALLOW_DB_WIPE=1 scripts/with-local-supabase.sh pnpm --filter @mininode/cli test:roundtrip",
     "mininode": "node packages/cli/src/bin.ts",
     "e2e": "scripts/with-local-supabase.sh playwright test -c e2e/playwright.config.ts",
     "spec:short": "node scripts/generate-short-spec.ts",
