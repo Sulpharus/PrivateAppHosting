@@ -66,6 +66,12 @@
           }
         }
       }
+    },
+    {
+      "includes": ["hosted/aether-notes/**"],
+      "linter": {
+        "enabled": false
+      }
     }
   ],
   "css": {
