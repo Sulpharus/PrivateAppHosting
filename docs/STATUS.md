@@ -100,9 +100,13 @@ since the PR #12 deploy. Earlier deploys stopped at medialog and never shipped t
    entered under Supabase → Auth → Google (`first-setup.md` §3.1). New migrations
    (`…_profile_language`, `…_app_icons`) are applied by the deploy.
 0. **For the new upload features** (all optional until used, each page says what is missing):
+   - **A ruleset on `main` that requires the CI checks** (Settings → Rules → Rulesets: *Lint,
+     typecheck, test*, *Database, integration and e2e*, *Infra scripts and images*, *Secret
+     scan*). Without it GitHub lets you merge a red pull request, as happened with the first two
+     uploads (`runbooks/uploads.md` step 4);
    - `INTEGRATE_TOKEN` (GitHub secret: contents + pull requests write) so CI and deploy run on
-     what the integrate workflow creates; `INTEGRATE_AUTOMERGE=true` (variable) only when you
-     trust the script;
+     what the integrate workflow creates; `INTEGRATE_AUTOMERGE=true` (variable) only after the
+     ruleset exists (it then merges when the checks are green);
    - `R2_ENDPOINT`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` as secrets of the API Worker for
      program uploads;
    - the migration `20261001150000_…` (the deploy applies it) and a release tag when you want the

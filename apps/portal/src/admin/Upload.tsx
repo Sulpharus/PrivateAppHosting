@@ -349,8 +349,8 @@ function SubmissionCard({
       )}
       {row.status === 'integrated' && (
         <p>
-          Der Pull Request ist gemergt, der Deploy veröffentlicht die App. Zugriff vergibst du
-          unter <Link to="/admin/apps">Apps</Link>.
+          Der Pull Request ist gemergt, der Deploy veröffentlicht die App. Zugriff vergibst du unter{' '}
+          <Link to="/admin/apps">Apps</Link>.
         </p>
       )}
       {row.status === 'installed' && (
