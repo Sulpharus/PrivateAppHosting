@@ -2,22 +2,28 @@
  * Haushaltsinventar: household items with warranties, receipts, service dates and owners.
  * Data is shared-account (mn.kv), files go to mn.files, reminders through mn.push.
  */
-import { useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { Header, Navigation, type Tab } from './components/Shell';
 import { showToast, ToastContainer } from './components/Toast';
-import { EditorSheet } from './dialogs/EditorSheet';
 import { ItemSheet } from './dialogs/ItemSheet';
 import { MaintenanceSheet } from './dialogs/MaintenanceSheet';
 import { t } from './i18n';
-import { InventoryContext } from './lib/context';
+import { InventoryContext, SdkContext } from './lib/context';
 import { categoryStats, EMPTY_FILTERS, maintenanceRule } from './lib/domain';
 import { exportToExcel } from './lib/excel';
 import { formatMoney } from './lib/format';
 import { useInventory } from './lib/useInventory';
 import type { Filters, Item } from './types';
 import { DashboardView } from './views/DashboardView';
-import { HouseholdView } from './views/HouseholdView';
 import { InventoryView } from './views/InventoryView';
+
+// The editor and the household page are only needed on demand: they load when first opened.
+const EditorSheet = lazy(() =>
+  import('./dialogs/EditorSheet').then((module) => ({ default: module.EditorSheet })),
+);
+const HouseholdView = lazy(() =>
+  import('./views/HouseholdView').then((module) => ({ default: module.HouseholdView })),
+);
 
 interface EditorState {
   item: Item | null;
@@ -81,12 +87,12 @@ export default function App() {
     }
   }, [loading, detailId, detail]);
 
-  const openDetail = (item: Item) => setDetailId(item.id);
+  const openDetail = useCallback((item: Item) => setDetailId(item.id), []);
   const closeDetail = () => {
     setDetailId(null);
     dropItemParam();
   };
-  const addItem = () => setEditor({ item: null });
+  const addItem = useCallback(() => setEditor({ item: null }), []);
 
   async function exportExcel() {
     try {
@@ -143,102 +149,108 @@ export default function App() {
     ) : undefined;
 
   return (
-    <InventoryContext.Provider value={api}>
-      <Navigation tab={tab} onSelect={setTab} onAdd={addItem} />
-      <div className="mn-page">
-        <Header
-          title={titles[tab][0]}
-          subtitle={loading ? t('app.loading') : titles[tab][1]}
-          tools={tools}
-          offline={offline}
-          onAdd={addItem}
-        />
-        {loading ? (
-          <main className="mn-main" aria-busy="true">
-            <span className="mn-sk" style={{ height: '88px', display: 'block' }} />
-            <span className="mn-sk" style={{ height: '220px', display: 'block' }} />
-          </main>
-        ) : tab === 'start' ? (
-          <DashboardView
-            items={scopeItems}
-            settings={data.settings}
-            onOpen={openDetail}
+    <SdkContext.Provider value={api.mn}>
+      <InventoryContext.Provider value={api}>
+        <Navigation tab={tab} onSelect={setTab} onAdd={addItem} />
+        <div className="mn-page">
+          <Header
+            title={titles[tab][0]}
+            subtitle={loading ? t('app.loading') : titles[tab][1]}
+            tools={tools}
+            offline={offline}
             onAdd={addItem}
-            onAddReceipt={() => setEditor({ item: null, focusReceipt: true })}
-            onExport={exportExcel}
-            onShowWarranties={() => {
-              setFilters({ ...EMPTY_FILTERS, warranty: 'soon' });
-              setTab('inventory');
-            }}
-            onShowInventory={() => setTab('inventory')}
+          />
+          {loading ? (
+            <main className="mn-main" aria-busy="true">
+              <span className="mn-sk" style={{ height: '88px', display: 'block' }} />
+              <span className="mn-sk" style={{ height: '220px', display: 'block' }} />
+            </main>
+          ) : tab === 'start' ? (
+            <DashboardView
+              items={scopeItems}
+              settings={data.settings}
+              onOpen={openDetail}
+              onAdd={addItem}
+              onAddReceipt={() => setEditor({ item: null, focusReceipt: true })}
+              onExport={exportExcel}
+              onShowWarranties={() => {
+                setFilters({ ...EMPTY_FILTERS, warranty: 'soon' });
+                setTab('inventory');
+              }}
+              onShowInventory={() => setTab('inventory')}
+              onLogMaintenance={logMaintenance}
+            />
+          ) : tab === 'inventory' ? (
+            <InventoryView
+              items={scopeItems}
+              rooms={data.rooms}
+              owners={owners}
+              filters={scopeFilters}
+              viewMode={viewMode}
+              onFilters={setFilters}
+              onViewMode={(mode) => api.setPrefs({ viewMode: mode })}
+              onOpen={openDetail}
+              onAdd={addItem}
+              onExport={exportExcel}
+            />
+          ) : (
+            <Suspense fallback={<main className="mn-main" aria-busy="true" />}>
+              <HouseholdView
+                items={scopeItems}
+                allItems={data.items}
+                activeHouseholdId={activeHouseholdId}
+                onExport={exportExcel}
+              />
+            </Suspense>
+          )}
+        </div>
+
+        {detail && !editor && !maintenance && (
+          <ItemSheet
+            item={detail}
+            households={data.households}
+            onClose={closeDetail}
+            onEdit={(item) => setEditor({ item })}
             onLogMaintenance={logMaintenance}
-          />
-        ) : tab === 'inventory' ? (
-          <InventoryView
-            items={scopeItems}
-            rooms={data.rooms}
-            owners={owners}
-            filters={scopeFilters}
-            viewMode={viewMode}
-            onFilters={setFilters}
-            onViewMode={(mode) => api.setPrefs({ viewMode: mode })}
-            onOpen={openDetail}
-            onAdd={addItem}
-            onExport={exportExcel}
-          />
-        ) : (
-          <HouseholdView
-            items={scopeItems}
-            allItems={data.items}
-            activeHouseholdId={activeHouseholdId}
-            onExport={exportExcel}
+            onDelete={async (item) => {
+              if (await api.removeItem(item)) {
+                closeDetail();
+                showToast(t('item.deleted'));
+              }
+            }}
           />
         )}
-      </div>
-
-      {detail && !editor && !maintenance && (
-        <ItemSheet
-          item={detail}
-          households={data.households}
-          onClose={closeDetail}
-          onEdit={(item) => setEditor({ item })}
-          onLogMaintenance={logMaintenance}
-          onDelete={async (item) => {
-            if (await api.removeItem(item)) {
-              closeDetail();
-              showToast(t('item.deleted'));
-            }
-          }}
-        />
-      )}
-      {editor && (
-        <EditorSheet
-          mn={api.mn}
-          item={editor.item}
-          rooms={data.rooms}
-          households={data.households}
-          activeHouseholdId={activeHouseholdId}
-          owners={owners}
-          defaultOwner={user.name}
-          focusReceipt={editor.focusReceipt}
-          onClose={() => setEditor(null)}
-          onSave={api.saveItem}
-          onDiscard={api.dropFiles}
-        />
-      )}
-      {maintenance && (
-        <MaintenanceSheet
-          item={maintenance.item}
-          suggestion={maintenance.suggestion}
-          onClose={() => setMaintenance(null)}
-          onSave={async (item, title) => {
-            const ok = await api.logMaintenance(item, title);
-            if (ok) showToast(t('maintenance.saved'));
-            return ok;
-          }}
-        />
-      )}
-      <ToastContainer />
-    </InventoryContext.Provider>
+        <Suspense fallback={null}>
+          {editor && (
+            <EditorSheet
+              mn={api.mn}
+              item={editor.item}
+              rooms={data.rooms}
+              households={data.households}
+              activeHouseholdId={activeHouseholdId}
+              owners={owners}
+              defaultOwner={user.name}
+              focusReceipt={editor.focusReceipt}
+              onClose={() => setEditor(null)}
+              onSave={api.saveItem}
+              onDiscard={api.dropFiles}
+            />
+          )}
+        </Suspense>
+        {maintenance && (
+          <MaintenanceSheet
+            item={maintenance.item}
+            suggestion={maintenance.suggestion}
+            onClose={() => setMaintenance(null)}
+            onSave={async (item, title) => {
+              const ok = await api.logMaintenance(item, title);
+              if (ok) showToast(t('maintenance.saved'));
+              return ok;
+            }}
+          />
+        )}
+        <ToastContainer />
+      </InventoryContext.Provider>
+    </SdkContext.Provider>
   );
 }

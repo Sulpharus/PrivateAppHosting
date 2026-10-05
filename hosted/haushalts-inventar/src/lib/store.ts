@@ -117,10 +117,12 @@ function extension(file: File): string {
 export async function uploadItemFile(
   mn: Sdk,
   itemId: string,
-  kind: 'photo' | 'receipt',
-  file: File,
+  kind: 'photo' | 'thumb' | 'receipt',
+  file: File | Blob,
 ): Promise<string> {
-  const path = `items/${itemId}/${kind}-${Date.now().toString(36)}.${extension(file)}`;
+  // A scaled picture is a JPEG whatever the original was.
+  const name = file instanceof File ? extension(file) : 'jpg';
+  const path = `items/${itemId}/${kind}-${Date.now().toString(36)}.${name}`;
   await mn.files.upload(path, file, file.type ? { contentType: file.type } : {});
   return path;
 }
@@ -138,6 +140,7 @@ export function usedPaths(items: Item[], backups: Backup[]): Set<string> {
   for (const list of [items, ...backups.map((backup) => backup.items)]) {
     for (const item of list) {
       if (item.photoPath) used.add(item.photoPath);
+      if (item.thumbPath) used.add(item.thumbPath);
       if (item.receiptPath) used.add(item.receiptPath);
     }
   }

@@ -191,6 +191,16 @@ test('a course plans every session; cancelled sessions count nowhere', async ({ 
   await page.keyboard.press('Escape');
   await expect(page.locator('.tile-off')).toHaveText('Ausgefallen');
 
+  // In the calendar the cancelled session is red: its dot, its date and its row.
+  await page.getByRole('button', { name: 'Kalender' }).first().click();
+  await expect(page.locator('#cells .cell.today .dots i.off')).toHaveCount(1);
+  await expect(page.locator('#cells .cell.today.off')).toHaveCount(1);
+  const offRow = page.locator('#callist .row.off', { hasText: 'Yoga-Kurs' });
+  await expect(offRow).toBeVisible();
+  const red = await offRow.locator('h4').evaluate((el) => getComputedStyle(el).color);
+  expect(red).toMatch(/^rgb\((180, 35, 24|249, 112, 102)\)$/);
+  await page.getByRole('button', { name: 'Tag', exact: true }).first().click();
+
   // Planned so far this year: the days before today (today is cancelled).
   const yearStart = `${new Date().getFullYear()}-01-01`;
   const past = [day(-2), day(-1)].filter((d) => d >= yearStart).length;

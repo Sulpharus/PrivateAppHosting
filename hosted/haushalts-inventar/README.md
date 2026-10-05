@@ -58,6 +58,18 @@ von …"), so nothing is lost; deleting a household moves its items to the next 
 - **New:** German and English language packages, the App Kit look (rose accent, light and dark),
   sheets with focus trap and `Escape`, 44 px targets, destructive actions ask for a second tap.
 
+## Speed on phones
+
+- Photos are scaled before they are stored (1280 px for the detail view, 480 px for tiles and
+  lists; receipts up to 2400 px). A phone photo of 4 MB becomes about 150 KB, so scrolling does not
+  decode huge pictures. Older items without a thumbnail fall back to their photo.
+- A picture asks for its signed address only when it comes near the screen, not all at once.
+- Tiles and rows are drawn again only when their own item changes; the search follows the text a
+  moment later (`useDeferredValue`); off-screen tiles are not laid out (`content-visibility`).
+- Coming back to the tab reloads only after a minute away, and a reload that finds the same data
+  keeps the state, so a short app switch does not redraw the list.
+- The editor and the household page load when first opened, the Excel library when exporting.
+
 ## Develop
 
 ```bash

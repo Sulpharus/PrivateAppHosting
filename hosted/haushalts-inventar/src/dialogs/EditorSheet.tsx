@@ -5,6 +5,7 @@ import { showToast } from '../components/Toast';
 import { t } from '../i18n';
 import { maintenanceRule, parseAmount, suggestMaintenance, warrantyExpiryFor } from '../lib/domain';
 import { categoryLabel, formatBytes, formatDate, newId, roomLabel } from '../lib/format';
+import { shrinkImage } from '../lib/image';
 import type { Sdk } from '../lib/mininode';
 import { MAX_FILE_BYTES, uploadItemFile } from '../lib/store';
 import { CATEGORIES, type CategoryId, type Household, type Item } from '../types';
@@ -135,19 +136,28 @@ export function EditorSheet({
     const removed: (string | undefined)[] = [];
     const uploaded: string[] = [];
     let photoPath = item?.photoPath;
+    let thumbPath = item?.thumbPath;
     let receiptPath = item?.receiptPath;
     try {
       if (photo && mn) {
-        removed.push(photoPath);
-        photoPath = await uploadItemFile(mn, id, 'photo', photo);
+        removed.push(photoPath, thumbPath);
+        photoPath = await uploadItemFile(mn, id, 'photo', await shrinkImage(photo, 1280));
         uploaded.push(photoPath);
+        thumbPath = await uploadItemFile(mn, id, 'thumb', await shrinkImage(photo, 480, 0.78));
+        uploaded.push(thumbPath);
       } else if (dropPhoto) {
-        removed.push(photoPath);
+        removed.push(photoPath, thumbPath);
         photoPath = undefined;
+        thumbPath = undefined;
       }
       if (receipt && mn) {
         removed.push(receiptPath);
-        receiptPath = await uploadItemFile(mn, id, 'receipt', receipt);
+        receiptPath = await uploadItemFile(
+          mn,
+          id,
+          'receipt',
+          await shrinkImage(receipt, 2400, 0.88),
+        );
         uploaded.push(receiptPath);
       } else if (dropReceipt) {
         removed.push(receiptPath);
@@ -177,6 +187,7 @@ export function EditorSheet({
       householdId: householdId || undefined,
       notes: clean(notes),
       photoPath,
+      thumbPath,
       receiptPath,
       serialNumber: clean(serial),
       color: clean(color),

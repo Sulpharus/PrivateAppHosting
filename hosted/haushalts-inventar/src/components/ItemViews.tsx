@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { t } from '../i18n';
 import { warrantyState } from '../lib/domain';
 import { categoryLabel, formatMoney, roomLabel } from '../lib/format';
@@ -32,13 +33,13 @@ interface ItemProps {
   onOpen: (item: Item) => void;
 }
 
-export function ItemTile({ item, onOpen }: ItemProps) {
+function ItemTileView({ item, onOpen }: ItemProps) {
   return (
     <div className="mn-tile-wrap">
       <button className="mn-tile" type="button" onClick={() => onOpen(item)}>
         <span className="mn-tile-media">
           {item.photoPath ? (
-            <StoredImage path={item.photoPath} />
+            <StoredImage path={item.thumbPath ?? item.photoPath} />
           ) : (
             <span className="mn-tile-initials" aria-hidden="true">
               {initialsOf(item.name)}
@@ -69,14 +70,18 @@ export function ItemTile({ item, onOpen }: ItemProps) {
   );
 }
 
-export function ItemRow({ item, onOpen }: ItemProps) {
+function ItemRowView({ item, onOpen }: ItemProps) {
   const detail = [roomLabel(item.location), categoryLabel(item.category), item.owner]
     .filter(Boolean)
     .join(' · ');
   return (
     <button className="mn-row" type="button" onClick={() => onOpen(item)}>
       <span className="mn-thumb">
-        {item.photoPath ? <StoredImage path={item.photoPath} /> : initialsOf(item.name)}
+        {item.photoPath ? (
+          <StoredImage path={item.thumbPath ?? item.photoPath} />
+        ) : (
+          initialsOf(item.name)
+        )}
       </span>
       <span>
         <span className="mn-row-title">{item.name}</span>
@@ -89,3 +94,7 @@ export function ItemRow({ item, onOpen }: ItemProps) {
     </button>
   );
 }
+
+/** Drawn again only when its own item changes: a long list does not redraw for every keystroke. */
+export const ItemTile = memo(ItemTileView);
+export const ItemRow = memo(ItemRowView);

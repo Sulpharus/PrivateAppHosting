@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react';
+import { type CSSProperties, useMemo } from 'react';
 import { Icon } from '../components/Icon';
 import { ItemTile } from '../components/ItemViews';
 import { t } from '../i18n';
@@ -29,11 +29,15 @@ export function DashboardView({
   onShowInventory,
   onLogMaintenance,
 }: Props) {
-  const today = new Date();
-  const stats = categoryStats(items);
-  const ending = warrantiesEnding(items, today, 90);
+  const { stats, ending, due } = useMemo(() => {
+    const today = new Date();
+    return {
+      stats: categoryStats(items),
+      ending: warrantiesEnding(items, today, 90),
+      due: maintenanceDue(items, today).filter((entry) => entry.soon || entry.overdue),
+    };
+  }, [items]);
   const nearest = ending[0];
-  const due = maintenanceDue(items, today).filter((entry) => entry.soon || entry.overdue);
   const over = settings.insuranceLimit !== null && stats.total > settings.insuranceLimit;
 
   if (items.length === 0) {

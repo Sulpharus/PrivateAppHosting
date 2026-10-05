@@ -1,3 +1,4 @@
+import { useDeferredValue, useMemo } from 'react';
 import { Icon } from '../components/Icon';
 import { ItemRow, ItemTile } from '../components/ItemViews';
 import { t } from '../i18n';
@@ -30,7 +31,12 @@ export function InventoryView({
   onAdd,
   onExport,
 }: Props) {
-  const shown = filterItems(items, filters, new Date());
+  // Typing stays smooth: the list follows the text a moment later, not on every key.
+  const query = useDeferredValue(filters.query);
+  const shown = useMemo(
+    () => filterItems(items, { ...filters, query }, new Date()),
+    [items, filters, query],
+  );
   const set = (changes: Partial<Filters>) => onFilters({ ...filters, ...changes });
 
   return (

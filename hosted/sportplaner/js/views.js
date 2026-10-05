@@ -122,7 +122,7 @@ function rowHTML(a, right, ds) {
       ? `<img class="thumb" src="${esc(thumbSrc(a, a.photos[0]))}" alt="" decoding="async">`
       : `<span class="thumb">${esc(initials(a.name))}</span>`;
   const sub = [a.category, a.provider, a.location].filter(Boolean).join(', ');
-  return `<button class="row" data-action="open" data-id="${esc(a.id)}"${ds ? ` data-date="${ds}"` : ''}>${t}<span class="min"><h4>${esc(a.name)}</h4>${sub ? `<p>${esc(sub)}</p>` : ''}${right.below || ''}</span>${right.side || ''}</button>`;
+  return `<button class="row${right.off ? ' off' : ''}" data-action="open" data-id="${esc(a.id)}"${ds ? ` data-date="${ds}"` : ''}>${t}<span class="min"><h4>${esc(a.name)}</h4>${sub ? `<p>${esc(sub)}</p>` : ''}${right.below || ''}</span>${right.side || ''}</button>`;
 }
 const VIEW_ICONS = {
   month:
@@ -264,29 +264,36 @@ function updCal() {
         ds = ymd(d),
         list = pl ? plannedOn(ds) : onDate(ds),
         c = list.length;
-      const dots = pl
-        ? list
-            .slice(0, 3)
-            .map((x) =>
-              (x.a.done || []).includes(ds)
+      // A cancelled session is a red dot in both modes; done and planned keep their own marks.
+      const offN = list.filter((x) => isCancelled(x.a, ds)).length;
+      const dots = list
+        .slice(0, 3)
+        .map((x) =>
+          isCancelled(x.a, ds)
+            ? '<i class="off"></i>'
+            : pl
+              ? (x.a.done || []).includes(ds)
                 ? '<i></i>'
-                : isCancelled(x.a, ds)
-                  ? '<i class="x"></i>'
-                  : '<i class="o"></i>',
-            )
-            .join('')
-        : '<i></i>'.repeat(Math.min(c, 3));
+                : '<i class="o"></i>'
+              : '<i></i>',
+        )
+        .join('');
       const cls = [
         'cell',
         d.getMonth() !== first.getMonth() && 'out',
         ds === td && 'today',
         ds === S.date && 'sel',
+        c > 0 && offN === c && 'off',
       ]
         .filter(Boolean)
         .join(' ');
+      const label = tr(pl ? 'cal.cellPlanned' : 'cal.cellActivities', {
+        date: fmt(d, { day: 'numeric', month: 'long' }),
+        n: c,
+      });
       return {
         key: ds + S.calMode,
-        html: `<button class="${cls}" data-action="calpick" data-date="${ds}" aria-label="${esc(tr(pl ? 'cal.cellPlanned' : 'cal.cellActivities', { date: fmt(d, { day: 'numeric', month: 'long' }), n: c }))}"><span class="n">${d.getDate()}</span><span class="dots">${dots}</span></button>`,
+        html: `<button class="${cls}" data-action="calpick" data-date="${ds}" aria-label="${esc(offN ? tr('cal.cellOff', { label, off: offN }) : label)}"><span class="n">${d.getDate()}</span><span class="dots">${dots}</span></button>`,
       };
     }),
   );
@@ -304,7 +311,10 @@ function updCal() {
   listOrEmpty(
     $('#callist'),
     'list-card',
-    items.map((x) => ({ key: x.a.id, html: rowHTML(x.a, { side: side(x) }, S.date) })),
+    items.map((x) => ({
+      key: x.a.id + (isCancelled(x.a, S.date) ? ':off' : ''),
+      html: rowHTML(x.a, { side: side(x), off: isCancelled(x.a, S.date) }, S.date),
+    })),
     pl
       ? `<p class="note">${esc(tr('cal.emptyPlanned'))}</p>`
       : `<p class="note">${esc(tr('cal.emptyAvail'))}</p>`,

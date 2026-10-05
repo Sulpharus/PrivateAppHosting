@@ -34,6 +34,8 @@ export interface Item {
   notes?: string;
   /** Logical mn.files paths (the SDK adds the app and account folders). */
   photoPath?: string;
+  /** A small copy of the photo for tiles and lists. */
+  thumbPath?: string;
   receiptPath?: string;
   serialNumber?: string;
   color?: string;

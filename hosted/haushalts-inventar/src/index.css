@@ -96,3 +96,21 @@ fieldset.mn-seg {
 .hi-name .mn-row-sub {
   white-space: normal;
 }
+
+/* Off-screen tiles and rows are not laid out or painted until they scroll near: long lists stay
+   smooth on a phone. The size is a guess that keeps the scroll bar steady. */
+.mn-tile-wrap {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 260px;
+}
+.mn-list > .mn-row {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 72px;
+}
+
+/* The picture holder fills its box, so it can be watched before the picture is there. */
+.hi-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
