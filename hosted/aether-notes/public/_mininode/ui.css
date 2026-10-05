@@ -1,0 +1,135 @@
+/*
+ * MiniNode App Kit: the shared look of every hosted app.
+ * Spec and component catalogue: docs/ai/DESIGN-SYSTEM.md.
+ */
+
+:root {
+  --mn-bg: #f3f4f1;
+  --mn-surface: #ffffff;
+  --mn-surface-2: #eceee9;
+  --mn-ink: #15191c;
+  --mn-muted: #5b646c;
+  --mn-line: #dde1db;
+  --mn-line-strong: #7e8882;
+  --mn-scrim: rgba(10, 14, 12, 0.5);
+  --mn-shadow: 0 1px 2px rgba(20, 30, 25, 0.06), 0 4px 16px rgba(20, 30, 25, 0.06);
+  --mn-shadow-lg: 0 12px 48px rgba(10, 20, 15, 0.22);
+
+  --mn-accent: #1c6a4f;
+  --mn-accent-ink: #ffffff;
+  --mn-accent-soft: #e0ede6;
+  --mn-accent-text: #175a43;
+
+  --mn-ok: #1f7a3a;
+  --mn-ok-soft: #e2f1e6;
+  --mn-warn: #7a5600;
+  --mn-warn-soft: #f6ecd2;
+  --mn-bad: #b42318;
+  --mn-bad-soft: #f9e3e1;
+
+  --mn-font-display: "Plus Jakarta Sans", "Bricolage Grotesque", system-ui, sans-serif;
+  --mn-font-text: "Plus Jakarta Sans", "Instrument Sans", system-ui, sans-serif;
+  --mn-font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --mn-fs-xs: 12px;
+  --mn-fs-sm: 14px;
+  --mn-fs-md: 16px;
+  --mn-fs-lg: 18px;
+  --mn-fs-xl: 22px;
+  --mn-fs-2xl: 28px;
+  --mn-fs-3xl: 34px;
+
+  --mn-s1: 4px;
+  --mn-s2: 8px;
+  --mn-s3: 12px;
+  --mn-s4: 16px;
+  --mn-s5: 20px;
+  --mn-s6: 24px;
+  --mn-s8: 32px;
+  --mn-s10: 40px;
+  --mn-r-sm: 8px;
+  --mn-r-md: 12px;
+  --mn-r-lg: 16px;
+  --mn-r-xl: 20px;
+  --mn-tap: 44px;
+  --mn-gutter: 16px;
+  --mn-content: 1080px;
+  --mn-nav-w: 256px;
+  --mn-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --mn-bg: #0e1113;
+    --mn-surface: #171b1e;
+    --mn-surface-2: #1f2427;
+    --mn-ink: #eceff1;
+    --mn-muted: #9ba4ab;
+    --mn-line: #2a3034;
+    --mn-line-strong: #6b757c;
+    --mn-scrim: rgba(0, 0, 0, 0.62);
+    --mn-shadow: none;
+    --mn-shadow-lg: 0 12px 48px rgba(0, 0, 0, 0.5);
+    --mn-accent: #5cc49a;
+    --mn-accent-ink: #0b1a14;
+    --mn-accent-soft: #173229;
+    --mn-accent-text: #7fd6b1;
+    --mn-ok: #6fcf8c;
+    --mn-ok-soft: #16301f;
+    --mn-warn: #e3c35a;
+    --mn-warn-soft: #33290f;
+    --mn-bad: #f97066;
+    --mn-bad-soft: #3a1a17;
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --mn-bg: #0e1113;
+  --mn-surface: #171b1e;
+  --mn-surface-2: #1f2427;
+  --mn-ink: #eceff1;
+  --mn-muted: #9ba4ab;
+  --mn-line: #2a3034;
+  --mn-line-strong: #6b757c;
+  --mn-scrim: rgba(0, 0, 0, 0.62);
+  --mn-shadow: none;
+  --mn-shadow-lg: 0 12px 48px rgba(0, 0, 0, 0.5);
+  --mn-accent: #5cc49a;
+  --mn-accent-ink: #0b1a14;
+  --mn-accent-soft: #173229;
+  --mn-accent-text: #7fd6b1;
+  --mn-ok: #6fcf8c;
+  --mn-ok-soft: #16301f;
+  --mn-warn: #e3c35a;
+  --mn-warn-soft: #33290f;
+  --mn-bad: #f97066;
+  --mn-bad-soft: #3a1a17;
+  color-scheme: dark;
+}
+
+.mn-toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(84px + env(safe-area-inset-bottom, 0px));
+  transform: translate(-50%, 20px);
+  background: var(--mn-ink);
+  color: var(--mn-bg);
+  padding: var(--mn-s3) var(--mn-s4);
+  border-radius: var(--mn-r-md);
+  font-size: var(--mn-fs-sm);
+  font-weight: 600;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 0.2s,
+    transform 0.2s;
+  z-index: 80;
+  max-width: calc(100% - 40px);
+  box-shadow: var(--mn-shadow-lg);
+}
+.mn-toast.show {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
