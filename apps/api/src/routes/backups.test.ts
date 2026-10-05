@@ -38,9 +38,11 @@ interface Seen {
 }
 let seen: Seen[] = [];
 let github: (url: string) => Response;
+let auditStatus = 201;
 
 beforeEach(() => {
   seen = [];
+  auditStatus = 201;
   vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
     const url = String(input instanceof Request ? input.url : input);
     seen.push({
@@ -50,7 +52,7 @@ beforeEach(() => {
       ...(init?.redirect ? { redirect: init.redirect } : {}),
     });
     if (url.startsWith('https://api.github.com/')) return github(url);
-    return new Response(null, { status: 201 }); // the audit insert
+    return new Response(null, { status: auditStatus }); // the audit insert
   });
 });
 
@@ -134,19 +136,22 @@ describe('GET /admin/backups', () => {
               },
             ],
           })
-        : Response.json({
-            artifacts: [
-              {
-                id: 70,
-                name: 'mininode-backup-20261005-080000',
-                size_in_bytes: 5000,
-                expired: false,
-                expires_at: '2026-11-04T08:00:00Z',
-                created_at: '2026-10-05T08:05:00Z',
-                workflow_run: { id: 7 },
-              },
-            ],
-          });
+        : // Per run, not the repository's list (which CI fills with its own reports).
+          url.endsWith('/actions/runs/7/artifacts')
+          ? Response.json({
+              artifacts: [
+                {
+                  id: 70,
+                  name: 'mininode-backup-20261005-080000',
+                  size_in_bytes: 5000,
+                  expired: false,
+                  expires_at: '2026-11-04T08:00:00Z',
+                  created_at: '2026-10-05T08:05:00Z',
+                  workflow_run: { id: 7 },
+                },
+              ],
+            })
+          : new Response(null, { status: 500 });
     const body = (await (await call('/admin/backups')).json()) as {
       configured: boolean;
       runs: { state: string; artifact: { id: number } | null }[];
@@ -197,15 +202,46 @@ describe('POST /admin/backups/:id/download', () => {
         ? artifact('mininode-backup-20261005-080000')
         : new Response(null, {
             status: 302,
-            headers: { Location: 'https://blob.example/zip?sig=1' },
+            headers: { Location: 'https://productionresultssa1.blob.core.windows.net/zip?sig=1' },
           });
     const response = await download('70');
     expect(await response.json()).toEqual({
-      url: 'https://blob.example/zip?sig=1',
+      url: 'https://productionresultssa1.blob.core.windows.net/zip?sig=1',
       name: 'mininode-backup-20261005-080000.zip',
     });
     // The redirect is read, not followed: the ZIP never passes through the Worker.
     expect(seen.find((s) => s.url.endsWith('/zip'))?.redirect).toBe('manual');
+  });
+
+  it('does not hand out an address outside GitHub or an unlogged download', async () => {
+    signedIn('admin');
+    github = (url) =>
+      url.endsWith('/artifacts/70')
+        ? artifact('mininode-backup-20261005-080000')
+        : new Response(null, { status: 302, headers: { Location: 'https://evil.example/zip' } });
+    expect((await download('70')).status).toBe(502);
+    github = (url) =>
+      url.endsWith('/artifacts/70')
+        ? artifact('mininode-backup-20261005-080000')
+        : new Response(null, {
+            status: 302,
+            headers: { Location: 'http://x.blob.core.windows.net/z' },
+          });
+    expect((await download('70')).status).toBe(502);
+  });
+
+  it('hands out nothing when the download cannot be logged', async () => {
+    signedIn('admin');
+    auditStatus = 500;
+    github = (url) =>
+      url.endsWith('/artifacts/70')
+        ? artifact('mininode-backup-20261005-080000')
+        : new Response(null, {
+            status: 302,
+            headers: { Location: 'https://x.blob.core.windows.net/z' },
+          });
+    expect((await download('70')).status).toBe(500);
+    expect(seen.some((s) => s.url.endsWith('/zip'))).toBe(false);
   });
 
   it('refuses artifacts that are not backups, expired ones and bad ids', async () => {

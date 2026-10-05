@@ -14,7 +14,6 @@ import {
   type BackupBucket,
   type BackupFile,
   type BackupManifest,
-  encodeObjectPath,
   MANIFEST_FILE,
   sha256File,
 } from './manifest.ts';
@@ -55,7 +54,7 @@ export const READABLE_SETTINGS = [
 ];
 
 /** Columns that hold keys or hashes stay out of the readable copies (the dump has them all). */
-export const SECRET_COLUMN = /(_enc$|cipher|secret|token|hash|password|key_value)/i;
+export const SECRET_COLUMN = /(_enc$|cipher|secret|token|hash|password|key_value|api_?key|_key$)/i;
 
 export function readableRow(row: Record<string, unknown>): Record<string, unknown> {
   return Object.fromEntries(Object.entries(row).filter(([name]) => !SECRET_COLUMN.test(name)));
@@ -71,8 +70,8 @@ This folder holds the data of the platform. It is not usable on its own: restore
   database/data.dump     all rows of platform, the app schemas and the sign-in accounts
                          (password hashes included), PostgreSQL custom format, data only
   database/tables.json   which tables and how many rows
-  storage/               the files of the apps (storage/files/<bucket>/<path>, names
-                         percent-encoded) and the bucket settings (buckets.json, objects.json)
+  storage/               the files of the apps (storage/files/<bucket>/<number>.<ext>) and
+                         the bucket settings; objects.json says which file is which object
   settings/              readable copies of the hosting settings and the list of accounts;
                          keys and hashes are left out there
   manifest.json          what is inside, with a SHA-256 checksum for every file
@@ -104,102 +103,116 @@ export async function createBackup(options: CreateOptions): Promise<BackupManife
   const sql = postgres(options.databaseUrl, { max: 1, onnotice: () => {} });
   let manifest: Omit<BackupManifest, 'files'>;
   try {
-    const [{ version = '', number = 170000 } = {}] = await sql<
-      { version: string; number: number }[]
-    >`
-      select current_setting('server_version') as version,
-             current_setting('server_version_num')::int as number`;
-    const major = Math.floor(number / 10000);
+    // One snapshot for the counts, the readable copies and pg_dump (it joins through
+    // pg_export_snapshot), so the manifest describes exactly what the dump holds even while the
+    // platform is being used. The transaction stays open until the dump is done.
+    manifest = await sql.begin('isolation level repeatable read read only', async (tx) => {
+      const [snapshot] = await tx<{ id: string }[]>`select pg_export_snapshot() as id`;
+      const [{ version = '', number = 170000 } = {}] = await tx<
+        { version: string; number: number }[]
+      >`
+        select current_setting('server_version') as version,
+               current_setting('server_version_num')::int as number`;
+      const major = Math.floor(number / 10000);
 
-    const tableRows = await sql<{ schema: string; table: string }[]>`
-      select schemaname as schema, tablename as "table"
-      from pg_tables
-      where schemaname = 'platform'
-         or schemaname like 'app\_%'
-         or (schemaname = 'auth' and tablename = any(${AUTH_TABLES}))
-      order by schemaname, tablename`;
-    const tables: BackupManifest['database']['tables'] = [];
-    for (const { schema, table } of tableRows) {
-      const [{ n } = { n: 0 }] = await sql<{ n: number }[]>`
-        select count(*)::int as n from ${sql(`${schema}.${table}`)}`;
-      tables.push({ schema, table, rows: n });
-    }
-    const schemas = [...new Set(tables.map((t) => t.schema))];
+      const tableRows = await tx<{ schema: string; table: string }[]>`
+        select schemaname as schema, tablename as "table"
+        from pg_tables
+        where schemaname = 'platform'
+           or schemaname like 'app\_%'
+           or (schemaname = 'auth' and tablename = any(${AUTH_TABLES}))
+        order by schemaname, tablename`;
+      const tables: BackupManifest['database']['tables'] = [];
+      for (const { schema, table } of tableRows) {
+        const [{ n } = { n: 0 }] = await tx<{ n: number }[]>`
+          select count(*)::int as n from ${tx(schema)}.${tx(table)}`;
+        tables.push({ schema, table, rows: n });
+      }
+      const schemas = [...new Set(tables.map((t) => t.schema))];
 
-    const migrations = await sql<{ version: string }[]>`
-      select version from supabase_migrations.schema_migrations order by version`.catch(() => []);
+      // Checked first: a missing table would abort the transaction.
+      const [{ present = false } = {}] = await tx<{ present: boolean }[]>`
+        select to_regclass('supabase_migrations.schema_migrations') is not null as present`;
+      const migrations = present
+        ? await tx<{ version: string }[]>`
+            select version from supabase_migrations.schema_migrations order by version`
+        : [];
 
-    log(
-      `database: ${tables.length} tables in ${schemas.length} schemas, ${tables.reduce((n, t) => n + t.rows, 0)} rows`,
-    );
-
-    // The dump: data only. The structure (tables, policies, grants) is the migrations' business
-    // and stays exactly as they define it, so a restore cannot loosen any rule.
-    const runner = pickRunner(options.databaseUrl, major);
-    log(`pg_dump (${runner.kind})`);
-    const dump = runner.start(
-      'pg_dump',
-      [
-        '--format=custom',
-        '--data-only',
-        '--no-owner',
-        '--no-privileges',
-        '--table=platform.*',
-        '--table=app_*.*',
-        ...AUTH_TABLES.map((table) => `--table=auth.${table}`),
-      ],
-      { stdout: true },
-    );
-    if (!dump.stdout) throw new Error('pg_dump has no output');
-    const written = pipeline(dump.stdout, createWriteStream(join(out, 'database', 'data.dump')));
-    await Promise.all([finished(dump, 'pg_dump'), written]);
-    writeFileSync(join(out, 'database', 'tables.json'), `${JSON.stringify(tables, null, 2)}\n`);
-
-    // Readable settings (without keys and hashes) and the list of accounts.
-    for (const table of READABLE_SETTINGS) {
-      if (!tables.some((t) => t.schema === 'platform' && t.table === table)) continue;
-      const rows = await sql<Record<string, unknown>[]>`
-        select to_jsonb(t) as row from ${sql(`platform.${table}`)} t`.then((all) =>
-        all.map((r) => readableRow(r.row as Record<string, unknown>)),
+      log(
+        `database: ${tables.length} tables in ${schemas.length} schemas, ${tables.reduce((n, t) => n + t.rows, 0)} rows`,
       );
+
+      // The dump: data only. The structure (tables, policies, grants) is the migrations' business
+      // and stays exactly as they define it, so a restore cannot loosen any rule.
+      const runner = pickRunner(options.databaseUrl, major);
+      log(`pg_dump (${runner.kind})`);
+      const dump = runner.start(
+        'pg_dump',
+        [
+          '--format=custom',
+          '--data-only',
+          '--no-owner',
+          '--no-privileges',
+          `--snapshot=${snapshot?.id ?? ''}`,
+          '--table=platform.*',
+          '--table=app_*.*',
+          ...AUTH_TABLES.map((table) => `--table=auth.${table}`),
+        ],
+        { stdout: true },
+      );
+      if (!dump.stdout) throw new Error('pg_dump has no output');
+      const written = pipeline(dump.stdout, createWriteStream(join(out, 'database', 'data.dump')));
+      await Promise.all([finished(dump, 'pg_dump'), written]);
+      writeFileSync(join(out, 'database', 'tables.json'), `${JSON.stringify(tables, null, 2)}\n`);
+
+      // Readable settings (without keys and hashes) and the list of accounts.
+      for (const table of READABLE_SETTINGS) {
+        if (!tables.some((t) => t.schema === 'platform' && t.table === table)) continue;
+        const rows = await tx<{ row: Record<string, unknown> }[]>`
+          select to_jsonb(t) as row from platform.${tx(table)} t`;
+        writeFileSync(
+          join(out, 'settings', `platform.${table}.json`),
+          `${JSON.stringify(
+            rows.map((r) => readableRow(r.row)),
+            null,
+            2,
+          )}\n`,
+        );
+      }
+      const users = await tx`
+        select id, email, phone, created_at, last_sign_in_at, email_confirmed_at, banned_until,
+               raw_app_meta_data, raw_user_meta_data
+        from auth.users order by created_at`;
+      writeFileSync(join(out, 'settings', 'accounts.json'), `${JSON.stringify(users, null, 2)}\n`);
       writeFileSync(
-        join(out, 'settings', `platform.${table}.json`),
-        `${JSON.stringify(rows, null, 2)}\n`,
+        join(out, 'settings', 'deployment.json'),
+        `${JSON.stringify(
+          {
+            createdAt: new Date().toISOString(),
+            commit: options.commit ?? null,
+            supabaseUrl: options.supabaseUrl,
+            serverVersion: version,
+            migrations: migrations.length,
+            note: 'Worker secrets and GitHub secrets are not part of a backup; see docs/runbooks/backups.md.',
+          },
+          null,
+          2,
+        )}\n`,
       );
-    }
-    const users = await sql`
-      select id, email, phone, created_at, last_sign_in_at, email_confirmed_at, banned_until,
-             raw_app_meta_data, raw_user_meta_data
-      from auth.users order by created_at`;
-    writeFileSync(join(out, 'settings', 'accounts.json'), `${JSON.stringify(users, null, 2)}\n`);
-    writeFileSync(
-      join(out, 'settings', 'deployment.json'),
-      `${JSON.stringify(
-        {
-          createdAt: new Date().toISOString(),
-          commit: options.commit ?? null,
-          supabaseUrl: options.supabaseUrl,
-          serverVersion: version,
-          migrations: migrations.length,
-          note: 'Worker secrets and GitHub secrets are not part of a backup; see docs/runbooks/backups.md.',
-        },
-        null,
-        2,
-      )}\n`,
-    );
 
-    manifest = {
-      format: BACKUP_FORMAT,
-      createdAt: new Date().toISOString(),
-      commit: options.commit ?? null,
-      database: {
-        serverVersion: version,
-        migrations: migrations.map((row) => row.version),
-        schemas,
-        tables,
-      },
-      storage: { included: files, buckets: [] },
-    };
+      return {
+        format: BACKUP_FORMAT,
+        createdAt: new Date().toISOString(),
+        commit: options.commit ?? null,
+        database: {
+          serverVersion: version,
+          migrations: migrations.map((row) => row.version),
+          schemas,
+          tables,
+        },
+        storage: { included: files, buckets: [] },
+      };
+    });
   } finally {
     await sql.end();
   }
@@ -227,9 +240,12 @@ export async function createBackup(options: CreateOptions): Promise<BackupManife
       skippedNames.push(`${object.bucket}/${object.name}`);
       continue;
     }
+    // The name on disk is only a number (and the extension): object names can be long, contain
+    // anything and collide on case-insensitive systems. objects.json maps it to the real name.
+    const extension = /\.[A-Za-z0-9]{1,8}$/.exec(object.name)?.[0] ?? '';
     copy.push({
       ...object,
-      file: `storage/files/${object.bucket}/${encodeObjectPath(object.name)}`,
+      file: `storage/files/${object.bucket}/${String(copy.length + 1).padStart(8, '0')}${extension.toLowerCase()}`,
     });
   }
   log(`storage: ${bucketInfo.length} buckets, ${copy.length} files`);

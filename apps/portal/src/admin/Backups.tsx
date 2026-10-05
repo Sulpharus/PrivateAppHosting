@@ -23,6 +23,7 @@ export function Backups() {
   const [list, setList] = useState<BackupList | null>(null);
   const [files, setFiles] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [downloading, setDownloading] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -64,8 +65,9 @@ export function Backups() {
   };
 
   const download = async (row: BackupRow) => {
-    if (!row.artifact) return;
+    if (!row.artifact || downloading !== null) return;
     setError(null);
+    setDownloading(row.runId);
     try {
       const { url } = await run(() =>
         api<{ url: string }>(`/admin/backups/${row.artifact?.id}/download`, { method: 'POST' }),
@@ -74,6 +76,8 @@ export function Backups() {
       window.location.assign(url);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Der Download hat nicht geklappt.');
+    } finally {
+      setDownloading(null);
     }
   };
 
@@ -167,6 +171,7 @@ export function Backups() {
                 <button
                   type="button"
                   className="button small primary"
+                  disabled={downloading !== null}
                   onClick={() => void download(row)}
                 >
                   Herunterladen

@@ -60,30 +60,3 @@ export function sha256File(path: string): Promise<{ sha256: string; bytes: numbe
       .on('end', () => resolve({ sha256: hash.digest('hex'), bytes }));
   });
 }
-
-/**
- * Object names are free text (spaces, `:`, `?`, unicode). On disk every path segment is
- * percent-encoded, so the folder opens on Windows too and the original name comes back exactly.
- */
-export function encodeObjectPath(name: string): string {
-  return name
-    .split('/')
-    .map((segment) => {
-      const encoded = encodeURIComponent(segment).replace(
-        /[!'()*]/g,
-        (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`,
-      );
-      // "." and ".." would walk out of the folder; a trailing dot or space is not allowed on Windows.
-      return encoded === '.' || encoded === '..' || /[. ]$/.test(encoded)
-        ? encoded.replace(/[. ]$/, (c) => (c === '.' ? '%2E' : '%20'))
-        : encoded;
-    })
-    .join('/');
-}
-
-export function decodeObjectPath(path: string): string {
-  return path
-    .split('/')
-    .map((segment) => decodeURIComponent(segment))
-    .join('/');
-}

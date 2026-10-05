@@ -16,8 +16,12 @@ const url = process.env.SUPABASE_URL;
 const publishable = process.env.SUPABASE_PUBLISHABLE_KEY;
 const secret = process.env.SUPABASE_SECRET_KEY;
 const databaseUrl = process.env.SUPABASE_DB_URL;
+// Only ever against a database on this machine: the restore empties it.
+const local = ['127.0.0.1', 'localhost', '[::1]'].includes(
+  new URL(databaseUrl ?? 'x://none').hostname,
+);
 const enabled = Boolean(
-  url && publishable && secret && databaseUrl && process.env.MININODE_ALLOW_DB_WIPE,
+  local && url && publishable && secret && databaseUrl && process.env.MININODE_ALLOW_DB_WIPE,
 );
 
 describe.skipIf(!enabled)('backup and restore', () => {

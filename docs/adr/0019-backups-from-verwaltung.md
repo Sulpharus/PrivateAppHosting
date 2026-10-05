@@ -21,7 +21,8 @@ all users, the stored files, the hosting settings), keep it themselves and resto
     and the sign-in accounts (`auth.users`, `identities`, `mfa_factors`, `webauthn_credentials`:
     password hashes and passkeys come back, so nobody has to reset anything). Sessions, tokens and
     the sign-in service's own bookkeeping are left out.
-  - `storage/`: bucket settings and every file (`files/<bucket>/<path>`, names percent-encoded).
+  - `storage/`: bucket settings and every file (`files/<bucket>/<number>.<ext>`; `objects.json`
+    maps each file to its real bucket and name, so long or odd names cannot break the folder).
   - `settings/`: readable JSON of the hosting settings (apps, grants, categories, API services,
     budgets, profiles) without keys or hashes, the list of accounts, the deployment facts.
   - `manifest.json`: tables with row counts, applied migrations, commit, a SHA-256 for every file.
@@ -38,10 +39,16 @@ all users, the stored files, the hosting settings), keep it themselves and resto
   goes from GitHub to the browser, not through the Worker. Only artifacts named `mininode-backup-*`
   are offered.
 - **Restore** is a command on the owner's computer, not a button (`mininode backup restore`,
-  runbook `backups.md`). Without `--yes` it only prints the plan. It refuses a damaged folder
-  (checksums), a target that lacks migrations or tables, and checks the row counts afterwards. The
-  database part runs in one transaction with triggers off (`session_replication_role = replica`),
-  so a failure changes nothing; files are uploaded again with upsert.
+  runbook `backups.md`). Without `--yes` it only prints the plan, including the target database
+  and every table outside the backup that the cascading `truncate` would also empty. It refuses a
+  damaged folder (checksums) and a target that lacks tables; it also refuses a target that lacks
+  migrations or whose truncate would reach tables outside the backup and the sign-in service's own
+  bookkeeping (both only with `--force`). For a database that is not on this machine `--yes` needs
+  `--confirm <host>`. The database part runs in one transaction with triggers off
+  (`session_replication_role = replica`), after a check that the role may do that; it is committed
+  only when `pg_restore` ended cleanly **and** every table holds the backup's row count, otherwise
+  it is rolled back, so a failure changes nothing. Files are uploaded again with upsert (after the
+  database part).
 - **Not included**, on purpose: secrets of the Workers and GitHub (they cannot be read back and do
   not belong in an archive), the code of the apps (git), the NucBox and Windows VM (restic and
   Proxmox, `restore.md`).
@@ -53,8 +60,11 @@ all users, the stored files, the hosting settings), keep it themselves and resto
 - The artifact quota of the GitHub plan limits how many archives fit; the page shows the size, the
   owner downloads and keeps them elsewhere. A copy into R2 (`mininode-backups`) or a schedule is a
   small addition when wanted.
-- Created while the platform runs: the database part is one consistent snapshot, the files are
-  copied right after it, so a file written in between can be newer than the rows.
+- Created while the platform runs: the row counts, the readable settings and `pg_dump` share one
+  snapshot (`pg_export_snapshot`), so the manifest matches the dump. The files are copied right
+  after it, so a file written in between can be newer than the rows.
+- The workflow's `main` check sits in the file itself; what really protects the secrets is the
+  deployment-branch rule of the environment `production` (runbook, setup step 4).
 - Restoring into the hosted Supabase project depends on the `postgres` role being allowed to
   truncate the `auth` tables and set `session_replication_role`; verified locally only. A restore
   drill into a staging project belongs in the runbook for that reason.

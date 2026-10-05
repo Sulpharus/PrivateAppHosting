@@ -32,8 +32,9 @@ const USAGE = `mininode <command>
   submission status <id> <status> [--result file] [--report file] [--pr url] [--review url] [--run url] [--only-if-pr url]
   backup create --out <dir> [--no-files]   Copy the database and the stored files into a folder
   backup verify <dir>               Check a backup folder against its checksums
-  backup restore <dir> [--yes] [--no-database] [--no-storage] [--force]
-                                    Put a backup back (without --yes: show what would change)
+  backup restore <dir> [--yes] [--confirm <db host>] [--no-database] [--no-storage] [--force]
+                                    Put a backup back (without --yes: show what would change;
+                                    a remote database also needs --confirm <its host>)
   library check <entry> <slug>      App-Bibliothek: check an install before the rollout
   library install <entry> <slug>    App-Bibliothek: register an installed program
   library remove <slug> <entry>     App-Bibliothek: disable a removed program
@@ -202,15 +203,20 @@ async function main(args: string[]): Promise<number> {
           database: !args.includes('--no-database'),
           storage: !args.includes('--no-storage'),
           force: args.includes('--force'),
+          ...(flag(args, '--confirm') ? { confirm: flag(args, '--confirm') as string } : {}),
           yes,
           log: (message) => console.log(message),
         });
         if (!yes) {
+          if (plan.target)
+            console.log(`Target database: ${plan.target.host} / ${plan.target.database}`);
           console.log('Nothing was changed. A restore would replace the rows of these tables:');
           for (const t of plan.tables)
             console.log(
               `  ${t.schema}.${t.table}: ${t.target ?? '?'} now, ${t.backup} in the backup`,
             );
+          if (plan.dependents.length > 0)
+            console.log(`and empty these tables that refer to them: ${plan.dependents.join(', ')}`);
           console.log(`and upload ${plan.objects} files into ${plan.buckets} buckets.`);
           console.log('Run again with --yes to do it.');
         } else console.log('restore done');

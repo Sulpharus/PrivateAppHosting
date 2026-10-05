@@ -4,35 +4,10 @@ import { join } from 'node:path';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { afterEach, describe, expect, it } from 'vitest';
 import { readableRow } from './create.ts';
-import {
-  BACKUP_FORMAT,
-  type BackupManifest,
-  decodeObjectPath,
-  encodeObjectPath,
-  sha256File,
-} from './manifest.ts';
+import { BACKUP_FORMAT, type BackupManifest, sha256File } from './manifest.ts';
 import { connectionEnv } from './pg.ts';
 import { inParallel, listObjects } from './storage.ts';
 import { verifyBackup } from './verify.ts';
-
-describe('object paths on disk', () => {
-  it('round-trips awkward names and keeps folders', () => {
-    for (const name of [
-      'app/user-1/photo one.jpg',
-      'a/b:c?d*e.txt',
-      'dots/../x',
-      'ünï/ß.txt',
-      'trailing./dot',
-      '100%/real',
-    ]) {
-      const encoded = encodeObjectPath(name);
-      expect(encoded).not.toMatch(/[:?*<>|"\\]/);
-      expect(encoded.split('/').every((s) => s !== '.' && s !== '..')).toBe(true);
-      expect(decodeObjectPath(encoded)).toBe(name);
-    }
-    expect(encodeObjectPath('a/b c.jpg')).toBe('a/b%20c.jpg');
-  });
-});
 
 describe('readable settings', () => {
   it('leave out keys and hashes', () => {
@@ -46,6 +21,10 @@ describe('readable settings', () => {
         refresh_token: 't',
       }),
     ).toEqual({ id: 'openai', name: 'OpenAI', key_hint: '1234' });
+    expect(readableRow({ id: 'x', api_key: 'k', service_key: 'k', key_hint: 'abcd' })).toEqual({
+      id: 'x',
+      key_hint: 'abcd',
+    });
   });
 });
 

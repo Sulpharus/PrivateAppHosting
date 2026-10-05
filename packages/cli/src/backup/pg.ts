@@ -17,7 +17,7 @@ export interface Connection {
 export function connectionEnv(databaseUrl: string): Record<string, string> {
   const url = new URL(databaseUrl);
   const env: Record<string, string> = {
-    PGHOST: url.hostname,
+    PGHOST: url.hostname.replace(/^\[|\]$/g, ''),
     PGPORT: url.port || '5432',
     PGUSER: decodeURIComponent(url.username),
     PGPASSWORD: decodeURIComponent(url.password),
@@ -29,7 +29,7 @@ export function connectionEnv(databaseUrl: string): Record<string, string> {
   return env;
 }
 
-const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '::1', '[::1]']);
+export const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '::1']);
 
 function localMajor(tool: PgTool): number | null {
   const probe = spawnSync(tool, ['--version'], { encoding: 'utf8' });

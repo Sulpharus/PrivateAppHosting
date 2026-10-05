@@ -84,31 +84,42 @@ export function joinRuns(runs: GithubRun[], artifacts: GithubArtifact[]): Backup
     .sort((a, b) => b.startedAt.localeCompare(a.startedAt));
 }
 
+/** Writes the audit row; false when it could not be written. */
 async function audit(
   c: Context<AppContext>,
   action: string,
   detail: Record<string, unknown>,
-): Promise<void> {
+): Promise<boolean> {
   const { error } = await adminClient(c.env)
     .schema('platform')
     .from('audit_log')
     .insert({ actor_id: c.get('claims').sub, action, detail });
-  // The action already happened; a missing audit row must not turn that into an error.
   if (error) console.error(`audit of ${action} failed: ${error.message}`);
+  return !error;
 }
 
 backups.get('/admin/backups', requireUser({ role: 'admin' }), async (c) => {
   if (!c.env.GITHUB_DISPATCH_TOKEN) return c.json({ configured: false, runs: [] });
-  const [runs, artifacts] = await Promise.all([
-    githubGet<{ workflow_runs: GithubRun[] }>(
-      c.env,
-      `/actions/workflows/${BACKUP_WORKFLOW}/runs?per_page=15`,
-    ),
-    githubGet<{ artifacts: GithubArtifact[] }>(c.env, '/actions/artifacts?per_page=100'),
-  ]);
+  const runs = await githubGet<{ workflow_runs: GithubRun[] }>(
+    c.env,
+    `/actions/workflows/${BACKUP_WORKFLOW}/runs?per_page=15`,
+  );
   if (runs instanceof Response) return runs;
-  if (artifacts instanceof Response) return artifacts;
-  return c.json({ configured: true, runs: joinRuns(runs.workflow_runs, artifacts.artifacts) });
+  // The archives of each finished run, asked for by run: the repository's artifact list is shared
+  // with every CI run (Playwright reports), so older backups would fall off its first page.
+  const perRun = await Promise.all(
+    runs.workflow_runs
+      .filter((run) => run.status === 'completed' && run.conclusion === 'success')
+      .map((run) =>
+        githubGet<{ artifacts: GithubArtifact[] }>(c.env, `/actions/runs/${run.id}/artifacts`),
+      ),
+  );
+  const failed = perRun.find((result) => result instanceof Response);
+  if (failed instanceof Response) return failed;
+  const artifacts = perRun.flatMap((result) =>
+    result instanceof Response ? [] : result.artifacts,
+  );
+  return c.json({ configured: true, runs: joinRuns(runs.workflow_runs, artifacts) });
 });
 
 const startSchema = z.object({ files: z.boolean() }).strict();
@@ -120,6 +131,7 @@ backups.post('/admin/backups', requireUser({ role: 'admin', recentAuth: 600 }), 
     files: String(parsed.data.files),
   });
   if (started instanceof Response) return started;
+  // The backup already runs; a missing audit row must not turn that into an error.
   await audit(c, 'backup.started', { files: parsed.data.files });
   return c.json({ started: true, runs: started.runs }, 202);
 });
@@ -128,7 +140,7 @@ backups.post(
   '/admin/backups/:artifact/download',
   requireUser({ role: 'admin', recentAuth: 300 }),
   async (c) => {
-    const id = z.coerce.number().int().positive().safeParse(c.req.param('artifact'));
+    const id = z.coerce.number().int().safe().positive().safeParse(c.req.param('artifact'));
     if (!id.success) return problem(404, 'not_found', 'Diese Sicherung gibt es nicht.');
     // Only archives of the backup workflow: the repository has other artifacts too.
     const artifact = await githubGet<GithubArtifact>(c.env, `/actions/artifacts/${id.data}`, {
@@ -138,9 +150,11 @@ backups.post(
     if (!artifact.name.startsWith(ARTIFACT_PREFIX))
       return problem(404, 'not_found', 'Diese Sicherung gibt es nicht.');
     if (artifact.expired) return problem(410, 'expired', 'Diese Sicherung ist abgelaufen.');
+    // Recorded before the address is issued: no download without a trace.
+    if (!(await audit(c, 'backup.downloaded', { artifact: artifact.name })))
+      return problem(500, 'audit_failed', 'Der Download konnte nicht protokolliert werden.');
     const url = await artifactDownloadUrl(c.env, id.data);
     if (url instanceof Response) return url;
-    await audit(c, 'backup.downloaded', { artifact: artifact.name });
     return c.json({ url, name: `${artifact.name}.zip` });
   },
 );

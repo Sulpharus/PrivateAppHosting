@@ -147,5 +147,15 @@ export async function artifactDownloadUrl(
       `GitHub gibt die Sicherung nicht heraus (${response.status}): ${refusalHint(response.status)}`,
     );
   }
-  return location;
+  // Only GitHub's own storage: the browser is sent to this address.
+  let target: URL;
+  try {
+    target = new URL(location);
+  } catch {
+    return problem(502, 'github_error', 'GitHub hat eine ungültige Adresse geliefert.');
+  }
+  const trusted = ['.githubusercontent.com', '.blob.core.windows.net', '.github.com'];
+  if (target.protocol !== 'https:' || !trusted.some((suffix) => target.hostname.endsWith(suffix)))
+    return problem(502, 'github_error', 'GitHub hat eine unerwartete Adresse geliefert.');
+  return target.toString();
 }
