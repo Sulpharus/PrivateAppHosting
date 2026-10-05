@@ -18,6 +18,9 @@ MiniNode app or a screenshot). Keep what works, move the rest onto the platform:
   import for the old data (JSON or CSV, see the import/export module), run once from settings.
 - Replace the old layout with the App Kit shell and components; keep the owner's wording for
   labels and categories.
+- Move every text for people into the German and English language packages while you rebuild
+  (`i18n/de.json`, `i18n/en.json`, `data-i18n` and `mnI18n.t()`, see the language package guide);
+  keep the owner's German wording as the German text.
 - Remove everything the platform provides: own login screens, API keys, backend calls to other
   services, CDN scripts, analytics.
 - List at the end what changed, what was dropped and why, and how to import the old data.

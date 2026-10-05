@@ -28,6 +28,18 @@ Jede App liefert zwei Dateien: `i18n/de.json` und `i18n/en.json` (bei Build-Apps
 Neue Apps müssen beide Pakete mitbringen; die Spezifikation und die [KI-Werkstatt](wiki:ki-werkstatt) verlangen es. Ausführlich:
 `docs/ai/LANGUAGE-PACKAGES.md`.
 
+## Sprachpakete nachträglich einbauen
+
+Eine App ohne Pakete (ältere App, Export, Upload) bekommt sie mit einem fertigen Auftrag: Verwaltung → KI-Werkstatt → Dateien → **Prompt: Sprachpakete nachrüsten**
+(`docs/ai/RETROFIT-LANGUAGE.md` plus die ganze Anleitung). So gehst du vor:
+
+1. Prompt kopieren und in die KI einfügen (Claude, AI Studio oder Claude Code im Repository).
+2. Den Code der App anhängen oder einfügen (oder in Claude Code den Ordner `hosted/<name>` nennen).
+3. Die KI liefert `i18n/de.json`, `i18n/en.json`, die angepassten Dateien und eine Liste unsicherer Stellen. Sie ändert sonst nichts.
+4. Einspielen (als Pull Request) und `pnpm mininode doctor hosted/<name>` ausführen: keine `i18n-*`-Meldung mehr; die App einmal auf Deutsch und Englisch durchklicken.
+
+Ohne Pakete meldet `doctor` die Warnung `i18n-missing`; die App läuft trotzdem, bleibt aber Deutsch.
+
 ## Deutsche Formate
 
 Zahlen, Daten und Sortierung folgen der Sprache (`mnI18n.locale` = `de-DE` oder `en-GB`). Die deutschen Regeln:

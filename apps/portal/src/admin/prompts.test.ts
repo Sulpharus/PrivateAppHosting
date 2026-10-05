@@ -8,6 +8,7 @@ import {
   type Library,
   MODULE_GROUPS,
   parsePart,
+  retrofitLanguagePrompt,
   slugify,
   sortParts,
 } from './prompts.ts';
@@ -126,5 +127,34 @@ describe('slugify', () => {
     expect(slugify('Bücherregal Plus!')).toBe('buecherregal-plus');
     expect(slugify('  Größe & Maß ')).toBe('groesse-mass');
     expect(slugify('Café')).toBe('cafe');
+  });
+});
+
+describe('language packages in the prompts', () => {
+  it('are part of every composed prompt: section, rules and checklist', () => {
+    for (const short of [false, true]) {
+      const prompt = compose({ ...brief, short }, library);
+      expect(prompt).toContain('## 5. Language packages (German and English)');
+      expect(prompt).toContain('data-i18n');
+      expect(prompt).toContain('i18n/de.json');
+      expect(prompt).toContain('`i18n` block (de, en)');
+      expect(prompt).toContain('no `i18n-*` finding');
+    }
+  });
+
+  it('come with a prompt to add them to an app that already exists', () => {
+    const prompt = retrofitLanguagePrompt(read('docs/ai/RETROFIT-LANGUAGE.md'), library.language);
+    expect(prompt).toContain('Task: add the German and English language packages');
+    // The task, the guide (all four sections) and the checks travel together.
+    for (const part of [
+      '## What to do',
+      '## Deliver',
+      '### 1. Files and manifest',
+      '### 3. Writing the texts',
+      '### 4. Check before you hand over',
+      'Platform glossary',
+    ])
+      expect(prompt).toContain(part);
+    expect(prompt).not.toMatch(/^# MiniNode language packages/m);
   });
 });

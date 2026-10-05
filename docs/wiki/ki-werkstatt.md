@@ -30,7 +30,8 @@ Alle Bausteine liegen im Repository und sind in der Werkstatt zum Kopieren oder 
 | `docs/ai/NEW-APP-SPEC.md` | Die Spezifikation: Stack, SDK, Daten, Manifest (`specVersion`) |
 | `docs/ai/NEW-APP-SPEC.short.md` | Kurzfassung, **erzeugt** (`pnpm spec:short`), nie von Hand ändern |
 | `docs/ai/DESIGN-SYSTEM.md` | App-Kit: Farben (hell/dunkel), Hülle, Komponenten, Textregeln |
-| `docs/ai/LANGUAGE-PACKAGES.md` | Zwei Sprachpakete, Stil, Glossar, Prüfungen |
+| `docs/ai/LANGUAGE-PACKAGES.md` | Zwei Sprachpakete, Stil, Glossar, Prüfungen; **steckt in jedem zusammengesetzten Prompt** (Abschnitt 5, mit Prüfpunkten in der Checkliste) |
+| `docs/ai/RETROFIT-LANGUAGE.md` | Auftrag, um **nachträglich** Sprachpakete in eine bestehende App einzubauen; in der Werkstatt als *Prompt: Sprachpakete nachrüsten* mit der ganzen Anleitung ([Sprache und Formate](wiki:sprachen-formate)) |
 | `docs/ai/prompts/types`, `prompts/modules` | App-Typen und Funktionsbausteine für den Prompt-Ersteller |
 | `docs/ai/playbooks/` | Schritt-für-Schritt-Umbau je Quelle (Claude-Artifact, AI Studio, Vite, Next.js, statisch, Server, Docker, Installer) |
 
