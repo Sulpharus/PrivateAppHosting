@@ -603,3 +603,185 @@
     display: none;
   }
 }
+
+/* ---------- map view ---------- */
+.cal-map {
+  display: grid;
+  gap: var(--mn-s4);
+}
+.cal-map-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--mn-s3) var(--mn-s4);
+}
+.cal-map-field {
+  display: grid;
+  gap: 2px;
+  font-size: var(--mn-fs-xs);
+  color: var(--mn-muted);
+}
+.cal-map-check {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mn-s2);
+  min-height: 44px;
+  font-size: var(--mn-fs-sm);
+}
+.cal-map-status {
+  min-height: 1.4em;
+  margin: 0;
+}
+.cal-map-main {
+  display: grid;
+  gap: var(--mn-s4);
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+}
+@media (min-width: 900px) {
+  .cal-map-main {
+    grid-template-columns: minmax(0, 1fr) 340px;
+  }
+}
+.cal-map-canvas {
+  height: min(70vh, 640px);
+  min-height: 320px;
+  border: 1px solid var(--mn-line);
+  border-radius: var(--mn-radius-l, 14px);
+  overflow: hidden;
+  background: var(--mn-surface-2, var(--mn-surface));
+  z-index: 0;
+}
+.cal-map-empty {
+  padding: var(--mn-s6);
+}
+.cal-map-list {
+  display: grid;
+  gap: var(--mn-s2);
+  max-height: min(70vh, 640px);
+  overflow-y: auto;
+}
+.cal-map-day {
+  margin: var(--mn-s3) 0 0;
+  font-size: var(--mn-fs-sm);
+  color: var(--mn-muted);
+  font-weight: 600;
+}
+.cal-map-home {
+  font-size: var(--mn-fs-sm);
+  color: var(--mn-muted);
+}
+.cal-map-row {
+  display: flex;
+  align-items: center;
+  gap: var(--mn-s3);
+  min-height: 48px;
+  padding: var(--mn-s2) var(--mn-s3);
+  border: 1px solid var(--mn-line);
+  border-radius: 10px;
+  background: var(--mn-surface);
+  color: var(--mn-ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.cal-map-row:hover {
+  border-color: var(--mn-muted);
+}
+.cal-map-row:focus-visible {
+  outline: 2px solid var(--mn-focus, var(--mn-cat, currentColor));
+  outline-offset: 2px;
+}
+.cal-map-row-text {
+  display: grid;
+  min-width: 0;
+}
+.cal-map-row-text span {
+  font-size: var(--mn-fs-xs);
+  color: var(--mn-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cal-map-leg {
+  padding-left: var(--mn-s5);
+  font-size: var(--mn-fs-xs);
+  color: var(--mn-muted);
+  border-left: 2px dashed var(--mn-line);
+  margin-left: 14px;
+}
+.cal-leg {
+  display: grid;
+  gap: 2px;
+}
+.cal-leg--tight .cal-leg-warn {
+  color: var(--mn-warn-text, #8a5a00);
+}
+.cal-leg--late .cal-leg-warn {
+  color: var(--mn-bad-text, #c0262d);
+}
+.cal-leg-go {
+  justify-self: start;
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+}
+.cal-pin {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50% 50% 50% 4px;
+  transform: rotate(-45deg);
+  background: var(--mn-cat, #1f5fbf);
+  color: #fff;
+  font-weight: 700;
+  font-size: 13px;
+  border: 2px solid #fff;
+  box-shadow: 0 1px 4px rgb(0 0 0 / 35%);
+}
+.cal-pin > * {
+  transform: rotate(45deg);
+}
+.cal-pin.is-faded {
+  opacity: 0.6;
+}
+.cal-pin--home {
+  background: #17160f;
+}
+.cal-pin-wrap {
+  background: transparent;
+  border: 0;
+}
+/* the number sits upright: the shape turns, the text turns back */
+.cal-pin {
+  line-height: 1;
+}
+.cal-pin--inline {
+  transform: none;
+  border-radius: 50%;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  box-shadow: none;
+}
+.cal-map-pop {
+  display: grid;
+  gap: 6px;
+  min-width: 160px;
+}
+.cal-map-pop .mn-btn {
+  min-height: 40px;
+}
+.cal-place-check {
+  display: grid;
+  gap: var(--mn-s2);
+  justify-items: start;
+  margin-bottom: var(--mn-s3);
+}
+@media (prefers-reduced-motion: reduce) {
+  .cal-map-canvas * {
+    transition: none !important;
+  }
+}
