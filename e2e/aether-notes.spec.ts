@@ -1,15 +1,17 @@
 import { expect, test } from '@playwright/test';
-import { cleanup, createUser, grant, PASSWORD } from './seed.ts';
+import { admin, cleanup, createUser, grant, PASSWORD } from './seed.ts';
 
 // hosted/aether-notes behind its local gate: it greets the MiniNode account by name, offers no
 // profile or name settings, and the contacts tab works (data goes to the account, not the browser).
 const run = `e2ea${Date.now().toString(36)}`;
 const APP = 'http://localhost:8806';
 const person = { email: `${run}@example.com`, name: `Nora${run}` };
+let userId = '';
 
 test.beforeAll(async () => {
   // The app is granted by an admin (access.default is false).
-  await grant(await createUser(person.email, 'user', person.name), 'aether-notes');
+  userId = await createUser(person.email, 'user', person.name);
+  await grant(userId, 'aether-notes');
 });
 
 test.afterAll(async () => {
@@ -57,6 +59,20 @@ test('greets the account name, has no name settings, and keeps contacts in the a
   await page.getByRole('button', { name: 'Neuer Kontakt' }).click();
   await page.getByPlaceholder('Erika Mustermann').fill('Erika Muster');
   await page.getByRole('button', { name: 'Profil speichern' }).click();
+  // The save reaches the account a moment later (the app writes in the background): wait for it
+  // before reloading, otherwise the reload can come first.
+  await expect
+    .poll(async () => {
+      const { data } = await admin
+        .schema('platform')
+        .from('app_kv')
+        .select('key')
+        .eq('app_slug', 'aether-notes')
+        .eq('owner_id', userId)
+        .like('key', 'contacts:%');
+      return data?.length ?? 0;
+    })
+    .toBeGreaterThan(0);
   await page.reload();
   await page
     .getByRole('button', { name: /CRM & Kontakte/ })
