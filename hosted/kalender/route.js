@@ -171,4 +171,52 @@ export function directionsUrl(a, b, mode) {
   return `https://www.openstreetmap.org/directions?engine=${engine}&route=${from}%3B${b.lat}%2C${b.lon}`;
 }
 
+// ---------- the keyed provider (Geoapify): one key for the address search and the routes ----------
+// The free OpenStreetMap services stay as the fallback while no key is entered.
+
+/** The way of travelling in Geoapify's words. */
+const KEYED_MODE = { car: 'drive', bike: 'bicycle', foot: 'walk' };
+
+export const keyedGeocodePath = (text, lang) =>
+  `/v1/geocode/search?text=${encodeURIComponent(String(text).trim())}&format=json&limit=5&lang=${encodeURIComponent(lang)}`;
+
+/** Matches of an address search answer, best first. */
+export function parseKeyedGeocode(res) {
+  return (Array.isArray(res?.results) ? res.results : [])
+    .map((r) => ({
+      lat: Number(r.lat),
+      lon: Number(r.lon),
+      label: String(r.formatted ?? '').slice(0, 200),
+    }))
+    .filter(validPoint);
+}
+
+export const keyedRoutePath = (a, b, mode) =>
+  `/v1/routing?waypoints=${a.lat},${a.lon}|${b.lat},${b.lon}&mode=${KEYED_MODE[mode] ?? KEYED_MODE.car}`;
+
+/** { duration (s), distance (m), line [[lat, lon], …] } of a route answer, or null. */
+export function parseKeyedRoute(res) {
+  const feature = res?.features?.[0];
+  const time = Number(feature?.properties?.time);
+  if (!Number.isFinite(time)) return null;
+  const geometry = feature.geometry ?? {};
+  const parts =
+    geometry.type === 'MultiLineString'
+      ? geometry.coordinates
+      : geometry.type === 'LineString'
+        ? [geometry.coordinates]
+        : [];
+  return {
+    duration: time,
+    distance: Number(feature.properties.distance) || 0,
+    line: parts.flat().map(([lon, lat]) => [lat, lon]),
+  };
+}
+
+/** Whether an error of the platform's API proxy means "this API is not set up (yet)". */
+export const notSetUp = (err) =>
+  ['api_key_missing', 'api_key_unreadable', 'api_not_declared', 'vault_not_configured'].includes(
+    err?.code,
+  );
+
 export { DAY_MS };

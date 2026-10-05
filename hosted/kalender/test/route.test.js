@@ -5,8 +5,13 @@ import {
   directionsUrl,
   haversine,
   hoursMinutes,
+  keyedGeocodePath,
+  keyedRoutePath,
   kilometres,
   legsOf,
+  notSetUp,
+  parseKeyedGeocode,
+  parseKeyedRoute,
   placeKey,
   placesToLookUp,
   pointOf,
@@ -139,5 +144,65 @@ describe('formatting and links', () => {
     expect(directionsUrl(MUC, AUG, 'foot')).toBe(
       'https://www.openstreetmap.org/directions?engine=fossgis_osrm_foot&route=48.137%2C11.575%3B48.371%2C10.898',
     );
+  });
+});
+
+describe('the keyed provider', () => {
+  it('builds the requests', () => {
+    expect(keyedGeocodePath(' Marienplatz 1, München ', 'de')).toBe(
+      '/v1/geocode/search?text=Marienplatz%201%2C%20M%C3%BCnchen&format=json&limit=5&lang=de',
+    );
+    expect(keyedRoutePath(MUC, AUG, 'bike')).toBe(
+      '/v1/routing?waypoints=48.137,11.575|48.371,10.898&mode=bicycle',
+    );
+    expect(keyedRoutePath(MUC, AUG, 'x')).toContain('mode=drive');
+  });
+
+  it('reads the matches of an address search and drops unusable ones', () => {
+    const found = parseKeyedGeocode({
+      results: [
+        { lat: 48.137, lon: 11.575, formatted: 'Marienplatz, 80331 München' },
+        { lat: 'x', lon: 1 },
+        { lat: 95, lon: 1 },
+      ],
+    });
+    expect(found).toEqual([{ lat: 48.137, lon: 11.575, label: 'Marienplatz, 80331 München' }]);
+    expect(parseKeyedGeocode(null)).toEqual([]);
+  });
+
+  it('reads a route from a line or several lines', () => {
+    const multi = parseKeyedRoute({
+      features: [
+        {
+          properties: { time: 3600, distance: 62000 },
+          geometry: {
+            type: 'MultiLineString',
+            coordinates: [
+              [
+                [11.5, 48.1],
+                [11.0, 48.3],
+              ],
+              [
+                [11.0, 48.3],
+                [10.9, 48.37],
+              ],
+            ],
+          },
+        },
+      ],
+    });
+    expect(multi.duration).toBe(3600);
+    expect(multi.distance).toBe(62000);
+    expect(multi.line[0]).toEqual([48.1, 11.5]);
+    expect(multi.line).toHaveLength(4);
+    expect(parseKeyedRoute({ features: [{ properties: {}, geometry: {} }] })).toBeNull();
+    expect(parseKeyedRoute({})).toBeNull();
+  });
+
+  it('knows when the provider is not set up', () => {
+    expect(notSetUp({ code: 'api_key_missing' })).toBe(true);
+    expect(notSetUp({ code: 'api_not_declared' })).toBe(true);
+    expect(notSetUp({ code: 'upstream_error' })).toBe(false);
+    expect(notSetUp(null)).toBe(false);
   });
 });

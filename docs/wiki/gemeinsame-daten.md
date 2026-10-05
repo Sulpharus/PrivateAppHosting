@@ -43,8 +43,7 @@ Die Ansicht **Karte** (Taste O) zeigt die Termine mit Ort als nummerierte Markie
 (hell/dunkel automatisch, Standard, Gelände, Satellit). Ein Ort ohne Koordinaten wird einmal gesucht und im Konto gemerkt; im Termin-Editor prüft **Ort prüfen**
 den Ort und speichert den Punkt gleich mit. Mit einem **Startpunkt** (deine Adresse) und der Fortbewegung (Auto, Fahrrad, zu Fuß) berechnet die Karte die Wege
 zwischen den Terminen eines Tages, nennt die Zeit zum Losgehen und warnt, wenn die Zeit zwischen zwei Terminen knapp („Knapp“) oder zu kurz ist („Nicht zu
-schaffen“). „Navigation öffnen“ startet die Route in OpenStreetMap. Dafür nutzt der Kalender zwei öffentliche Dienste ohne Schlüssel: Nominatim (Orte suchen) und
-das OpenStreetMap-Routing von FOSSGIS ([API-Schlüssel](wiki:api-schluessel)). Treffen aus Aether Notes erscheinen mit ihrem Ort ebenfalls auf der Karte.
+schaffen“). „Navigation öffnen“ startet die Route in OpenStreetMap. Für Adressen und Wege nutzt der Kalender (wie Aether Notes) zuerst Geoapify mit einem Schlüssel, den du unter Verwaltung → API-Schlüssel einträgst; ohne Schlüssel greifen die freien OpenStreetMap-Dienste Nominatim und FOSSGIS-Routing als Ersatz ([API-Schlüssel](wiki:api-schluessel)). Treffen aus Aether Notes erscheinen mit ihrem Ort ebenfalls auf der Karte.
 
 ## Google Kalender
 

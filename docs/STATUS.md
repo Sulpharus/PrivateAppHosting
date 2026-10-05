@@ -127,7 +127,9 @@ since the PR #12 deploy. Earlier deploys stopped at medialog and never shipped t
    - Sportplaner: activity write;
    - Haushalt: contract write;
    - Aether Notes: event delete (its meetups appear in the Kalender with their place).
-2. Connect Google with calendar access under "Dein Konto" (Google Calendar sync).
+2. Enter the Geoapify key under Verwaltung → API-Schlüssel (free account at myprojects.geoapify.com; Kalender and
+   Aether Notes share it). Until then the maps use the free OpenStreetMap services as a fallback.
+3. Connect Google with calendar access under "Dein Konto" (Google Calendar sync).
 3. NucBox setup (`nucbox-install.md`): `vars.NUCBOX_TUNNEL_ID`, deploy SSH key, Access
    secrets. Container apps and the App-Bibliothek need it.
 4. GitHub tokens:
