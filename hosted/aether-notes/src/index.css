@@ -1,5 +1,4 @@
 @import "tailwindcss";
-@import "../public/_mininode/ui.css";
 
 :root,
 html[data-accent="green"] {

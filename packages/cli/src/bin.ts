@@ -10,7 +10,7 @@ import { type DoctorReport, doctor, hostedApps } from './doctor.ts';
 import { exportApp } from './export.ts';
 import { integrate, reportMarkdown } from './integrate/index.ts';
 import type { IntegrateResult } from './integrate/types.ts';
-import { lintExemption, tidy, verifyBuild } from './integrate/verify.ts';
+import { biomeSkip, lintExemption, tidy, verifyBuild } from './integrate/verify.ts';
 import { fetchSubmission, type SubmissionStatus, setSubmissionStatus } from './submissions.ts';
 
 const ROOT = resolve(import.meta.dirname, '../../..');
@@ -26,9 +26,9 @@ const USAGE = `mininode <command>
   export <app-dir> --out <dir>      Copy one app as a shareable project (no data, no keys)
   integrate <zip|dir> [--slug x]    Turn an export into hosted/<slug> by script (exit 2: needs review)
                                     [--build] [--tidy] [--json file] [--report file]
-  exempt <slug>                     Exempt an imported app from the linter (publish step)
+  exempt <slug> [--skip]            Exempt an imported app from the linter, or from Biome entirely (publish step)
   submission fetch <id> --out <file>  Download an uploaded ZIP (workflow)
-  submission status <id> <status> [--result file] [--report file] [--pr url] [--review url] [--run url]
+  submission status <id> <status> [--result file] [--report file] [--pr url] [--review url] [--run url] [--only-if-pr url]
   library check <entry> <slug>      App-Bibliothek: check an install before the rollout
   library install <entry> <slug>    App-Bibliothek: register an installed program
   library remove <slug> <entry>     App-Bibliothek: disable a removed program
@@ -89,7 +89,8 @@ async function main(args: string[]): Promise<number> {
     case 'exempt': {
       if (!target || !/^[a-z][a-z0-9-]{0,30}[a-z0-9]$/.test(target)) break;
       const path = join(ROOT, 'biome.json');
-      writeFileSync(path, lintExemption(readFileSync(path, 'utf8'), target));
+      const change = args.includes('--skip') ? biomeSkip : lintExemption;
+      writeFileSync(path, change(readFileSync(path, 'utf8'), target));
       return 0;
     }
     case 'submission': {
@@ -113,10 +114,12 @@ async function main(args: string[]): Promise<number> {
         const pr = flag(args, '--pr');
         const review = flag(args, '--review');
         const run = flag(args, '--run');
+        const onlyIfPr = flag(args, '--only-if-pr');
         await setSubmissionStatus(env, id, status as SubmissionStatus, result, report, {
           ...(pr ? { pr } : {}),
           ...(review ? { review } : {}),
           ...(run ? { run } : {}),
+          ...(onlyIfPr ? { onlyIfPr } : {}),
         });
         return 0;
       }

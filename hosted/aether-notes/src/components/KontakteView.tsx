@@ -1021,7 +1021,7 @@ export default function KontakteView({
                       type="email"
                       value={formEmail}
                       onChange={(e) => setFormEmail(e.target.value)}
-                      placeholder="julia@beispiel.de"
+                      placeholder="julia@example.com"
                     />
                   </label>
                   <label className="mn-field">

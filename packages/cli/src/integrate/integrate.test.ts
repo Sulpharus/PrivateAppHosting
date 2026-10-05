@@ -2,12 +2,13 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { slugify } from '@mininode/manifest';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { stripExternalStyles } from './convert.ts';
 import { deriveName, integrate } from './index.ts';
 import { serverRoutes } from './inspect.ts';
+import type { IntegrateResult } from './types.ts';
 import { checkZipListing, UnpackError } from './unpack.ts';
-import { lintExemption } from './verify.ts';
+import { biomeSkip, lintExemption, tidy } from './verify.ts';
 
 let dir: string;
 beforeEach(() => {
@@ -292,4 +293,48 @@ describe('helpers', () => {
     });
     expect(lintExemption(once, 'sentinel')).toBe(once);
   });
+
+  it('leaves an app out of Biome entirely once, for code Biome cannot read', () => {
+    const base = JSON.stringify({ files: { includes: ['**', '!graphify-out'] } });
+    const once = biomeSkip(base, 'splitter');
+    expect(JSON.parse(once).files.includes).toEqual(['**', '!graphify-out', '!hosted/splitter']);
+    expect(biomeSkip(once, 'splitter')).toBe(once);
+  });
+
+  it('leaves code Biome cannot read out of Biome, but only turns the linter off for lint findings', () => {
+    // CI mode: tidy reports the exemption and does not touch biome.json.
+    vi.stubEnv('CI', '1');
+    const root = join(import.meta.dirname, '../../../..');
+    const slug = `zz-tidy-${Date.now().toString(36)}`;
+    const app = join(root, 'hosted', slug);
+    const result = (): IntegrateResult => ({
+      status: 'integrated',
+      slug,
+      name: 'Tidy',
+      framework: 'vite',
+      reasons: [],
+      warnings: [],
+      actions: [],
+      outDir: app,
+    });
+    try {
+      mkdirSync(join(app, 'src'), { recursive: true });
+      // Tailwind 4: a syntax error for Biome whatever the lint rules say.
+      writeFileSync(join(app, 'src/index.css'), '@variant dark (&:where(.dark, .dark *));\n');
+      const unreadable = tidy(root, result());
+      expect(unreadable.lintExempt).toBe(true);
+      expect(unreadable.biomeSkip).toBe(true);
+
+      // Readable code with only a lint finding (an unlabelled button): the linter alone is off.
+      rmSync(join(app, 'src/index.css'));
+      writeFileSync(join(app, 'src/a.tsx'), 'export const A = () => <div onClick={() => 1} />;\n');
+      const lintOnly = tidy(root, result());
+      expect(lintOnly.lintExempt).toBe(true);
+      expect(lintOnly.biomeSkip).toBeUndefined();
+    } finally {
+      rmSync(app, { recursive: true, force: true });
+      vi.unstubAllEnvs();
+    }
+    // Biome runs several times: slow on a busy CI runner, so the default 5 s is too tight.
+  }, 60_000);
 });

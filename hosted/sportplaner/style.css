@@ -786,8 +786,8 @@ main {
   border-radius: 999px;
 }
 .tile-done.tile-off {
-  background: var(--surface);
-  color: var(--muted);
+  background: var(--danger);
+  color: var(--bg);
 }
 .tile-done svg {
   width: 13px;
@@ -882,6 +882,13 @@ main {
 }
 .row:last-child {
   border-bottom: 0;
+}
+.row.off {
+  box-shadow: inset 3px 0 0 var(--danger);
+}
+.row.off h4,
+.row.off .next b {
+  color: var(--danger);
 }
 .row:hover h4 {
   color: var(--accent-text);
@@ -1076,18 +1083,26 @@ main {
   border-radius: 50%;
   background: var(--accent);
 }
-.dots i.x {
-  background: transparent;
-  box-shadow: inset 0 0 0 1.5px var(--muted);
-  transform: rotate(45deg);
-  border-radius: 1px;
-}
 .dots i.o {
   background: transparent;
   box-shadow: inset 0 0 0 1.5px var(--accent);
 }
+.dots i.off {
+  background: var(--danger);
+}
+.cell.off .n {
+  color: var(--danger);
+}
 .cell.sel .dots i {
   background: var(--bg);
+}
+/* On the dark selected cell a red dot needs a ring to stay visible. */
+.cell.sel .dots i.off {
+  background: var(--danger);
+  box-shadow: 0 0 0 1.5px var(--bg);
+}
+.cell.sel.off .n {
+  color: var(--bg);
 }
 .cell.sel .dots i.o {
   background: transparent;
@@ -1187,7 +1202,7 @@ main {
   gap: 4px;
 }
 .ag-state.off {
-  color: var(--muted);
+  color: var(--danger);
 }
 .ag-state svg {
   width: 14px;
@@ -1787,6 +1802,9 @@ button.ubar:hover b {
 }
 .today-box.is-off {
   background: var(--surface-2);
+}
+.today-box.is-off b {
+  color: var(--danger);
 }
 .done-btn svg {
   width: 16px;

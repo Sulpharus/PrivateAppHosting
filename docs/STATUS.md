@@ -57,6 +57,7 @@ Where things are documented:
 | KI-Werkstatt | Features in 7 collapsible groups with search; 19 new feature modules (money, dates, editor, drag sort, AI chat/vision, roles, comments, accessibility, errors, testing, migration, game save/touch/generator/kit, container, remote program, library entry) and 2 new types (Server-Dienst, Programm) | `docs/ai/prompts/`, `apps/portal/src/admin/{Workshop,prompts}.ts(x)` |
 | Language switch | Per person in Konto → "Sprache / Language" (de/en, profile + `mn-lang` cookie); every hosted app has `i18n/de.json` + `en.json`; new apps must ship both; doctor checks them | ADR 0017, `docs/ai/LANGUAGE-PACKAGES.md`, `packages/ui/kit/i18n.js`, `e2e/language.spec.ts` |
 | App logos | Verwaltung → Apps uploads a logo per app (bucket `app-icons`); deploy picks up `icon.svg`; prompt module "App-Logo"; tile buttons in their own row | ADR 0018, `apps/portal/src/lib/appIcon.ts`, `packages/cli/src/deploy/icon.ts`, `e2e/app-icons.spec.ts` |
+| Haushaltsinventar | Upload review `ee7721bb` (AI Studio "Steward") rebuilt on the platform: items with photo, receipt, warranty, owner, households, service dates and reminders (`mn.push`), backups that restore, Excel report; data mode `shared-account`, rose accent | `hosted/haushalts-inventar`, `e2e/haushalts-inventar.spec.ts` |
 | German formats | Date, month and time inputs as German parts in every browser; full dates as "01. Okt. 2026"; German numbers | `packages/ui/kit/ui.js`, `docs/ai/DESIGN-SYSTEM.md` §8 |
 
 The Sportplaner map (tab "Karte") and course mode (editor step "Zeiten" → "Kurs") are live
@@ -83,7 +84,7 @@ since the PR #12 deploy. Earlier deploys stopped at medialog and never shipped t
   - To pick values like a person: `locator('.mn-date').getByRole('combobox', { name: 'Monat' })`.
   - Opt out per field or area with `data-mn-native`. Invalid fields get a German message under
     the parts (role=alert) instead of the browser bubble.
-- **Apps that load the kit:** haushalt, kalender, wunschliste, memory and medialog load
+- **Apps that load the kit:** haushalt, kalender, wunschliste, memory, medialog and haushalts-inventar load
   `ui.css` and `ui.js`; the games also load `game.js`. The Sportplaner has its own styles and loads only `ui.js`.
 - **Plain-script apps** (sportplaner, haushalt) share one global scope per page. Testable pure
   logic goes into its own file:
@@ -99,9 +100,13 @@ since the PR #12 deploy. Earlier deploys stopped at medialog and never shipped t
    entered under Supabase → Auth → Google (`first-setup.md` §3.1). New migrations
    (`…_profile_language`, `…_app_icons`) are applied by the deploy.
 0. **For the new upload features** (all optional until used, each page says what is missing):
+   - **A ruleset on `main` that requires the CI checks** (Settings → Rules → Rulesets: *Lint,
+     typecheck, test*, *Database, integration and e2e*, *Infra scripts and images*, *Secret
+     scan*). Without it GitHub lets you merge a red pull request, as happened with the first two
+     uploads (`runbooks/uploads.md` step 4);
    - `INTEGRATE_TOKEN` (GitHub secret: contents + pull requests write) so CI and deploy run on
-     what the integrate workflow creates; `INTEGRATE_AUTOMERGE=true` (variable) only when you
-     trust the script;
+     what the integrate workflow creates; `INTEGRATE_AUTOMERGE=true` (variable) only after the
+     ruleset exists (it then merges when the checks are green);
    - `R2_ENDPOINT`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` as secrets of the API Worker for
      program uploads;
    - the migration `20261001150000_…` (the deploy applies it) and a release tag when you want the

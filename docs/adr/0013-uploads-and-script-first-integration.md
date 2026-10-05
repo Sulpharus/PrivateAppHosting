@@ -48,8 +48,13 @@ code exempt the app from the linter in `biome.json`) and hands over the result a
 `publish` (secrets) copies only the app's folder (plain files, no links) of a validated slug into the
 repository, makes the lockfile and the lint exemption itself, refuses a commit that touches anything
 else, then
-- success: branch `auto/<slug>-<id>` and a pull request, or a push to `main` when the repository
-  variable `INTEGRATE_AUTOMERGE` is `true` (the deploy then starts);
+- success: branch `auto/<slug>-<id>` and a pull request, status `pr_open`. The workflow
+  `pr-merged.yml` sets `integrated` when the pull request is merged and `dismissed` when it is
+  closed (it finds the upload by a marker in the PR body and runs the code from `main`). With the
+  repository variable `INTEGRATE_AUTOMERGE` the PR is set to auto-merge, which waits for the
+  required checks of `main`; nothing is pushed to `main` directly (amended: the first version
+  pushed straight to `main`, and reported `integrated` when it opened the PR, so a red CI looked
+  like a finished upload);
 - needs review: branch `review/<id>` with the ZIP and the report, and an issue labelled
   `ai-review` carrying a marker `mininode-submission id=… env=…`;
 - crash: status `failed` with the run link.
@@ -77,8 +82,8 @@ request for an AI session ("Prüfauftrag kopieren").
 - Uploads are limited to 40 MB (ZIP, Supabase storage) and 95 MB (installer, request body of a
   Worker); larger installers go to R2 by hand (`docs/runbooks/programs.md`).
 - The build of an uploaded export runs with install scripts disabled (`--ignore-scripts`), in a job
-  without secrets. The uploaded app itself reaches `main` only through a pull request, or on the
-  owner's explicit `INTEGRATE_AUTOMERGE`. The upload is an admin action; an uploaded app is never
+  without secrets. The uploaded app itself reaches `main` only through a pull request; `INTEGRATE_AUTOMERGE` only
+  lets GitHub merge it once the required checks pass. The upload is an admin action; an uploaded app is never
   given to users automatically.
 - The script is conservative: a Vite app with an unknown plugin or a backend goes to review even if
   it might have worked. Widening it is one case at a time, with a test.

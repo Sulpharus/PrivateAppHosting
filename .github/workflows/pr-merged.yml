@@ -1,0 +1,75 @@
+name: Upload nach dem Pull Request
+
+# The pull request that integrate.yml opened (branch auto/<slug>-<id>) was merged or closed: the
+# upload in Verwaltung → Hochladen follows. Merged = "Eingebaut" (the deploy publishes the app);
+# closed without a merge = "Ausgeblendet". Until then it shows "Pull Request offen", so a red CI
+# on the pull request is never reported as done.
+
+# pull_request_target: the workflow runs as defined on main, from the ref main (so a deployment
+# rule on the environments that allows only main still lets it run), and the pull request's own
+# files are never checked out.
+on:
+  pull_request_target:
+    types: [closed]
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  marker:
+    name: Read the marker
+    # Only pull requests from this repository's own auto branches (not forks).
+    if: startsWith(github.event.pull_request.head.ref, 'auto/') && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    outputs:
+      id: ${{ steps.read.outputs.id }}
+      env: ${{ steps.read.outputs.env }}
+    steps:
+      - id: read
+        env:
+          BODY: ${{ github.event.pull_request.body }}
+        run: |
+          line=$(printf '%s' "$BODY" | grep -o 'mininode-submission id=[0-9a-f-]* env=[a-z]*' | head -n1 || true)
+          [ -n "$line" ] || { echo "no marker"; exit 0; }
+          id=$(printf '%s' "$line" | sed -E 's/.* id=([0-9a-f-]+) .*/\1/')
+          env=$(printf '%s' "$line" | sed -E 's/.* env=([a-z]+)$/\1/')
+          [[ "$id" =~ ^[0-9a-f-]{36}$ ]] || exit 0
+          [[ "$env" =~ ^(production|staging)$ ]] || exit 0
+          { echo "id=$id"; echo "env=$env"; } >> "$GITHUB_OUTPUT"
+
+  update:
+    name: Update the upload
+    needs: marker
+    if: needs.marker.outputs.id != ''
+    runs-on: ubuntu-latest
+    environment: ${{ needs.marker.outputs.env }}
+    env:
+      SUPABASE_URL: ${{ needs.marker.outputs.env == 'production' && 'https://ojicmpgqvoyakigvubek.supabase.co' || 'https://ttgrtecdqouiogiwcjag.supabase.co' }}
+      SUPABASE_PUBLISHABLE_KEY: ${{ needs.marker.outputs.env == 'production' && 'sb_publishable_jv1tZqYWg51sNxJ5-GjMMw_tZqa1s1C' || 'sb_publishable_zQfFz-ruNPkIQauwa253iw_4zOZmiOB' }}
+      STAGING_DOMAIN: ${{ vars.STAGING_DOMAIN }}
+      MERGED: ${{ github.event.pull_request.merged }}
+      ID: ${{ needs.marker.outputs.id }}
+      DEPLOY_ENV: ${{ needs.marker.outputs.env }}
+      PR: ${{ github.event.pull_request.html_url }}
+    steps:
+      # The code that runs with the secret comes from main, never from the pull request's branch.
+      - uses: actions/checkout@v5
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # The key is only in the environment of the one step that needs it, not of the install.
+      - name: Update the upload
+        env:
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+        run: |
+          status=dismissed
+          [ "$MERGED" = "true" ] && status=integrated
+          # Only an upload that waits on exactly this pull request changes.
+          pnpm mininode submission status "$ID" "$status" --pr "$PR" --only-if-pr "$PR" --env "$DEPLOY_ENV"

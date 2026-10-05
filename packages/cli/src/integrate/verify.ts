@@ -56,6 +56,22 @@ export function lintExemption(biomeJson: string, slug: string): string {
 }
 
 /**
+ * Takes the whole app folder out of Biome (parser, formatter and linter). For code Biome cannot
+ * read at all, such as the Tailwind 4 `@variant dark (...)` rule: turning the linter off does not
+ * help there, because a syntax error fails `pnpm lint` whatever the rules say.
+ */
+export function biomeSkip(biomeJson: string, slug: string): string {
+  const config = JSON.parse(biomeJson) as { files?: { includes?: string[] } };
+  const files = config.files ?? {};
+  config.files = files;
+  const includes = files.includes ?? ['**'];
+  files.includes = includes;
+  const glob = `!hosted/${slug}`;
+  if (!includes.includes(glob)) includes.push(glob);
+  return `${JSON.stringify(config, null, 2)}\n`;
+}
+
+/**
  * Formats the app like the rest of the repository so CI's `pnpm lint` passes. An export that
  * has lint findings of its own (accessibility hints, style) is exempted from linting: imported
  * code stays as its author wrote it, and the finding count goes into the warnings.
@@ -74,19 +90,26 @@ export function tidy(root: string, result: IntegrateResult): IntegrateResult {
   if (after.status === 0)
     return { ...result, actions: [...result.actions, 'Code mit Biome formatiert'] };
   const count = /Found (\d+) errors?/.exec(`${after.stdout}${after.stderr}`)?.[1] ?? 'mehrere';
+  // Lint rules can be switched off; a syntax or format error cannot. Check what is left when the
+  // linter is off: if Biome still fails, only leaving the folder out helps.
+  const unreadable = biome(['--linter-enabled=false', '--assist-enabled=false']).status !== 0;
   // The exemption is a change to a root file: the trusted publish step makes it (`mininode
   // exempt <slug>`), not this build. Locally the file is changed right away.
   if (!process.env.CI) {
     const path = join(root, 'biome.json');
-    writeFileSync(path, lintExemption(readFileSync(path, 'utf8'), result.slug));
+    const change = unreadable ? biomeSkip : lintExemption;
+    writeFileSync(path, change(readFileSync(path, 'utf8'), result.slug));
   }
   return {
     ...result,
     lintExempt: true,
-    actions: [...result.actions, 'Code mit Biome formatiert'],
+    ...(unreadable ? { biomeSkip: true } : {}),
+    actions: [...result.actions, unreadable ? 'Biome ausgelassen' : 'Code mit Biome formatiert'],
     warnings: [
       ...result.warnings,
-      `Der Code hat ${count} Lint-Hinweise (Barrierefreiheit, Stil). Er bleibt, wie der Autor ihn geschrieben hat; die App ist vom Linter ausgenommen (biome.json).`,
+      unreadable
+        ? `Biome kann den Code nicht lesen oder formatieren (${count} Fehler, zum Beispiel Tailwind-4-Schreibweise in CSS). Er bleibt, wie der Autor ihn geschrieben hat; der Ordner ist von Biome ganz ausgenommen (biome.json).`
+        : `Der Code hat ${count} Lint-Hinweise (Barrierefreiheit, Stil). Er bleibt, wie der Autor ihn geschrieben hat; die App ist vom Linter ausgenommen (biome.json).`,
     ],
   };
 }

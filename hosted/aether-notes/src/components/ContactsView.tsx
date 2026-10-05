@@ -1039,7 +1039,7 @@ export default function ContactsView({
                   </label>
                   <input
                     type="email"
-                    placeholder="ada@analytical.engine"
+                    placeholder="ada@example.com"
                     value={contactEmail}
                     onChange={(e) => setContactEmail(e.target.value)}
                     className="w-full bg-surface-container border border-outline-variant/30 rounded-xl p-2.5 text-xs text-on-surface focus:ring-1 focus:ring-primary/30"

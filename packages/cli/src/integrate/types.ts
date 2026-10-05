@@ -37,4 +37,6 @@ export interface IntegrateResult {
   outDir: string | null;
   /** The app's own lint findings exempt it from the linter (the publish step applies this). */
   lintExempt?: boolean;
+  /** Biome cannot read the code: the whole folder is left out of Biome, not only the linter. */
+  biomeSkip?: boolean;
 }

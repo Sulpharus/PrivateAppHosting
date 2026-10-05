@@ -68,10 +68,15 @@ const APPS: [slug: string, port: number, shows: (page: Page) => ReturnType<Page[
   ['solitaer', 8802, (p) => p.getByText('Move every card to the four foundations.')],
   ['n2048', 8803, (p) => p.getByText('Merge matching tiles until you reach 2048.')],
   ['codeknacker', 8804, (p) => p.getByText('Work out the secret code of four symbols.')],
+  [
+    'haushalts-inventar',
+    8805,
+    (p) => p.getByRole('button', { name: 'Inventory', exact: true }).first(),
+  ],
 ];
 
 test('every hosted app follows the language of the profile', async ({ browser }) => {
-  test.setTimeout(240_000);
+  test.setTimeout(480_000);
   // The portal mirrors the profile into the cookie when the person signs in; the apps read that.
   await setLanguage(userId, 'en');
   const context = await browser.newContext();
@@ -90,7 +95,7 @@ test('every hosted app follows the language of the profile', async ({ browser })
       signedIn++;
     }
     await expect(page).toHaveURL(new RegExp(`^${app}/`));
-    await expect(shows(page), `${slug} shows English`).toBeVisible({ timeout: 15_000 });
+    await expect(shows(page), `${slug} shows English`).toBeVisible({ timeout: 45_000 });
     expect(errors, slug).toEqual([]);
     await page.close();
   }

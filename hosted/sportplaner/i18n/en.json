@@ -88,6 +88,7 @@
   "cal.subAvailMonth": "When which offers take place",
   "cal.cellPlanned": "{date}, {n} planned",
   "cal.cellActivities": "{date}, {n} activities",
+  "cal.cellOff": "{label}, {off} cancelled",
   "cal.openDay": "Open day",
   "cal.emptyPlanned": "Nothing is planned for this day. Plan sessions when editing an activity or in its detail view.",
   "cal.emptyAvail": "No activity is available on this day.",

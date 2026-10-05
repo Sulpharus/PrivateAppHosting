@@ -7,8 +7,11 @@ Design and limits: ADR 0013.
 
 - **ZIP:** the API stores it and starts the workflow *Web-App einbauen* (`integrate.yml`). The
   script `mininode integrate` rewrites the export, checks it with doctor and builds it.
-  - Done: a pull request `auto/<slug>-<id>` (or a push to `main` with `INTEGRATE_AUTOMERGE`).
-    Merging deploys it. The app has no access for anybody until you grant it under *Apps*.
+  - Done: a pull request `auto/<slug>-<id>`. The upload shows **Pull Request offen** until the
+    pull request is merged (`pr-merged.yml` then sets **Eingebaut**; closing it without a merge
+    sets **Ausgeblendet**). **Merge only when every check on the pull request is green:** the
+    status of the upload says nothing about CI. Merging deploys it. The app has no access for
+    anybody until you grant it under *Apps*.
   - Not done: an issue labelled `ai-review` and a branch `review/<id>` with the ZIP. Tell Claude
     Code: "arbeite die ai-review-Issues ab" (skill `integrate-app`). Closing the issue updates the
     upload in Verwaltung.
@@ -29,11 +32,29 @@ for a Claude session on the clipboard.
    fine-grained token for this repository with *Contents* and *Pull requests* write. Without it
    the pull request exists but shows no checks, and a push to `main` does not deploy (pushes made
    with the default token start no other workflow).
-4. **Optional, fully automatic:** set the repository variable `INTEGRATE_AUTOMERGE` to `true`.
-   A successful integration is then pushed to `main` and deployed without a pull request. Keep it
-   off while the script is new; the pull request is your review.
-5. **Label and issues:** nothing to do; the workflow creates the label `ai-review`.
-6. Apply the migration `20261001150000_uploads_drawers_personal_keys.sql` (the deploy does).
+4. **Make CI binding (do this first):** Settings → Rules → Rulesets → New branch ruleset for
+   `main`, "Require status checks to pass" with *Lint, typecheck, test*, *Database, integration and
+   e2e*, *Infra scripts and images* and *Secret scan*. Without a rule GitHub lets you merge a pull
+   request with red checks.
+5. **Optional, fully automatic:** set the repository variable `INTEGRATE_AUTOMERGE` to `true` (and
+   allow auto-merge under Settings → General). The pull request is then merged by GitHub as soon
+   as the required checks of step 4 pass; it never goes straight to `main`. Without step 4 the
+   pull request just stays open.
+6. **Label and issues:** nothing to do; the workflow creates the label `ai-review`.
+7. Apply the migrations `20261001150000_uploads_drawers_personal_keys.sql` and
+   `20261005090000_submission_pr_open.sql` (the deploy does).
+
+## What the script checks before it says "done"
+
+`mininode integrate` runs the checks that CI runs, so a red pull request is the exception:
+
+- `mininode doctor`, including **export-scan** (secrets, instance identifiers, personal email
+  addresses such as sample people in demo data) and **reserved-path** (a stand-in `/_mininode/`
+  folder with a fake SDK or kit inside the app).
+- The build, and Biome: code Biome cannot read (for example Tailwind 4 `@variant` in CSS) takes
+  the whole folder out of Biome, because switching the linter off does not stop a syntax error.
+
+Anything else goes to review (issue `ai-review`), not to a pull request.
 
 ## What the script handles, and what it sends to review
 
