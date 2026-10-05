@@ -99,7 +99,7 @@ class FallbackMiniNodeClient implements MiniNodeClient {
       } else {
         this._user = {
           id: 'user-aether',
-          email: 'alex@aether.mininode.app',
+          email: 'alex@example.com',
           name: 'Alex',
           isGuest: false,
         };
@@ -108,7 +108,7 @@ class FallbackMiniNodeClient implements MiniNodeClient {
     } catch (e) {
       this._user = {
         id: 'user-aether',
-        email: 'alex@aether.mininode.app',
+        email: 'alex@example.com',
         name: 'Alex',
         isGuest: false,
       };
@@ -123,7 +123,7 @@ class FallbackMiniNodeClient implements MiniNodeClient {
   auth = {
     requireLogin: async (): Promise<MiniNodeUser> => {
       if (!this._user) {
-        this._user = { id: 'user-aether', email: 'alex@aether.mininode.app', name: 'Alex' };
+        this._user = { id: 'user-aether', email: 'alex@example.com', name: 'Alex' };
         localStorage.setItem('mn_user', JSON.stringify(this._user));
         this._notifyAuth();
       }

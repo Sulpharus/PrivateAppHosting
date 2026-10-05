@@ -1078,7 +1078,7 @@ export default function PeopleView({
                         onChange={(e) => setNewEmail(e.target.value)}
                         placeholder={
                           language === 'de'
-                            ? 'z.B. kontakt@beispiel.de'
+                            ? 'z.B. kontakt@example.com'
                             : 'e.g. contact@example.com'
                         }
                         className="w-full bg-surface-container-lowest border border-outline-variant/20 px-3 py-2 rounded-xl text-sm font-sans focus:outline-primary placeholder:text-on-surface-variant/40 text-on-surface"
