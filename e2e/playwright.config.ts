@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import { defineConfig, devices } from '@playwright/test';
 
 // End-to-end tests against the local Supabase stack (`pnpm db:start`) and the portal dev server.
@@ -51,12 +52,15 @@ export default defineConfig({
       ['n2048', 8803],
       ['codeknacker', 8804],
       ['haushalts-inventar', 8805],
-    ].map(([slug, port]) => ({
-      // shared-account apps need an admin to own their data: make sure there is one first.
-      command: `${slug === 'haushalts-inventar' ? 'node seed-admin.ts && ' : ''}pnpm mininode dev hosted/${slug} --port ${port}`,
-      url: `http://localhost:${port}/_mininode/config.json`,
-      reuseExistingServer: !process.env.CI,
-      timeout: 120_000,
-    })),
+    ]
+      // An app that was uninstalled (its removal pull request) has no folder any more: no server.
+      .filter(([slug]) => existsSync(`hosted/${slug}/mininode.json`))
+      .map(([slug, port]) => ({
+        // shared-account apps need an admin to own their data: make sure there is one first.
+        command: `${slug === 'haushalts-inventar' ? 'node seed-admin.ts && ' : ''}pnpm mininode dev hosted/${slug} --port ${port}`,
+        url: `http://localhost:${port}/_mininode/config.json`,
+        reuseExistingServer: !process.env.CI,
+        timeout: 120_000,
+      })),
   ],
 });
