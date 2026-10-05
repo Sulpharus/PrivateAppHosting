@@ -30,6 +30,16 @@ test('greets the account name, has no name settings, and keeps contacts in the a
     timeout: 30_000,
   });
 
+  // A way back to the app menu, and icons that are drawn, not written out (nights_stay is a ligature).
+  await expect(page.getByRole('link', { name: 'Alle Apps' }).first()).toBeVisible();
+  await page
+    .getByRole('button', { name: /Rhythmen & Routinen/ })
+    .first()
+    .click();
+  const moon = page.locator('.material-symbols-outlined', { hasText: 'nights_stay' }).first();
+  await expect(moon).toBeVisible();
+  expect((await moon.boundingBox())?.width ?? 999).toBeLessThan(48);
+
   // No profile picture and no name fields.
   await page
     .getByRole('button', { name: /Bereichs-Einstellungen/ })

@@ -74,6 +74,9 @@ export const MiniNode = {
     },
   },
 
+  /** The address of the app menu (the portal). */
+  portalUrl: async (): Promise<string> => (await platform()).config.portalUrl,
+
   notify: async (title: string, body?: string, path?: string): Promise<void> => {
     await (await platform()).notify(title, body, path);
   },

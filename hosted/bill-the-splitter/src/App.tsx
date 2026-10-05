@@ -7,7 +7,13 @@ import {
   INITIAL_MEMBERS,
   INITIAL_SETTLEMENTS,
 } from './initialData';
-import { generateId, MiniNodeAPI, type MiniNodeUser } from './mininode';
+import {
+  avatarFor,
+  generateId,
+  MiniNodeAPI,
+  type MiniNodeUser,
+  portalUrl as portalUrlOf,
+} from './mininode';
 import {
   cleanPayPalHandle,
   formatIban,
@@ -44,6 +50,12 @@ export default function App() {
     return false;
   });
   const t = TRANSLATIONS[lang];
+  const [portalUrl, setPortalUrl] = useState('/');
+  useEffect(() => {
+    portalUrlOf()
+      .then(setPortalUrl)
+      .catch(() => {});
+  }, []);
 
   // Effect to sync dark mode state with HTML document root for bulletproof Tailwind dark mode support
   useEffect(() => {
@@ -1505,6 +1517,15 @@ export default function App() {
       <div className="flex h-screen overflow-hidden">
         {/* SIDE BAR NAVIGATION */}
         <aside className="hidden md:flex flex-col h-screen w-72 flex-shrink-0 bg-slate-100/80 dark:bg-slate-900/90 py-10 px-6 border-r border-slate-200 dark:border-slate-800 transition-colors">
+          <a
+            href={portalUrl}
+            className="mb-4 -mt-4 ml-2 inline-flex min-h-11 items-center gap-1.5 self-start text-xs font-bold text-slate-500 hover:text-[#006c49] dark:text-slate-400 focus-visible:outline-2 focus-visible:outline-[#006c49]"
+          >
+            <span className="material-symbols-outlined text-base" aria-hidden="true">
+              arrow_back
+            </span>
+            {lang === 'de' ? 'Alle Apps' : 'All apps'}
+          </a>
           {/* Logo Brand Frame */}
           <div className="mb-10 pl-2">
             <h1 className="font-display text-[#006c49] dark:text-[#10b981] font-black tracking-tight text-2xl flex items-center gap-2">
@@ -1606,6 +1627,15 @@ export default function App() {
           {/* Mobile Navigation Header */}
           <header className="md:hidden flex justify-between items-center px-6 h-16 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 z-40 fixed top-0 w-full">
             <h1 className="font-display text-[#006c49] dark:text-[#10b981] font-black text-lg tracking-tight flex items-center gap-2">
+              <a
+                href={portalUrl}
+                aria-label={lang === 'de' ? 'Alle Apps' : 'All apps'}
+                className="-ml-3 flex h-11 w-11 items-center justify-center rounded-full text-slate-500 focus-visible:outline-2 focus-visible:outline-[#006c49]"
+              >
+                <span className="material-symbols-outlined" aria-hidden="true">
+                  arrow_back
+                </span>
+              </a>
               <span className="material-symbols-outlined">payments</span>
               <span>{t.appName}</span>
             </h1>

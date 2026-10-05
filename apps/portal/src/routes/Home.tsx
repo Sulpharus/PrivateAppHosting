@@ -55,6 +55,23 @@ function storedSort(): Sort {
   }
 }
 
+type View = 'cards' | 'large' | 'list' | 'compact';
+const VIEW_LABEL: Record<View, string> = {
+  cards: 'Kacheln',
+  large: 'Groß',
+  list: 'Liste',
+  compact: 'Kompakt',
+};
+const VIEW_KEY = 'mn-view';
+function storedView(): View {
+  try {
+    const value = localStorage.getItem(VIEW_KEY);
+    return value && value in VIEW_LABEL ? (value as View) : 'cards';
+  } catch {
+    return 'cards';
+  }
+}
+
 function greeting(now = new Date()): string {
   const hour = now.getHours();
   if (hour < 11) return 'Guten Morgen';
@@ -80,6 +97,7 @@ export function Home() {
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [filter, setFilter] = useState<Filter>('all');
   const [sort, setSort] = useState<Sort>(storedSort);
+  const [view, setView] = useState<View>(storedView);
   const [query, setQuery] = useState('');
   const [error, setError] = useState<string | null>(null);
   const arrange = useArrangement('apps');
@@ -157,6 +175,15 @@ export function Home() {
   const drawer = filter.startsWith('drawer:')
     ? (arrange.drawers.find((d) => d.id === filter.slice(7)) ?? null)
     : null;
+
+  const changeView = (next: View) => {
+    setView(next);
+    try {
+      localStorage.setItem(VIEW_KEY, next);
+    } catch {
+      // Remembering the view is a convenience.
+    }
+  };
 
   const changeSort = (next: Sort) => {
     setSort(next);
@@ -265,7 +292,7 @@ export function Home() {
           </p>
         )}
 
-        <div className="home-grid">
+        <div className={`home-grid${remoteApps.length > 0 ? ' with-remote' : ''}`}>
           <section aria-label="Apps" className="stack" style={{ gap: 20 }}>
             {showSets && (
               <section aria-labelledby="sets-title" className="stack" style={{ gap: 12 }}>
@@ -343,6 +370,19 @@ export function Home() {
                   {editing ? 'Fertig' : 'Anordnen'}
                 </button>
               )}
+              <fieldset className="view-switch">
+                <legend className="sr-only">Ansicht</legend>
+                {(Object.keys(VIEW_LABEL) as View[]).map((key) => (
+                  <button
+                    key={key}
+                    type="button"
+                    aria-pressed={view === key}
+                    onClick={() => changeView(key)}
+                  >
+                    {VIEW_LABEL[key]}
+                  </button>
+                ))}
+              </fieldset>
               <label className="sort-select">
                 <span className="sr-only">Sortieren</span>
                 <select value={sort} onChange={(event) => changeSort(event.target.value as Sort)}>
@@ -407,6 +447,7 @@ export function Home() {
             )}
 
             <ReorderGrid
+              className={`tiles view-${view}`}
               items={visible}
               editing={editing}
               label={(app) => app.name}

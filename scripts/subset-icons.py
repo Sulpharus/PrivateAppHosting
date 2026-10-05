@@ -30,6 +30,8 @@ except ImportError:
 
 CODE = {".ts", ".tsx", ".js", ".jsx", ".html", ".css", ".json"}
 WORD = re.compile(r"[a-z][a-z0-9_]{1,40}")
+# An icon written as the text of a Material Symbols element: <span class="material-symbols-outlined">name</span>
+TAGGED = re.compile(r"material-symbols[a-z-]*[^>]*>\s*([a-z][a-z0-9_]{1,40})\s*<")
 
 
 def find_font(app: Path, style: str) -> Path:
@@ -52,6 +54,15 @@ def used_words(app: Path) -> set[str]:
     return words
 
 
+def tagged_words(app: Path) -> set[str]:
+    words: set[str] = set()
+    for path in app.rglob("*"):
+        if path.suffix not in CODE or "node_modules" in path.parts or "dist" in path.parts:
+            continue
+        words.update(TAGGED.findall(path.read_text(errors="ignore")))
+    return words
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("app", type=Path)
@@ -61,8 +72,21 @@ def main() -> None:
     source = find_font(app, args.style)
 
     font = TTFont(source)
-    glyph_names = set(font.getGlyphOrder())
-    icons = sorted(used_words(app) & glyph_names)
+    # An icon is a ligature: its letters become one glyph, whose name is not always the icon's name.
+    cmap = font.getBestCmap()
+    char_of = {glyph: chr(code) for code, glyph in cmap.items()}
+    ligature_glyph: dict[str, str] = {}
+    for lookup in font["GSUB"].table.LookupList.Lookup:
+        for sub in lookup.SubTable:
+            sub = getattr(sub, "ExtSubTable", sub)
+            for first, ligatures in getattr(sub, "ligatures", {}).items():
+                for lig in ligatures:
+                    if first in char_of and all(c in char_of for c in lig.Component):
+                        ligature_glyph[char_of[first] + "".join(char_of[c] for c in lig.Component)] = lig.LigGlyph
+    icons = sorted({ligature_glyph[w] for w in used_words(app) if w in ligature_glyph})
+    # An icon the code names but this version of the font does not have would show as plain text.
+    for name in sorted(tagged_words(app) - ligature_glyph.keys()):
+        print(f"warning: '{name}' is not in this version of the font (renamed or removed): pick another icon", file=sys.stderr)
     cmap = font.getBestCmap()
     letters = [cmap[ord(c)] for c in "abcdefghijklmnopqrstuvwxyz0123456789_" if ord(c) in cmap]
 

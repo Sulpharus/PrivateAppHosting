@@ -140,6 +140,9 @@ export function avatarFor(name: string): string {
 let current: MiniNodeUser | null = null;
 const authListeners = new Set<(user: MiniNodeUser | null) => void>();
 
+/** The address of the app menu (the portal). */
+export const portalUrl = async (): Promise<string> => (await platform()).config.portalUrl;
+
 export const MiniNodeAPI = {
   auth: {
     requireLogin: async (): Promise<MiniNodeUser> => {

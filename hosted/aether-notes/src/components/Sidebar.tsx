@@ -3,8 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { useEffect, useState } from 'react';
 import { useTranslation } from '../contexts/TranslationContext';
-import type { MiniNodeUser } from '../mininode';
+import { MiniNode, type MiniNodeUser } from '../mininode';
 import type { UserSettings } from '../types';
 
 interface SidebarProps {
@@ -33,11 +34,28 @@ export default function Sidebar({
   onToggleDarkMode,
 }: SidebarProps) {
   const { t, language, setLanguage } = useTranslation();
+  const [portalUrl, setPortalUrl] = useState('/');
+  useEffect(() => {
+    MiniNode.portalUrl()
+      .then(setPortalUrl)
+      .catch(() => {});
+  }, []);
+  const allApps = language === 'de' ? 'Alle Apps' : 'All apps';
 
   return (
     <>
       {/* Desktop Side Navigation (hidden md:flex) */}
       <aside className="hidden md:flex fixed left-0 top-0 h-full w-64 border-r border-outline-variant/30 flex-col p-4 bg-surface-container-low z-40">
+        <a
+          href={portalUrl}
+          className="mx-2 mt-2 inline-flex min-h-11 items-center gap-1.5 self-start rounded-lg px-2 text-xs font-semibold text-on-surface-variant hover:text-primary focus-visible:outline-2 focus-visible:outline-primary"
+        >
+          <span className="material-symbols-outlined text-base" aria-hidden="true">
+            arrow_back
+          </span>
+          {allApps}
+        </a>
+
         {/* Brand Header */}
         <div className="flex items-center justify-between px-2 py-6 mb-4 min-w-0">
           <div className="flex items-center gap-2.5 min-w-0">
@@ -228,6 +246,15 @@ export default function Sidebar({
       {/* Mobile Top App Bar (md:hidden) */}
       <header className="flex md:hidden justify-between items-center w-full px-5 py-3 bg-surface border-b border-surface-container-high fixed top-0 left-0 z-40 h-14">
         <div className="flex items-center gap-1.5 min-w-0">
+          <a
+            href={portalUrl}
+            aria-label={allApps}
+            className="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-on-surface-variant hover:text-primary focus-visible:outline-2 focus-visible:outline-primary"
+          >
+            <span className="material-symbols-outlined text-xl" aria-hidden="true">
+              arrow_back
+            </span>
+          </a>
           <span
             className="material-symbols-outlined text-primary text-xl shrink-0"
             style={{ fontVariationSettings: "'FILL' 1" }}
