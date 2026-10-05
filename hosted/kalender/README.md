@@ -19,8 +19,9 @@ Nothing app-specific: the calendar works only on suite records (ADR 0002, `mn.su
 Events with a place as numbered pins (Leaflet from `/vendor`), for a day, a week or seven weeks. Places without
 coordinates are looked up with Nominatim (one request per second, cached in `mn.kv` under `geo`); the editor's
 "Ort prüfen" stores the point on the record (`lat`, `lon`). Layer, way of travelling, buffer and start point live in
-`prefs.map`. Routes come from `routing.openstreetmap.de` (car, bike, foot) through the platform proxy (`apis` in
-`mininode.json`, both without a key); `route.js` holds the pure parts (legs of a day, judging the time between two
+`prefs.map`. Addresses and routes come from Geoapify (`apis` → `geoapify`, one shared key under Verwaltung → API-Schlüssel);
+without a key, or when it fails, the free services are used: Nominatim and `routing.openstreetmap.de` (car, bike, foot),
+both through the platform proxy; `route.js` holds the pure parts (legs of a day, judging the time between two
 appointments) and is covered by `test/route.test.js`. Shortcut: O.
 
 ## Features

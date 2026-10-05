@@ -60,6 +60,17 @@
   },
   "apis": [
     {
+      "id": "geoapify",
+      "name": "Geoapify (Karten, Adressen, Routen)",
+      "baseUrl": "https://api.geoapify.com",
+      "auth": {
+        "type": "query",
+        "param": "apiKey"
+      },
+      "docs": "https://myprojects.geoapify.com",
+      "reason": "Adressen finden und Wege berechnen, zuverlässiger als die freien OpenStreetMap-Dienste (diese bleiben der Ersatz)"
+    },
+    {
       "id": "nominatim",
       "name": "OpenStreetMap Nominatim",
       "baseUrl": "https://nominatim.openstreetmap.org",

@@ -56,6 +56,27 @@ interface NominatimRow {
     postcode?: string;
   };
 }
+interface KeyedRow {
+  lat: number | string;
+  lon: number | string;
+  formatted?: string;
+  city?: string;
+  town?: string;
+  village?: string;
+  postcode?: string;
+}
+const NOT_SET_UP = [
+  'api_key_missing',
+  'api_key_unreadable',
+  'api_not_declared',
+  'vault_not_configured',
+];
+const validPlace = (p: Place) =>
+  Number.isFinite(p.lat) &&
+  Number.isFinite(p.lon) &&
+  Math.abs(p.lat) <= 90 &&
+  Math.abs(p.lon) <= 180;
+let keyedOff = false;
 let geoQueue: Promise<unknown> = Promise.resolve();
 let geoLast = 0;
 
@@ -97,11 +118,32 @@ export const MiniNode = {
   },
 
   /**
-   * Up to five matches for an address, best first (OpenStreetMap Nominatim through the platform
+   * Up to five matches for an address, best first (Geoapify with the admin's key, else OpenStreetMap Nominatim, through the platform
    * proxy, one request per second as its usage policy asks). Throws when it cannot be reached.
    */
   geocode: (query: string): Promise<Place[]> => {
     const run = geoQueue.then(async () => {
+      if (!keyedOff) {
+        try {
+          const found = await (await platform())
+            .api('geoapify')
+            .json<{ results?: KeyedRow[] }>(
+              `/v1/geocode/search?text=${encodeURIComponent(query.trim())}&format=json&limit=5&lang=${encodeURIComponent(window.mnI18n.lang)}`,
+            );
+          return (Array.isArray(found.results) ? found.results : [])
+            .map((r) => ({
+              lat: Number(r.lat),
+              lon: Number(r.lon),
+              label: String(r.formatted ?? '').slice(0, 200),
+              city: r.city ?? r.town ?? r.village,
+              postcode: r.postcode,
+            }))
+            .filter(validPlace);
+        } catch (err) {
+          // not set up (no key yet): the free service below is used until the page is reloaded
+          if (NOT_SET_UP.includes((err as { code?: string })?.code ?? '')) keyedOff = true;
+        }
+      }
       const wait = geoLast + 1100 - Date.now();
       if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
       geoLast = Date.now();
@@ -123,13 +165,7 @@ export const MiniNode = {
             undefined,
           postcode: row.address?.postcode,
         }))
-        .filter(
-          (p) =>
-            Number.isFinite(p.lat) &&
-            Number.isFinite(p.lon) &&
-            Math.abs(p.lat) <= 90 &&
-            Math.abs(p.lon) <= 180,
-        );
+        .filter(validPlace);
     });
     geoQueue = run.then(
       () => undefined,

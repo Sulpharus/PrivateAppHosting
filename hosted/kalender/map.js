@@ -8,8 +8,13 @@ import {
   dayGroups,
   directionsUrl,
   hoursMinutes,
+  keyedGeocodePath,
+  keyedRoutePath,
   kilometres,
   legsOf,
+  notSetUp,
+  parseKeyedGeocode,
+  parseKeyedRoute,
   placeKey,
   placesToLookUp,
   pointOf,
@@ -97,13 +102,26 @@ function loadLeaflet() {
 // ---------- places ----------
 let geoQueue = Promise.resolve();
 let geoLast = 0;
-/** Up to five matches for an address text, best first. One request per second (usage policy). */
+/** The keyed provider is not set up: until the page is reloaded the free services are used. */
+let keyedOff = false;
+/** Up to five matches for an address text, best first. */
 export function geocode(q) {
   const run = geoQueue.then(async () => {
+    const mn = await ctx.ready;
+    if (!keyedOff) {
+      try {
+        return parseKeyedGeocode(
+          await mn.api('geoapify').json(keyedGeocodePath(q, window.mnI18n.lang)),
+        );
+      } catch (err) {
+        if (notSetUp(err)) keyedOff = true;
+        // any other failure: ask the free service once
+      }
+    }
+    // Nominatim: one request per second (its usage policy)
     const wait = geoLast + 1100 - Date.now();
     if (wait > 0) await new Promise((r) => setTimeout(r, wait));
     geoLast = Date.now();
-    const mn = await ctx.ready;
     const rows = await mn
       .api('nominatim')
       .json(
@@ -174,6 +192,14 @@ async function routeOf(a, b, mode) {
   const job = (async () => {
     try {
       const mn = await ctx.ready;
+      if (!keyedOff) {
+        try {
+          const keyed = parseKeyedRoute(await mn.api('geoapify').json(keyedRoutePath(a, b, mode)));
+          if (keyed) return keyed;
+        } catch (err) {
+          if (notSetUp(err)) keyedOff = true;
+        }
+      }
       const res = await mn.api('routing').json(routePath(a, b, mode));
       const r = res?.routes?.[0];
       if (!r || !Number.isFinite(r.duration)) return null;
