@@ -128,7 +128,12 @@ test('authenticator app: set up, then required after a password sign-in', async 
   // Removing the authenticator app from a passkey session asks for a code first.
   await page.goto('/account');
   page.once('dialog', (confirm) => void confirm.accept());
-  await page.getByRole('button', { name: 'Entfernen' }).last().click();
+  // The authenticator section loads its factor after the passkey list: pick its own button, not
+  // whichever "Entfernen" happens to be last on the page yet (that was a passkey, sometimes).
+  await page
+    .getByRole('region', { name: 'Authenticator-App' })
+    .getByRole('button', { name: 'Entfernen' })
+    .click();
   const confirmDialog = page.getByRole('dialog', { name: 'Kurz bestätigen' });
   await expect(confirmDialog).toBeVisible();
   used = await freshCode(secret, used);
