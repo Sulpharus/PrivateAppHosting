@@ -11,6 +11,11 @@ Jede Änderung am System bekommt hier eine Zeile (siehe [Wissen aktuell halten](
 
 | Datum | Neu | Wo |
 | --- | --- | --- |
+| 05.10. | **Sportplaner: Credits und Kontingente** für Mitgliedschaften wie Urban Sports Club oder ClassPass: Credits pro Monat oder maximale Besuche (pro Monat/Tag) beim Tarif, Kosten bzw. Monatslimit je Aktivität beim Verknüpfen, Hinweis bei Überschreitung und Verbrauch des Monats in Statistik und Details | App Sportplaner |
+| 05.10. | **Wunschliste**: Fotos direkt hochladen (nicht nur per Link) und die Liste als schön gestaltetes **PDF mit Bildern** exportieren („Als PDF“) | App Wunschliste |
+| 05.10. | **Sportplaner**: bei *Sportart* mehrere Sportarten mit Komma eintragen („Schwimmen, Sauna“); Filter, Chips und Statistik zählen jede einzeln | App Sportplaner |
+| 05.10. | **Einheitlicher Startbildschirm** für alle Apps (statt nur dem Buchstaben-Icon): Zeichen, Name, Fortschritt, hell/dunkel, DE/EN | [Benachrichtigungen, Push und Offline](wiki:push-offline) |
+| 05.10. | **Einbau-Skript und KI-Prompt lernen aus den Prüf-Issues**: unbekannte Manifest-Schlüssel, Platzhalter-Namen, Beispiel-E-Mails, fremde Schriften/Icons und eigene SDK-Ersatzdateien werden behoben oder gemeldet; der Prompt nennt diese Fallen. Neue Apps: Haushaltsinventar (Steward), Bill the Splitter; Aether Notes wieder ordentlich dargestellt | [Fehlerbehebung](wiki:fehlerbehebung), [Hochladen](wiki:hochladen) |
 | 05.10. | **App löschen: Entfernen-Pull-Request besteht CI**: er nimmt auch den e2e-Test der App mit, e2e startet nur noch vorhandene Apps | [App löschen](wiki:app-loeschen) |
 | 05.10. | **Sprachpakete nachrüsten**: fertiger Prompt in der KI-Werkstatt für Apps ohne Pakete; „Bestehende App übernehmen“ verlangt sie jetzt auch | Verwaltung → KI-Werkstatt, [Sprache und Formate](wiki:sprachen-formate) |
 | 05.10. | **Wissen**: Wiki und Startup-Guide in der Verwaltung; Regel und Test, dass sie mit dem System mitwachsen (ADR 0021) | Verwaltung → Wissen, [Wissen aktuell halten](wiki:wissen-pflegen) |

@@ -192,3 +192,60 @@ describe('stripComments', () => {
     );
   });
 });
+
+describe('doctor: what exports bring along', () => {
+  const rulesOf = (dir: string, severity: 'error' | 'warning') =>
+    doctor(dir)
+      .findings.filter((f) => f.severity === severity)
+      .map((f) => f.rule);
+
+  it('stops on window.mininode read by a page that never loads the SDK', () => {
+    const dir = app({
+      ...healthy,
+      'src/main.ts': 'const mn = await window.mininode.mininode();',
+    });
+    expect(rules(dir)).toContain('sdk-not-loaded');
+  });
+
+  it('accepts window.mininode when the page loads /_mininode/sdk.js', () => {
+    const dir = app({
+      ...healthy,
+      'index.html': '<html><body><script src="/_mininode/sdk.js"></script></body></html>',
+      'src/main.ts': 'const mn = await window.mininode.mininode();',
+    });
+    expect(rules(dir)).not.toContain('sdk-not-loaded');
+  });
+
+  it('says what window.MiniNode is when it is the reason the SDK is missing', () => {
+    const dir = app({ ...healthy, 'src/main.ts': 'const x = window.MiniNode?.db;' });
+    const finding = doctor(dir).findings.find((f) => f.rule === 'sdk-required');
+    expect(finding?.message).toContain('window.MiniNode is not a platform API');
+  });
+
+  it('warns about a stand-in client, but not about ordinary classes', () => {
+    const standIn = app({
+      ...healthy,
+      'src/mininode.ts': 'class FallbackMiniNodeClient {}\nclass LocalMininodeShim {}',
+    });
+    expect(rulesOf(standIn, 'warning')).toContain('stand-in-sdk');
+    const fine = app({
+      ...healthy,
+      'src/other.ts': 'class MiniNodeSync {}\nclass LocalCache {}\nconst mockData = [];',
+    });
+    expect(rulesOf(fine, 'warning')).not.toContain('stand-in-sdk');
+  });
+
+  it('warns about stylesheets and fonts from other sites', () => {
+    const dir = app({
+      ...healthy,
+      'index.html':
+        '<html><head><link href="https://fonts.googleapis.com/css2?family=Inter" rel="stylesheet"></head></html>',
+    });
+    expect(rulesOf(dir, 'warning')).toContain('external-assets');
+    const own = app({
+      ...healthy,
+      'index.html': '<html><head><link rel="stylesheet" href="/_mininode/ui.css"></head></html>',
+    });
+    expect(rulesOf(own, 'warning')).not.toContain('external-assets');
+  });
+});

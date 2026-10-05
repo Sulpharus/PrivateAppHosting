@@ -40,6 +40,19 @@ needs a backend. Do not build your own login, backend or API-key handling.**
    `/_mininode/ui.js` (and `/_mininode/i18n.js`), put `class="mn-app"` on `<body>`, pick a `data-accent` and build from
    its `mn-*` components and `--mn-*` tokens.
 6. Deliver a **ZIP** containing the project (source, `package.json` if any, `mininode.json`).
+7. **Details that make an upload fail the check** (the integration script and `mininode doctor`
+   stop on each of them):
+   - **Name and address:** give the app its own name and slug (the brief names them); never leave
+     "Neue App" or `neue-app` in `mininode.json`, the page title or the README.
+   - **`mininode.json` has only the documented keys.** The accent colour is the HTML attribute
+     `data-accent` on `<html>`, never a key in `mininode.json` (no `accent`, `theme`, `color`).
+   - **The platform API is `@mininode/sdk` (or `window.mininode` in plain HTML) and nothing else.**
+     There is no `window.MiniNode`, no host object to probe for and no "standalone fallback": do
+     not write a bridge or a localStorage mode for "when MiniNode is not there". Import the SDK
+     and use `mn.auth`, `mn.kv`, `mn.files` directly; data mode `private`, `shared-account` or
+     `group` requires it.
+   - **Sample data uses `@example.com` addresses** (`max@example.com`), never real-looking or
+     localised ones (`@beispiel.de`, `@gmail.com`): such addresses stop the export of the app.
 
 ### The SDK
 
@@ -68,6 +81,8 @@ const data = await mn.ai.json<Recipe[]>('Drei Rezepte mit Reis', jsonSchema);
 // Files (private per user; { shared: true } for shared files):
 await mn.files.upload('fotos/urlaub.jpg', file);
 const url = await mn.files.url('fotos/urlaub.jpg'); // signed URL, 1 h
+// A signed URL expires: never store it in kv or a table. Store the path and ask for the URL when
+// showing (`{ expiresIn: 86400 }` for longer). Delete with mn.files.remove(path), not "delete".
 const names = await mn.files.list('fotos');
 
 // Realtime (live updates between users of the app):

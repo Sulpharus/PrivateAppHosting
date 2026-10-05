@@ -89,5 +89,21 @@
   "editor.errPrice": "Enter the price as a number, e.g. 24.99.",
   "editor.errImage": "The picture address must start with https://.",
   "editor.errSave": "Could not save. Please try again.",
-  "editor.errDelete": "Could not delete."
+  "editor.errDelete": "Could not delete.",
+  "mine.pdf": "As PDF",
+  "editor.photo": "Photo",
+  "editor.photoChoose": "Choose a photo from the gallery or camera",
+  "editor.photoRemove": "Remove photo",
+  "editor.photoHint": "From the gallery or the camera. It is saved shrunk and everyone who sees your list can see it.",
+  "editor.errPhoto": "The picture could not be read. Try a JPEG or PNG.",
+  "editor.errUpload": "The photo could not be uploaded. Please try again.",
+  "pdf.title": "Wishlist",
+  "pdf.subtitle": "{name} · {count} · as of {date}",
+  "pdf.anonymous": "My list",
+  "pdf.link": "View offer",
+  "pdf.brand": "MiniNode · Wishlist",
+  "pdf.page": "Page {page} of {pages}",
+  "toast.pdfBusy": "Creating the PDF …",
+  "toast.pdfReady": "PDF saved",
+  "toast.pdfFailed": "The PDF could not be created."
 }

@@ -15,7 +15,8 @@
       "!packages/manifest/schema.json",
       "!fixtures/*/input",
       "!graphify-out",
-      "!hosted/*/vendor"
+      "!hosted/*/vendor",
+      "!hosted/bill-the-splitter"
     ]
   },
   "formatter": {
@@ -68,7 +69,11 @@
       }
     },
     {
-      "includes": ["hosted/aether-notes/**"],
+      "includes": [
+        "hosted/aether-notes/**",
+        "hosted/haushalts-inventar/**",
+        "hosted/bill-the-splitter/**"
+      ],
       "linter": {
         "enabled": false
       }

@@ -44,6 +44,21 @@ three users.
 
 `access.default` is true: every user gets the app (existing users on the first deploy).
 
+## Photos and PDF
+
+- **Photo upload** (editor → "Bild und Notiz" → Foto): chosen from the gallery or camera, shrunk in the
+  browser to a JPEG of at most 1280 px and stored in `mn.files` in the *shared* scope as
+  `wishes/<uuid>.jpg` (so the people who see the list can load it; everyone with the app can read the
+  folder, which is the same audience as the lists themselves). `db/002_wish_images.sql` adds
+  `wishes.image_path` and returns it from `wishlist()`. A photo wins over an image link; replacing or
+  removing it, or deleting the wish, deletes the file. Signed addresses expire after an hour: they are
+  made on demand and kept for 50 minutes (`pictureUrl`). The shopping list still shows initials.
+- **PDF export** ("Als PDF" on *Meine Liste*): `wishlist-pdf.js` lays out A4 pages (title, one card per
+  wish with picture or initial, price, priority tag, note, link to the shop) on `pdf.js`, a small PDF
+  writer (standard fonts, JPEG pictures, links; no library). Pictures are fetched, shrunk to 700 px and
+  embedded; an image link whose site does not allow cross-origin reads is left out (initial instead).
+  `test/pdf.test.js` checks the file structure, `e2e/wunschliste.spec.ts` the download.
+
 ## Languages
 
 German and English (`i18n/de.json`, `i18n/en.json`, declared under `i18n` in `mininode.json`). The person's choice in Konto → Sprache applies; an unknown key falls back to German. New texts need a key in both files; `pnpm mininode doctor hosted/wunschliste` checks them (ADR 0017).

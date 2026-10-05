@@ -206,7 +206,12 @@ export function createMininode(config: MininodeConfig): Mininode {
       },
       async requireLogin() {
         const user = await currentUser();
-        if (user) return user;
+        if (user) {
+          // The start screen of the platform (the gate's splash) waits for this.
+          (globalThis as { __mnReady?: boolean }).__mnReady = true;
+          globalThis.dispatchEvent?.(new Event('mn:ready'));
+          return user;
+        }
         location.assign(loginUrl());
         return new Promise<never>(() => {});
       },

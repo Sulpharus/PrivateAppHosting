@@ -326,7 +326,7 @@ function updLib() {
     tr('lib.title'),
     S.loading && !S.acts.length ? tr('common.loading') : countLabel(S.acts.length),
   );
-  const cats = [...new Set(S.acts.map((a) => a.category).filter(Boolean))].sort();
+  const cats = [...new Set(S.acts.flatMap((a) => sportsOf(a.category)))].sort();
   if (!cats.includes(S.cat)) S.cat = 'Alle';
   const provs = [...new Set(S.acts.map((a) => a.provider).filter(Boolean))].sort((x, y) =>
     x.localeCompare(y, loc()),
@@ -349,7 +349,7 @@ function updLib() {
   const list = S.acts
     .filter(
       (a) =>
-        (S.cat === 'Alle' || a.category === S.cat) &&
+        (S.cat === 'Alle' || sportsOf(a.category).includes(S.cat)) &&
         (!S.prov || a.provider === S.prov) &&
         (!q ||
           [a.name, a.category, a.provider, a.location, a.description]

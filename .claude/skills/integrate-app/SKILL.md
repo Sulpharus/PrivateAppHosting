@@ -65,6 +65,32 @@ writing `db/*.sql`.
 placeholders). The script cannot translate: an app it finished without packages still passes
 doctor with the `i18n-missing` warning, so add them before the PR unless the user said to skip.
 
+**Mistakes exports repeat — look for these first, the script and doctor name most of them:**
+
+- *Placeholder name:* `slug: "neue-app"`, name "Neue App" (the brief gave none). Pick a real name and
+  slug and use it in `mininode.json`, `<title>`, the header and the README.
+- *Keys that are not in the manifest* (`accent`, `theme`, …): doctor stops on them. The accent is
+  `data-accent` in the HTML. (`mininode integrate` drops them from exports that bring a manifest.)
+- *A stand-in for the platform client:* a `FallbackMiniNodeClient`, `LocalMiniNodeShim` or a bridge
+  that talks to a `window.MiniNode` the platform does not have. Where it takes over, everything
+  stays in one browser. Replace the file by the real SDK (`import { mininode } from '@mininode/sdk'`
+  in Vite apps; `<script src="/_mininode/sdk.js">` in plain HTML) and keep the app's own API on top
+  (`src/mininode.ts` of `hosted/haushalts-inventar` and `hosted/bill-the-splitter` are examples).
+  Data that sits only in `localStorage` moves to `mn.kv`; for `group` data use `'shared'` scope and
+  one record per entry, so two people never overwrite each other's list.
+- *Fonts and icons from Google* (`fonts.googleapis.com`, Material Symbols as ligature text): the
+  CSP blocks them, the icon names show as text and the layout collapses. Fonts come from
+  `@fontsource-variable/<font>`; icons from `python3 scripts/subset-icons.py hosted/<slug>` (a 150 kB
+  subset instead of the 4 MB font) linked in `index.html` as `/fonts/material-symbols.css`.
+- *Images from other sites* (AI Studio's `lh3.googleusercontent.com/aida-public/…`, Unsplash): they
+  expire or are blocked; remove them or draw a placeholder (initial letter, plain panel).
+- *Tailwind plus the App Kit:* `class="mn-app"` on `<body>` makes the kit restyle inputs and buttons
+  and overrides utility classes. An app with its own Tailwind design leaves `mn-app` out.
+- *Sample people with real-looking addresses* (`@beispiel.de`): the export of the app stops; use
+  `@example.com` (the script rewrites them).
+- *The generator's `package.json`/`vite.config.ts`* (name `react-example`, `express`, dev-server
+  settings): the script rewrites them for Vite apps; check it when you convert by hand.
+
 ## 4. Verify (all must pass)
 
 ```bash

@@ -1,12 +1,18 @@
 // The privacy rules of db/001_init.sql against the local Supabase stack, in one transaction that
 // is rolled back: the wish owner never learns who reserves what, others see "geschenkt" for 30
 // days, and the giver keeps the reservation until it is ticked off.
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import postgres from 'postgres';
 import { afterAll, describe, expect, it } from 'vitest';
 
 const dbUrl = process.env.SUPABASE_DB_URL;
-const init = readFileSync(new URL('../db/001_init.sql', import.meta.url), 'utf8');
+const dbDir = new URL('../db/', import.meta.url);
+// All migrations, in order, as the deploy applies them.
+const init = readdirSync(dbDir)
+  .filter((file) => file.endsWith('.sql'))
+  .sort()
+  .map((file) => readFileSync(new URL(file, dbDir), 'utf8'))
+  .join('\n');
 
 describe.skipIf(!dbUrl)('wunschliste database', () => {
   const sql = postgres(dbUrl ?? '', { max: 1, onnotice: () => {} });
@@ -127,6 +133,32 @@ describe.skipIf(!dbUrl)('wunschliste database', () => {
             ).count,
           );
         expect(edits).toEqual([1, 1]);
+
+        // A picture uploaded from the device: only the owner sets the path, everyone with the app
+        // gets it through wishlist(), and it has to look like the file the app wrote.
+        const path = 'wishes/0b0c7a52-6f5a-4d63-8a5c-1d1f0f4f9a11.jpg';
+        await as(
+          lena,
+          () => tx`update app_wunschliste.wishes set image_path = ${path} where id = ${wish.id}`,
+        );
+        const withPicture = await as(
+          tom,
+          () => tx`select image_path from app_wunschliste.wishlist(${lena}) where id = ${wish.id}`,
+        );
+        expect(withPicture[0]?.image_path).toBe(path);
+        await expect(
+          refused(
+            lena,
+            (db) =>
+              db`update app_wunschliste.wishes set image_path = '../x.jpg' where id = ${wish.id}`,
+          ),
+        ).rejects.toThrow(/image_path|check/);
+        const foreign = await as(
+          tom,
+          () =>
+            tx`update app_wunschliste.wishes set image_path = null where id = ${wish.id} returning id`,
+        );
+        expect(foreign).toHaveLength(0);
 
         // Not from another app's page, and not by writing reservations directly.
         expect(

@@ -260,6 +260,7 @@ function sanitizePlan(raw) {
     start: isDay(raw.start) ? raw.start : '',
     end: isDay(raw.end) ? raw.end : '',
     activities: arr(raw.activities).filter((x) => typeof x === 'string'),
+    ...sanitizeQuota(raw),
     updatedAt: Number.isFinite(raw.updatedAt) ? raw.updatedAt : 0,
   };
 }

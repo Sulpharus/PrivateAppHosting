@@ -211,12 +211,14 @@ export function compose(brief: Brief, lib: Library): string {
   const modules = lib.modules.filter((m) => brief.modules.includes(m.id));
   const audience = AUDIENCES[brief.audience];
   const builder = BUILDERS[brief.builder];
-  const name = brief.name.trim() || 'Neue App';
-  const slug = slugify(name) || 'neue-app';
+  // No name in the brief: the AI picks one. A placeholder ("Neue App") must never reach the upload.
+  const named = brief.name.trim().length > 0 && slugify(brief.name).length >= 2;
+  const name = named ? brief.name.trim() : '';
+  const slug = named ? slugify(name) : '';
   const accentLabel = ACCENTS.find(([id]) => id === brief.accent)?.[1] ?? brief.accent;
 
   const lines: string[] = [];
-  lines.push(`# Build the MiniNode app "${name}"`);
+  lines.push(named ? `# Build the MiniNode app "${name}"` : '# Build a MiniNode app');
   lines.push('');
   lines.push(
     'You are building a web app for MiniNode, a private platform that hosts small German-language apps behind one login. Read the whole prompt before you start. The app brief comes first, then how to build and deliver it, then the platform spec and the design system every app follows, then guidance for this kind of app and each requested feature. Where they differ, the brief wins over the guidance, and the spec and design system win over your own habits.',
@@ -224,8 +226,14 @@ export function compose(brief: Brief, lib: Library): string {
   lines.push('');
   lines.push('## 1. The app');
   lines.push('');
-  lines.push(`- **Name:** ${name}`);
-  lines.push(`- **Slug:** \`${slug}\` (it becomes https://${slug}.mininode.app)`);
+  if (named) {
+    lines.push(`- **Name:** ${name}`);
+    lines.push(`- **Slug:** \`${slug}\` (it becomes https://${slug}.mininode.app)`);
+  } else {
+    lines.push(
+      '- **Name and slug:** the brief gives none. Choose a short, distinctive name (not "Neue App", not "New app", not a generic word like "Tracker") and its slug (lowercase letters, digits and hyphens, e.g. `garantie-box`), and use them in `mininode.json`, the `<title>`, the app header and the README. Tell the owner which you chose.',
+    );
+  }
   if (type) lines.push(`- **Kind of app:** ${type.title} (${type.summary})`);
   lines.push(`- **Who uses it:** ${audience.note} Data mode \`${audience.mode}\`.`);
   lines.push(`- **Accent:** \`data-accent="${brief.accent}"\` (${accentLabel}).`);
@@ -294,11 +302,12 @@ export function compose(brief: Brief, lib: Library): string {
   lines.push('');
   lines.push(
     [
-      `- \`mininode.json\` has slug \`${slug}\`, data mode \`${audience.mode}\`, the \`i18n\` block (de, en)${modules.some((m) => m.id === 'ai') ? ', the AI models with a small monthly budget' : ''}${modules.some((m) => m.id === 'google') ? ', the `google` block with the least access the app needs' : ''}.`,
+      `- \`mininode.json\` has ${named ? `slug \`${slug}\`` : 'the slug and name you chose (never "neue-app" or "Neue App")'}, data mode \`${audience.mode}\`, the \`i18n\` block (de, en)${modules.some((m) => m.id === 'ai') ? ', the AI models with a small monthly budget' : ''}${modules.some((m) => m.id === 'google') ? ', the `google` block with the least access the app needs' : ''}.`,
       `- \`<html lang="de" data-accent="${brief.accent}">\`, \`<body class="mn-app">\`, the App Kit shell (\`mn-nav\`, \`mn-top\`, \`mn-main\`).`,
       '- `i18n/de.json` and `i18n/en.json` (in `public/i18n/` for built apps): same keys, same placeholders, plural forms, professional English; no text for people left in the code; `pnpm mininode doctor` shows no `i18n-*` finding.',
       '- Every view checked at 360 px and 1280 px, in light and dark mode, in German and in English.',
       '- No localStorage for user data, no CDN scripts, no API keys, no raw colours or fonts in app CSS.',
+      '- `mininode.json` holds only keys the spec documents (the accent is `data-accent` in the HTML, never a key there). Data goes through `@mininode/sdk` (`mn.auth`, `mn.kv`): no `window.MiniNode`, no fallback for "MiniNode not available". Sample data uses `@example.com` addresses only.',
       '- Every list has an empty state and a loading skeleton; every network call has an error message.',
       '- A README says what the app does, what it stores and how to try it.',
     ].join('\n'),

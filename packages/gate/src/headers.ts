@@ -24,7 +24,8 @@ export function contentSecurityPolicy(options: CspOptions): string {
     "script-src 'self'",
     // Inline styles are common in AI-generated UIs and low risk without inline scripts.
     "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data: blob: https:",
+    // https: covers the hosted Supabase; the origin itself covers a local stack over http.
+    `img-src 'self' data: blob: https: ${supabase.origin}`,
     "font-src 'self' data:",
     "media-src 'self' blob: https:",
     `connect-src ${connect.join(' ')}`,

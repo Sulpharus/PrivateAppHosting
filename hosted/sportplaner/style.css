@@ -2275,7 +2275,7 @@ details.more > div {
   cursor: pointer;
 }
 .yearly-check input,
-.checks input {
+.checks input[type="checkbox"] {
   width: 20px;
   height: 20px;
   min-height: 0;
@@ -2309,7 +2309,7 @@ details.more > div {
 .checks {
   display: grid;
 }
-.checks label {
+.checks > label {
   display: flex;
   gap: var(--s3);
   align-items: center;
@@ -2542,4 +2542,44 @@ details.more > div {
   height: auto;
   padding-block: var(--s2);
   white-space: normal;
+}
+
+/* Credits and visit allowances of a membership */
+.quota-link {
+  grid-column: 1 / -1;
+  flex-basis: 100%;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 8px 12px;
+  margin: 0 0 8px 34px;
+  padding: 10px 12px;
+  border-left: 3px solid var(--mn-accent, currentColor);
+  border-radius: 0 var(--mn-radius-md, 10px) var(--mn-radius-md, 10px) 0;
+  background: var(--mn-surface-2, rgba(127, 127, 127, 0.1));
+}
+.quota-link[hidden],
+.quota-link[data-qmode="none"] {
+  display: none;
+}
+.quota-link[data-qmode="visits"] .q-credits-only,
+.quota-link[data-qmode="none"] .q-credits-only {
+  display: none;
+}
+.quota-link[data-qmode="credits"] .q-visits-only {
+  display: none;
+}
+#planform[data-quota="none"] .only-quota,
+#planform[data-quota="none"] .quota-link {
+  display: none;
+}
+#planform[data-quota="visits"] .q-credits-only,
+#planform[data-quota="none"] .q-credits-only {
+  display: none;
+}
+#planform[data-quota="credits"] .q-visits-only {
+  display: none;
+}
+.quota-use {
+  color: var(--mn-ink-2, inherit);
+  font-size: 0.9em;
 }

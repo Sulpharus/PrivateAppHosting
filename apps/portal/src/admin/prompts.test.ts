@@ -120,6 +120,22 @@ describe('compose', () => {
   it('asks for a description when none is given', () => {
     expect(compose({ ...brief, idea: ' ' }, library)).toContain('ask before you start');
   });
+
+  it('lets the AI choose a name instead of handing it the placeholder "Neue App"', () => {
+    const text = compose({ ...brief, name: ' ' }, library);
+    expect(text).toContain('# Build a MiniNode app');
+    expect(text).toContain('the brief gives none. Choose a short, distinctive name');
+    expect(text).not.toContain('**Slug:**');
+    expect(text).not.toMatch(/\*\*Name:\*\* Neue App|Build the MiniNode app "Neue App"/);
+  });
+
+  it('names the details that make an upload fail the check', () => {
+    const text = compose(brief, library);
+    expect(text).toContain('never a key there');
+    expect(text).toContain('no `window.MiniNode`');
+    expect(text).toContain('`@example.com`');
+    expect(text).toContain('**`mininode.json` has only the documented keys.**');
+  });
 });
 
 describe('slugify', () => {

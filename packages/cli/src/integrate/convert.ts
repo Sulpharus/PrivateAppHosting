@@ -1,6 +1,7 @@
-import { cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
-import { MANIFEST_FILENAME, type ManifestInput } from '@mininode/manifest';
+import { MANIFEST_FILENAME, type ManifestInput, manifestSchema } from '@mininode/manifest';
+import { anonymiseEmails, NON_TEXT } from '../export.ts';
 import type { Inspection, PackageJson } from './inspect.ts';
 
 export interface ConvertContext {
@@ -155,6 +156,27 @@ function cleanAssets(ctx: ConvertContext, converted: Converted) {
   }
 }
 
+/**
+ * Icons written as Material Symbols ligatures need the font; it comes from the npm package (same
+ * origin) instead of Google, whose address the content security policy blocks. The full font is
+ * large: `scripts/subset-icons.py` cuts it to the icons the app uses.
+ */
+export const ICON_FONT_VERSION = '^0.47.6';
+
+/** An app that ships its own (smaller) copy of the font does not need the package. */
+const ownIconFont = (inspection: Inspection) =>
+  inspection.files.includes('public/fonts/material-symbols.css');
+
+function noteIconFont(ctx: ConvertContext, converted: Converted) {
+  if (!ctx.inspection.iconFont || ownIconFont(ctx.inspection)) return;
+  converted.actions.push(
+    `Icon-Schrift Material Symbols aus dem Paket material-symbols eingebunden (statt von Google)`,
+  );
+  converted.warnings.push(
+    'Die Icon-Schrift ist 4 MB groß: mit scripts/subset-icons.py auf die genutzten Icons verkleinern.',
+  );
+}
+
 function bootSource(inspection: Inspection): string {
   const { uses } = inspection;
   const imports = [
@@ -165,6 +187,9 @@ function bootSource(inspection: Inspection): string {
   return [
     '// Written by `mininode integrate`: login first, then the compatibility layers, then the app.',
     `import { ${imports.join(', ')} } from '@mininode/sdk';`,
+    ...(inspection.iconFont && !ownIconFont(inspection)
+      ? [`import 'material-symbols/${inspection.iconFont}.css';`]
+      : []),
     '',
     'const mn = await mininode();',
     'await mn.auth.requireLogin();',
@@ -220,6 +245,8 @@ function dependencyPackage(ctx: ConvertContext, original: string): PackageJson {
   if (/plugin-react/.test(original) && devDependencies['@vitejs/plugin-react'] === undefined)
     devDependencies['@vitejs/plugin-react'] = 'latest';
   dependencies['@mininode/sdk'] = 'workspace:*';
+  if (ctx.inspection.iconFont && !ownIconFont(ctx.inspection))
+    dependencies['material-symbols'] = ICON_FONT_VERSION;
   const sorted = (deps: Record<string, string>) =>
     Object.fromEntries(Object.entries(deps).sort(([a], [b]) => a.localeCompare(b)));
   return {
@@ -276,6 +303,7 @@ export function convertVite(ctx: ConvertContext): Converted {
   );
 
   cleanAssets(ctx, converted);
+  noteIconFont(ctx, converted);
   writeManifest(ctx, 'spa');
   converted.actions.push(
     `mininode.json: Single-Page-App, Daten privat${inspection.uses.miniNodeAi ? ', KI mit Monatsbudget 3 €' : ''}, Zugriff nicht automatisch`,
@@ -368,21 +396,131 @@ export function convertStatic(ctx: ConvertContext): Converted {
   return converted;
 }
 
-/** The export already carries a `mininode.json`: copy it unchanged and let doctor judge. */
+/**
+ * Sample people an AI tool writes into demo data (`max@beispiel.de`) would stop the export of the
+ * app: they become `max@example.com`.
+ */
+function anonymiseSampleEmails(ctx: ConvertContext, converted: Converted) {
+  let changed = 0;
+  const files: string[] = [];
+  for (const file of ctx.inspection.files) {
+    if (NON_TEXT.test(file) || file.startsWith('vendor/') || file.includes('/vendor/')) continue;
+    const path = join(ctx.outDir, file);
+    if (!existsSync(path)) continue;
+    const buffer = readFileSync(path);
+    if (buffer.includes(0)) continue;
+    const result = anonymiseEmails(buffer.toString('utf8'));
+    if (result.count === 0) continue;
+    writeFileSync(path, result.text);
+    changed += result.count;
+    files.push(file);
+  }
+  if (changed > 0) {
+    converted.actions.push(
+      `${changed} Beispiel-E-Mail-Adresse(n) durch @example.com ersetzt (${files.slice(0, 3).join(', ')}${files.length > 3 ? ', …' : ''})`,
+    );
+    converted.warnings.push(
+      'E-Mail-Adressen im Code sind durch @example.com ersetzt: prüfen, ob eine davon echt gemeint war.',
+    );
+  }
+}
+
+/**
+ * The export already carries a `mininode.json`: it is kept, with what a generator gets wrong
+ * regularly set right (unknown keys, a placeholder address, access for everybody), and doctor judges.
+ */
 export function convertNative(ctx: ConvertContext): Converted {
   const converted: Converted = {
     actions: ['Projekt mit vorhandener mininode.json übernommen'],
     warnings: [],
   };
-  copyTree(ctx.inspection, ctx.outDir, () => false);
-  // Whatever the export asks for, access is the admin's decision: never "for everybody".
+  const { inspection } = ctx;
+  const deps = { ...inspection.pkg?.dependencies, ...inspection.pkg?.devDependencies };
+  const vite = inspection.pkg !== null && deps.vite !== undefined;
+  const serverFiles = new Set(
+    vite ? inspection.files.filter((file) => /^server\.(ts|js|mjs|cjs)$/.test(file)) : [],
+  );
+  copyTree(
+    inspection,
+    ctx.outDir,
+    (file) =>
+      serverFiles.has(file) ||
+      (vite && (/^server\//.test(file) || /^vite\.config\.\w+$/.test(file))),
+  );
+  if (vite) {
+    // The same clean-up as for a Vite export without a manifest: the generator's package.json
+    // (server, provider SDKs, a name shared by every export: "react-example") and its dev-server
+    // settings in vite.config must not reach hosted/.
+    const configFile = inspection.files.find((file) => /^vite\.config\.\w+$/.test(file));
+    const originalConfig = configFile
+      ? readFileSync(join(inspection.root, configFile), 'utf8')
+      : '';
+    writeFileSync(join(ctx.outDir, 'vite.config.ts'), viteConfig(originalConfig));
+    writeFileSync(
+      join(ctx.outDir, 'package.json'),
+      `${JSON.stringify(dependencyPackage(ctx, originalConfig), null, 2)}\n`,
+    );
+    converted.actions.push(
+      'package.json: Name je App, Server- und KI-Pakete entfernt, @mininode/sdk ergänzt; vite.config.ts ohne Entwicklungs-Einstellungen',
+    );
+    if (serverFiles.size > 0)
+      converted.actions.push(`Entwicklungs-Server entfernt (${[...serverFiles].join(', ')})`);
+  }
   const path = join(ctx.outDir, MANIFEST_FILENAME);
-  const manifest = JSON.parse(readFileSync(path, 'utf8')) as { access?: { default?: boolean } };
+  const manifest = JSON.parse(readFileSync(path, 'utf8')) as Record<string, unknown> & {
+    access?: { default?: boolean };
+    build?: { command?: string };
+  };
+  let changed = false;
+  // The workspace builds with pnpm; a generator writes npm.
+  const build = manifest.build?.command;
+  if (build && /^npm run /.test(build)) {
+    manifest.build = { ...manifest.build, command: build.replace(/^npm run /, 'pnpm ') };
+    changed = true;
+    converted.actions.push(`Build-Befehl auf „${manifest.build.command}“ gesetzt`);
+  }
+
+  // Keys the manifest does not know (an AI tool puts the accent colour or a theme here) are not
+  // read by anything; the strict schema would only stop the app because of them.
+  const known = new Set(Object.keys(manifestSchema.shape));
+  const unknown = Object.keys(manifest).filter((key) => !known.has(key));
+  for (const key of unknown) delete manifest[key];
+  if (unknown.length > 0) {
+    changed = true;
+    converted.actions.push(
+      `Unbekannte Schlüssel aus mininode.json entfernt: ${unknown.join(', ')}`,
+    );
+  }
+  if (manifest.slug !== ctx.slug) {
+    manifest.slug = ctx.slug;
+    changed = true;
+    converted.actions.push(`Adresse der App auf „${ctx.slug}“ gesetzt`);
+  }
+  if (manifest.name !== ctx.name) {
+    manifest.name = ctx.name;
+    changed = true;
+    converted.actions.push(`Name der App auf „${ctx.name}“ gesetzt`);
+  }
+  // Whatever the export asks for, access is the admin's decision: never "for everybody".
   if (manifest.access?.default) {
     manifest.access.default = false;
-    writeFileSync(path, `${JSON.stringify(manifest, null, 2)}\n`);
+    changed = true;
     converted.actions.push('access.default auf false gesetzt (Zugriff vergibt der Admin)');
   }
+  if (changed) writeFileSync(path, `${JSON.stringify(manifest, null, 2)}\n`);
+
+  // Links to fonts and styles on other sites are blocked by the security rules anyway.
+  cleanAssets(ctx, converted);
+  const entry = inspection.moduleEntry;
+  if (entry && vite && inspection.iconFont && !ownIconFont(inspection)) {
+    const entryPath = join(ctx.outDir, entry);
+    writeFileSync(
+      entryPath,
+      `import 'material-symbols/${inspection.iconFont}.css';\n${readFileSync(entryPath, 'utf8')}`,
+    );
+    noteIconFont(ctx, converted);
+  }
+  anonymiseSampleEmails(ctx, converted);
   if (!ctx.inspection.files.includes('README.md')) writeReadme(ctx, converted);
   return converted;
 }

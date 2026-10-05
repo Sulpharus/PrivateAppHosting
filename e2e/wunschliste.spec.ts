@@ -1,3 +1,4 @@
+import { deflateSync } from 'node:zlib';
 import { type Browser, expect, type Page, test } from '@playwright/test';
 import { cleanup, createUser, PASSWORD } from './seed.ts';
 
@@ -11,6 +12,45 @@ const people = {
   tom: { email: `${run}-tom@example.com`, name: `Tom ${run}` },
   mia: { email: `${run}-mia@example.com`, name: `Mia ${run}` },
 };
+
+// A real 64 x 48 PNG (two colours), enough for a photo.
+function makePng(width: number, height: number): Buffer {
+  const crcTable = Array.from({ length: 256 }, (_, n) => {
+    let c = n;
+    for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+    return c >>> 0;
+  });
+  const crc = (buf: Buffer) => {
+    let c = 0xffffffff;
+    for (const byte of buf) c = (crcTable[(c ^ byte) & 255] as number) ^ (c >>> 8);
+    return (c ^ 0xffffffff) >>> 0;
+  };
+  const chunk = (type: string, data: Buffer) => {
+    const body = Buffer.concat([Buffer.from(type), data]);
+    const out = Buffer.alloc(body.length + 8);
+    out.writeUInt32BE(data.length, 0);
+    body.copy(out, 4);
+    out.writeUInt32BE(crc(body), body.length + 4);
+    return out;
+  };
+  const head = Buffer.alloc(13);
+  head.writeUInt32BE(width, 0);
+  head.writeUInt32BE(height, 4);
+  head.set([8, 2, 0, 0, 0], 8); // 8 bit, RGB
+  const rows = Buffer.alloc((width * 3 + 1) * height);
+  for (let y = 0; y < height; y++)
+    for (let x = 0; x < width; x++) {
+      const at = y * (width * 3 + 1) + 1 + x * 3;
+      rows.set(x < width / 2 ? [47, 111, 143] : [242, 193, 78], at);
+    }
+  return Buffer.concat([
+    Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
+    chunk('IHDR', head),
+    chunk('IDAT', deflateSync(rows)),
+    chunk('IEND', Buffer.alloc(0)),
+  ]);
+}
+const PHOTO = makePng(64, 48);
 
 test.beforeAll(async () => {
   for (const p of Object.values(people)) await createUser(p.email, 'user', p.name);
@@ -112,4 +152,65 @@ test('wishlists: reserve for others, hidden from the owner', async ({ browser })
     await mia.emulateMedia({ colorScheme: 'dark' });
     await mia.screenshot({ path: `${shots}/wunschliste-mobil-dunkel.png`, fullPage: true });
   }
+});
+
+test('a wish with an uploaded photo: others see it, and the list exports as a PDF with it', async ({
+  browser,
+}) => {
+  test.setTimeout(120_000);
+  const lena = await signedIn(browser, people.lena.email);
+  await lena.getByRole('button', { name: 'Wunsch hinzufügen' }).first().click();
+  const dialog = lena.getByRole('dialog', { name: 'Neuer Wunsch' });
+  await dialog.getByLabel('Was wünschst du dir?').fill('Rennrad mit Foto');
+  await dialog.getByLabel('Preis in € (ungefähr)').fill('1299,50');
+  // The photo comes from the device: a PNG here, saved as a shrunk JPEG.
+  await dialog.getByText('Bild und Notiz').click();
+  await dialog
+    .getByLabel('Foto aus Galerie oder Kamera wählen')
+    .setInputFiles({ name: 'rad.png', mimeType: 'image/png', buffer: PHOTO });
+  await expect(dialog.locator('.photo-preview img')).toBeVisible();
+  await dialog.getByRole('button', { name: 'Speichern' }).click();
+  await expect(dialog).toBeHidden();
+
+  // The picture is on her list (a signed address into the shared files).
+  const own = lena.locator('.wish', { hasText: 'Rennrad mit Foto' }).locator('img.mn-thumb');
+  await expect(own).toHaveAttribute(
+    'src',
+    /\/storage\/v1\/object\/sign\/app-files\/wunschliste\/shared\/wishes\//,
+  );
+  await expect
+    .poll(() => own.evaluate((img: HTMLImageElement) => img.naturalWidth))
+    .toBeGreaterThan(0);
+
+  // Tom sees the photo on her list: shared files are readable by everyone with the app.
+  const tom = await signedIn(browser, people.tom.email);
+  await openList(tom, people.lena.name);
+  const seen = tom.locator('img.mn-thumb').first();
+  await expect(seen).toHaveAttribute('src', /wunschliste\/shared\/wishes\//);
+  await expect
+    .poll(() => seen.evaluate((img: HTMLImageElement) => img.naturalWidth))
+    .toBeGreaterThan(0);
+
+  // The PDF: a real file with the title, the price and the picture inside.
+  const download = lena.waitForEvent('download');
+  await lena.getByRole('button', { name: 'Als PDF' }).click();
+  const file = await download;
+  expect(file.suggestedFilename()).toMatch(/^wunschliste-.*\.pdf$/);
+  const path = await file.path();
+  const { readFileSync } = await import('node:fs');
+  const pdf = readFileSync(path).toString('latin1');
+  expect(pdf.startsWith('%PDF-1.4')).toBe(true);
+  expect(pdf).toContain('(Rennrad mit Foto)');
+  expect(pdf).toContain('1.299,50');
+  expect(pdf).toContain('/Filter /DCTDecode');
+  expect(pdf).toContain('/Im1 Do');
+  if (shots) await lena.screenshot({ path: `${shots}/wunschliste-foto.png`, fullPage: true });
+
+  // Changing the wish and removing the photo: the list shows the initials again.
+  await lena.getByRole('button', { name: /Rennrad mit Foto.* bearbeiten/ }).click();
+  await lena.getByRole('button', { name: 'Foto entfernen' }).click();
+  await lena.getByRole('button', { name: 'Speichern' }).click();
+  await expect(lena.locator('.wish', { hasText: 'Rennrad mit Foto' }).locator('img')).toHaveCount(
+    0,
+  );
 });

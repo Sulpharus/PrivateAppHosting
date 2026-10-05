@@ -176,7 +176,12 @@ function computeStats(Y) {
   const total = entries.reduce((s, e) => s + e.amount, 0);
   const group = (k) => {
     const m = new Map();
-    for (const e of entries) m.set(e[k], (m.get(e[k]) || 0) + e.amount);
+    for (const e of entries) {
+      // An offer with several sports shares its cost between them.
+      const keys = k === 'category' ? sportsOf(e.category) : [e[k]];
+      for (const key of keys.length ? keys : [e[k]])
+        m.set(key, (m.get(key) || 0) + e.amount / (keys.length || 1));
+    }
     return [...m].sort((x, y) => y[1] - x[1]);
   };
   const actCost = new Map();
@@ -305,7 +310,8 @@ function updStats() {
             .sort((x, y) => x.p.name.localeCompare(y.p.name, loc()))
             .map(({ p, total, visits, perVisit }) => {
               const links = (p.activities || []).map(actName).filter(Boolean);
-              return `<button class="row prow" data-action="edit-plan" data-id="${esc(p.id)}"><span class="min"><h4>${esc(p.name)}</h4><p>${esc([planSummary(p), p.provider].filter(Boolean).join(', '))}</p>${links.length ? `<p>${esc(links.join(', '))}</p>` : ''}</span><span class="next"><b>${eur(total)}</b>${visits ? esc(tr('stats.visits', { n: visits })) : ''}${perVisit ? `<br>${esc(tr('stats.perVisit', { price: eur(perVisit) }))}` : ''}</span></button>`;
+              const use = quotaLines(p, todayStr());
+              return `<button class="row prow" data-action="edit-plan" data-id="${esc(p.id)}"><span class="min"><h4>${esc(p.name)}</h4><p>${esc([planSummary(p), p.provider].filter(Boolean).join(', '))}</p>${links.length ? `<p>${esc(links.join(', '))}</p>` : ''}${use.length ? `<p class="quota-use">${esc(use.join(' · '))}</p>` : ''}</span><span class="next"><b>${eur(total)}</b>${visits ? esc(tr('stats.visits', { n: visits })) : ''}${perVisit ? `<br>${esc(tr('stats.perVisit', { price: eur(perVisit) }))}` : ''}</span></button>`;
             })
             .join('')}</div>`
         : emptyHTML(
@@ -351,7 +357,7 @@ function openPlanEditor(p) {
   const acts = [...S.acts].sort((x, y) => x.name.localeCompare(y.name, loc()));
   openSheet(
     `<div class="bar"><button class="btn ghost" data-action="close">${esc(tr('action.cancel'))}</button><h2 id="sheet-title">${esc(tr(p ? 'plan.edit' : 'plan.new'))}</h2><span></span></div>
-  <form class="form" id="planform" data-type="${esc(pdraft.type)}" novalidate>
+  <form class="form" id="planform" data-type="${esc(pdraft.type)}" data-quota="${esc(planQuota(pdraft).mode)}" novalidate>
     <fieldset><legend>${esc(tr('plan.sectionPlan'))}</legend>
       <label class="f">${esc(tr('plan.name'))}<input name="name" value="${v('name')}" placeholder="${esc(tr('plan.namePlaceholder'))}" autocomplete="off"></label>
       <div class="two"><label class="f">${esc(tr('plan.provider'))}<input name="provider" value="${v('provider')}" list="pprovs" autocomplete="off"></label><label class="f">${esc(tr('plan.sport'))}<input name="category" value="${v('category')}" list="pcats" placeholder="${esc(tr('plan.optional'))}" autocomplete="off"></label></div>
@@ -380,8 +386,16 @@ function openPlanEditor(p) {
       <p class="hint only-recurring">${esc(tr('plan.hintCancelled'))}</p>
       <p class="hint only-card">${esc(tr('plan.hintCard'))}</p>
     </fieldset>
+    <fieldset><legend>${esc(tr('quota.legend'))}</legend>
+      <label class="f">${esc(tr('quota.mode'))}<select name="qmode" id="qmode">${['none', 'credits', 'visits'].map((m) => opt(m, tr(`quota.mode.${m}`), planQuota(pdraft).mode)).join('')}</select></label>
+      <div class="two only-quota">
+        <label class="f"><span class="q-credits-only">${esc(tr('quota.creditsMonth'))}</span><span class="q-visits-only">${esc(tr('quota.visitsMonth'))}</span><input name="qmonth" type="number" inputmode="numeric" min="0" max="100000" value="${planQuota(pdraft).month || ''}" placeholder="${esc(tr('quota.unlimited'))}"></label>
+        <label class="f">${esc(tr('quota.perDay'))}<input name="qday" type="number" inputmode="numeric" min="0" max="100" value="${planQuota(pdraft).day || ''}" placeholder="${esc(tr('quota.unlimited'))}"></label>
+      </div>
+      <p class="hint only-quota"><span class="q-credits-only">${esc(tr('quota.hintCredits'))}</span><span class="q-visits-only">${esc(tr('quota.hintVisits'))}</span></p>
+    </fieldset>
     <fieldset><legend>${esc(tr('plan.appliesTo'))}</legend>
-      ${acts.length ? `<div class="checks">${acts.map((a) => `<label><input type="checkbox" name="acts" value="${esc(a.id)}"${(pdraft.activities || []).includes(a.id) ? ' checked' : ''}><span>${esc(a.name)}${a.provider ? `<small>${esc(a.provider)}</small>` : ''}</span></label>`).join('')}</div>` : `<p class="hint">${esc(tr('plan.addActivitiesFirst'))}</p>`}
+      ${acts.length ? `<div class="checks">${acts.map((a) => `<label><input type="checkbox" name="acts" value="${esc(a.id)}" data-q="ql_${esc(a.id)}"${(pdraft.activities || []).includes(a.id) ? ' checked' : ''}><span>${esc(a.name)}${a.provider ? `<small>${esc(a.provider)}</small>` : ''}</span></label>${quotaFieldsHTML(pdraft, a.id, `ql_${a.id}`, planQuota(pdraft).mode, (pdraft.activities || []).includes(a.id))}`).join('')}</div>` : `<p class="hint">${esc(tr('plan.addActivitiesFirst'))}</p>`}
       <p class="hint">${esc(tr('plan.hintVisits'))}</p>
     </fieldset>
     <fieldset><legend>${esc(tr('plan.notes'))}</legend><label class="f">${esc(tr('plan.notes'))}<textarea name="notes" rows="3">${v('notes')}</textarea></label></fieldset>
@@ -406,6 +420,22 @@ async function savePlan() {
   p.every = Math.max(1, parseInt(fd.get('every'), 10) || 1);
   p.visits = Math.max(1, parseInt(fd.get('visits'), 10) || 1);
   p.activities = fd.getAll('acts');
+  // Credits or a visit allowance, and what each activity of the membership costs or allows.
+  const mode = String(fd.get('qmode') || 'none');
+  if (mode === 'none') {
+    delete p.quota;
+    delete p.links;
+  } else {
+    p.quota = { mode, month: wholeNumber(fd.get('qmonth')), day: wholeNumber(fd.get('qday')) };
+    p.links = {};
+    for (const id of p.activities) p.links[id] = readQuotaLink(fd, `ql_${id}`);
+    if (mode === 'credits') {
+      const missing = S.acts.find(
+        (a) => p.activities.includes(a.id) && !(p.links[a.id].credits > 0),
+      );
+      if (missing) return fail(tr('quota.errCreditsFor', { name: missing.name }));
+    }
+  }
   if (!p.name) return fail(tr('plan.errName'));
   if (!(p.amount >= 0)) return fail(tr('plan.errAmount'));
   if ((p.type === 'recurring' || p.type === 'once') && !p.start)
@@ -484,12 +514,14 @@ Object.assign(H, {
     if (d > todayStr()) return toast(tr('visit.future'));
     if ((a.done || []).includes(d)) return toast(tr('visit.exists'));
     try {
+      const problems = quotaProblems(a, d);
       await persist({
         ...a,
         done: [...(a.done || []), d].sort(),
         cancelled: (a.cancelled || []).filter((x) => x !== d),
       });
-      toast(tr('visit.added'));
+      // Entered all the same (it did happen), but the person is told what it goes beyond.
+      toast(problems.length ? `${tr('visit.added')}. ${problems.join(' ')}` : tr('visit.added'));
     } catch {
       toast(tr('visit.addFailed'));
     }
@@ -506,6 +538,11 @@ Object.assign(H, {
   },
 });
 document.addEventListener('change', (e) => {
+  if (e.target.id === 'qmode') {
+    $('#planform').dataset.quota = e.target.value;
+    for (const box of document.querySelectorAll('#planform .quota-link'))
+      box.dataset.qmode = e.target.value;
+  }
   if (e.target.id === 'ptype') {
     $('#planform').dataset.type = e.target.value;
     setText($('#amountlbl'), tr(PLAN_AMOUNT_LABEL[e.target.value]));

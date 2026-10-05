@@ -89,5 +89,21 @@
   "editor.errPrice": "Gib den Preis als Zahl an, z. B. 24,99.",
   "editor.errImage": "Die Bildadresse muss mit https:// beginnen.",
   "editor.errSave": "Speichern hat nicht geklappt. Versuch es noch einmal.",
-  "editor.errDelete": "Löschen hat nicht geklappt."
+  "editor.errDelete": "Löschen hat nicht geklappt.",
+  "mine.pdf": "Als PDF",
+  "editor.photo": "Foto",
+  "editor.photoChoose": "Foto aus Galerie oder Kamera wählen",
+  "editor.photoRemove": "Foto entfernen",
+  "editor.photoHint": "Aus der Galerie oder mit der Kamera. Es wird verkleinert gespeichert und ist für alle sichtbar, die deine Liste sehen.",
+  "editor.errPhoto": "Das Bild konnte nicht gelesen werden. Versuch ein JPEG oder PNG.",
+  "editor.errUpload": "Das Foto konnte nicht hochgeladen werden. Versuch es noch einmal.",
+  "pdf.title": "Wunschliste",
+  "pdf.subtitle": "{name} · {count} · Stand {date}",
+  "pdf.anonymous": "Meine Liste",
+  "pdf.link": "Zum Angebot",
+  "pdf.brand": "MiniNode · Wunschliste",
+  "pdf.page": "Seite {page} von {pages}",
+  "toast.pdfBusy": "PDF wird erstellt …",
+  "toast.pdfReady": "PDF gespeichert",
+  "toast.pdfFailed": "Das PDF konnte nicht erstellt werden."
 }

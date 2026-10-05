@@ -15,6 +15,8 @@ export interface Inspection {
   root: string;
   files: string[];
   pkg: PackageJson | null;
+  /** The export's own `mininode.json` (name and address only), when it has one. */
+  manifest: { name?: string; slug?: string } | null;
   framework: Framework;
   /** Why the script cannot (yet) handle the export; empty for the supported shapes. */
   blockers: Reason[];
@@ -31,6 +33,25 @@ export interface Inspection {
   };
   metadata: { name?: string; description?: string };
   title: string | null;
+  /**
+   * The app writes its icons as Material Symbols ligatures (`<span class="material-symbols-outlined">
+   * home</span>`). AI tools load that font from Google, which the content security policy blocks:
+   * the icon names then show as plain text and the layout falls apart. The style it uses.
+   */
+  iconFont: 'outlined' | 'rounded' | 'sharp' | null;
+}
+
+/** The Material Symbols style an app uses, or null. */
+export function iconFontStyle(texts: string[]): 'outlined' | 'rounded' | 'sharp' | null {
+  for (const text of texts) {
+    const match =
+      /material-symbols-(outlined|rounded|sharp)|Material[+ ]Symbols[+ ](Outlined|Rounded|Sharp)/i.exec(
+        text,
+      );
+    const style = (match?.[1] ?? match?.[2])?.toLowerCase();
+    if (style === 'outlined' || style === 'rounded' || style === 'sharp') return style;
+  }
+  return null;
 }
 
 const SKIP_DIRS = new Set(['node_modules', 'dist', 'build', '.git', '.next', '__MACOSX', '.venv']);
@@ -209,6 +230,14 @@ export function inspectProject(root: string): Inspection {
     proModels: false,
   };
   let moduleEntry: string | null = null;
+  if (framework === 'mininode') moduleEntry = htmlModuleEntry(html);
+
+  // The files that name an icon font: markup, styles and code (not what is already a font file).
+  const iconFont = iconFontStyle(
+    files
+      .filter((file) => /\.(m?[jt]sx?|html?|css)$/.test(file) && statSize(root, file) < 2_000_000)
+      .map((file) => text(file)),
+  );
 
   if (framework === 'vite' || framework === 'static') {
     if (!has('index.html'))
@@ -316,6 +345,10 @@ export function inspectProject(root: string): Inspection {
     root,
     files,
     pkg,
+    manifest:
+      framework === 'mininode'
+        ? readJson<{ name?: string; slug?: string }>(join(root, 'mininode.json'))
+        : null,
     framework,
     blockers,
     warnings,
@@ -323,6 +356,7 @@ export function inspectProject(root: string): Inspection {
     uses,
     metadata,
     title: /<title>([^<]+)<\/title>/i.exec(html)?.[1]?.trim() ?? null,
+    iconFont,
   };
 }
 
