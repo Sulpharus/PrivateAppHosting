@@ -16,6 +16,7 @@ compromised. Each row can be rotated on its own.
 | App-Bibliothek catalog token | `CATALOG_TOKEN` in `/etc/mininode/deploy.env` | new fine-grained token (Contents: read), replace the line |
 | Supabase secret key | GitHub `SUPABASE_SECRET_KEY`, API + AI proxy Worker secrets | Dashboard → API Keys → create new secret key, update all three, then delete the old key |
 | `SEND_EMAIL_HOOK_SECRET` (only with email) | Supabase hook + API Worker | Auth → Hooks → regenerate; update the Worker |
+| `BACKUP_PASSPHRASE` | GitHub environment `production` secret + your password manager | Encrypts the backups from Verwaltung. Changing it does not affect archives already made: keep the old one for them |
 | Supabase DB password | GitHub `SUPABASE_DB_PASSWORD`, `SUPABASE_DB_URL`, `backup.env` | Dashboard → Database → Reset password; update all three |
 | Supabase JWT signing key | Supabase | Auth → Signing Keys → create standby key, *rotate*; the gates pick it up from JWKS within 10 min. Revoke the old key after 1 h (session lifetime) |
 | AI Gateway token / provider keys | AI proxy Worker secrets | gateway settings / provider consoles; `wrangler secret put` |

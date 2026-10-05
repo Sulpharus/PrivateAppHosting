@@ -1,0 +1,87 @@
+name: Sicherung
+
+# A backup of all data (ADR 0019): the database (accounts with password hashes, platform and app
+# tables), the stored files and readable copies of the hosting settings, packed into one 7z
+# archive with AES-256 (the passphrase BACKUP_PASSPHRASE; headers are encrypted too, so even the
+# file names stay private). Started from Verwaltung → Sicherung through the API or by hand under
+# Actions. The archive is kept as an artifact for 30 days; download it there and keep it safe.
+
+on:
+  workflow_dispatch:
+    inputs:
+      files:
+        description: Copy the stored files of the apps too
+        type: boolean
+        default: true
+
+run-name: Sicherung ${{ inputs.files && 'mit' || 'ohne' }} Dateien
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    name: Backup
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 120
+    env:
+      SUPABASE_URL: https://ojicmpgqvoyakigvubek.supabase.co
+      FILES: ${{ inputs.files }}
+    steps:
+      - name: Check the passphrase
+        env:
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          # Not scripts/ci-clean-secret.sh: a passphrase may contain spaces, they must stay.
+          if [ "${#BACKUP_PASSPHRASE}" -lt 16 ]; then
+            echo "::error::BACKUP_PASSPHRASE is missing or shorter than 16 characters (docs/runbooks/backups.md, step 1)"
+            exit 1
+          fi
+          echo "::add-mask::$BACKUP_PASSPHRASE"
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Copy the data
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+        run: |
+          flags=()
+          [ "$FILES" = "true" ] || flags+=(--no-files)
+          pnpm mininode backup create --out "$RUNNER_TEMP/backup" "${flags[@]}"
+          pnpm mininode backup verify "$RUNNER_TEMP/backup"
+      - name: Pack and encrypt
+        id: pack
+        env:
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          command -v 7z >/dev/null || sudo apt-get install -y --no-install-recommends p7zip-full
+          name="mininode-backup-$(date -u +%Y%m%d-%H%M%S)"
+          [ "$FILES" = "true" ] || name="$name-nofiles"
+          mkdir -p "$RUNNER_TEMP/out"
+          # -mhe=on encrypts the file names too; -mx=1 because photos and the dump do not shrink.
+          (cd "$RUNNER_TEMP/backup" && 7z a -t7z -mx=1 -mhe=on "-p$BACKUP_PASSPHRASE" "$RUNNER_TEMP/out/$name.7z" . >/dev/null)
+          7z t "-p$BACKUP_PASSPHRASE" "$RUNNER_TEMP/out/$name.7z" >/dev/null
+          rm -rf "$RUNNER_TEMP/backup"
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+          size=$(stat -c %s "$RUNNER_TEMP/out/$name.7z")
+          echo "Backup \`$name.7z\`: $((size / 1024)) KiB, encrypted with AES-256 and tested." >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.pack.outputs.name }}
+          path: ${{ runner.temp }}/out/${{ steps.pack.outputs.name }}.7z
+          retention-days: 30
+          compression-level: 0
+          if-no-files-found: error

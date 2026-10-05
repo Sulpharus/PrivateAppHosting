@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename, join, resolve } from 'node:path';
+import { createBackup, currentCommit, restoreBackup, verifyBackup } from './backup/index.ts';
 import { changedApps } from './changed.ts';
 import type { DeployEnv } from './deploy/environment.ts';
 import { deployApp, devApp, readVersion } from './deploy/index.ts';
@@ -29,6 +30,10 @@ const USAGE = `mininode <command>
   exempt <slug> [--skip]            Exempt an imported app from the linter, or from Biome entirely (publish step)
   submission fetch <id> --out <file>  Download an uploaded ZIP (workflow)
   submission status <id> <status> [--result file] [--report file] [--pr url] [--review url] [--run url] [--only-if-pr url]
+  backup create --out <dir> [--no-files]   Copy the database and the stored files into a folder
+  backup verify <dir>               Check a backup folder against its checksums
+  backup restore <dir> [--yes] [--no-database] [--no-storage] [--force]
+                                    Put a backup back (without --yes: show what would change)
   library check <entry> <slug>      App-Bibliothek: check an install before the rollout
   library install <entry> <slug>    App-Bibliothek: register an installed program
   library remove <slug> <entry>     App-Bibliothek: disable a removed program
@@ -154,6 +159,64 @@ async function main(args: string[]): Promise<number> {
       }
       console.log(`exported ${result.slug} (${result.files.length} files) to ${out}`);
       return 0;
+    }
+    case 'backup': {
+      const [, , folder] = args;
+      const databaseUrl = process.env.SUPABASE_DB_URL;
+      const supabaseUrl = process.env.SUPABASE_URL;
+      const serviceKey = process.env.SUPABASE_SECRET_KEY;
+      if (target === 'create') {
+        const out = flag(args, '--out');
+        if (!out) break;
+        if (!databaseUrl || !supabaseUrl || !serviceKey)
+          throw new Error('SUPABASE_DB_URL, SUPABASE_URL and SUPABASE_SECRET_KEY are required');
+        const manifest = await createBackup({
+          databaseUrl,
+          supabaseUrl,
+          serviceKey,
+          out: resolve(process.cwd(), out),
+          files: !args.includes('--no-files'),
+          commit: process.env.GITHUB_SHA ?? currentCommit(),
+          log: (message) => console.log(message),
+        });
+        const bytes = manifest.files.reduce((n, f) => n + f.bytes, 0);
+        console.log(`backup written to ${out}: ${manifest.files.length} files, ${bytes} bytes`);
+        return 0;
+      }
+      if (target === 'verify' && folder) {
+        const { manifest, problems } = await verifyBackup(resolve(process.cwd(), folder));
+        if (!manifest || problems.length > 0) {
+          for (const problem of problems) console.error(problem);
+          return 1;
+        }
+        console.log(`ok: ${manifest.files.length} files, made ${manifest.createdAt}`);
+        return 0;
+      }
+      if (target === 'restore' && folder) {
+        const yes = args.includes('--yes');
+        const plan = await restoreBackup({
+          dir: resolve(process.cwd(), folder),
+          ...(databaseUrl ? { databaseUrl } : {}),
+          ...(supabaseUrl ? { supabaseUrl } : {}),
+          ...(serviceKey ? { serviceKey } : {}),
+          database: !args.includes('--no-database'),
+          storage: !args.includes('--no-storage'),
+          force: args.includes('--force'),
+          yes,
+          log: (message) => console.log(message),
+        });
+        if (!yes) {
+          console.log('Nothing was changed. A restore would replace the rows of these tables:');
+          for (const t of plan.tables)
+            console.log(
+              `  ${t.schema}.${t.table}: ${t.target ?? '?'} now, ${t.backup} in the backup`,
+            );
+          console.log(`and upload ${plan.objects} files into ${plan.buckets} buckets.`);
+          console.log('Run again with --yes to do it.');
+        } else console.log('restore done');
+        return 0;
+      }
+      break;
     }
     case 'library': {
       const [, , first, second] = args;

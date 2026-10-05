@@ -36,7 +36,7 @@ Non-goals: public sign-up, multi-tenant SaaS, a hot standby database.
 | Exposure | **Cloudflare Tunnel** only. Admin surfaces (Proxmox, SSH, Guacamole admin) sit behind **Cloudflare Access** |
 | Database | **Supabase Cloud** Free (production). A second free project serves as **staging**. No hot standby; a scripted monthly **restore drill** instead |
 | Keep-alive | A daily real query (not a cached request), monitored by a dead-man's switch |
-| Backups | Nightly `pg_dump` + storage sync on the NucBox, then restic to NVMe (7/4/6) and an encrypted restic copy in R2. Restore drill scripted and alerting |
+| Backups | Nightly `pg_dump` + storage sync on the NucBox, then restic to NVMe (7/4/6) and an encrypted restic copy in R2. Restore drill scripted and alerting. On demand: a password-protected backup of all data from Verwaltung (ADR 0019) |
 | Auth | Supabase Auth, invite-only. **Passkeys** (Face ID, fingerprint, Windows Hello) primary, email + password fallback. All auth UI lives at **`mininode.app/login`** (ADR 0001) |
 | Email | **Off for now** (Cloudflare Email Sending needs Workers Paid). Invites and password resets are one-time links the admin shares directly. The Email Sending binding and Send Email hook stay implemented and switch on with one config change |
 | Roles | `admin` (owner), `trusted` (shared-account apps), `user` |

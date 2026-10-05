@@ -58,6 +58,7 @@ Where things are documented:
 | Language switch | Per person in Konto → "Sprache / Language" (de/en, profile + `mn-lang` cookie); every hosted app has `i18n/de.json` + `en.json`; new apps must ship both; doctor checks them | ADR 0017, `docs/ai/LANGUAGE-PACKAGES.md`, `packages/ui/kit/i18n.js`, `e2e/language.spec.ts` |
 | App logos | Verwaltung → Apps uploads a logo per app (bucket `app-icons`); deploy picks up `icon.svg`; prompt module "App-Logo"; tile buttons in their own row | ADR 0018, `apps/portal/src/lib/appIcon.ts`, `packages/cli/src/deploy/icon.ts`, `e2e/app-icons.spec.ts` |
 | Haushaltsinventar | Upload review `ee7721bb` (AI Studio "Steward") rebuilt on the platform: items with photo, receipt, warranty, owner, households, service dates and reminders (`mn.push`), backups that restore, Excel report; data mode `shared-account`, rose accent | `hosted/haushalts-inventar`, `e2e/haushalts-inventar.spec.ts` |
+| Backups | Verwaltung → Sicherung: one password-protected archive (accounts with passwords, platform and app data, files, settings) made by `backup.yml`, downloaded from the page; `mininode backup create|verify|restore`; restore tested by a round trip on the local stack | ADR 0019, `docs/runbooks/backups.md`, `packages/cli/src/backup`, `apps/api/src/routes/backups.ts`, `e2e/backups.spec.ts` |
 | German formats | Date, month and time inputs as German parts in every browser; full dates as "01. Okt. 2026"; German numbers | `packages/ui/kit/ui.js`, `docs/ai/DESIGN-SYSTEM.md` §8 |
 
 The Sportplaner map (tab "Karte") and course mode (editor step "Zeiten" → "Kurs") are live
@@ -111,6 +112,10 @@ since the PR #12 deploy. Earlier deploys stopped at medialog and never shipped t
      program uploads;
    - the migration `20261001150000_…` (the deploy applies it) and a release tag when you want the
      packages (`git tag v0.1.0 && git push origin v0.1.0`).
+0. **Backups** (`runbooks/backups.md`): add the secret `BACKUP_PASSPHRASE` (16+ characters, also in your
+   password manager) to the GitHub environment `production`, then Verwaltung → Sicherung works.
+   Do one restore drill into a staging project; restoring into the hosted project is verified on the
+   local stack only.
 1. Approve the suite requests under Verwaltung → Gemeinsame Daten:
    - Kalender: event delete, the other types read;
    - Sportplaner: activity write;

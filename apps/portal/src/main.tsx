@@ -38,6 +38,7 @@ const Catalog = lazy(() => import('./admin/Catalog.tsx').then((m) => ({ default:
 const Hardware = lazy(() => import('./admin/Hardware.tsx').then((m) => ({ default: m.Hardware })));
 const Library = lazy(() => import('./admin/Library.tsx').then((m) => ({ default: m.Library })));
 const NucBox = lazy(() => import('./admin/NucBox.tsx').then((m) => ({ default: m.NucBox })));
+const Backups = lazy(() => import('./admin/Backups.tsx').then((m) => ({ default: m.Backups })));
 const Upload = lazy(() => import('./admin/Upload.tsx').then((m) => ({ default: m.Upload })));
 const Suite = lazy(() => import('./admin/Suite.tsx').then((m) => ({ default: m.Suite })));
 const Games = lazy(() => import('./routes/Games.tsx').then((m) => ({ default: m.Games })));
@@ -122,6 +123,7 @@ const router = createBrowserRouter([
           { index: true, element: <Overview /> },
           { path: 'apps', element: <Apps /> },
           { path: 'upload', element: <Upload /> },
+          { path: 'backups', element: <Backups /> },
           { path: 'catalog', element: <Catalog /> },
           { path: 'users', element: <Users /> },
           {

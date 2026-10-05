@@ -10,8 +10,8 @@ export function workflowRepo(env: ApiEnv): string {
   return env.GITHUB_REPO ?? DEFAULT_REPO;
 }
 
-/** What a refused dispatch usually means, so the owner knows what to fix. */
-function refusalHint(status: number): string {
+/** What a refused call usually means, so the owner knows what to fix. */
+export function refusalHint(status: number): string {
   if (status === 401) return 'Der Startschlüssel ist ungültig oder abgelaufen.';
   if (status === 403)
     return 'Dem Startschlüssel fehlt die Berechtigung „Actions: Read and write“ für dieses Repository.';
@@ -69,4 +69,83 @@ export async function dispatchWorkflow(
     );
   }
   return { runs: `https://github.com/${repo}/actions/workflows/${workflow}` };
+}
+
+/** GitHub headers for the API calls with the dispatch token. */
+function githubHeaders(token: string): Record<string, string> {
+  return {
+    Authorization: `Bearer ${token}`,
+    Accept: 'application/vnd.github+json',
+    'X-GitHub-Api-Version': '2022-11-28',
+    'User-Agent': 'mininode-api',
+  };
+}
+
+/** GET on the repository's API (`/actions/...`), or a problem response when it cannot be done. */
+export async function githubGet<T>(
+  env: ApiEnv,
+  path: string,
+  options: { notFound?: string } = {},
+): Promise<T | Response> {
+  const token = env.GITHUB_DISPATCH_TOKEN;
+  if (!token)
+    return problem(
+      503,
+      'not_configured',
+      'Noch nicht eingerichtet: der GitHub-Startschlüssel fehlt (LIBRARY_DISPATCH_TOKEN).',
+    );
+  const response = await fetch(`https://api.github.com/repos/${workflowRepo(env)}${path}`, {
+    headers: githubHeaders(token),
+    signal: AbortSignal.timeout(15_000),
+  }).catch(() => null);
+  if (!response) return problem(502, 'github_unavailable', 'GitHub ist gerade nicht erreichbar.');
+  if (response.status === 404 && options.notFound)
+    return problem(404, 'not_found', options.notFound);
+  if (!response.ok) {
+    console.error('github read refused', { path, status: response.status });
+    return problem(
+      502,
+      'github_error',
+      `GitHub hat die Anfrage abgelehnt (${response.status}): ${refusalHint(response.status)}`,
+    );
+  }
+  return (await response.json()) as T;
+}
+
+/**
+ * The short-lived address GitHub gives for an artifact's ZIP (valid about a minute, no key
+ * needed to use it), or a problem response. The ZIP itself never passes through the Worker.
+ */
+export async function artifactDownloadUrl(
+  env: ApiEnv,
+  artifactId: number,
+): Promise<string | Response> {
+  const token = env.GITHUB_DISPATCH_TOKEN;
+  if (!token)
+    return problem(
+      503,
+      'not_configured',
+      'Noch nicht eingerichtet: der GitHub-Startschlüssel fehlt.',
+    );
+  const response = await fetch(
+    `https://api.github.com/repos/${workflowRepo(env)}/actions/artifacts/${artifactId}/zip`,
+    {
+      headers: githubHeaders(token),
+      redirect: 'manual',
+      signal: AbortSignal.timeout(15_000),
+    },
+  ).catch(() => null);
+  if (!response) return problem(502, 'github_unavailable', 'GitHub ist gerade nicht erreichbar.');
+  const location = response.headers.get('Location');
+  if (response.status === 410)
+    return problem(410, 'expired', 'Diese Sicherung ist bei GitHub abgelaufen.');
+  if (response.status !== 302 || !location) {
+    console.error('artifact download refused', { artifactId, status: response.status });
+    return problem(
+      502,
+      'github_error',
+      `GitHub gibt die Sicherung nicht heraus (${response.status}): ${refusalHint(response.status)}`,
+    );
+  }
+  return location;
 }

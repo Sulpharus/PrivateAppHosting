@@ -5,6 +5,9 @@ Backups: restic repositories on the NucBox (`/mnt/backup/restic`) and in R2
 manager: without it the backups are unreadable). Retention 7 daily, 4 weekly, 6 monthly.
 The monthly restore drill (`mininode-restore-drill.timer`) proves the R2 copy works.
 
+A backup you start and keep yourself (accounts, data, files, settings) is made in Verwaltung →
+Sicherung; its restore is in `backups.md`.
+
 ```bash
 . /etc/mininode/backup.env && export RESTIC_PASSWORD AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY
 restic -r "$RESTIC_R2_REPO" snapshots            # or $RESTIC_LOCAL_REPO (faster)
