@@ -14,7 +14,7 @@ liegt in der Datenbank: Jede Tabelle hat **Zeilenschutz** (*Row Level Security*,
 | --- | --- | --- |
 | `mn.kv` | Einstellungen, kleine Listen, einfache Daten | Schlüssel-Wert; privat je Person oder `shared` für alle mit der App; **funktioniert offline**, Änderungen werden später übertragen |
 | `mn.files` | Fotos, Belege, Anhänge | Dateispeicher je App; signierte Adressen (1 h); Grenze 50 MB je Datei |
-| **Eigene Tabellen** (`hosted/<name>/db/*.sql`, per `mn.db`) | Beziehungsdaten, Auswertungen | Schema `app_<name>`; Migrationen laufen beim Deploy, zuerst Staging, dann Produktion |
+| **Eigene Tabellen** (`hosted/<name>/db/*.sql`, per `mn.db`) | Beziehungsdaten, Auswertungen | Schema `app_<name>`; Migrationen laufen beim Deploy (Produktion; Staging nur, wenn du den Deploy dafür von Hand startest) |
 
 `localStorage` und IndexedDB sind für Nutzerdaten **verboten** (sie wandern nicht zwischen Geräten). Apps, die sie dennoch nutzen,
 bekommen beim Einbau eine Schicht, die `localStorage` im Konto hält (`installLocalStorageSync`).

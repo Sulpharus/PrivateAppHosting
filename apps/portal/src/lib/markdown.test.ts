@@ -70,3 +70,44 @@ describe('renderMarkdown', () => {
     expect(html).toContain('&lt;img');
   });
 });
+
+describe('hostile input', () => {
+  it('never lets an address break out of its attribute or carry markup', () => {
+    // A code span or emphasis inside an address is not part of the link.
+    expect(inline('[x](https://a.example/`b`)')).not.toContain('<a');
+    const starred = inline('[x](https://a.example/**b**)');
+    expect(starred).not.toContain('<strong>');
+    expect(starred).toContain('href="https://a.example/**b**"');
+    // Quotes and angle brackets in an address cannot close the attribute.
+    for (const url of ['https://a.example/"onmouseover="x', 'https://a.example/<b>']) {
+      const html = inline(`[x](${url})`);
+      // Either no link at all, or exactly one well-formed anchor whose address holds no quote.
+      expect(
+        html === 'x' ||
+          /^<a href="[^"]*" target="_blank" rel="noopener noreferrer">x<\/a>$/.test(html),
+      ).toBe(true);
+      expect(html).not.toContain('<b>');
+    }
+  });
+
+  it('turns entities and tags in headings, cells and quotes into text', () => {
+    const { html } = renderMarkdown(
+      '# <img src=x onerror=alert(1)>\n\n> ## &lt;script&gt;\n\n| a |\n| --- |\n| &#60;b&#62; |',
+    );
+    expect(html).not.toMatch(/<img|<script|<b>/);
+    expect(html).toContain('&amp;lt;script&amp;gt;');
+    expect(html).toContain('&amp;#60;b&amp;#62;');
+  });
+
+  it('keeps heading ids unique across quotes and with a prefix', () => {
+    const { headings } = renderMarkdown('## Titel\n\n> ## Titel\n\n## Titel');
+    expect(new Set(headings.map((h) => h.id)).size).toBe(headings.length);
+    const prefixed = renderMarkdown('### Details', { idPrefix: 'schritt-1-' });
+    expect(prefixed.headings[0]?.id).toBe('schritt-1-details');
+  });
+
+  it('keeps an escaped pipe inside a code span in its table cell', () => {
+    const { html } = renderMarkdown('| Befehl | Zweck |\n| --- | --- |\n| `a \\| b` | geht |');
+    expect(html).toContain('<td><code>a | b</code></td><td>geht</td>');
+  });
+});

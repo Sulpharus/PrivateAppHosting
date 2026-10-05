@@ -1651,6 +1651,11 @@ code,
   gap: 6px;
 }
 
+.wiki-toc a {
+  display: inline-block;
+  padding: 10px 0;
+}
+
 .wiki-toc ul {
   margin: 0;
   padding-left: 18px;

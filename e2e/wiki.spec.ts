@@ -48,7 +48,7 @@ test('the Wissen group has a Wiki with search and articles and a Startup-Guide w
 
   // A generated page lists the apps of the repository.
   await page.goto('/admin/wiki/ref-apps');
-  await expect(page.getByRole('cell', { name: 'sportplaner.mininode.app' })).toBeVisible();
+  await expect(page.getByRole('cell', { name: 'kalender.mininode.app' })).toBeVisible();
 
   // No raw HTML and no script from an article reaches the page.
   expect(await page.locator('.wiki-prose script').count()).toBe(0);

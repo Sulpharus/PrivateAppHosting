@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import { headingId, renderMarkdown } from '../lib/markdown.ts';
 import { findArticle, GUIDE_SLUG } from '../lib/wiki.ts';
@@ -35,20 +35,22 @@ export function Guide() {
   const [done, setDone] = useState<Set<string>>(() => readDone());
   const [open, setOpen] = useState<string | null>(null);
 
-  useEffect(() => writeDone(done), [done]);
-
   if (!guide) return <p className="empty">Der Startup-Guide fehlt (docs/wiki/startup-guide.md).</p>;
   const steps = guide.steps;
   const finished = steps.filter((step) => done.has(step.id)).length;
   const firstOpen = open ?? steps.find((step) => !done.has(step.id))?.id ?? null;
 
-  const toggle = (id: string) =>
-    setDone((current) => {
-      const next = new Set(current);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+  // Saved when the person changes something, never on load: another tab's progress stays.
+  const change = (next: Set<string>) => {
+    setDone(next);
+    writeDone(next);
+  };
+  const toggle = (id: string) => {
+    const next = new Set(done);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    change(next);
+  };
 
   return (
     <>
@@ -57,13 +59,13 @@ export function Guide() {
         <Prose html={renderMarkdown(guide.intro).html} className="muted" />
       </div>
 
-      <div className="card" role="status">
+      <div className="card">
         <div className="row" style={{ justifyContent: 'space-between' }}>
-          <strong>
+          <strong role="status">
             {finished} von {steps.length} Schritten erledigt
           </strong>
           {finished > 0 && (
-            <button type="button" className="button small" onClick={() => setDone(new Set())}>
+            <button type="button" className="button small" onClick={() => change(new Set())}>
               Zurücksetzen
             </button>
           )}
@@ -106,7 +108,12 @@ export function Guide() {
                   <strong>{step.title}</strong>
                 </button>
               </div>
-              {isOpen && <Prose html={renderMarkdown(step.body).html} />}
+              {isOpen && (
+                <Prose
+                  html={renderMarkdown(step.body, { idPrefix: `${step.id}-` }).html}
+                  id={`step-${step.id}`}
+                />
+              )}
             </li>
           );
         })}

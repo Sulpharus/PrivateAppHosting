@@ -9,7 +9,7 @@ summary: Welche Prüfungen es gibt, was sie sichern und was ein roter Lauf heiß
 
 | Prüfung | Was sie macht |
 | --- | --- |
-| **Lint, typecheck, test** | Biome, `tsc`, alle Vitest-Tests (Turborepo) |
+| **Lint, typecheck, test** | Biome, `tsc`, alle Vitest-Tests (Turborepo); `mininode doctor --all` für alle Apps; ein Probe-Deploy der geänderten Apps (bauen, Gate-Konfiguration); **die Kurzfassung der App-Spezifikation ist aktuell** (`pnpm spec:short`, sonst rot, wenn du `docs/ai/NEW-APP-SPEC.md` änderst); **das JSON-Schema des Manifests ist aktuell** |
 | **Database, integration and e2e** | startet ein lokales Supabase; pgTAP (`db:test`), Integrationstests, **Sicherung/Löschen-Rundlauf** (`test:roundtrip`), dann alle Playwright-e2e-Tests |
 | **Infra scripts and images** | Shell-Skripte (shellcheck), Docker-Images der NucBox, Test des Deploy-Skripts |
 | **Secret scan** | gitleaks über jeden Commit |

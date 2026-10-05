@@ -30,9 +30,16 @@ whenever something new is added.
 - **Keeping it current is a rule and a test.** `CLAUDE.md` requires every visible or operational change
   to update the wiki in the same commit (article, `neuigkeiten.md`, Startup-Guide, `fehlerbehebung.md`,
   and the AI specs when apps can use it); the `reviewer` subagent checks it. The test
-  `apps/portal/src/lib/wiki.test.ts` fails in CI when a Verwaltung page, an `apps/*` or `packages/*`
-  folder or an ADR is not named in an article, when links or front matter are broken, and when the
-  generated pages miss an app, workflow or decision.
+  `apps/portal/src/lib/wiki.test.ts` fails in CI when a Verwaltung page is missing from
+  `verwaltung-rundgang.md`, an `apps/*` or `packages/*` folder is not named (whole word) or an ADR is
+  not mentioned as "ADR NNNN", when `neuigkeiten.md` does not name the latest ADR, when links, front
+  matter, `order` values or guide step ids are broken, and when the generated pages miss an app,
+  workflow or decision. Renderer safety (no raw HTML) is covered by `markdown.test.ts`.
+- **The wiki is public static content**: it ships in the portal bundle, readable by anyone who can
+  load the portal assets. Articles must never contain secrets. The generated reference sources are
+  trimmed at build time (`?wikihead`, `apps/portal/wiki-sources.ts`) so the bundle does not carry whole
+  workflow files or the CLI.
+- Renaming a guide step changes its id, so its checkmark in the browser resets.
 
 ## Consequences
 

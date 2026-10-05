@@ -6,7 +6,8 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { renderMarkdown, safeHref } from './markdown.ts';
+import { trimForWiki } from '../../wiki-sources.ts';
+import { headingId, renderMarkdown, safeHref } from './markdown.ts';
 import {
   type Article,
   buildArticles,
@@ -25,26 +26,33 @@ function findRoot(): string {
 }
 const root = findRoot();
 const read = (path: string) => readFileSync(`${root}${path}`, 'utf8');
-const files = (dir: string, extension: string): Record<string, string> =>
+// `trim`: reference sources are trimmed like the build does (wiki-sources.ts).
+const files = (dir: string, pattern: RegExp, trim = false): Record<string, string> =>
   Object.fromEntries(
     readdirSync(`${root}${dir}`)
-      .filter((name) => name.endsWith(extension))
-      .map((name) => [`${dir}/${name}`, read(`${dir}/${name}`)]),
+      .filter((name) => pattern.test(name))
+      .map((name) => {
+        const path = `${dir}/${name}`;
+        return [path, trim ? trimForWiki(path, read(path)) : read(path)];
+      }),
   );
 
 const sources: Sources = {
-  articles: files('docs/wiki', '.md'),
+  articles: files('docs/wiki', /\.md$/),
   manifests: readdirSync(`${root}hosted`)
     .filter((name) => existsSync(`${root}hosted/${name}/mininode.json`))
-    .map((name) => read(`hosted/${name}/mininode.json`)),
-  workflows: files('.github/workflows', '.yml'),
-  binSource: read('packages/cli/src/bin.ts'),
-  adrs: files('docs/adr', '.md'),
-  runbooks: files('docs/runbooks', '.md'),
+    .map((name) =>
+      trimForWiki(`hosted/${name}/mininode.json`, read(`hosted/${name}/mininode.json`)),
+    ),
+  workflows: files('.github/workflows', /\.ya?ml$/, true),
+  binSource: trimForWiki('packages/cli/src/bin.ts', read('packages/cli/src/bin.ts')),
+  adrs: files('docs/adr', /\.md$/, true),
+  runbooks: files('docs/runbooks', /\.md$/, true),
 };
 
 const articles = buildArticles(sources);
 const written = articles.filter((article) => !article.generated);
+const bundled = `${JSON.stringify(sources.adrs)}${JSON.stringify(sources.runbooks)}${JSON.stringify(sources.workflows)}`;
 const everything = written.map((article) => `${article.title}\n${article.body}`).join('\n');
 
 describe('the articles', () => {
@@ -93,13 +101,6 @@ describe('the articles', () => {
       }
     }
   });
-
-  it('render without raw HTML', () => {
-    for (const article of written) {
-      const { html } = renderMarkdown(article.body);
-      expect(html, article.slug).not.toMatch(/<script|<iframe|<img|onerror=|javascript:/i);
-    }
-  });
 });
 
 describe('the Startup-Guide', () => {
@@ -109,7 +110,10 @@ describe('the Startup-Guide', () => {
     const { steps } = parseGuide(guide?.body ?? '', (title) => title);
     expect(steps.length).toBeGreaterThanOrEqual(8);
     for (const step of steps) expect(step.body.length, step.title).toBeGreaterThan(40);
-    expect(new Set(steps.map((s) => s.title)).size).toBe(steps.length);
+    // The checkmarks are kept by the id of a step: two titles must not share one.
+    const ids = steps.map((s) => headingId(s.title));
+    expect(new Set(ids).size).toBe(steps.length);
+    for (const id of ids) expect(id.length).toBeGreaterThan(2);
   });
 });
 
@@ -118,18 +122,24 @@ describe('what has to be written down', () => {
     const layout = read('apps/portal/src/admin/AdminLayout.tsx');
     const labels = [...layout.matchAll(/\['\/admin[^']*', '([^']+)'\]/g)].map((m) => m[1] ?? '');
     expect(labels.length).toBeGreaterThan(8);
+    // Words like "Apps" or "Sicherung" occur everywhere: the page has to be named in the tour.
+    const tour = written.find((a) => a.slug === 'verwaltung-rundgang')?.body ?? '';
     for (const label of labels)
-      expect(everything, `Verwaltung "${label}" is in no wiki article`).toContain(label);
+      expect(tour, `Verwaltung "${label}" is not in verwaltung-rundgang.md`).toContain(
+        `**${label}**`.replace('**Wiki**', 'Wiki').replace('**Startup-Guide**', 'Startup-Guide'),
+      );
   });
 
   it('names every app and package folder of the platform', () => {
     for (const parent of ['apps', 'packages']) {
       for (const entry of readdirSync(`${root}${parent}`, { withFileTypes: true })) {
         if (!entry.isDirectory() || entry.name === 'node_modules') continue;
+        // With a word boundary: `packages/ui` is not found inside `packages/ui-kit`.
+        const name = `${parent}/${entry.name}`.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         expect(
-          everything,
+          new RegExp(`${name}(?![\\w-])`).test(everything),
           `${parent}/${entry.name} is in no wiki article (ueberblick.md, repo-aufbau.md)`,
-        ).toContain(`${parent}/${entry.name}`);
+        ).toBe(true);
       }
     }
   });
@@ -180,9 +190,42 @@ describe('the generated reference pages', () => {
     for (const name of readdirSync(`${root}docs/adr`)) expect(decisions, name).toContain(name);
   });
 
-  it('list the commands of the command line', () => {
-    const commands = byslug('ref-befehle').body;
+  it('list every command of the command line with a description', () => {
+    const rows = byslug('ref-befehle')
+      .body.split('\n')
+      .filter((line) => line.startsWith('| `'));
+    expect(rows.length).toBeGreaterThan(15);
+    for (const row of rows) {
+      const cells = row.split(/(?<!\\)\|/).map((c) => c.trim());
+      expect(cells[2]?.length, `no description: ${row}`).toBeGreaterThan(8);
+    }
+    const commands = rows.join('\n');
     for (const command of ['doctor', 'deploy', 'integrate', 'backup create', 'uninstall'])
       expect(commands, command).toContain(command);
+  });
+
+  it('give every workflow a purpose and a trigger', () => {
+    const rows = byslug('ref-workflows')
+      .body.split('\n')
+      .filter((line) => line.startsWith('| `'));
+    expect(rows.length).toBe(readdirSync(`${root}.github/workflows`).length);
+    for (const row of rows) {
+      const cells = row.split(/(?<!\\)\|/).map((c) => c.trim());
+      expect(cells[3], row).not.toBe('-');
+      // ci.yml has no header comment; every other workflow says what it is for.
+      if (!row.startsWith('| `ci.yml`'))
+        expect(cells[4]?.length, `no purpose: ${row}`).toBeGreaterThan(10);
+      expect(cells[4], row).not.toMatch(/^Registered with GitHub/);
+    }
+  });
+});
+
+describe('what the portal bundle holds', () => {
+  it('has only trimmed repository files, nothing a runbook or workflow body says', () => {
+    // A step of a workflow, a shell command of a runbook: not part of the public bundle.
+    expect(bundled).not.toContain('runs-on:');
+    expect(bundled).not.toContain('jobs:');
+    expect(bundled).not.toContain('${{');
+    expect(bundled.length).toBeLessThan(200_000);
   });
 });

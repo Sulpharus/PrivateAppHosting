@@ -126,11 +126,43 @@ export function appsReference(manifests: string[]): string {
   return lines.join('\n');
 }
 
-/** The workflows in .github/workflows: name, triggers and the first comment lines. */
+/** The words of a workflow header comment that say what it is for (the first sentence). */
+export function workflowPurpose(source: string): string {
+  const comment: string[] = [];
+  for (const line of source.split('\n').slice(1)) {
+    if (line.startsWith('#')) comment.push(line.replace(/^#\s?/, ''));
+    else if (line.trim() !== '') break;
+  }
+  // "Registered with GitHub on the default branch…" only says why the file was touched once.
+  const text = comment
+    .filter((line) => !/^Registered with GitHub/i.test(line))
+    .join(' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const sentence = text.split(/(?<=\.)\s/)[0] ?? '';
+  return sentence.length > 160 ? `${sentence.slice(0, 157).trimEnd()} …` : sentence;
+}
+
+/** What starts a workflow: the keys under `on:`, or the inline forms `on: push` and `on: [push, x]`. */
+export function workflowTriggers(source: string): string[] {
+  const inline = /^on:\s*(\[[^\]]*\]|[a-z_]+)\s*$/m.exec(source)?.[1];
+  if (inline)
+    return inline
+      .replace(/[[\]]/g, '')
+      .split(',')
+      .map((t) => t.trim())
+      .filter(Boolean);
+  const block = /^on:\s*\n((?:[ \t]+.*\n|\n)*)/m.exec(source)?.[1] ?? '';
+  const indent = /^([ \t]+)\S/m.exec(block)?.[1] ?? '  ';
+  const keys = [...block.matchAll(new RegExp(`^${indent}([a-z_]+):`, 'gm'))].map((m) => m[1]);
+  return [...new Set(keys.filter((t): t is string => !!t))];
+}
+
+/** The workflows in .github/workflows: name, triggers and the first comment sentence. */
 export function workflowsReference(files: Record<string, string>): string {
   const lines = [
-    'Aus `.github/workflows/` erzeugt. Gestartet werden sie automatisch, von Verwaltung aus über die API, ' +
-      'oder von Hand unter GitHub → Actions → Workflow → *Run workflow*.',
+    'Aus `.github/workflows/` erzeugt (der Zweck steht dort englisch im Kopf jeder Datei). Gestartet werden Workflows automatisch, ' +
+      'von Verwaltung aus über die API, oder von Hand unter GitHub → Actions → Workflow → *Run workflow*.',
     '',
     '| Datei | Name | Auslöser | Wofür |',
     '| --- | --- | --- | --- |',
@@ -138,40 +170,35 @@ export function workflowsReference(files: Record<string, string>): string {
   for (const [path, source] of Object.entries(files).sort(([a], [b]) => a.localeCompare(b))) {
     const file = path.split('/').pop() ?? path;
     const name = /^name:\s*(.+)$/m.exec(source)?.[1]?.replace(/^["']|["']$/g, '') ?? file;
-    const onBlock = /^on:\s*\n((?:[ \t]+.*\n|\n)*)/m.exec(source)?.[1] ?? '';
-    const triggers = [
-      ...new Set(
-        [...onBlock.matchAll(/^ {2}([a-z_]+):/gm)].map((m) => m[1]).filter((t): t is string => !!t),
-      ),
-    ];
-    // The comment block right after `name:` says what the workflow is for.
-    const comment: string[] = [];
-    for (const line of source.split('\n').slice(1)) {
-      if (line.startsWith('#')) comment.push(line.replace(/^#\s?/, ''));
-      else if (line.trim() !== '') break;
-    }
-    const purpose = comment.join(' ').split(/(?<=\.)\s/)[0] ?? '';
+    const triggers = workflowTriggers(source);
     lines.push(
-      `| \`${file}\` | ${cell(name)} | ${cell(triggers.join(', ') || '-')} | ${cell(purpose)} |`,
+      `| \`${file}\` | ${cell(name)} | ${cell(triggers.join(', ') || '-')} | ${cell(workflowPurpose(source))} |`,
     );
   }
   return lines.join('\n');
 }
 
-/** The commands of `mininode`, from the usage text in packages/cli/src/bin.ts. */
+/**
+ * The commands of `mininode`, from the usage text in packages/cli/src/bin.ts. Format of that text:
+ * an entry starts with two spaces; the description follows after two or more spaces, or on the
+ * lines below it; a line below that starts with `[` continues the command (more options).
+ */
 export function commandsReference(binSource: string): string {
   const usage = /const USAGE = `mininode <command>\n\n([\s\S]*?)`;/.exec(binSource)?.[1] ?? '';
   const entries: { command: string; text: string }[] = [];
   for (const line of usage.split('\n')) {
     if (!line.trim()) continue;
-    const start = /^ {2}(\S.*?)(?: {2,}(\S.*))?$/.exec(line);
-    if (line.startsWith('   ') && entries.length > 0 && !/^ {2}\S/.test(line)) {
-      const last = entries[entries.length - 1];
-      if (last) last.text += ` ${line.trim()}`;
-    } else if (start) entries.push({ command: start[1] ?? '', text: start[2] ?? '' });
+    const last = entries[entries.length - 1];
+    if (/^ {3,}\S/.test(line) && last) {
+      if (line.trim().startsWith('[')) last.command += ` ${line.trim()}`;
+      else last.text = `${last.text} ${line.trim()}`.trim();
+    } else {
+      const start = /^ {2}(\S.*?)(?: {2,}(\S.*))?$/.exec(line);
+      if (start) entries.push({ command: start[1] ?? '', text: start[2] ?? '' });
+    }
   }
   return [
-    'Aus der Hilfe von `pnpm mininode` erzeugt. Aufruf im Repository: `pnpm mininode <befehl>`.',
+    'Aus der Hilfe von `pnpm mininode` erzeugt (englisch). Aufruf im Repository: `pnpm mininode <befehl>`.',
     '',
     '| Befehl | Was er tut |',
     '| --- | --- |',
@@ -336,12 +363,18 @@ export function parseGuide(
   body: string,
   idOf: (title: string) => string,
 ): { intro: string; steps: GuideStep[] } {
-  const parts = body.split(/^## /m);
-  const intro = (parts[0] ?? '').trim();
-  const steps = parts.slice(1).map((part) => {
-    const newline = part.indexOf('\n');
-    const title = (newline < 0 ? part : part.slice(0, newline)).trim();
-    return { id: idOf(title), title, body: newline < 0 ? '' : part.slice(newline + 1).trim() };
+  // A `## ` line inside a code fence is code, not a step.
+  const sections: string[][] = [[]];
+  let fenced = false;
+  for (const line of body.split('\n')) {
+    if (/^```/.test(line)) fenced = !fenced;
+    if (!fenced && /^## /.test(line)) sections.push([line.slice(3)]);
+    else sections[sections.length - 1]?.push(line);
+  }
+  const intro = (sections[0] ?? []).join('\n').trim();
+  const steps = sections.slice(1).map((section) => {
+    const [title = '', ...rest] = section;
+    return { id: idOf(title.trim()), title: title.trim(), body: rest.join('\n').trim() };
   });
   return { intro, steps };
 }

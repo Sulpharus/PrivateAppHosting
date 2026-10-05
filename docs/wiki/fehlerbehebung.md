@@ -48,7 +48,7 @@ Meist eine **zwischengespeicherte** PWA-Version: Seite neu laden oder die App sc
 | --- | --- |
 | CI rot nach Merge, Test „language“ flackert | kalte Dev-Server: Wartezeiten, nicht die App; im Zweifel Lauf wiederholen **und** Ursache beheben, nie Tests abschalten |
 | Lokal geht Docker/Supabase nicht | `scripts/cloud-stack.sh` (Cloud-Sitzung), dann `pnpm exec supabase db reset --local` |
-| Alter Dev-Server blockiert Port | Prozess per PID beenden (`ps -eo pid,args | grep -E "[w]rangler|[v]ite"`), nicht `pkill -f` |
+| Alter Dev-Server blockiert Port | Prozess per PID beenden (`ps -eo pid,args \| grep -E "[w]rangler\|[v]ite"`), nicht `pkill -f` |
 | Echte Schlüssel in Chat/Terminal gelandet | widerrufen, neu erstellen |
 
 Mehr: die Runbooks ([Liste](wiki:ref-runbooks)) und [Wissen aktuell halten](wiki:wissen-pflegen), falls hier ein Fall fehlt: ergänze ihn.

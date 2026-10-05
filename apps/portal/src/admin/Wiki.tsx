@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router';
+import { Link, useLocation, useNavigate, useParams } from 'react-router';
 import { renderMarkdown } from '../lib/markdown.ts';
 import { findArticle, WIKI_ARTICLES } from '../lib/wiki.ts';
 import { type Article, CATEGORIES, searchArticles } from '../lib/wikiLib.ts';
@@ -10,11 +10,29 @@ import { type Article, CATEGORIES, searchArticles } from '../lib/wikiLib.ts';
 
 const REPO = 'https://github.com/Sulpharus/PrivateAppHosting';
 
+/** Scrolls to a heading and moves focus there; no animation when the person asked for none. */
+export function goToHeading(id: string): void {
+  const target = document.getElementById(id);
+  if (!target) return;
+  const calm = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+  target.scrollIntoView({ behavior: calm ? 'auto' : 'smooth' });
+  target.setAttribute('tabindex', '-1');
+  target.focus({ preventScroll: true });
+}
+
 /**
  * Rendered Markdown. Internal links navigate without a page load; the listener sits on the
  * container (not as a JSX handler), because the links are part of the generated HTML.
  */
-export function Prose({ html, className = '' }: { html: string; className?: string }) {
+export function Prose({
+  html,
+  className = '',
+  id,
+}: {
+  html: string;
+  className?: string;
+  id?: string;
+}) {
   const navigate = useNavigate();
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -29,7 +47,7 @@ export function Prose({ html, className = '' }: { html: string; className?: stri
         navigate(href);
       } else if (href.startsWith('#')) {
         event.preventDefault();
-        document.getElementById(href.slice(1))?.scrollIntoView({ behavior: 'smooth' });
+        goToHeading(href.slice(1));
       }
     };
     element.addEventListener('click', onClick);
@@ -38,6 +56,7 @@ export function Prose({ html, className = '' }: { html: string; className?: stri
   return (
     <div
       ref={ref}
+      {...(id ? { id } : {})}
       className={`wiki-prose ${className}`}
       // biome-ignore lint/security/noDangerouslySetInnerHtml: the Markdown renderer escapes all text and allows only its own tags
       dangerouslySetInnerHTML={{ __html: html }}
@@ -81,9 +100,7 @@ function Index() {
       {searching ? (
         <div className="stack" style={{ gap: 10 }} aria-live="polite">
           <h2 className="section-title">
-            {hits.length === 0
-              ? 'Nichts gefunden'
-              : `${hits.length} ${hits.length === 1 ? 'Artikel' : 'Artikel'}`}
+            {hits.length === 0 ? 'Nichts gefunden' : `${hits.length} Artikel`}
           </h2>
           {hits.map((article) => (
             <ArticleLink key={article.slug} article={article} />
@@ -124,6 +141,11 @@ function ArticleLink({ article }: { article: Article }) {
 function ArticleView({ slug }: { slug: string }) {
   const article = findArticle(slug);
   const rendered = useMemo(() => (article ? renderMarkdown(article.body) : null), [article]);
+  // A new article starts at the top, like a new page.
+  const { pathname } = useLocation();
+  useEffect(() => {
+    if (pathname) window.scrollTo(0, 0);
+  }, [pathname]);
   if (!article || !rendered)
     return (
       <div className="stack">
@@ -161,7 +183,7 @@ function ArticleView({ slug }: { slug: string }) {
                   href={`#${heading.id}`}
                   onClick={(event) => {
                     event.preventDefault();
-                    document.getElementById(heading.id)?.scrollIntoView({ behavior: 'smooth' });
+                    goToHeading(heading.id);
                   }}
                 >
                   {heading.text}

@@ -34,8 +34,7 @@ sich in Proxmox auf den Snapshot `pre-<name>-…` zurückrollen. Installer über
 ## Remote-Apps im Betrieb
 
 Verwaltung → Hardware-Server → **Remote-Apps**: Native Programme im Browser über Guacamole. Eine Sitzung gleichzeitig mit Warteschlange
-und Anzeige „belegt seit …“. Windows-VM und Container schlafen, solange niemand verbunden ist (Leerlauf 15 Minuten, Warnung 2 Minuten
-vorher). Für `trusted`-Personen im gemeinsamen Konto sind Zwischenablage, Dateiübertragung und Laufwerksumleitung abgeschaltet; sie arbeiten
+und Anzeige „belegt seit …“. Windows-VM und Container schlafen, solange niemand verbunden ist (Windows-VM: nach 15 Minuten Leerlauf; Wine-Container: nach 10). Für `trusted`-Personen im gemeinsamen Konto sind Zwischenablage, Dateiübertragung und Laufwerksumleitung abgeschaltet; sie arbeiten
 in einem eigenen, gesperrten Windows-Konto. Die Sitzung braucht eine frische Anmeldung (Step-up).
 
 ## Linux oder Windows?

@@ -44,12 +44,12 @@ braucht deshalb einen Admin als Besitzer. Mehr: [Daten speichern](wiki:daten-spe
 ## Erneute Bestätigung (Step-up)
 
 Heikle Aktionen (Apps ändern, Nutzer löschen, Schlüssel setzen, Sicherung herunterladen, App löschen) verlangen eine
-Anmeldung in den letzten 10 Minuten. Das Portal fragt dann kurz nach Passkey/Passwort oder, wenn eingerichtet, dem Code
+Anmeldung in den letzten 10 Minuten (der Sicherungs-Download: 5 Minuten). Das Portal fragt dann kurz nach Passkey/Passwort oder, wenn eingerichtet, dem Code
 der Authenticator-App. Siehe [Anmeldung](wiki:anmeldung).
 
 ## Nutzer einladen
 
-Verwaltung → **Nutzer & Rollen** → *Einladen*: Rolle wählen, Apps wählen, Link erzeugen und der Person schicken
+Verwaltung → **Nutzer & Rollen** → Abschnitt *Neue Einladung*: Rolle wählen, Apps wählen, **Einladungslink erstellen** und den Link der Person schicken
 (Messenger). Der Link öffnet eine Seite mit einem **Weiter**-Knopf; erst der Klick löst den Link ein, damit Mail-Scanner ihn
 nicht verbrauchen. E-Mail-Versand ist aus, solange Cloudflare Email Sending nicht eingeschaltet ist (`first-setup.md`).
 Rollen ändern und Nutzer löschen geht auf derselben Seite.

@@ -29,6 +29,15 @@ export function escapeHtml(text: string): string {
   return text.replace(/[&<>"']/g, (c) => ESCAPES[c] ?? c);
 }
 
+function unescapeHtml(text: string): string {
+  return text
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&amp;/g, '&');
+}
+
 /** "Rollen & Zugriff" → "rollen-zugriff" (umlauts spelled out). */
 export function headingId(text: string): string {
   return text
@@ -54,23 +63,30 @@ export function safeHref(url: string): string | null {
 /** Inline formatting of one line of text (already free of block syntax). */
 export function inline(text: string): string {
   const codes: string[] = [];
+  const links: string[] = [];
   // Code spans first, so nothing inside them is formatted.
   let work = text.replace(/`([^`]+)`/g, (_m, code: string) => {
     codes.push(`<code>${escapeHtml(code)}</code>`);
     return `\uE000${codes.length - 1}\uE000`;
   });
   work = escapeHtml(work);
+  // Links are set aside too: emphasis inside an address must not become markup.
   work = work.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (_m, label: string, url: string) => {
     // The url went through escapeHtml: undo it for the check, the result is escaped again.
-    const raw = url.replace(/&amp;/g, '&');
-    const href = safeHref(raw);
+    const raw = unescapeHtml(url);
+    const href = raw.includes('\uE000') ? null : safeHref(raw);
     if (!href) return label;
     const external = href.startsWith('https://');
-    return `<a href="${escapeHtml(href)}"${external ? ' target="_blank" rel="noopener noreferrer"' : ''}>${label}</a>`;
+    links.push(
+      `<a href="${escapeHtml(href)}"${external ? ' target="_blank" rel="noopener noreferrer"' : ''}>${label}</a>`,
+    );
+    return `\uE001${links.length - 1}\uE001`;
   });
   work = work.replace(/\*\*([^*\s][^*]*?)\*\*/g, '<strong>$1</strong>');
   work = work.replace(/(^|[\s(])\*([^*\s][^*]*?)\*(?=[\s).,;:!?]|$)/g, '$1<em>$2</em>');
-  return work.replace(/\uE000(\d+)\uE000/g, (_m, index: string) => codes[Number(index)] ?? '');
+  return work
+    .replace(/\uE001(\d+)\uE001/g, (_m, index: string) => links[Number(index)] ?? '')
+    .replace(/\uE000(\d+)\uE000/g, (_m, index: string) => codes[Number(index)] ?? '');
 }
 
 interface ListItem {
@@ -129,15 +145,28 @@ const isSeparator = (line: string): boolean =>
   /^\s*\|?(\s*:?-{2,}:?\s*\|)+\s*:?-{2,}:?\s*\|?\s*$/.test(line) ||
   /^\s*\|\s*:?-{2,}:?\s*\|\s*$/.test(line);
 
-export function renderMarkdown(source: string): Rendered {
+export interface RenderOptions {
+  /** Put in front of every heading id, so several texts on one page cannot share an id. */
+  idPrefix?: string;
+}
+
+export function renderMarkdown(source: string, options: RenderOptions = {}): Rendered {
+  return render(source, options, { used: new Set<string>(), headings: [] });
+}
+
+interface Context {
+  used: Set<string>;
+  headings: Heading[];
+}
+
+function render(source: string, options: RenderOptions, context: Context): Rendered {
   const lines = source.replace(/\r\n/g, '\n').split('\n');
-  const headings: Heading[] = [];
+  const { headings, used } = context;
   const out: string[] = [];
-  const used = new Set<string>();
   let i = 0;
 
   const uniqueId = (text: string): string => {
-    const base = headingId(text) || 'abschnitt';
+    const base = `${options.idPrefix ?? ''}${headingId(text) || 'abschnitt'}`;
     let id = base;
     for (let n = 2; used.has(id); n++) id = `${base}-${n}`;
     used.add(id);
@@ -186,7 +215,7 @@ export function renderMarkdown(source: string): Rendered {
         quote.push((lines[i] ?? '').replace(/^>\s?/, ''));
         i++;
       }
-      out.push(`<blockquote>${renderMarkdown(quote.join('\n')).html}</blockquote>`);
+      out.push(`<blockquote>${render(quote.join('\n'), options, context).html}</blockquote>`);
       continue;
     }
     // Table: a row of cells followed by a separator row

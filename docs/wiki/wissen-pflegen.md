@@ -37,10 +37,14 @@ Das ist eine feste Regel in `CLAUDE.md` (ADR 0021), die auch Claude Code befolgt
 
 Er läuft in jeder CI und schlägt fehl, wenn
 
-- ein Artikel falsche Kopfzeilen hat, doppelt vorkommt oder ein Link ins Leere führt;
-- eine **Verwaltungsseite** (Seitenleiste), ein **Ordner unter `apps/` oder `packages/`** oder ein **ADR** in keinem Artikel vorkommt;
-- der Startup-Guide fehlt oder keine Schritte hat;
-- der Markdown-Renderer rohes HTML durchlässt.
+- ein Artikel falsche Kopfzeilen hat, eine `order` in seiner Kategorie doppelt vergeben ist oder ein `wiki:`-Link ins Leere führt;
+- eine **Verwaltungsseite** (Seitenleiste) in `verwaltung-rundgang.md` fehlt, ein **Ordner unter `apps/` oder `packages/`** in keinem Artikel als ganzes Wort vorkommt oder ein **ADR** nicht als „ADR NNNN“ genannt wird;
+- [Neuigkeiten](wiki:neuigkeiten) den neuesten ADR nicht nennt;
+- der Startup-Guide fehlt, keine Schritte hat oder zwei Schritte dieselbe Kennung bekommen;
+- die generierten Referenzseiten (Apps, Workflows, Befehle, ADRs, Runbooks) unvollständig sind oder Beschreibungen fehlen;
+- das Portal-Bundle mehr als die gekürzten Referenzquellen enthält.
+
+Dass der Markdown-Renderer kein rohes HTML durchlässt, prüft `markdown.test.ts`.
 
 Er kann nicht prüfen, ob ein Text noch **stimmt**. Das ist Aufgabe dessen, der etwas ändert, und des Reviews: Beim Prüfen einer Änderung gehört die Frage „Ist das Wissen dazu aktuell?“
 dazu.

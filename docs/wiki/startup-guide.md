@@ -41,7 +41,7 @@ Ohne `VAULT_KEY` und `GOOGLE_TOKEN_KEY` sind gespeicherte API-Schlüssel und Goo
 1. In GitHub (Settings → Environments → `production`) das Geheimnis **`BACKUP_PASSPHRASE`** anlegen (24+ zufällige Zeichen, dieselbe Zeile im Passwortmanager) und die Umgebung auf den
    Branch `main` beschränken.
 2. [Verwaltung → Sicherung](/admin/backups) → **Sicherung erstellen**, nach einigen Minuten **Herunterladen**.
-3. Datei **außerhalb von GitHub und Supabase** ablegen (externe Platte, Cloud-Laufwerk) und mit `pnpm mininode backup verify` prüfen. Wie das Wiederherstellen geht: [Sicherung](wiki:sicherung).
+3. Datei **außerhalb von GitHub und Supabase** ablegen (externe Platte, Cloud-Laufwerk) und mit `pnpm mininode backup verify <entpackter ordner>` prüfen. Wie das Wiederherstellen geht: [Sicherung](wiki:sicherung).
 
 ## Verbindliche Prüfungen auf main einschalten
 
@@ -51,7 +51,7 @@ Mehr: [Tests und CI](wiki:tests-ci).
 
 ## Eine Person einladen
 
-[Verwaltung → Nutzer & Rollen](/admin/users) → **Einladen**: Rolle wählen (`user` für eigene Daten, `trusted` für gemeinsame Konten), Apps wählen, Link erzeugen und der Person per Messenger schicken.
+[Verwaltung → Nutzer & Rollen](/admin/users) → Abschnitt *Neue Einladung*: Rolle wählen (`user` für eigene Daten, `trusted` für gemeinsame Konten), Apps wählen, **Einladungslink erstellen** und den Link der Person per Messenger schicken.
 Die Person öffnet den Link, klickt **Weiter**, legt ein Passwort und einen Passkey an. Wer was darf: [Rollen, Zugriff und Freigaben](wiki:rollen-zugriff).
 
 ## Apps freigeben
