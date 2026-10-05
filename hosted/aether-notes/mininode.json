@@ -22,5 +22,26 @@
   "i18n": {
     "languages": ["de", "en"],
     "default": "de"
+  },
+  "apis": [
+    {
+      "id": "nominatim",
+      "name": "OpenStreetMap Nominatim",
+      "baseUrl": "https://nominatim.openstreetmap.org",
+      "auth": {
+        "type": "none"
+      },
+      "docs": "https://operations.osmfoundation.org/policies/nominatim/",
+      "reason": "Adressen von Kontakten und Treffen auf der Karte finden"
+    }
+  ],
+  "suite": {
+    "uses": [
+      {
+        "type": "event",
+        "access": "delete",
+        "why": "Treffen im Kalender mit Ort zeigen"
+      }
+    ]
   }
 }

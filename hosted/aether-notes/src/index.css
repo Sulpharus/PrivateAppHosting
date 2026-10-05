@@ -202,3 +202,26 @@ body {
 .animate-fade-in {
   animation: fadeIn 0.8s ease-out forwards;
 }
+
+/* map pins (MapView) */
+.aether-pin-wrap {
+  background: transparent;
+  border: 0;
+}
+.aether-pin {
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50% 50% 50% 4px;
+  transform: rotate(-45deg);
+  background: var(--color-primary, #1f6b4a);
+  color: var(--color-on-primary, #fff);
+  border: 2px solid #fff;
+  box-shadow: 0 1px 4px rgb(0 0 0 / 35%);
+  font: 700 11px / 1 var(--font-sans, sans-serif);
+}
+.aether-pin > span {
+  transform: rotate(45deg);
+}

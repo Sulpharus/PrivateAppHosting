@@ -37,6 +37,28 @@ declare global {
   }
 }
 
+export interface Place {
+  lat: number;
+  lon: number;
+  label: string;
+  city?: string;
+  postcode?: string;
+}
+interface NominatimRow {
+  lat: string;
+  lon: string;
+  display_name?: string;
+  address?: {
+    city?: string;
+    town?: string;
+    village?: string;
+    municipality?: string;
+    postcode?: string;
+  };
+}
+let geoQueue: Promise<unknown> = Promise.resolve();
+let geoLast = 0;
+
 type Json = Parameters<Mininode['kv']['set']>[1];
 
 export const MiniNode = {
@@ -73,6 +95,51 @@ export const MiniNode = {
       await (await platform()).kv.set(key, value as Json);
     },
   },
+
+  /**
+   * Up to five matches for an address, best first (OpenStreetMap Nominatim through the platform
+   * proxy, one request per second as its usage policy asks). Throws when it cannot be reached.
+   */
+  geocode: (query: string): Promise<Place[]> => {
+    const run = geoQueue.then(async () => {
+      const wait = geoLast + 1100 - Date.now();
+      if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
+      geoLast = Date.now();
+      const rows = await (await platform())
+        .api('nominatim')
+        .json<NominatimRow[]>(
+          `/search?format=jsonv2&limit=5&addressdetails=1&accept-language=${window.mnI18n.lang}&q=${encodeURIComponent(query.trim())}`,
+        );
+      return (Array.isArray(rows) ? rows : [])
+        .map((row) => ({
+          lat: Number(row.lat),
+          lon: Number(row.lon),
+          label: String(row.display_name ?? '').slice(0, 200),
+          city:
+            row.address?.city ??
+            row.address?.town ??
+            row.address?.village ??
+            row.address?.municipality ??
+            undefined,
+          postcode: row.address?.postcode,
+        }))
+        .filter(
+          (p) =>
+            Number.isFinite(p.lat) &&
+            Number.isFinite(p.lon) &&
+            Math.abs(p.lat) <= 90 &&
+            Math.abs(p.lon) <= 180,
+        );
+    });
+    geoQueue = run.then(
+      () => undefined,
+      () => undefined,
+    );
+    return run;
+  },
+
+  /** Records of the shared type `event` (what the Kalender shows), written by this app. */
+  events: async () => (await platform()).suite.type('event'),
 
   /** The address of the app menu (the portal). */
   portalUrl: async (): Promise<string> => (await platform()).config.portalUrl,

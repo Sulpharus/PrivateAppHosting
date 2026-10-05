@@ -8,6 +8,7 @@ import CelebrationModal from './components/CelebrationModal';
 import ContactsView from './components/ContactsView';
 import DashboardView from './components/DashboardView';
 import KanbanView from './components/KanbanView';
+import MapView from './components/MapView';
 import NoteModal from './components/NoteModal';
 import NotesLibraryView from './components/NotesLibraryView';
 import PeopleView from './components/PeopleView';
@@ -33,6 +34,7 @@ import {
   type MiniNodeUser,
   scheduleMiniNodeReminder,
 } from './mininode';
+import { scheduleSuiteSync } from './suite';
 import type {
   Contact,
   Interaction,
@@ -50,7 +52,7 @@ export default function App() {
   const { setLanguage, t } = useTranslation();
   // Navigation State
   const [activeTab, setActiveTab] = useState<
-    'dashboard' | 'library' | 'routines' | 'people' | 'contacts' | 'settings' | 'kanban'
+    'dashboard' | 'library' | 'routines' | 'people' | 'contacts' | 'map' | 'settings' | 'kanban'
   >('dashboard');
 
   // MiniNode Session & Loading States
@@ -220,6 +222,11 @@ export default function App() {
       isMounted = false;
     };
   }, []);
+
+  // Meetups and the addresses of people show up in the Kalender: a moment after every change
+  useEffect(() => {
+    if (!isLoading) scheduleSuiteSync();
+  }, [meetups, contacts, people, isLoading]);
 
   // Routine Completion Check-off Handler
   const handleToggleRoutine = async (id: string) => {
@@ -921,6 +928,8 @@ export default function App() {
             onDeleteMeetup={handleDeleteMeetup}
           />
         )}
+
+        {activeTab === 'map' && <MapView contacts={contacts} people={people} meetups={meetups} />}
 
         {activeTab === 'settings' && (
           <SettingsView

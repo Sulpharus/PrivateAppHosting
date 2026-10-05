@@ -8,6 +8,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from '../contexts/TranslationContext';
 import { MiniNode } from '../mininode';
+import { scheduleSuiteSync } from '../suite';
 import type { ConnectionCategory, Person, PersonInteractionLog } from '../types';
 import RelationshipMap from './RelationshipMap';
 
@@ -156,7 +157,10 @@ export default function PeopleView({
   const [meetupPrepNotes, setMeetupPrepNotes] = useState('');
 
   useEffect(() => {
-    if (listsLoaded) MiniNode.db.setItem('aether_people_meetups', peopleMeetups);
+    if (!listsLoaded) return;
+    void MiniNode.db
+      .setItem('aether_people_meetups', peopleMeetups)
+      .then(() => scheduleSuiteSync());
   }, [peopleMeetups, listsLoaded]);
 
   useEffect(() => {
