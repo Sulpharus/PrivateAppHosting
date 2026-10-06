@@ -38,13 +38,16 @@ const user = await mn.auth.requireLogin();  // schickt zum zentralen Login, fall
 | `mn.table` | Listen von Einträgen als Tabellen im Schema `app_<name>`: `list`, `get`, `upsert`, `remove`; **auch offline** | [Daten speichern](wiki:daten-speichern) |
 | `mn.kv` | Einstellungen und kleine Zustände (Schlüssel-Wert), privat oder geteilt, **auch offline** | [Daten speichern](wiki:daten-speichern) |
 | `mn.db` | Abfragen, Summen und Filter auf den Tabellen (online; Zeilenschutz) | [Daten speichern](wiki:daten-speichern) |
-| `mn.files` | Dateien (Fotos, Belege), privat oder geteilt, mit signierten Adressen | [Daten speichern](wiki:daten-speichern) |
+| `mn.files` | Dateien (Fotos, Belege), privat, geteilt oder je Team (`{ team }`), mit signierten Adressen | [Daten speichern](wiki:daten-speichern) |
+| `mn.team` | Teams für Apps mit Datenmodus `team`: `list`, `create`, `members`, `setMember`, `removeMember`, `rename`, `remove`, `notify` | [Daten speichern](wiki:daten-speichern) |
 | `mn.ai` | `chat()`, `stream()`, `json()` über den KI-Proxy, keine Schlüssel im Browser | [KI-Proxy](wiki:ki-proxy) |
 | `mn.api(id)` | Externe APIs über den Schlüssel-Proxy | [API-Schlüssel](wiki:api-schluessel) |
 | `mn.google` | Gmail/Kalender-Tokens für deklarierte Bereiche; `calendarSync` (nur Kalender) | [Google](wiki:google) |
 | `mn.suite` | Gemeinsame Datensätze und Sammlungen | [Gemeinsame Daten](wiki:gemeinsame-daten) |
 | `mn.notify`, `mn.push` | Glocke und Push; Erinnerungen zu einer Zeit | [Push und Offline](wiki:push-offline) |
 | `mn.people()` | Personen mit Zugriff auf die App, zum Teilen | ADR 0008 |
+| `mn.birthdays()` | freigegebene Geburtstage der Personen dieser App (ADR 0025) | [Anmeldung](wiki:anmeldung) |
+| `mn.ai.search()` | KI-Antwort mit Websuche und Quellen, nur mit `ai.search` im Manifest (ADR 0024) | [KI-Proxy](wiki:ki-proxy) |
 | `mn.game` | Spielername, Zeit, Ergebnis, Bestenliste | [Gaming Hub](wiki:gaming-hub) |
 | `mn.realtime(kanal)` | Live-Updates zwischen Nutzern | |
 

@@ -76,6 +76,8 @@ await mn.kv.delete('settings');
 const text = await mn.ai.chat('Fasse zusammen: …', { model: 'gemini-flash' });
 for await (const chunk of mn.ai.stream(messages, { system: '…' })) render(chunk);
 const data = await mn.ai.json<Recipe[]>('Drei Rezepte mit Reis', jsonSchema);
+// Current facts with sources (needs "search": true in the ai block): then structure with mn.ai.json
+const { text, sources } = await mn.ai.search('Wartungsintervalle VW Golf 8 2.0 TDI');
 // models: 'gemini-flash' | 'gemini-pro' | 'claude-haiku' | 'claude-sonnet' (declare in mininode.json)
 // errors: AiError with .code 'budget_exceeded' | 'model_not_allowed' | … → show a friendly message
 
@@ -170,8 +172,8 @@ create index on app_<slug_with_underscores>.recipes (cooked_on);
   "target": "cloudflare",
   "i18n": { "languages": ["de", "en"], "default": "de" },   // language packages i18n/de.json, i18n/en.json
   "access": { "default": true },            // true: every user gets it; false: admin grants it
-  "data": { "mode": "private" },            // none | private | shared-account | group | readonly
-  "ai": { "models": ["gemini-flash"], "monthlyBudgetEur": 2, "maxOutputTokens": 1500 },
+  "data": { "mode": "private" },            // none | private | shared-account | group | readonly | team
+  "ai": { "models": ["gemini-flash"], "monthlyBudgetEur": 2, "maxOutputTokens": 1500, "search": false },
   "google": { "gmail": "write", "calendar": "read" },   // only if the app uses Gmail/Calendar
   "apis": [{                                // only if the app calls an external API with a key
     "id": "openweathermap", "name": "OpenWeatherMap",
@@ -186,10 +188,12 @@ create index on app_<slug_with_underscores>.recipes (cooked_on);
 
 Data modes: `private` = each user their own data · `shared-account` = trusted users work on the
 owner's data (e.g. a shared household budget) · `group` = everyone with the app shares all data ·
-`readonly` = users read, only the admin writes.
+`readonly` = users read, only the admin writes · `team` = data per team: the people in a team (2 to 6, with
+roles viewer, editor, owner) see that team's rows and files, nobody else (`mn.team`, tables with `team_id`,
+ADR 0023).
 
 Google: `"read"` sees mails or events; `"write"` also sends mails, changes labels and creates or
-edits events. Ask for `write` only when the app needs it. Google API origins are allowed by the
+edits events; `"drive": "file"` reaches only the Drive files the app created (never all of Drive). Ask for `write` only when the app needs it. Google API origins are allowed by the
 platform automatically; do not add Google scripts or a Google client ID.
 
 APIs: one entry per external API; `id` names the key, so apps using the same API with the same

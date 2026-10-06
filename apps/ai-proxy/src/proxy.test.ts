@@ -1,12 +1,14 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { describe, expect, it } from 'vitest';
 import { createApp, originMatchesApp, type ProxyEnv } from './index.ts';
-import { catalog, costMicro } from './models.ts';
+import { catalog, costMicro, SEARCH_INPUT_ALLOWANCE, SEARCH_SURCHARGE_MICRO } from './models.ts';
 import type { Provider } from './providers.ts';
 
 type Call = { fn: string; args: Record<string, unknown> };
 
-function harness(options: { reserveError?: string; providerText?: string; grant?: boolean } = {}) {
+function harness(
+  options: { reserveError?: string; providerText?: string; grant?: boolean; search?: boolean } = {},
+) {
   const calls: Call[] = [];
   const db = {
     schema: () => ({
@@ -20,9 +22,17 @@ function harness(options: { reserveError?: string; providerText?: string; grant?
     }),
   } as unknown as SupabaseClient;
 
+  const searches: (boolean | undefined)[] = [];
   const provider: Provider = {
-    async complete() {
-      return { text: options.providerText ?? 'Hallo!', usage: { input: 100, output: 20 } };
+    async complete(request) {
+      searches.push(request.search);
+      return {
+        text: options.providerText ?? 'Hallo!',
+        usage: { input: 100, output: 20 },
+        ...(request.search
+          ? { sources: [{ title: 'Handbuch', url: 'https://example.com/a' }] }
+          : {}),
+      };
     },
     async stream() {
       const body = new Response('Hal' + 'lo').body;
@@ -43,7 +53,11 @@ function harness(options: { reserveError?: string; providerText?: string; grant?
     checkGrant: async () => options.grant ?? true,
     appAi: async (slug: string) =>
       slug === 'rezepte'
-        ? { models: ['gemini-flash', 'claude-haiku'], maxOutputTokens: 1000 }
+        ? {
+            models: ['gemini-flash', 'claude-haiku'],
+            maxOutputTokens: 1000,
+            search: options.search === true,
+          }
         : null,
     provider: () => provider,
   }));
@@ -72,7 +86,7 @@ function harness(options: { reserveError?: string; providerText?: string; grant?
       ctx,
     );
 
-  return { post, calls, waits };
+  return { post, calls, waits, searches };
 }
 
 const chat = { app: 'rezepte', messages: [{ role: 'user', content: 'Hi' }] };
@@ -116,6 +130,35 @@ describe('ai proxy', () => {
     const res = await post('/v1/chat', chat);
     expect(res.status).toBe(402);
     expect(await res.json()).toMatchObject({ error: 'budget_exceeded' });
+  });
+
+  it('searches the web only for apps that may, charges extra and returns the sources', async () => {
+    const plain = harness();
+    const first = await plain.post('/v1/chat', chat);
+    const base = plain.calls.find((c) => c.fn === 'ai_reserve')?.args.p_max_micro as number;
+    expect(first.status).toBe(200);
+    expect((await plain.post('/v1/chat', { ...chat, search: true })).status).toBe(403);
+
+    const allowed = harness({ search: true });
+    const res = await allowed.post('/v1/chat', { ...chat, search: true });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ sources: [{ url: 'https://example.com/a' }] });
+    expect(allowed.searches).toEqual([true]);
+    const reserved = allowed.calls.find((c) => c.fn === 'ai_reserve')?.args.p_max_micro as number;
+    const settled = allowed.calls.find((c) => c.fn === 'ai_settle')?.args.p_cost_micro as number;
+    expect(reserved - base).toBe(
+      SEARCH_SURCHARGE_MICRO +
+        costMicro(catalog(undefined)['gemini-flash'], SEARCH_INPUT_ALLOWANCE, 0),
+    );
+    expect(settled).toBe(
+      costMicro(catalog(undefined)['gemini-flash'], 100, 20) + SEARCH_SURCHARGE_MICRO,
+    );
+    const json = await allowed.post('/v1/json', {
+      ...chat,
+      search: true,
+      schema: { type: 'object' },
+    });
+    expect(json.status).toBe(400);
   });
 
   it('requires a session and a grant', async () => {

@@ -55,6 +55,37 @@ describe('prompt library', () => {
   });
 });
 
+describe('app briefs', () => {
+  const dir = 'docs/ai/briefs';
+  const briefs = readdirSync(join(root, dir)).filter((f) => f.endsWith('.brief.md'));
+
+  it('only use modules and types that exist', () => {
+    expect(briefs.length).toBeGreaterThan(0);
+    for (const file of briefs) {
+      const meta = Object.fromEntries(
+        (/^---\n([\s\S]*?)\n---/.exec(read(join(dir, file)))?.[1] ?? '')
+          .split('\n')
+          .map((line) => [
+            line.slice(0, line.indexOf(':')).trim(),
+            line.slice(line.indexOf(':') + 1).trim(),
+          ]),
+      );
+      for (const id of (meta.modules ?? '')
+        .split(',')
+        .map((m) => m.trim())
+        .filter(Boolean))
+        expect(
+          library.modules.some((m) => m.id === id),
+          `${file}: module ${id}`,
+        ).toBe(true);
+      expect(
+        library.types.some((t) => t.id === meta.type),
+        `${file}: type`,
+      ).toBe(true);
+    }
+  });
+});
+
 describe('module groups', () => {
   it('puts every module into a known group', () => {
     const known = MODULE_GROUPS.map((g) => g.id);

@@ -25,6 +25,7 @@ import {
   createTables,
   type TableFactory,
 } from './tables.ts';
+import { createTeams } from './team.ts';
 
 export { ExternalApiError } from './api.ts';
 export { installLocalStorageSync, installMiniNodeCompat } from './compat.ts';
@@ -41,6 +42,7 @@ export type {
   SuiteWrite,
 } from './suite.ts';
 export type { TableFactory, TableHandle, TableOptions, TableRow } from './tables.ts';
+export type { Team, TeamMember, TeamRole } from './team.ts';
 export type { AiChatOptions, AiMessage, KvScope, MininodeConfig };
 
 export type Role = 'admin' | 'trusted' | 'user';
@@ -69,15 +71,23 @@ export interface Mininode {
    * `.upsert(row)`, `.remove(id)`. For queries, joins and sums on the server use `mn.db`.
    */
   readonly table: TableFactory;
+  /**
+   * Teams for apps with data mode `team` (ADR 0023): create a team, add people from `people()`,
+   * set roles. Rows of the app's tables carry the `team_id`; files go under `{ team: id }`.
+   */
+  readonly team: ReturnType<typeof createTeams>;
   readonly files: {
     upload(
       path: string,
       body: Blob | File | ArrayBuffer,
-      options?: { shared?: boolean; contentType?: string },
+      options?: { shared?: boolean; team?: string; contentType?: string },
     ): Promise<string>;
-    url(path: string, options?: { shared?: boolean; expiresIn?: number }): Promise<string>;
-    list(prefix?: string, options?: { shared?: boolean }): Promise<string[]>;
-    remove(path: string, options?: { shared?: boolean }): Promise<void>;
+    url(
+      path: string,
+      options?: { shared?: boolean; team?: string; expiresIn?: number },
+    ): Promise<string>;
+    list(prefix?: string, options?: { shared?: boolean; team?: string }): Promise<string[]>;
+    remove(path: string, options?: { shared?: boolean; team?: string }): Promise<void>;
   };
   realtime(channel: string): RealtimeChannel;
   readonly ai: ReturnType<typeof createAi>;
@@ -90,6 +100,14 @@ export interface Mininode {
    * Only answers from the app's own page.
    */
   people(): Promise<{ id: string; name: string }[]>;
+  /**
+   * Birthdays the other people of this app entered in "Dein Konto" and allowed to share (ADR 0025):
+   * `{ id, name, month, day, year }`, `year` is null when the person left it out. Only from the app's
+   * own page. Your own birthday is not included.
+   */
+  birthdays(): Promise<
+    { id: string; name: string; month: number; day: number; year: number | null }[]
+  >;
   /** Bell notification now; also pushed to the user's devices with notifications on. */
   notify(title: string, body?: string, url?: string): Promise<void>;
   /** Reminders delivered later, also with the app closed (ADR 0005). */
@@ -172,7 +190,11 @@ export function createMininode(config: MininodeConfig): Mininode {
     (await supabase.auth.getSession()).data.session?.access_token ?? null;
 
   // Resolves the owner folder for file paths: shared-account apps store under the app owner.
-  const ownerFolder = async (shared?: boolean): Promise<string> => {
+  const ownerFolder = async (shared?: boolean, team?: string): Promise<string> => {
+    if (team) {
+      if (!/^[0-9a-f-]{36}$/.test(team)) throw new Error('mininode: invalid team id');
+      return `team-${team}`; // the database checks the membership
+    }
     if (shared) return 'shared';
     const { data, error } = await supabase
       .schema('platform')
@@ -180,10 +202,10 @@ export function createMininode(config: MininodeConfig): Mininode {
     if (error || typeof data !== 'string') throw new Error('mininode: not signed in');
     return data;
   };
-  const objectPath = async (path: string, shared?: boolean) => {
+  const objectPath = async (path: string, shared?: boolean, team?: string) => {
     const clean = path.replace(/^\/+/, '');
     if (!clean || clean.includes('..')) throw new Error('mininode: invalid file path');
-    return `${config.appSlug}/${await ownerFolder(shared)}/${clean}`;
+    return `${config.appSlug}/${await ownerFolder(shared, team)}/${clean}`;
   };
 
   const stores = new Map<string, LocalStore>();
@@ -256,9 +278,10 @@ export function createMininode(config: MininodeConfig): Mininode {
     kv: offlineKv.kv,
     offline: offlineKv.offline,
     table: createTables(offlineKv.rows, conflictTargets),
+    team: createTeams(supabase, config.appSlug),
     files: {
       async upload(path, body, options = {}) {
-        const target = await objectPath(path, options.shared);
+        const target = await objectPath(path, options.shared, options.team);
         const { error } = await supabase.storage.from(FILE_BUCKET).upload(target, body, {
           upsert: true,
           ...(options.contentType ? { contentType: options.contentType } : {}),
@@ -267,7 +290,7 @@ export function createMininode(config: MininodeConfig): Mininode {
         return target;
       },
       async url(path, options = {}) {
-        const target = await objectPath(path, options.shared);
+        const target = await objectPath(path, options.shared, options.team);
         const { data, error } = await supabase.storage
           .from(FILE_BUCKET)
           .createSignedUrl(target, options.expiresIn ?? 3600);
@@ -275,10 +298,11 @@ export function createMininode(config: MininodeConfig): Mininode {
         return data.signedUrl;
       },
       async list(prefix = '', options = {}) {
-        const folder = `${config.appSlug}/${await ownerFolder(options.shared)}/${prefix}`.replace(
-          /\/$/,
-          '',
-        );
+        const folder =
+          `${config.appSlug}/${await ownerFolder(options.shared, options.team)}/${prefix}`.replace(
+            /\/$/,
+            '',
+          );
         const { data, error } = await supabase.storage.from(FILE_BUCKET).list(folder);
         if (error) throw error;
         return data.map((entry) => entry.name);
@@ -286,7 +310,7 @@ export function createMininode(config: MininodeConfig): Mininode {
       async remove(path, options = {}) {
         const { error } = await supabase.storage
           .from(FILE_BUCKET)
-          .remove([await objectPath(path, options.shared)]);
+          .remove([await objectPath(path, options.shared, options.team)]);
         if (error) throw error;
       },
     },
@@ -305,6 +329,27 @@ export function createMininode(config: MininodeConfig): Mininode {
       return ((data ?? []) as { user_id: string; display_name: string }[]).map((p) => ({
         id: p.user_id,
         name: p.display_name,
+      }));
+    },
+    async birthdays() {
+      const { data, error } = await supabase
+        .schema('platform')
+        .rpc('app_birthdays', { p_slug: config.appSlug });
+      if (error) throw error;
+      return (
+        (data ?? []) as {
+          user_id: string;
+          display_name: string;
+          month: number;
+          day: number;
+          year: number | null;
+        }[]
+      ).map((p) => ({
+        id: p.user_id,
+        name: p.display_name,
+        month: p.month,
+        day: p.day,
+        year: p.year,
       }));
     },
     async notify(title, body, url) {

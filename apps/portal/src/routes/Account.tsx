@@ -121,6 +121,42 @@ export function Account() {
     setMessage(language === 'en' ? 'Language saved.' : 'Sprache gespeichert.');
   };
 
+  const [birthday, setBirthday] = useState({ month: '', day: '', year: '', shared: false });
+  useEffect(() => {
+    void (async () => {
+      const { data } = await platform().rpc('my_birthday');
+      const row = (
+        data as { month: number | null; day: number | null; year: number | null; shared: boolean }[]
+      )?.[0];
+      if (row)
+        setBirthday({
+          month: row.month ? String(row.month) : '',
+          day: row.day ? String(row.day) : '',
+          year: row.year ? String(row.year) : '',
+          shared: row.shared,
+        });
+    })();
+  }, []);
+
+  // A preference, not a security setting: no confirmation code is asked for.
+  const saveBirthday = async (clear = false) => {
+    setError(null);
+    setMessage(null);
+    const set = !clear && birthday.month && birthday.day;
+    const { error: rpcError } = await platform().rpc('set_my_birthday', {
+      p_month: set ? Number(birthday.month) : null,
+      p_day: set ? Number(birthday.day) : null,
+      p_year: set && birthday.year ? Number(birthday.year) : null,
+      p_shared: set ? birthday.shared : false,
+    });
+    if (rpcError) {
+      setError('Das Datum gibt es nicht. Bitte Tag, Monat und Jahr prüfen.');
+      return;
+    }
+    if (!set) setBirthday({ month: '', day: '', year: '', shared: false });
+    setMessage(set ? 'Geburtstag gespeichert.' : 'Geburtstag entfernt.');
+  };
+
   const savePassword = async () => {
     setError(null);
     setMessage(null);
@@ -213,6 +249,73 @@ export function Account() {
               </button>
             ))}
           </fieldset>
+        </section>
+
+        <section className="card" aria-labelledby="birthday-title">
+          <h2 id="birthday-title" className="section-title">
+            Geburtstag
+          </h2>
+          <p className="muted">
+            Nur für dich, bis du ihn freigibst. Freigegeben sehen ihn nur Personen, die dieselben
+            Apps nutzen (zum Beispiel in der Wunschliste, damit sie rechtzeitig ein Geschenk
+            finden). Das Jahr ist freiwillig.
+          </p>
+          <form
+            className="row"
+            style={{ alignItems: 'flex-end', flexWrap: 'wrap' }}
+            onSubmit={(event) => {
+              event.preventDefault();
+              void saveBirthday();
+            }}
+          >
+            <label className="field" style={{ width: 90 }}>
+              <span>Tag</span>
+              <input
+                inputMode="numeric"
+                maxLength={2}
+                value={birthday.day}
+                onChange={(event) =>
+                  setBirthday({ ...birthday, day: event.target.value.replace(/\D/g, '') })
+                }
+              />
+            </label>
+            <label className="field" style={{ width: 90 }}>
+              <span>Monat</span>
+              <input
+                inputMode="numeric"
+                maxLength={2}
+                value={birthday.month}
+                onChange={(event) =>
+                  setBirthday({ ...birthday, month: event.target.value.replace(/\D/g, '') })
+                }
+              />
+            </label>
+            <label className="field" style={{ width: 110 }}>
+              <span>Jahr (freiwillig)</span>
+              <input
+                inputMode="numeric"
+                maxLength={4}
+                value={birthday.year}
+                onChange={(event) =>
+                  setBirthday({ ...birthday, year: event.target.value.replace(/\D/g, '') })
+                }
+              />
+            </label>
+            <label className="row" style={{ minHeight: 44 }}>
+              <input
+                type="checkbox"
+                checked={birthday.shared}
+                onChange={(event) => setBirthday({ ...birthday, shared: event.target.checked })}
+              />
+              <span>Für andere Personen sichtbar</span>
+            </label>
+            <button type="submit" className="button" disabled={!birthday.day || !birthday.month}>
+              Speichern
+            </button>
+            <button type="button" className="button" onClick={() => void saveBirthday(true)}>
+              Entfernen
+            </button>
+          </form>
         </section>
 
         {passkeysSupported() && (

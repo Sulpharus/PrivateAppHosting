@@ -19,5 +19,7 @@ group: daten
   first photo is the cover. Removing an item removes its files.
 - Uploads made in an editor that is then cancelled are deleted again.
 - PDFs and other documents open in a new tab via their signed URL.
+- Files of a team (data mode `team`): `mn.files.upload(path, blob, { team: teamId })`, same for `url`,
+  `list` and `remove`; team attachments stay under 5 MB, larger things are linked (Drive or URL).
 - Limits: reject files over 20 MB with a clear message; accept `image/*` and
   `application/pdf` unless the app needs more.

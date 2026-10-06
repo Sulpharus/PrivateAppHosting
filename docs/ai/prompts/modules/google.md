@@ -13,6 +13,12 @@ group: anbindungen
   `mininode.json`, e.g. `"google": { "gmail": "write", "calendar": "write" }` (`read` if it only
   shows data), and call the REST APIs with `mn.google.fetch(url, init)`, which attaches a
   short-lived token for exactly those scopes.
+- Drive (`"drive": "file"`): only files the app created itself (never all of Drive). Create a
+  folder (`POST https://www.googleapis.com/drive/v3/files` with `mimeType:
+  application/vnd.google-apps.folder`), upload with `https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart`,
+  list the app's files with `files?q='<folderId>' in parents`, and keep `id` and `webViewLink` in
+  the row. Sharing is Drive's own (a link or `permissions`); other Drive files are attached by
+  pasting their link. There is no file picker: its script is blocked.
 - Calendar: `https://www.googleapis.com/calendar/v3/…` (`calendars/primary/events` with
   `timeMin`, `timeMax`, `singleEvents=true`, `orderBy=startTime`; `POST` to create, `PATCH` to
   change, `DELETE` to remove). Send `timeZone: 'Europe/Berlin'` with `dateTime` values.

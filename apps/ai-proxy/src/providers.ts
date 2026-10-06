@@ -16,6 +16,13 @@ export interface ChatRequest {
   temperature?: number | undefined;
   /** JSON Schema: when set, the model must answer with matching JSON. */
   schema?: Record<string, unknown> | undefined;
+  /** Let the model search the web (chat only; ADR 0024). */
+  search?: boolean | undefined;
+}
+
+export interface Source {
+  title: string;
+  url: string;
 }
 
 export interface Usage {
@@ -26,6 +33,8 @@ export interface Usage {
 export interface ChatResult {
   text: string;
   usage: Usage;
+  /** Pages the answer relies on, when the model searched. */
+  sources?: Source[];
 }
 
 export interface StreamResult {
@@ -79,6 +88,13 @@ export function anthropicProvider(keys: ProviderKeys): Provider {
     ...(request.schema
       ? { output_config: { format: { type: 'json_schema' as const, schema: request.schema } } }
       : {}),
+    ...(request.search
+      ? {
+          tools: [
+            { type: 'web_search_20250305' as const, name: 'web_search' as const, max_uses: 5 },
+          ],
+        }
+      : {}),
   });
 
   const textOf = (message: Anthropic.Message) =>
@@ -87,9 +103,23 @@ export function anthropicProvider(keys: ProviderKeys): Provider {
       .map((block) => block.text)
       .join('');
 
+  const sourcesOf = (message: Anthropic.Message): Source[] => {
+    const found = new Map<string, Source>();
+    for (const block of message.content) {
+      if (block.type === 'web_search_tool_result' && Array.isArray(block.content))
+        for (const hit of block.content)
+          if (hit.type === 'web_search_result')
+            found.set(hit.url, { title: hit.title, url: hit.url });
+    }
+    return [...found.values()];
+  };
+
   const guard = (message: Anthropic.Message) => {
     if (message.stop_reason === 'refusal')
       throw new ProviderError('model declined the request', 422);
+    // A search that did not finish would return a cut-off answer that looks complete.
+    if (message.stop_reason === 'pause_turn')
+      throw new ProviderError('the search did not finish', 502);
   };
 
   return {
@@ -97,9 +127,11 @@ export function anthropicProvider(keys: ProviderKeys): Provider {
       try {
         const message = await client.messages.create(params(request));
         guard(message);
+        const sources = sourcesOf(message);
         return {
           text: textOf(message),
           usage: { input: message.usage.input_tokens, output: message.usage.output_tokens },
+          ...(sources.length ? { sources } : {}),
         };
       } catch (error) {
         if (error instanceof ProviderError) throw error;
@@ -150,7 +182,11 @@ export function anthropicProvider(keys: ProviderKeys): Provider {
 // ---------------------------------------------------------------------------
 
 interface GeminiResponse {
-  candidates?: { content?: { parts?: { text?: string }[] }; finishReason?: string }[];
+  candidates?: {
+    content?: { parts?: { text?: string }[] };
+    finishReason?: string;
+    groundingMetadata?: { groundingChunks?: { web?: { uri?: string; title?: string } }[] };
+  }[];
   usageMetadata?: {
     promptTokenCount?: number;
     candidatesTokenCount?: number;
@@ -175,6 +211,7 @@ export function geminiProvider(keys: ProviderKeys, fetcher: typeof fetch = fetch
         parts: [{ text: m.content }],
       })),
       ...(request.system ? { systemInstruction: { parts: [{ text: request.system }] } } : {}),
+      ...(request.search ? { tools: [{ google_search: {} }] } : {}),
       generationConfig: {
         maxOutputTokens: request.maxOutputTokens,
         ...(request.temperature !== undefined ? { temperature: request.temperature } : {}),
@@ -203,7 +240,18 @@ export function geminiProvider(keys: ProviderKeys, fetcher: typeof fetch = fetch
       });
       if (!response.ok) throw new ProviderError(await response.text(), response.status);
       const data = (await response.json()) as GeminiResponse;
-      return { text: textOf(data), usage: usageOf(data) };
+      const sources = new Map<string, Source>();
+      for (const chunk of data.candidates?.[0]?.groundingMetadata?.groundingChunks ?? [])
+        if (chunk.web?.uri)
+          sources.set(chunk.web.uri, {
+            title: chunk.web.title ?? chunk.web.uri,
+            url: chunk.web.uri,
+          });
+      return {
+        text: textOf(data),
+        usage: usageOf(data),
+        ...(sources.size ? { sources: [...sources.values()] } : {}),
+      };
     },
 
     async stream(request) {

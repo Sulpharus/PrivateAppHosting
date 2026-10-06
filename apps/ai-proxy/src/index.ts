@@ -6,7 +6,14 @@ import { createVerifier, type Verifier } from '@mininode/gate';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { catalog, costMicro, estimateTokens, type ModelAlias } from './models.ts';
+import {
+  catalog,
+  costMicro,
+  estimateTokens,
+  type ModelAlias,
+  SEARCH_INPUT_ALLOWANCE,
+  SEARCH_SURCHARGE_MICRO,
+} from './models.ts';
 import {
   anthropicProvider,
   type ChatRequest,
@@ -37,9 +44,10 @@ const requestSchema = z.object({
   temperature: z.number().min(0).max(2).optional(),
   stream: z.boolean().optional(),
   schema: z.record(z.string(), z.unknown()).optional(),
+  search: z.boolean().optional(),
 });
 
-type AppAi = { models: ModelAlias[]; maxOutputTokens: number };
+type AppAi = { models: ModelAlias[]; maxOutputTokens: number; search?: boolean };
 
 interface Deps {
   verifier: Verifier;
@@ -106,10 +114,16 @@ function buildDeps(env: ProxyEnv): Deps {
         .eq('slug', slug)
         .maybeSingle();
       const ai = (
-        data?.manifest as { ai?: { models?: ModelAlias[]; maxOutputTokens?: number } } | undefined
+        data?.manifest as
+          | { ai?: { models?: ModelAlias[]; maxOutputTokens?: number; search?: boolean } }
+          | undefined
       )?.ai;
       const value = ai?.models?.length
-        ? { models: ai.models, maxOutputTokens: ai.maxOutputTokens ?? 2000 }
+        ? {
+            models: ai.models,
+            maxOutputTokens: ai.maxOutputTokens ?? 2000,
+            search: ai.search === true,
+          }
         : null;
       appCache.set(slug, { value, expires: Date.now() + 60_000 });
       return value;
@@ -168,6 +182,22 @@ export function createApp(depsFor: (env: ProxyEnv) => Deps = defaultDeps) {
       if (!allowed) return problem(403, 'forbidden', 'App nicht freigegeben.', cors);
       if (!ai) return problem(403, 'ai_disabled', 'KI ist für diese App nicht aktiviert.', cors);
 
+      if (input.search && mode === 'json') {
+        return problem(
+          400,
+          'invalid_request',
+          'Websuche geht nur im Chat: erst suchen (chat), dann das Ergebnis mit json ordnen.',
+          cors,
+        );
+      }
+      if (input.search && !ai.search) {
+        return problem(
+          403,
+          'search_not_allowed',
+          'Die Websuche ist für diese App nicht aktiviert (mininode.json: ai.search).',
+          cors,
+        );
+      }
       const alias = input.model ?? ai.models[0];
       if (!alias || !ai.models.includes(alias)) {
         return problem(
@@ -187,7 +217,11 @@ export function createApp(depsFor: (env: ProxyEnv) => Deps = defaultDeps) {
         ...input.messages.map((m) => m.content),
         JSON.stringify(input.schema ?? ''),
       ].join('\n');
-      const reserve = costMicro(model, estimateTokens(promptText), maxOutputTokens);
+      const surcharge = input.search ? SEARCH_SURCHARGE_MICRO : 0;
+      // Search results are added to the prompt by the provider: reserve room for them as well.
+      const searchTokens = input.search ? SEARCH_INPUT_ALLOWANCE : 0;
+      const reserve =
+        costMicro(model, estimateTokens(promptText) + searchTokens, maxOutputTokens) + surcharge;
 
       const reservation = await deps.db.schema('platform').rpc('ai_reserve', {
         p_user_id: verified.claims.sub,
@@ -210,7 +244,7 @@ export function createApp(depsFor: (env: ProxyEnv) => Deps = defaultDeps) {
       const settle = (usage: Usage | null) =>
         deps.db.schema('platform').rpc('ai_settle', {
           p_usage_id: usageId,
-          p_cost_micro: usage ? costMicro(model, usage.input, usage.output) : null,
+          p_cost_micro: usage ? costMicro(model, usage.input, usage.output) + surcharge : null,
           p_input_tokens: usage?.input ?? null,
           p_output_tokens: usage?.output ?? null,
         });
@@ -222,6 +256,7 @@ export function createApp(depsFor: (env: ProxyEnv) => Deps = defaultDeps) {
         maxOutputTokens,
         temperature: input.temperature,
         schema: mode === 'json' ? input.schema : undefined,
+        search: input.search,
       };
       const provider = deps.provider(model.provider);
 
@@ -258,7 +293,11 @@ export function createApp(depsFor: (env: ProxyEnv) => Deps = defaultDeps) {
             );
           }
         }
-        return c.json({ text: result.text, usage }, 200, cors);
+        return c.json(
+          { text: result.text, usage, ...(result.sources ? { sources: result.sources } : {}) },
+          200,
+          cors,
+        );
       } catch (error) {
         await settle(null);
         const status = error instanceof ProviderError ? error.status : 502;
