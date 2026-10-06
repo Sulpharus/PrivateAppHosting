@@ -36,6 +36,8 @@ export function catalog(override: string | undefined): Record<ModelAlias, ModelE
  * amount (micro-€) is added to the reservation and to the settled cost.
  */
 export const SEARCH_SURCHARGE_MICRO = 50_000;
+/** Tokens the found pages add to the prompt (up to five searches), reserved on top. */
+export const SEARCH_INPUT_ALLOWANCE = 30_000;
 
 /** Conservative token estimate for the reservation (~3 chars per token). */
 export function estimateTokens(text: string): number {

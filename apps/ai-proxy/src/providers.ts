@@ -117,6 +117,9 @@ export function anthropicProvider(keys: ProviderKeys): Provider {
   const guard = (message: Anthropic.Message) => {
     if (message.stop_reason === 'refusal')
       throw new ProviderError('model declined the request', 422);
+    // A search that did not finish would return a cut-off answer that looks complete.
+    if (message.stop_reason === 'pause_turn')
+      throw new ProviderError('the search did not finish', 502);
   };
 
   return {

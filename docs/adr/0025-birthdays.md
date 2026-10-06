@@ -27,6 +27,10 @@ but the platform has no place for it.
 
 ## Consequences
 
+- Admins can read every profile row (including a birthday that is not shared), like names and roles;
+  "private" means private from other users and from apps. The sharing switch is global: it is not
+  per app, anyone who can use the same app sees a shared birthday.
+
 - Nothing is revealed by default, and sharing can be switched off at any time.
 - The Wunschliste can combine three sources: people on MiniNode (`mn.birthdays()`), contacts from
   Aether Notes, and entries typed in the app itself.

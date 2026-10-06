@@ -11,6 +11,7 @@ import {
   costMicro,
   estimateTokens,
   type ModelAlias,
+  SEARCH_INPUT_ALLOWANCE,
   SEARCH_SURCHARGE_MICRO,
 } from './models.ts';
 import {
@@ -217,7 +218,10 @@ export function createApp(depsFor: (env: ProxyEnv) => Deps = defaultDeps) {
         JSON.stringify(input.schema ?? ''),
       ].join('\n');
       const surcharge = input.search ? SEARCH_SURCHARGE_MICRO : 0;
-      const reserve = costMicro(model, estimateTokens(promptText), maxOutputTokens) + surcharge;
+      // Search results are added to the prompt by the provider: reserve room for them as well.
+      const searchTokens = input.search ? SEARCH_INPUT_ALLOWANCE : 0;
+      const reserve =
+        costMicro(model, estimateTokens(promptText) + searchTokens, maxOutputTokens) + surcharge;
 
       const reservation = await deps.db.schema('platform').rpc('ai_reserve', {
         p_user_id: verified.claims.sub,

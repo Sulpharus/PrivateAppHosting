@@ -79,7 +79,7 @@ as $$
 declare
   v_team uuid;
 begin
-  if split_part(p_name, '/', 2) !~ '^team-[0-9a-f-]{36}$' then
+  if split_part(p_name, '/', 2) !~ '^team-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' then
     return false;
   end if;
   v_team := substr(split_part(p_name, '/', 2), 6)::uuid;
@@ -120,6 +120,13 @@ declare
 begin
   if (select auth.uid()) is null or not (select platform.app_access(p_slug)) then
     raise exception 'not allowed' using errcode = '42501';
+  end if;
+  if char_length(btrim(p_name)) = 0 then
+    raise exception 'a team needs a name' using errcode = '22023';
+  end if;
+  -- A generous cap, so an automated caller cannot fill the table.
+  if (select count(*) from platform.teams where app_slug = p_slug and created_by = (select auth.uid())) >= 50 then
+    raise exception 'too many teams' using errcode = '54000';
   end if;
   insert into platform.teams (app_slug, name, created_by)
   values (p_slug, btrim(p_name), (select auth.uid()))
@@ -201,7 +208,8 @@ begin
   if not (select platform.team_can(p_team, 'owner')) then
     raise exception 'not allowed' using errcode = '42501';
   end if;
-  select app_slug into v_slug from platform.teams where id = p_team;
+  -- One owner change at a time per team, so two owners cannot demote each other to zero owners.
+  select app_slug into v_slug from platform.teams where id = p_team for update;
   if not platform.user_may_use_app(p_user, v_slug) then
     raise exception 'this person cannot use the app' using errcode = '22023';
   end if;
@@ -231,6 +239,7 @@ begin
   elsif not (select platform.team_can(p_team, 'viewer')) then
     raise exception 'not allowed' using errcode = '42501';
   end if;
+  perform 1 from platform.teams where id = p_team for update;
   if exists (select 1 from platform.team_members where team_id = p_team and user_id = p_user and role = 'owner')
     and (select count(*) from platform.team_members where team_id = p_team and role = 'owner') = 1 then
     raise exception 'a team needs an owner' using errcode = '22023';
@@ -252,6 +261,13 @@ declare
 begin
   if not (select platform.team_can(p_team, 'editor')) then
     raise exception 'not allowed' using errcode = '42501';
+  end if;
+  if char_length(btrim(coalesce(p_title, ''))) = 0 then
+    raise exception 'a notification needs a title' using errcode = '22023';
+  end if;
+  -- Only a link inside MiniNode: a relative path, never another site or a script.
+  if p_url is not null and p_url !~ '^/[^/\\]' and p_url <> '/' then
+    raise exception 'the link must be a path on this site' using errcode = '22023';
   end if;
   select app_slug into v_slug from platform.teams where id = p_team;
   if not exists (select 1 from platform.team_members where team_id = p_team and user_id = p_user) then

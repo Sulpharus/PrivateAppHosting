@@ -52,6 +52,13 @@ by side, each seen only by the 2 to 6 people in it, with different rights (someo
 - Suite records (`task`, `project`, ADR 0002) stay per person and collection; an app publishes the
   tasks assigned to a person into that person's own collection so they show in the Kalender.
 
+- Files of a deleted team stay in the storage bucket (unreachable, but they count toward the quota
+  and the backups); an app removes them with `mn.files.remove(path, { team })` before deleting the
+  team, and a later cleanup job may sweep orphans.
+- Notifications through `mn.team.notify` carry only a path on this site as link; the portal also
+  refuses other links when it shows them. An editor can still send many notifications to a member;
+  there is no rate limit yet (teams are 2 to 6 trusted friends), and at most 50 teams per person.
+
 ## Alternatives considered
 
 - *`group` with a `project_id` column and policies in the app:* apps may not write policies, and

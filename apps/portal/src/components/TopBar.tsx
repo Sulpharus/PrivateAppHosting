@@ -76,7 +76,7 @@ function Notifications() {
             </p>
           )}
           {items.map((item) => (
-            <a key={item.id} className="menu-item" href={item.url ?? '#'}>
+            <a key={item.id} className="menu-item" href={safeLink(item.url)}>
               <strong>{item.title}</strong>
               {item.body && <small>{item.body}</small>}
             </a>
@@ -143,4 +143,9 @@ export function TopBar(props: { search?: string; onSearch?: (value: string) => v
       </div>
     </header>
   );
+}
+
+/** Notifications may only link to a path on this site (never another site or a script). */
+function safeLink(url: string | null | undefined): string {
+  return url && /^\/(?![/\\])/.test(url) ? url : '#';
 }

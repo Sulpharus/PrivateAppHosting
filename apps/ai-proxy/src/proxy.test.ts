@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { describe, expect, it } from 'vitest';
 import { createApp, originMatchesApp, type ProxyEnv } from './index.ts';
-import { catalog, costMicro, SEARCH_SURCHARGE_MICRO } from './models.ts';
+import { catalog, costMicro, SEARCH_INPUT_ALLOWANCE, SEARCH_SURCHARGE_MICRO } from './models.ts';
 import type { Provider } from './providers.ts';
 
 type Call = { fn: string; args: Record<string, unknown> };
@@ -146,7 +146,10 @@ describe('ai proxy', () => {
     expect(allowed.searches).toEqual([true]);
     const reserved = allowed.calls.find((c) => c.fn === 'ai_reserve')?.args.p_max_micro as number;
     const settled = allowed.calls.find((c) => c.fn === 'ai_settle')?.args.p_cost_micro as number;
-    expect(reserved - base).toBe(SEARCH_SURCHARGE_MICRO);
+    expect(reserved - base).toBe(
+      SEARCH_SURCHARGE_MICRO +
+        costMicro(catalog(undefined)['gemini-flash'], SEARCH_INPUT_ALLOWANCE, 0),
+    );
     expect(settled).toBe(
       costMicro(catalog(undefined)['gemini-flash'], 100, 20) + SEARCH_SURCHARGE_MICRO,
     );

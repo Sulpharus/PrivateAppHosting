@@ -1,5 +1,5 @@
 begin;
-select plan(26);
+select plan(36);
 select tests.reset();
 
 select tests.create_user('anna@example.com', 'Anna') as anna \gset
@@ -50,6 +50,15 @@ select lives_ok(format($$select platform.team_notify(%L, %L, 'Neue Aufgabe', 'So
   'an editor notifies a member');
 select throws_ok(format($$select platform.team_set_member(%L, %L, 'owner')$$, :'team', :'ben'), '42501', null,
   'an editor cannot manage the team');
+select throws_ok(format($$select platform.team_remove_member(%L, %L)$$, :'team', :'cleo'), '42501', null,
+  'an editor cannot remove another person');
+select throws_ok(format($$select platform.team_notify(%L, %L, 'x', null, 'javascript:alert(1)')$$, :'team', :'anna'),
+  '22023', null, 'a notification cannot carry a script link');
+select throws_ok(format($$select platform.team_notify(%L, %L, 'x', null, 'https://evil.example/')$$, :'team', :'anna'),
+  '22023', null, 'a notification cannot link to another site');
+select lives_ok(format($$select platform.team_notify(%L, %L, 'x', null, '/card/1')$$, :'team', :'anna'),
+  'a notification can link to a path on this site');
+select ok(not platform.may_access_app_file('projekte/team-' || repeat('-', 36) || '/a.png'), 'a malformed team folder is closed, not an error');
 select ok(platform.may_access_app_file('projekte/team-' || :'team' || '/a.png'), 'an editor reads team files');
 select ok(platform.may_write_app_file('projekte/team-' || :'team' || '/a.png'), 'an editor writes team files');
 
@@ -66,6 +75,7 @@ select throws_ok(format($$select platform.team_notify(%L, %L, 'x')$$, :'team', :
 
 -- Not a member / another app / no access
 select tests.logout(); select tests.login(:'anna'); select tests.as_app('andere');
+select ok(not platform.may_access_app_file('andere/team-' || :'team' || '/a.png'), 'a team''s folder under another app''s name is closed');
 select is((select count(*)::int from app_projekte.cards), 0, 'the same person on another app''s page sees nothing');
 select is((select count(*)::int from platform.team_list('projekte')), 0, 'teams are listed only on their own app''s page');
 select tests.as_app('projekte');
@@ -80,8 +90,15 @@ select ok(not platform.may_access_app_file('projekte/team-' || :'other' || '/a.p
 select tests.logout(); select tests.login(:'anna'); select tests.as_app('projekte');
 select throws_ok(format($$select platform.team_remove_member(%L, %L)$$, :'team', :'anna'), '22023', null,
   'the last owner cannot leave');
+select throws_ok(format($$select platform.team_set_member(%L, %L, 'editor')$$, :'team', :'anna'), '22023', null,
+  'the last owner cannot be demoted');
 select platform.team_remove_member(:'team', :'cleo');
 select is((select count(*)::int from platform.team_members_of(:'team')), 2, 'an owner removes a member');
+select tests.logout(); select tests.login(:'cleo'); select tests.as_app('projekte');
+select is((select count(*)::int from app_projekte.cards), 0, 'a removed member sees nothing any more');
+select ok(not platform.may_access_app_file('projekte/team-' || :'team' || '/a.png'), 'a removed member loses the files');
+select throws_ok($$select platform.team_create('projekte', '   ')$$, '22023', null, 'a team needs a name');
+select tests.logout(); select tests.login(:'anna'); select tests.as_app('projekte');
 select platform.team_delete(:'team');
 select is((select count(*)::int from app_projekte.cards), 0, 'deleting the team deletes its rows');
 
