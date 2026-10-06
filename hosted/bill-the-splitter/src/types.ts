@@ -31,11 +31,14 @@ export interface Expense {
   description: string;
   amount: number;
   paidById: string;
-  date: string; // e.g. "2026-10-24" or "Oct 24"
+  date: string; // "2026-10-24"; older expenses may still say "Today"
   dueDate?: string; // Payment deadline e.g. "2026-10-30"
   category: string;
-  splitType: 'equal' | 'percentage' | 'exact';
-  splitDetails: { [memberId: string]: number }; // percentage or exact amount owed by each member
+  splitType: 'equal' | 'percentage' | 'exact' | 'shares';
+  /** Who takes part. Missing on older expenses: everybody in the group. */
+  participantIds?: string[];
+  /** percentage, exact amount (€) or number of shares, per member; unused for 'equal'. */
+  splitDetails: { [memberId: string]: number };
   receiptUrl?: string; // Data URL or image link
   receiptName?: string;
   remindedAt?: string; // ISO string when reminder was sent

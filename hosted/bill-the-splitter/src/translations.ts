@@ -1,4 +1,35 @@
 export interface AppTranslations {
+  /** Labels of the expense categories, by their stored (English) key. */
+  categories: Record<string, string>;
+  editBill: string;
+  groupNamePlaceholder: string;
+  locationPlaceholder: string;
+  createGroupButton: string;
+  householdGroup: string;
+  eventGroup: string;
+  splitWith: string;
+  notInvolved: string;
+  deleteExpense: string;
+  howToSettle: string;
+  howToSettleHint: string;
+  allSettled: string;
+  payerPays: string;
+  bookAsPaid: string;
+  group: string;
+  date: string;
+  you: string;
+  youTo: string;
+  whoIsIn: string;
+  everyone: string;
+  splitEqual: string;
+  splitPercent: string;
+  splitAmounts: string;
+  splitShares: string;
+  splitAddsUp: string;
+  splitRestPercent: string;
+  splitRestAmount: string;
+  moreOptions: string;
+  moreOptionsHint: string;
   appName: string;
   dashboard: string;
   groups: string;
@@ -137,6 +168,7 @@ export interface AppTranslations {
   in2Weeks: string;
   endOfMonth: string;
   reminderLogged: string;
+  expenseAddedLog: string;
   directPay: string;
   payShare: string;
   paymentMethods: string;
@@ -178,10 +210,16 @@ import en from '../public/i18n/en.json';
  * The texts live in the language packages (public/i18n/de.json and en.json, the files the portal's
  * language switch reads, too); the keys there carry the prefix "bill.".
  */
-const unprefixed = (pack: Record<string, string>) =>
-  Object.fromEntries(
-    Object.entries(pack).map(([key, value]) => [key.replace(/^bill\./, ''), value]),
-  ) as unknown as AppTranslations;
+const unprefixed = (pack: Record<string, string>): AppTranslations => {
+  const flat: Record<string, string> = {};
+  const categories: Record<string, string> = {};
+  for (const [key, value] of Object.entries(pack)) {
+    const name = key.replace(/^bill\./, '');
+    if (name.startsWith('cat.')) categories[name.slice(4)] = value;
+    else flat[name] = value;
+  }
+  return { ...flat, categories } as unknown as AppTranslations;
+};
 
 export const TRANSLATIONS: { de: AppTranslations; en: AppTranslations } = {
   de: unprefixed(de),

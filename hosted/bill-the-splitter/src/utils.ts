@@ -1,3 +1,4 @@
+import { balancesInCents, expenseShares, fromCents } from './splits';
 import type { Expense, Group, Settlement } from './types';
 
 export interface GroupBalances {
@@ -16,60 +17,25 @@ export function calculateGroupBalances(
   allSettlements: Settlement[],
   currentUserId: string = 'u1',
 ): GroupBalances {
-  const groupId = group.id;
-
-  let totalSpent = 0;
+  const groupExpenses = allExpenses.filter((e) => e.groupId === group.id);
+  const groupSettlements = allSettlements.filter((s) => s.groupId === group.id);
+  const cents = balancesInCents(groupExpenses, groupSettlements, group.memberIds);
   const memberBalances: { [memberId: string]: number } = {};
+  for (const [id, value] of Object.entries(cents)) memberBalances[id] = fromCents(value);
 
-  // Initialize all current group members to 0 balance
-  group.memberIds.forEach((mId) => {
-    memberBalances[mId] = 0;
-  });
-
-  // 1. Process expenses for this group
-  const groupExpenses = allExpenses.filter((e) => e.groupId === groupId);
-  groupExpenses.forEach((exp) => {
-    const amount = exp.amount;
-    totalSpent += amount;
-
-    // Credit the person who paid
-    memberBalances[exp.paidById] = (memberBalances[exp.paidById] || 0) + amount;
-
-    // Debit everyone who shared (including payer)
-    if (exp.splitType === 'equal') {
-      const share = amount / (group.memberIds.length || 1);
-      group.memberIds.forEach((mId) => {
-        memberBalances[mId] = (memberBalances[mId] || 0) - share;
-      });
-    } else if (exp.splitType === 'percentage') {
-      group.memberIds.forEach((mId) => {
-        const percent = exp.splitDetails[mId] || 0;
-        const share = amount * (percent / 100);
-        memberBalances[mId] = (memberBalances[mId] || 0) - share;
-      });
-    } else if (exp.splitType === 'exact') {
-      group.memberIds.forEach((mId) => {
-        const share = exp.splitDetails[mId] || 0;
-        memberBalances[mId] = (memberBalances[mId] || 0) - share;
-      });
-    }
-  });
-
-  // 2. Process settlements for this group
-  const groupSettlements = allSettlements.filter((s) => s.groupId === groupId);
-  groupSettlements.forEach((set) => {
-    const amount = set.amount;
-    memberBalances[set.fromMemberId] = (memberBalances[set.fromMemberId] || 0) + amount;
-    memberBalances[set.toMemberId] = (memberBalances[set.toMemberId] || 0) - amount;
-  });
-
-  const userShare = totalSpent / (group.memberIds.length || 1);
-  const userNetBalance = memberBalances[currentUserId] || 0;
+  const totalSpent = groupExpenses.reduce((sum, e) => sum + e.amount, 0);
+  // What the current person's own part of everything comes to.
+  const userShare = fromCents(
+    groupExpenses.reduce(
+      (sum, e) => sum + (expenseShares(e, group.memberIds)[currentUserId] ?? 0),
+      0,
+    ),
+  );
 
   return {
     totalSpent,
     userShare,
-    userNetBalance,
+    userNetBalance: memberBalances[currentUserId] || 0,
     memberBalances,
   };
 }
