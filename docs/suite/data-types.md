@@ -168,8 +168,10 @@ other record. None of that is repeated in the tables below.
 | `story` | title, starts_at | ordered media[] + text blocks (e.g. a holiday photo walk) | src | K T | 3 |
 
 `image` (on `event` and `activity`): a tiny inline picture (a `data:image/jpeg|png|webp;base64,…` string of
-at most 16,000 characters, about 80 px wide) that the Kalender shows in its list, its day view and as a pin on the
+at most 16,000 characters, about 64 px wide, 2–3 KB) that the Kalender shows in its list, its day view and as a pin on the
 map. The app that owns the big picture makes the small one; no app needs access to another app's files.
+**Cost:** a record per occurrence carries its own copy (a daily session over 97 days is about 250 KB of pictures that
+the calendar and the owning app load), so keep it small and send it only for what people look at.
 
 A holiday photo walk: `trip` → `album`/`story` → `media`. Each `media` has `starts_at` + `geo`,
 so the universal calendar shows photos on their day and the map shows them where they were

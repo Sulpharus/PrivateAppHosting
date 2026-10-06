@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { imageOf, itemsFor, onDay, sourceOf, sourcesFrom, spanOf } from '../items.js';
+import { imageFits, imageOf, itemsFor, onDay, sourceOf, sourcesFrom, spanOf } from '../items.js';
 
 const rec = (over) => ({
   id: 'r1',
@@ -84,6 +84,18 @@ describe('pictures', () => {
     expect(imageOf(rec({ data: { image: 'data:image/png;base64,AAAA" onerror="x' } }))).toBeNull();
     expect(imageOf(rec({ data: {} }))).toBeNull();
     expect(imageOf(rec({ data: { image: 42 } }))).toBeNull();
+  });
+
+  it('fit into the day view only for entries longer than an hour in wide lanes', () => {
+    const at = (min) => new Date(2026, 9, 5, 10, min);
+    const item = (minutes, image = png) => ({ image, start: at(0), end: at(minutes) });
+    expect(imageFits(item(120), 1)).toBe(true);
+    expect(imageFits(item(120), 2)).toBe(true);
+    expect(imageFits(item(120), 3)).toBe(false);
+    expect(imageFits(item(120), 2, 1)).toBe(false);
+    expect(imageFits(item(60), 1)).toBe(false);
+    expect(imageFits(item(61), 1)).toBe(true);
+    expect(imageFits(item(120, null), 1)).toBe(false);
   });
 
   it('come along on the items', () => {

@@ -16,7 +16,7 @@ function suiteInstant(ds, time) {
   return new Date(y, m - 1, d, hh || 0, mm || 0).toISOString();
 }
 
-/* A tiny picture (about 80 px) of the first photo travels inside the record, so the Kalender can
+/* A tiny picture (about 64 px) of the first photo travels inside the record, so the Kalender can
    show it in its list, day and map without access to this app's files. One per photo and visit. */
 const suiteImages = new Map(); // photo ref → data URL or null
 const SUITE_IMAGE_MAX = 15000;
@@ -29,7 +29,7 @@ async function suiteTiny(blob) {
       el.onerror = reject;
       el.src = url;
     });
-    const data = scaleTo(img, 80, 0.6, false);
+    const data = scaleTo(img, 64, 0.5, false);
     return data.length <= SUITE_IMAGE_MAX ? data : null;
   } finally {
     URL.revokeObjectURL(url);
@@ -120,6 +120,17 @@ function suiteUnchanged(rec, f) {
   );
 }
 
+/** Writes one session; if the database refuses the picture (not known to it yet), without it. */
+async function upsertSession(act, fields, key) {
+  try {
+    return await act.upsert(fields, { sourceKey: key });
+  } catch (err) {
+    if (!err || err.code !== '22023' || !fields.data.image) throw err;
+    const { image, ...data } = fields.data;
+    return act.upsert({ ...fields, data }, { sourceKey: key });
+  }
+}
+
 async function suiteSync() {
   if (suiteOff) return;
   const mn = await ready;
@@ -132,8 +143,7 @@ async function suiteSync() {
     const jobs = [];
     for (const [key, fields] of wanted) {
       const rec = byKey.get(key);
-      if (!rec || !suiteUnchanged(rec, fields))
-        jobs.push(() => act.upsert(fields, { sourceKey: key }));
+      if (!rec || !suiteUnchanged(rec, fields)) jobs.push(() => upsertSession(act, fields, key));
     }
     // no longer planned: gone from the Kalender (earlier sessions stay as history)
     for (const r of mine)

@@ -16,7 +16,7 @@ import {
   withExdate,
 } from './edit.js';
 import { parseIcs, toIcs } from './ics.js';
-import { appName, COLORS, itemsFor, onDay, SELF, sourcesFrom, spanOf } from './items.js';
+import { appName, COLORS, imageFits, itemsFor, onDay, SELF, sourcesFrom, spanOf } from './items.js';
 import { isoWeek, layoutDay, monthGrid, startOfWeek } from './layout.js';
 import { geocode, initMap, mapView, reasonOf } from './map.js';
 import { validPoint } from './route.js';
@@ -846,6 +846,7 @@ function agenda() {
 const isBanner = (i) => i.allDay || i.end - i.start >= DAY;
 let suppressClick = false;
 
+const narrow = window.matchMedia('(max-width: 600px)');
 function timeGrid(days, { images = false } = {}) {
   const today = new Date();
   const grid = h('div', { class: 'cal-grid' });
@@ -910,13 +911,9 @@ function timeGrid(days, { images = false } = {}) {
     for (const p of layoutDay(timed)) {
       const top = ((p.start - start) / 60_000) * (HOUR_PX / 60);
       const height = Math.max(((p.end - p.start) / 60_000) * (HOUR_PX / 60), 22);
-      // a picture needs room: only entries longer than an hour, and not squeezed into a third lane
+      // a picture needs room: only entries longer than an hour, and not squeezed into narrow lanes
       const withImage =
-        images &&
-        imagesOn('day') &&
-        Boolean(p.orig.image) &&
-        p.orig.end - p.orig.start > 3_600_000 &&
-        p.lanes <= 2;
+        images && imagesOn('day') && imageFits(p.orig, p.lanes, narrow.matches ? 1 : 2);
       const ev = h(
         'button',
         {

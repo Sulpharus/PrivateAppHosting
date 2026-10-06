@@ -455,6 +455,9 @@ function h0(tag, props, text) {
 function renderPins() {
   const L = window.L;
   if (!lmap || !pinLayer || !pinState) return;
+  // zooming draws the pins again: an open popup is opened again on the pin that now holds its entry
+  const open = pinState.open;
+  pinState.redrawing = true;
   pinLayer.clearLayers();
   const zoom = lmap.getZoom();
   const pixels = pinState.entries.map((e) => lmap.project([e.point.lat, e.point.lon], zoom));
@@ -463,7 +466,15 @@ function renderPins() {
     const marker = members.length === 1 ? singlePin(L, members[0]) : clusterPin(L, members);
     marker.addTo(pinLayer);
     for (const e of members) e.marker = marker;
+    marker.on('popupopen', () => {
+      pinState.open = members[0];
+    });
+    marker.on('popupclose', () => {
+      if (!pinState.redrawing) pinState.open = null;
+    });
   }
+  pinState.redrawing = false;
+  if (open?.marker) open.marker.openPopup();
 }
 
 /** One appointment: its picture with a coloured outline when it has one, else the numbered pin. */
@@ -507,9 +518,9 @@ function clusterPin(L, members) {
     icon: L.divIcon({
       className: 'cal-pin-wrap',
       html: `<span class="cal-pin cal-pin--cluster${only ? '' : ' is-mixed'}"${only ? ` data-cat="${only}"` : ''} aria-hidden="true"><span>${members.length}</span></span>`,
-      iconSize: [40, 40],
-      iconAnchor: [20, 20],
-      popupAnchor: [0, -20],
+      iconSize: [44, 44],
+      iconAnchor: [22, 22],
+      popupAnchor: [0, -22],
     }),
     title: label,
     alt: label,

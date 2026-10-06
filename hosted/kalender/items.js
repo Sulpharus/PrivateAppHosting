@@ -93,6 +93,13 @@ export function imageOf(record) {
     : null;
 }
 
+/**
+ * Whether the day view has room for an entry's picture: it needs a picture, an entry longer than an
+ * hour (shorter ones are too low) and not more than `maxLanes` side by side (narrow columns).
+ */
+export const imageFits = (item, lanes, maxLanes = 2) =>
+  Boolean(item.image) && item.end - item.start > 3_600_000 && lanes <= maxLanes;
+
 const DAY = 86_400_000;
 const isMidnight = (d) => d.getHours() === 0 && d.getMinutes() === 0;
 
