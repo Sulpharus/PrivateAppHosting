@@ -8,9 +8,9 @@ export async function readDeployedVersions(
   envName: DeployEnv,
   client?: SupabaseClient,
 ): Promise<Map<string, string | null>> {
-  const env = environmentSettings(envName);
   let db = client;
   if (!db) {
+    const env = environmentSettings(envName);
     const secret = process.env.SUPABASE_SECRET_KEY;
     if (!secret) throw new Error('SUPABASE_SECRET_KEY is required to read the deployed versions');
     db = createClient(env.supabaseUrl, secret, { auth: { persistSession: false } });
