@@ -11,6 +11,7 @@ Jede Änderung am System bekommt hier eine Zeile (siehe [Wissen aktuell halten](
 
 | Datum | Neu | Wo |
 | --- | --- | --- |
+| 06.10. | **Deploy vergleicht jede App mit ihrem zuletzt ausgelieferten Stand** statt mit dem vorigen Push: Änderungen aus einem fehlgeschlagenen Lauf gehen nicht mehr verloren (`mininode deploy --since-deployed`) | GitHub → Actions → Deploy |
 | 06.10. | **Deploy wiederholt `supabase link`** bei einem Fehler der Supabase-Berechtigungsprüfung („FGA“) bis zu 5-mal und zeigt sonst die Ursache | GitHub → Actions → Deploy |
 | 06.10. | **Wunschliste lädt wieder**: das Schema der Daten-Schnittstelle wird nach dem Foto-Update neu geladen; bei einem Ladefehler steht jetzt die Ursache in der Meldung | App Wunschliste |
 | 06.10. | **Karte zeigt wieder Kacheln**: die Stile „Hell“ und „Dunkel“ nutzten CARTO, das jetzt einen API-Schlüssel verlangt; sie laufen nun über OpenStreetMap (Dunkel per Farbfilter) | Kalender → Karte, Aether Notes → Karte |
