@@ -133,4 +133,5 @@ export function reminderAt(person, daysBefore, now) {
   return at.getTime() > now.getTime() - 60_000 ? at : null;
 }
 
-export const reminderKey = (person, date) => `birthday:${person.key}:${date.getFullYear()}`;
+/** One pending reminder per person: scheduling again replaces it, so it moves on to the next year by itself. */
+export const reminderKey = (person) => `birthday:${person.key}`;

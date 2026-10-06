@@ -6,6 +6,7 @@ import {
   nextOccurrence,
   normalizeName,
   reminderAt,
+  reminderKey,
   turns,
   withCountdown,
 } from '../birthdays.js';
@@ -129,5 +130,6 @@ describe('reminders', () => {
     const at = reminderAt(person, 14, day(2026, 10, 1));
     expect([at.getMonth() + 1, at.getDate(), at.getHours()]).toEqual([10, 6, 9]);
     expect(reminderAt(person, 14, day(2026, 10, 10))).toBeNull();
+    expect(reminderKey(person)).toBe('birthday:own:1');
   });
 });

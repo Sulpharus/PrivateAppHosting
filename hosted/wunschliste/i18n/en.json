@@ -158,12 +158,13 @@
   "bd.yearLabel": "Year",
   "bd.yearHint": "optional",
   "bd.errDate": "That date does not exist. Please check day and month.",
-  "bd.errYear": "Enter a year between 1900 and today, or leave it empty.",
+  "bd.errYear": "Enter a year between 1905 and today, or leave it empty.",
   "bd.defaultRemind": "Reminder before the birthday",
   "bd.defaultRemindHint": "At 9:00, as a notification on your devices. Can be changed per person.",
   "bd.accountHint": "Your own birthday is under \"Your account\" in the portal. There you decide whether others see it.",
   "bd.pushTitle": "{name}'s birthday is coming up",
   "bd.pushIdeas": "In {days} days. {n} gift ideas noted.",
   "bd.pushNoIdea": "In {days} days. No gift idea yet.",
-  "bd.noContacts": "Birthdays of your contacts appear here once Aether Notes publishes them. The admin has to approve reading the calendar entries."
+  "bd.noContacts": "Birthdays of your contacts appear here once Aether Notes publishes them. The admin has to approve reading the calendar entries.",
+  "bd.pushIdea1": "In {days} days. One gift idea noted."
 }

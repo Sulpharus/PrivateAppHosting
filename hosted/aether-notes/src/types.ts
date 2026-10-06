@@ -74,6 +74,8 @@ export interface Person {
   email?: string;
   address?: string;
   birthday?: string;
+  /** false: the birthday stays in Aether and is not given to the other apps. */
+  birthdayShared?: boolean;
   tags?: string[];
   coffeePreference?: string;
   likes?: string;
@@ -162,6 +164,8 @@ export interface Contact {
   phone?: string;
   address?: string;
   birthday?: string; // YYYY-MM-DD or MM-DD
+  /** false: the birthday stays in Aether and is not given to the other apps. */
+  birthdayShared?: boolean;
   tags: string[];
   notes?: string;
   followUpDate?: string | null;

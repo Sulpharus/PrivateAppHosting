@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { birthdayFields, parseBirthday, UNKNOWN_YEAR } from './birthdays';
+import { birthdayFields, parseBirthday, planBirthdays, UNKNOWN_YEAR } from './birthdays';
 
 describe('parseBirthday', () => {
   it('reads a full date and a day without a year', () => {
@@ -12,6 +12,8 @@ describe('parseBirthday', () => {
     expect(parseBirthday('02-29')).toEqual({ month: 2, day: 29, year: null });
     expect(parseBirthday('2000-02-29')?.day).toBe(29);
     expect(parseBirthday('2023-02-29')).toBeNull();
+    // 1900 to 1904 cannot be told from "no year"
+    expect(parseBirthday('1903-05-05')).toEqual({ month: 5, day: 5, year: null });
   });
 
   it('refuses what is no date', () => {
@@ -55,5 +57,88 @@ describe('birthdayFields', () => {
     expect(birthdayFields('', '03-14', 'Geburtstag')).toBeNull();
     expect(birthdayFields('Mia', '02-30', 'Geburtstag')).toBeNull();
     expect(birthdayFields('Mia', undefined, 'Geburtstag')).toBeNull();
+  });
+});
+
+describe('planBirthdays', () => {
+  const base = {
+    contacts: {},
+    people: {},
+    off: false,
+    label: 'Geburtstag',
+    existing: [],
+    listsRead: true,
+  };
+  const record = (key: string, name: string, birthday: string, id = key) => {
+    const fields = birthdayFields(name, birthday, 'Geburtstag');
+    return {
+      id,
+      source_key: key,
+      title: fields?.title ?? null,
+      starts_at: fields?.starts_at ?? null,
+      data: fields?.data ?? null,
+    };
+  };
+
+  it('writes the valid, shared birthdays of contacts and people', () => {
+    const plan = planBirthdays({
+      ...base,
+      contacts: {
+        a: { name: 'Erika', birthday: '1990-03-14' },
+        b: { name: 'Nur privat', birthday: '03-15', birthdayShared: false },
+        c: { name: 'Kaputt', birthday: '02-30' },
+      },
+      people: { x: { name: 'Max', birthday: '02-29' } },
+    });
+    expect(plan.upserts.map((u) => u.key)).toEqual(['birthday:c:a', 'birthday:p:x']);
+    expect(plan.deletes).toEqual([]);
+  });
+
+  it('leaves unchanged records alone and rewrites changed ones', () => {
+    const existing = [record('birthday:c:a', 'Erika', '1990-03-14')];
+    expect(
+      planBirthdays({
+        ...base,
+        contacts: { a: { name: 'Erika', birthday: '1990-03-14' } },
+        existing,
+      }).upserts,
+    ).toEqual([]);
+    expect(
+      planBirthdays({
+        ...base,
+        contacts: { a: { name: 'Erika', birthday: '1990-03-15' } },
+        existing,
+      }).upserts,
+    ).toHaveLength(1);
+  });
+
+  it('deletes records of removed or no longer shared birthdays, but never from an unread list', () => {
+    const existing = [record('birthday:c:a', 'Erika', '1990-03-14', 'r1')];
+    expect(planBirthdays({ ...base, existing }).deletes).toEqual(['r1']);
+    expect(
+      planBirthdays({
+        ...base,
+        contacts: { a: { name: 'Erika', birthday: '1990-03-14', birthdayShared: false } },
+        existing,
+      }).deletes,
+    ).toEqual(['r1']);
+    expect(planBirthdays({ ...base, existing, listsRead: false }).deletes).toEqual([]);
+  });
+
+  it('removes everything when birthdays are switched off, even offline', () => {
+    const existing = [record('birthday:c:a', 'Erika', '1990-03-14', 'r1')];
+    const plan = planBirthdays({
+      ...base,
+      off: true,
+      listsRead: false,
+      contacts: { a: { name: 'Erika', birthday: '1990-03-14' } },
+      existing,
+    });
+    expect(plan).toEqual({ upserts: [], deletes: ['r1'] });
+  });
+
+  it('does not touch records of other kinds', () => {
+    const other = { id: 'm', source_key: 'meetup:1', title: 'Kaffee', starts_at: null, data: null };
+    expect(planBirthdays({ ...base, existing: [other] }).deletes).toEqual([]);
   });
 });

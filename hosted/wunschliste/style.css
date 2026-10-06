@@ -112,7 +112,7 @@
   cursor: pointer;
 }
 .bd-chip[aria-pressed="true"] {
-  background: var(--mn-accent-soft);
+  background: var(--mn-accent);
   color: var(--mn-accent-ink);
   border-color: var(--mn-accent);
 }

@@ -11,6 +11,8 @@ import {
 } from './birthdays.js';
 
 const SETTINGS_KEY = 'birthday-settings';
+/** The tables refuse more than 1,000,000 € (cents as integers). */
+const MAX_CENTS = 100_000_000;
 const DAYS = [0, 3, 7, 14, 30];
 const REMIND_CHECK = 'birthday-reminded-at';
 const daysIn = (month, year) =>
@@ -80,8 +82,32 @@ export function createBirthdayView({ h, t, icon, toast, ready, locale, S, render
     );
   const daysBeforeOf = (key) => prefOf(key)?.days_before ?? B.daysBefore;
 
-  /** One push per person and year, at most once an hour unless something changed. */
-  async function scheduleReminders(force) {
+  // One pending reminder per person (key `birthday:<person key>`), scheduled again only when its
+  // time or text changed; reminders of people who are gone or hidden are cancelled. The device
+  // keeps at most 500 reminders per app (platform limit), so a huge list would not all be scheduled.
+  const REMINDERS = 'birthday-reminders';
+  let running = null;
+  let again = null; // a run was asked for while one was going: null = none, else its `force`
+
+  function scheduleReminders(force) {
+    if (running) {
+      again = again === null ? force : again || force;
+      return running;
+    }
+    running = (async () => {
+      let next = force;
+      while (next !== null) {
+        again = null;
+        await runReminders(next);
+        next = again;
+      }
+    })().finally(() => {
+      running = null;
+    });
+    return running;
+  }
+
+  async function runReminders(force) {
     try {
       const mn = await ready;
       const last = Number((await mn.kv.get(REMIND_CHECK)) ?? 0);
@@ -97,25 +123,53 @@ export function createBirthdayView({ h, t, icon, toast, ready, locale, S, render
         }),
         now,
       );
+      const wanted = new Map();
       for (const person of all) {
-        const key = reminderKey(person, new Date(now.getFullYear(), person.month - 1, person.day));
         const at = person.hidden ? null : reminderAt(person, daysBeforeOf(person.key), now);
-        if (!at) {
-          await mn.push.cancel(key).catch(() => undefined);
-          continue;
-        }
-        const idea = B.ideas.filter((i) => i.person_key === person.key && i.status !== 'given');
-        await mn.push.schedule({
-          key: reminderKey(person, at),
+        if (!at) continue;
+        const ideas = B.ideas.filter((i) => i.person_key === person.key && i.status !== 'given');
+        const days = daysBeforeOf(person.key);
+        wanted.set(reminderKey(person), {
           at,
-          title: t('bd.pushTitle', { name: person.name }),
-          body: t(idea.length ? 'bd.pushIdeas' : 'bd.pushNoIdea', {
-            days: daysBeforeOf(person.key),
-            n: idea.length,
-          }),
-          path: '/?tab=birthdays',
+          title: t('bd.pushTitle', { name: person.name.slice(0, 60) }),
+          body: t(
+            ideas.length === 0
+              ? 'bd.pushNoIdea'
+              : ideas.length === 1
+                ? 'bd.pushIdea1'
+                : 'bd.pushIdeas',
+            {
+              days,
+              n: ideas.length,
+            },
+          ),
         });
       }
+      const known = (await mn.kv.get(REMINDERS)) ?? {};
+      const kept = {};
+      for (const [key, w] of wanted) {
+        const signature = `${w.at.toISOString()}|${w.title}|${w.body}`;
+        if (known[key] === signature) {
+          kept[key] = signature;
+          continue;
+        }
+        try {
+          await mn.push.schedule({
+            key,
+            at: w.at,
+            title: w.title,
+            body: w.body,
+            path: '/?tab=birthdays',
+          });
+          kept[key] = signature;
+        } catch (err) {
+          // One person that fails (a refused text) must not stop the others; no push access stops all.
+          if (err?.code === '42501') return;
+        }
+      }
+      for (const key of Object.keys(known))
+        if (!wanted.has(key)) await mn.push.cancel(key).catch(() => undefined);
+      await mn.kv.set(REMINDERS, kept);
       await mn.kv.set(REMIND_CHECK, Date.now());
     } catch {
       // notifications are off or the device is offline: the list works without
@@ -300,11 +354,22 @@ export function createBirthdayView({ h, t, icon, toast, ready, locale, S, render
     render();
   };
 
+  /** The same person always gets the same row id, so two devices never create two rows (unique key). */
+  async function prefId(key) {
+    const bytes = new Uint8Array(
+      await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`birthday_prefs:${key}`)),
+    ).slice(0, 16);
+    bytes[6] = (bytes[6] & 0x0f) | 0x50;
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+    const hex = [...bytes].map((b) => b.toString(16).padStart(2, '0')).join('');
+    return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+  }
+
   async function savePref(key, patch) {
     const mn = await ready;
     const existing = prefOf(key);
     await mn.table('birthday_prefs').upsert({
-      id: existing?.id ?? crypto.randomUUID(),
+      id: existing?.id ?? (await prefId(key)),
       person_key: key,
       days_before: existing?.days_before ?? null,
       budget_cents: existing?.budget_cents ?? null,
@@ -357,15 +422,21 @@ export function createBirthdayView({ h, t, icon, toast, ready, locale, S, render
     const error = h('p', { class: 'mn-error', role: 'alert', hidden: true });
     const savePrefs = async () => {
       const cents = budget.value.trim() ? parsePrice(budget.value, locale()) : null;
-      if (Number.isNaN(cents)) {
+      if (Number.isNaN(cents) || (cents ?? 0) > MAX_CENTS) {
         error.textContent = t('editor.errPrice');
         error.hidden = false;
         return;
       }
-      await savePref(key, {
-        days_before: remind.value === '' ? null : Number(remind.value),
-        budget_cents: cents,
-      });
+      try {
+        await savePref(key, {
+          days_before: remind.value === '' ? null : Number(remind.value),
+          budget_cents: cents,
+        });
+      } catch {
+        error.textContent = t('editor.errSave');
+        error.hidden = false;
+        return;
+      }
       await reload();
       void scheduleReminders(true);
       toast(t('toast.saved'));
@@ -373,7 +444,10 @@ export function createBirthdayView({ h, t, icon, toast, ready, locale, S, render
 
     const spent = ideas
       .filter(
-        (i) => i.status !== 'idea' && i.gifted_year === new Date().getFullYear() && i.price_cents,
+        (i) =>
+          i.status !== 'idea' &&
+          (i.gifted_year ?? new Date(i.created_at).getFullYear()) === new Date().getFullYear() &&
+          i.price_cents,
       )
       .reduce((sum, i) => sum + i.price_cents, 0);
 
@@ -462,7 +536,12 @@ export function createBirthdayView({ h, t, icon, toast, ready, locale, S, render
           type: 'button',
           class: 'mn-btn mn-btn--ghost',
           onclick: async () => {
-            await savePref(key, { hidden: !p.hidden });
+            try {
+              await savePref(key, { hidden: !p.hidden });
+            } catch {
+              toast(t('editor.errSave'));
+              return;
+            }
             window.mnui.sheet.close();
             await reload();
             void scheduleReminders(true);
@@ -534,7 +613,7 @@ export function createBirthdayView({ h, t, icon, toast, ready, locale, S, render
     const save = async () => {
       if (!title.value.trim()) return fail(t('editor.errTitle'));
       const cents = price.value.trim() ? parsePrice(price.value, locale()) : null;
-      if (Number.isNaN(cents)) return fail(t('editor.errPrice'));
+      if (Number.isNaN(cents) || (cents ?? 0) > MAX_CENTS) return fail(t('editor.errPrice'));
       const link = url.value.trim() ? parseLink(url.value) : { url: null };
       if (!link) return fail(t('editor.errUrl'));
       const mn = await ready;
@@ -571,11 +650,16 @@ export function createBirthdayView({ h, t, icon, toast, ready, locale, S, render
                 e.currentTarget.textContent = t('editor.deleteConfirm');
                 return;
               }
-              const mn = await ready;
-              await mn.table('gift_ideas').remove(idea.id);
+              try {
+                const mn = await ready;
+                await mn.table('gift_ideas').remove(idea.id);
+              } catch {
+                return fail(t('editor.errDelete'));
+              }
               window.mnui.sheet.close();
               toast(t('toast.deleted'));
               await reload();
+              void scheduleReminders(true);
             },
           },
           t('editor.delete'),
@@ -648,7 +732,7 @@ export function createBirthdayView({ h, t, icon, toast, ready, locale, S, render
         d > daysIn(m, y)
       )
         return fail(t('bd.errDate'));
-      if (y !== null && (!Number.isInteger(y) || y < 1900 || y > new Date().getFullYear()))
+      if (y !== null && (!Number.isInteger(y) || y < 1905 || y > new Date().getFullYear()))
         return fail(t('bd.errYear'));
       const mn = await ready;
       try {
@@ -681,14 +765,21 @@ export function createBirthdayView({ h, t, icon, toast, ready, locale, S, render
                 e.currentTarget.textContent = t('editor.deleteConfirm');
                 return;
               }
-              const mn = await ready;
-              await mn.table('birthday_people').remove(person.id);
-              await mn.push
-                .cancel(`birthday:own:${person.id}:${new Date().getFullYear()}`)
-                .catch(() => undefined);
+              try {
+                const mn = await ready;
+                const key = `own:${person.id}`;
+                await mn.table('birthday_people').remove(person.id);
+                for (const idea of B.ideas.filter((i) => i.person_key === key))
+                  await mn.table('gift_ideas').remove(idea.id);
+                const pref = prefOf(key);
+                if (pref) await mn.table('birthday_prefs').remove(pref.id);
+              } catch {
+                return fail(t('editor.errDelete'));
+              }
               window.mnui.sheet.close();
               toast(t('toast.deleted'));
               await reload();
+              void scheduleReminders(true);
             },
           },
           t('editor.delete'),

@@ -158,12 +158,13 @@
   "bd.yearLabel": "Jahr",
   "bd.yearHint": "freiwillig",
   "bd.errDate": "Dieses Datum gibt es nicht. Bitte Tag und Monat prüfen.",
-  "bd.errYear": "Bitte ein Jahr zwischen 1900 und heute angeben oder leer lassen.",
+  "bd.errYear": "Bitte ein Jahr zwischen 1905 und heute angeben oder leer lassen.",
   "bd.defaultRemind": "Erinnerung vor dem Geburtstag",
   "bd.defaultRemindHint": "Um 9 Uhr, als Benachrichtigung auf deinen Geräten. Pro Person änderbar.",
   "bd.accountHint": "Dein eigener Geburtstag steht unter „Dein Konto“ im Portal. Dort entscheidest du, ob ihn andere sehen.",
   "bd.pushTitle": "{name} hat bald Geburtstag",
   "bd.pushIdeas": "In {days} Tagen. {n} Geschenkideen notiert.",
   "bd.pushNoIdea": "In {days} Tagen. Noch keine Geschenkidee.",
-  "bd.noContacts": "Geburtstage deiner Kontakte erscheinen hier, sobald Aether Notes sie veröffentlicht. Der Admin muss das Lesen der Kalendereinträge freigeben."
+  "bd.noContacts": "Geburtstage deiner Kontakte erscheinen hier, sobald Aether Notes sie veröffentlicht. Der Admin muss das Lesen der Kalendereinträge freigeben.",
+  "bd.pushIdea1": "In {days} Tagen. Eine Geschenkidee notiert."
 }

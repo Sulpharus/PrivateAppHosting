@@ -45,6 +45,7 @@ test.beforeAll(async () => {
     ['contacts:c2', contact('c2', 'Max Beispiel', '02-29')],
     ['contacts:c3', contact('c3', 'Anna Probe', '02-30')],
     ['contacts:c4', contact('c4', 'Ohne Datum')],
+    ['contacts:c5', { ...contact('c5', 'Nur Privat', '05-05'), birthdayShared: false }],
   ] as const;
   for (const [key, value] of rows) {
     const { error } = await db
@@ -73,7 +74,7 @@ test('birthdays of contacts reach the Kalender, and leave it when switched off',
     timeout: 30_000,
   });
 
-  // Two valid ones; the 30 February and the contact without a date are left out.
+  // Two valid ones; the 30 February, the contact without a date and the private one are left out.
   await expect
     .poll(async () => (await records()).map((r) => r.source_key), {
       timeout: 30_000,

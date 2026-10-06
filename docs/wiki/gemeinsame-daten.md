@@ -56,6 +56,15 @@ den Ort und speichert den Punkt gleich mit. Mit einem **Startpunkt** (deine Adre
 zwischen den Terminen eines Tages, nennt die Zeit zum Losgehen und warnt, wenn die Zeit zwischen zwei Terminen knapp („Knapp“) oder zu kurz ist („Nicht zu
 schaffen“). „Navigation öffnen“ startet die Route in OpenStreetMap. Für Adressen und Wege nutzt der Kalender (wie Aether Notes) zuerst Geoapify mit einem Schlüssel, den du unter Verwaltung → API-Schlüssel einträgst; ohne Schlüssel greifen die freien OpenStreetMap-Dienste Nominatim und FOSSGIS-Routing als Ersatz ([API-Schlüssel](wiki:api-schluessel)). Treffen aus Aether Notes erscheinen mit ihrem Ort ebenfalls auf der Karte.
 
+## Geburtstage (Aether Notes → Kalender, Wunschliste)
+
+In Aether Notes trägst du bei jedem Kontakt und jeder Person das **Geburtstagsdatum** ein (Tag, Monat, Jahr freiwillig) und entscheidest dort, ob es
+**für andere Apps freigegeben** ist. Freigegebene Geburtstage veröffentlicht Aether als jährlich wiederkehrenden ganztägigen Eintrag (Typ `event`,
+Quellschlüssel `birthday:…`); der Kalender zeigt sie, die Wunschliste zählt darauf herunter. Nicht freigegebene bleiben nur in Aether. Ein Gesamtschalter
+steht unter *Bereichs-Einstellungen → Geburtstage*. Die Apps brauchen dafür die Freigabe des Admins (`event`: Aether schreibt, Wunschliste liest).
+Ein unbekanntes Jahr wird als 1904 geschrieben (das Alter bleibt dann leer); ein 29. Februar erscheint in der Wunschliste in Nicht-Schaltjahren am 28.,
+im Kalender nur in Schaltjahren. Die Geburtstage der MiniNode-Personen stehen unter *Dein Konto → Geburtstag* ([Anmeldung](wiki:anmeldung)).
+
 ## Google Kalender
 
 Der Kalender kann **in beide Richtungen** mit Google synchronisieren: siehe [Google](wiki:google) (ADR 0010).

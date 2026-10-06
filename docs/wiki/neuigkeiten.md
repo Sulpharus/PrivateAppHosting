@@ -11,6 +11,7 @@ Jede Änderung am System bekommt hier eine Zeile (siehe [Wissen aktuell halten](
 
 | Datum | Neu | Wo |
 | --- | --- | --- |
+| 06.10. | **Aether Notes: Geburtstag bei jedem Kontakt und jeder Person** (Tag, Monat, Jahr freiwillig) mit Schalter „für andere Apps freigeben“; die Wunschliste plant Erinnerungen pro Person ohne Doppelte | Aether Notes → Kontakte / Personen; Wissen → Gemeinsame Daten |
 | 06.10. | **Geburtstage in der Wunschliste**: neuer Tab mit Countdown für Personen auf MiniNode (wenn sie ihren Geburtstag im Konto freigegeben haben), Kontakte aus Aether Notes und selbst eingetragene Personen; Geschenkideen mit Stand und Budget, Erinnerung vor dem Geburtstag (Standard 14 Tage, 9 Uhr). **Aether Notes** zeigt die Geburtstage seiner Kontakte jetzt im Kalender (Einstellungen → Geburtstage; Admin-Freigabe `event` nötig, die Wunschliste braucht Lesen) | Wunschliste → Geburtstage; Aether Notes → Einstellungen |
 | 06.10. | **Fertige App-Aufträge** (`docs/ai/briefs/`) für Projekte (Teams), Fahrzeuge (mit KI-Websuche) und Geburtstage; `scripts/compose-brief.ts` baut daraus den vollständigen Prompt für AI Studio | Wissen → KI-Werkstatt |
 | 06.10. | **Geburtstag im Konto** (ADR 0025, freiwillig, nur für Personen derselben Apps sichtbar, wenn du es erlaubst) mit `mn.birthdays()` für Apps; **KI mit Websuche und Quellen** (ADR 0024, `mn.ai.search`, Manifest `ai.search`) | Dein Konto → Geburtstag; Wissen → KI-Proxy |
