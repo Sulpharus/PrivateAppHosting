@@ -35,8 +35,9 @@ const user = await mn.auth.requireLogin();  // schickt zum zentralen Login, fall
 | Bereich | Wofür | Mehr |
 | --- | --- | --- |
 | `mn.auth` | `requireLogin()`, `user()`, `role()` | [Anmeldung](wiki:anmeldung) |
-| `mn.kv` | Schlüssel-Wert-Speicher, privat oder geteilt, **auch offline** | [Daten speichern](wiki:daten-speichern) |
-| `mn.db` | Tabellen im Schema `app_<name>` (Zeilenschutz) | [Daten speichern](wiki:daten-speichern) |
+| `mn.table` | Listen von Einträgen als Tabellen im Schema `app_<name>`: `list`, `get`, `upsert`, `remove`; **auch offline** | [Daten speichern](wiki:daten-speichern) |
+| `mn.kv` | Einstellungen und kleine Zustände (Schlüssel-Wert), privat oder geteilt, **auch offline** | [Daten speichern](wiki:daten-speichern) |
+| `mn.db` | Abfragen, Summen und Filter auf den Tabellen (online; Zeilenschutz) | [Daten speichern](wiki:daten-speichern) |
 | `mn.files` | Dateien (Fotos, Belege), privat oder geteilt, mit signierten Adressen | [Daten speichern](wiki:daten-speichern) |
 | `mn.ai` | `chat()`, `stream()`, `json()` über den KI-Proxy, keine Schlüssel im Browser | [KI-Proxy](wiki:ki-proxy) |
 | `mn.api(id)` | Externe APIs über den Schlüssel-Proxy | [API-Schlüssel](wiki:api-schluessel) |

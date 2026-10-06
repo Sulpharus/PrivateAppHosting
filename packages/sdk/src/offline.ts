@@ -4,17 +4,23 @@
 
 import type { Json, KvScope } from './kv.ts';
 
-/** The server-side kv (see kv.ts). */
+/**
+ * `user` and `shared` are the kv scopes; `table` holds the rows of the app's own tables (`mn.table`,
+ * key `<table>/<id>`), which share the local copy and the queue of changes with kv.
+ */
+export type OfflineScope = KvScope | 'table';
+
+/** The server side: kv (kv.ts) and, for the scope `table`, rows of the app's tables (tables.ts). */
 export interface RemoteKv {
-  get(key: string, scope?: KvScope): Promise<Json | null>;
-  set(key: string, value: Json, scope?: KvScope): Promise<void>;
-  delete(key: string, scope?: KvScope): Promise<void>;
-  list(prefix?: string, scope?: KvScope): Promise<{ key: string; value: Json }[]>;
+  get(key: string, scope?: OfflineScope): Promise<Json | null>;
+  set(key: string, value: Json, scope?: OfflineScope): Promise<void>;
+  delete(key: string, scope?: OfflineScope): Promise<void>;
+  list(prefix?: string, scope?: OfflineScope): Promise<{ key: string; value: Json }[]>;
 }
 
 export interface LocalItem {
   id: string;
-  scope: KvScope;
+  scope: OfflineScope;
   key: string;
   value: Json;
 }
@@ -22,7 +28,7 @@ export interface LocalItem {
 export interface QueuedChange {
   seq?: number;
   op: 'set' | 'delete';
-  scope: KvScope;
+  scope: OfflineScope;
   key: string;
   value?: Json;
 }
@@ -40,7 +46,7 @@ export interface LocalStore {
   dequeue(seq: number): Promise<void>;
 }
 
-const itemId = (scope: KvScope, key: string) => `${scope}:${key}`;
+const itemId = (scope: OfflineScope, key: string) => `${scope}:${key}`;
 
 export function memoryStore(): LocalStore {
   const items = new Map<string, LocalItem>();
@@ -248,22 +254,65 @@ export function createOfflineKv(remote: RemoteKv, localStore: () => Promise<Loca
 
   if (typeof window !== 'undefined') window.addEventListener('online', () => void sync());
 
+  const read = async (key: string, scope: OfflineScope): Promise<Json | null> => {
+    const store = await localStore();
+    const id = itemId(scope, key);
+    if (online() && !(await pendingIds(store)).has(id)) {
+      try {
+        const value = await remote.get(key, scope);
+        if (value === null) await store.remove(id);
+        else await store.put({ id, scope, key, value });
+        return value;
+      } catch (err) {
+        if (isRefusal(err)) throw err;
+      }
+    }
+    return (await store.get(id))?.value ?? null;
+  };
+
+  const readList = async (
+    prefix: string,
+    scope: OfflineScope,
+  ): Promise<{ key: string; value: Json }[]> => {
+    const store = await localStore();
+    const local = () =>
+      store.all().then((items) =>
+        items
+          .filter((item) => item.scope === scope && item.key.startsWith(prefix))
+          .sort((a, b) => (a.key < b.key ? -1 : a.key > b.key ? 1 : 0))
+          .map((item) => ({ key: item.key, value: item.value })),
+      );
+    if (!online()) return local();
+    try {
+      const rows = await remote.list(prefix, scope);
+      // Refresh the copy, keeping local changes that are not sent yet.
+      const pending = await pendingIds(store);
+      const fresh = new Set(rows.map((row) => itemId(scope, row.key)));
+      for (const item of await store.all())
+        if (
+          item.scope === scope &&
+          item.key.startsWith(prefix) &&
+          !fresh.has(item.id) &&
+          !pending.has(item.id)
+        )
+          await store.remove(item.id);
+      for (const row of rows) {
+        const id = itemId(scope, row.key);
+        if (!pending.has(id)) await store.put({ id, scope, key: row.key, value: row.value });
+      }
+      return local();
+    } catch (err) {
+      if (isRefusal(err)) throw err;
+      return local();
+    }
+  };
+  const readOne = (key: string) => read(key, 'table');
+  const readAll = (prefix: string) => readList(prefix, 'table');
+
   return {
     kv: {
       async get<T extends Json = Json>(key: string, scope: KvScope = 'user'): Promise<T | null> {
-        const store = await localStore();
-        const id = itemId(scope, key);
-        if (online() && !(await pendingIds(store)).has(id)) {
-          try {
-            const value = await remote.get(key, scope);
-            if (value === null) await store.remove(id);
-            else await store.put({ id, scope, key, value });
-            return value as T | null;
-          } catch (err) {
-            if (isRefusal(err)) throw err;
-          }
-        }
-        return ((await store.get(id))?.value as T | undefined) ?? null;
+        return (await read(key, scope)) as T | null;
       },
 
       set: (key: string, value: Json, scope: KvScope = 'user') =>
@@ -271,39 +320,15 @@ export function createOfflineKv(remote: RemoteKv, localStore: () => Promise<Loca
 
       delete: (key: string, scope: KvScope = 'user') => write({ op: 'delete', scope, key }),
 
-      async list(prefix = '', scope: KvScope = 'user'): Promise<{ key: string; value: Json }[]> {
-        const store = await localStore();
-        const local = () =>
-          store.all().then((items) =>
-            items
-              .filter((item) => item.scope === scope && item.key.startsWith(prefix))
-              .sort((a, b) => (a.key < b.key ? -1 : a.key > b.key ? 1 : 0))
-              .map((item) => ({ key: item.key, value: item.value })),
-          );
-        if (!online()) return local();
-        try {
-          const rows = await remote.list(prefix, scope);
-          // Refresh the copy, keeping local changes that are not sent yet.
-          const pending = await pendingIds(store);
-          const fresh = new Set(rows.map((row) => itemId(scope, row.key)));
-          for (const item of await store.all())
-            if (
-              item.scope === scope &&
-              item.key.startsWith(prefix) &&
-              !fresh.has(item.id) &&
-              !pending.has(item.id)
-            )
-              await store.remove(item.id);
-          for (const row of rows) {
-            const id = itemId(scope, row.key);
-            if (!pending.has(id)) await store.put({ id, scope, key: row.key, value: row.value });
-          }
-          return local();
-        } catch (err) {
-          if (isRefusal(err)) throw err;
-          return local();
-        }
-      },
+      list: (prefix = '', scope: KvScope = 'user') => readList(prefix, scope),
+    },
+
+    /** Rows of the app's own tables, offline like kv (see tables.ts for the public shape). */
+    rows: {
+      get: (key: string) => readOne(key),
+      list: (prefix: string) => readAll(prefix),
+      set: (key: string, value: Json) => write({ op: 'set', scope: 'table', key, value }),
+      delete: (key: string) => write({ op: 'delete', scope: 'table', key }),
     },
 
     offline: {

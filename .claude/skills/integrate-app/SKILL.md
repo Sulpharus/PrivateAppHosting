@@ -46,7 +46,7 @@ down (in the PR description later):
 
 - slug (short, German or neutral, lowercase; check `hosted/` and `packages/manifest` reserved list)
 - kind/target, data mode (see common steps), AI models and budget
-- what the app stores and how it maps to `mn.kv` or tables
+- what the app stores: each list of entries becomes a table (`mn.table`, typed columns, ADR 0022), settings and small state `mn.kv`
 - anything that cannot be supported (tell the user instead of silently dropping it)
 
 If the data mode or a feature cut is a real product decision, ask the user one short question;
@@ -76,8 +76,9 @@ doctor with the `i18n-missing` warning, so add them before the PR unless the use
   stays in one browser. Replace the file by the real SDK (`import { mininode } from '@mininode/sdk'`
   in Vite apps; `<script src="/_mininode/sdk.js">` in plain HTML) and keep the app's own API on top
   (`src/mininode.ts` of `hosted/haushalts-inventar` and `hosted/bill-the-splitter` are examples).
-  Data that sits only in `localStorage` moves to `mn.kv`; for `group` data use `'shared'` scope and
-  one record per entry, so two people never overwrite each other's list.
+  Data that sits only in `localStorage` moves to the platform: settings to `mn.kv`, every list of entries to a
+  table (`mn.table`; for `group` data a `group` table), one row per entry, so two people never overwrite each
+  other's list. `mininode doctor` warns when an app keeps one kv key per entry (`entity-collection-in-kv`).
 - *Fonts and icons from Google* (`fonts.googleapis.com`, Material Symbols as ligature text): the
   CSP blocks them, the icon names show as text and the layout collapses. Fonts come from
   `@fontsource-variable/<font>`; icons from `python3 scripts/subset-icons.py hosted/<slug>` (a 150 kB

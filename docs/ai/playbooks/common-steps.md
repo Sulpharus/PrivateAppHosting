@@ -11,9 +11,10 @@
 3. **Login.** The app calls `await mn.auth.requireLogin()` once before rendering. Remove any
    own login/sign-up UI, user pickers or "enter your name" prompts (use `mn.auth.user()` and
    `platform.profiles.display_name` instead).
-4. **Data.** Replace `localStorage`/`IndexedDB`/in-memory "databases" with `mn.kv`. Use tables
-   (`db/NNN_*.sql` with `platform.create_app_schema` + `platform.secure_table`) only for lists
-   that need filtering, sorting or relations.
+4. **Data.** Replace `localStorage`/`IndexedDB`/in-memory "databases": a list of entries
+   becomes a table (`db/NNN_*.sql` with `platform.create_app_schema` + `platform.secure_table`,
+   typed columns and constraints, used through `mn.table`, ADR 0022); settings and small state go
+   to `mn.kv`. `mininode doctor` warns about one kv key per entry.
 5. **AI.** Replace any provider SDK or key with `mn.ai.chat|stream|json`; declare the models in
    `ai.models` and a sensible `monthlyBudgetEur` and `maxOutputTokens`. Show a friendly message
    for `AiError.code === 'budget_exceeded'`.

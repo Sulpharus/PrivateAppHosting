@@ -24,8 +24,8 @@ needs a backend. Do not build your own login, backend or API-key handling.**
 3. **No custom auth:** the page is only served to signed-in users. Call
    `await mn.auth.requireLogin()` once at start-up. There is no sign-up/login UI in the app.
 4. **Persistence:** never use `localStorage` or `IndexedDB` for user data (it does not sync
-   across devices). Use `mn.kv` for simple data (it also works offline), or tables (below) for
-   relational data. Do not add a service worker, web manifest or push code: the platform makes
+   across devices). **A list of entries (bookings, items, plans, contacts, …) is a table** (below,
+   `mn.table`; also offline); `mn.kv` is for settings and small state only (ADR 0022). Do not add a service worker, web manifest or push code: the platform makes
    every app installable and offline-capable and delivers notifications (`mn.notify`,
    `mn.push`).
 5. **UI in German and English.** Every text for people lives in two language packages,
@@ -115,26 +115,40 @@ try {
   if (err instanceof ExternalApiError && err.keyMissing) showSetupState(); // not an error screen
 }
 
-// Relational data (only if kv is not enough): tables in your own schema, see "Tables".
-const { data } = await mn.db.from('recipes').select('*').order('created_at');
+// Lists of entries: tables in your own schema (see "Tables"). mn.table works offline like kv:
+const recipes = mn.table('recipes');
+await recipes.upsert({ id: recipes.newId(), title: 'Suppe', minutes: 30 });
+const all = await recipes.list();                // rows; the local copy when offline
+await recipes.remove(all[0].id);
+// Server-side queries, filters and sums (online only):
+const { data } = await mn.db.from('recipes').select('*').gt('minutes', 20).order('created_at');
 ```
 
-### Tables (optional)
+### Tables (the default for lists)
 
-Only when you need queries, relations or large lists. Put SQL in `db/001_init.sql`:
+Every list of entries gets a table, with real column types and constraints. Put SQL in `db/001_init.sql`:
 
 ```sql
 select platform.create_app_schema('<slug>');
 
 create table app_<slug_with_underscores>.recipes (
-  id uuid primary key default gen_random_uuid(),
-  owner_id uuid,                -- required for 'private' and 'shared-account' data
-  title text not null,
-  created_at timestamptz not null default now()
+  id uuid primary key,                 -- made by the app: mn.table('recipes').newId()
+  owner_id uuid,                       -- required for 'private' and 'shared-account' data
+  title text not null check (char_length(title) between 1 and 200),
+  minutes integer check (minutes >= 0),
+  cooked_on date,
+  details jsonb not null default '{}', -- only the free-form rest, never what you filter on
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
 );
+create trigger recipes_touch before update on app_<slug_with_underscores>.recipes
+  for each row execute function platform.touch_updated_at();
 select platform.secure_table('<slug>', 'recipes', 'private');
+create index on app_<slug_with_underscores>.recipes (cooked_on);
 ```
 
+- Related tables get foreign keys (`references … on delete cascade`).
+- Money is an integer in cents, a day is a `date`, a moment a `timestamptz`.
 - Always schema-qualify tables with `app_<slug>`; call `platform.secure_table` for every table.
 - Never write `create policy`, `grant … to anon` or `disable row level security`.
 - `owner_id` is filled automatically; do not set it from the client.

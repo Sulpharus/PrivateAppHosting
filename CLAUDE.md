@@ -69,6 +69,9 @@ is still true: check it. The `reviewer` subagent asks for this too.
 
 - TypeScript strict, ESM only, no `any`, no non-null assertions. Validate external input
   with zod at boundaries.
+- **Lists are tables, kv is for settings** (ADR 0022). A list of entries is a table in `app_<slug>` with typed
+  columns and constraints, used through `mn.table` (offline like kv); `mn.kv` holds settings and small state.
+  `mininode doctor` warns about one kv key per entry.
 - **RLS is the security boundary.** Every table in an `app_*` schema has RLS enabled, and every
   policy calls `platform.app_access('<slug>')` (user grant and calling app, ADR 0002). The pgTAP
   meta-test enforces this.

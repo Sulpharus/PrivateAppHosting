@@ -12,9 +12,12 @@ liegt in der Datenbank: Jede Tabelle hat **Zeilenschutz** (*Row Level Security*,
 
 | Weg | Wofür | Eigenschaften |
 | --- | --- | --- |
-| `mn.kv` | Einstellungen, kleine Listen, einfache Daten | Schlüssel-Wert; privat je Person oder `shared` für alle mit der App; **funktioniert offline**, Änderungen werden später übertragen |
+| **Eigene Tabellen** (`hosted/<name>/db/*.sql`, per `mn.table`, für Abfragen `mn.db`) | **jede Liste von Einträgen** (Buchungen, Gegenstände, Pläne, Kontakte …) | Schema `app_<name>`; echte Spaltentypen, Pflichtfelder, Prüfregeln, Fremdschlüssel; **offline nutzbar** über `mn.table` (Änderungen werden später übertragen); Auswertungen und Summen auf dem Server per `mn.db` (online). Migrationen laufen beim Deploy (Produktion; Staging nur, wenn du den Deploy dafür von Hand startest) |
+| `mn.kv` | **Einstellungen** und kleine Zustände | Schlüssel-Wert; privat je Person oder `shared` für alle mit der App; funktioniert offline |
 | `mn.files` | Fotos, Belege, Anhänge | Dateispeicher je App; signierte Adressen (1 h); Grenze 50 MB je Datei |
-| **Eigene Tabellen** (`hosted/<name>/db/*.sql`, per `mn.db`) | Beziehungsdaten, Auswertungen | Schema `app_<name>`; Migrationen laufen beim Deploy (Produktion; Staging nur, wenn du den Deploy dafür von Hand startest) |
+
+Die Regel dahinter (ADR 0022): Listen sind Tabellen, kv ist für Einstellungen. `mininode doctor` warnt, wenn eine App je Eintrag einen
+kv-Schlüssel anlegt (`entity-collection-in-kv`). Ältere Apps ziehen nach und nach um; die kv-Einträge bleiben zunächst als Sicherung stehen.
 
 `localStorage` und IndexedDB sind für Nutzerdaten **verboten** (sie wandern nicht zwischen Geräten). Apps, die sie dennoch nutzen,
 bekommen beim Einbau eine Schicht, die `localStorage` im Konto hält (`installLocalStorageSync`).
