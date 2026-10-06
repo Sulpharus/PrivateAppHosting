@@ -11,6 +11,7 @@ Jede Änderung am System bekommt hier eine Zeile (siehe [Wissen aktuell halten](
 
 | Datum | Neu | Wo |
 | --- | --- | --- |
+| 06.10. | **Kalender: Bild links im Eintrag** (Tagesansicht, eine Stunde hoch); **Punkte am ausgewählten Tag der Monatsansicht behalten ihre Farbe** (vorher wurden sie weiß) | Kalender → Tag, Monat |
 | 06.10. | **Kalender: Bilder, Farben pro App, Kartenpins**: kleine Bilder in Listen- und Tagesansicht (Schalter „Bilder“), Farbe pro App unter „Quellen verwalten“, auf der Karte Pins mit Anzahl und Liste bei gleicher Adresse, Bild als Pin bei einzelnen Einträgen; der Sportplaner schickt sein Titelbild mit | Kalender → Liste / Tag / Karte, Quellen verwalten |
 | 06.10. | **Deploy vergleicht jede App mit ihrem zuletzt ausgelieferten Stand** statt mit dem vorigen Push: Änderungen aus einem fehlgeschlagenen Lauf gehen nicht mehr verloren (`mininode deploy --since-deployed`) | GitHub → Actions → Deploy |
 | 06.10. | **Deploy wiederholt `supabase link`** bei einem Fehler der Supabase-Berechtigungsprüfung („FGA“) bis zu 5-mal und zeigt sonst die Ursache | GitHub → Actions → Deploy |

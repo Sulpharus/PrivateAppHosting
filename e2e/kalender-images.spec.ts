@@ -105,6 +105,18 @@ test('pictures in list and day with switches, clusters and picture pins on the m
   await expect(
     page.locator('.cal-ev', { hasText: 'Kurzer Anruf' }).locator('.cal-ev-img'),
   ).toHaveCount(0);
+  // the picture sits on the left of the entry and is as tall as one hour of the grid (48 px)
+  const longEv = page.locator('.cal-ev', { hasText: 'Lange Besprechung' });
+  const evBox = await longEv.boundingBox();
+  const imgBox = await longEv.locator('.cal-ev-img').boundingBox();
+  expect(imgBox?.width).toBe(48);
+  expect(imgBox?.height).toBe(48);
+  expect((imgBox?.x ?? 0) - (evBox?.x ?? 0)).toBeLessThanOrEqual(4);
+  expect((imgBox?.y ?? 0) - (evBox?.y ?? 0)).toBeLessThanOrEqual(1);
+  if (process.env.SCREENSHOT_DIR) {
+    await page.waitForTimeout(2000); // the start screen fades out
+    await page.screenshot({ path: `${process.env.SCREENSHOT_DIR}/kalender-tag.png` });
+  }
   const daySwitch = page.getByRole('switch', { name: 'Bilder' });
   await expect(daySwitch).toHaveAttribute('aria-checked', 'true');
   await daySwitch.click();
@@ -145,5 +157,19 @@ test('pictures in list and day with switches, clusters and picture pins on the m
 
   if (process.env.SCREENSHOT_DIR)
     await page.screenshot({ path: `${process.env.SCREENSHOT_DIR}/kalender-bilder.png` });
+
+  // month on a phone: the selected day is dark, its dots keep the colour of their source
+  await page.setViewportSize({ width: 420, height: 900 });
+  await page.goto(`${KALENDER}/?view=month&date=${today}`);
+  const selectedDot = page.locator('.mn-cell[aria-pressed="true"] .mn-dots i').last();
+  await expect(selectedDot).toBeVisible({ timeout: 20_000 });
+  const colours = await selectedDot.evaluate((el) => ({
+    dot: getComputedStyle(el).backgroundColor,
+    cell: getComputedStyle(el.closest('.mn-cell') as Element).backgroundColor,
+    page: getComputedStyle(document.body).backgroundColor,
+  }));
+  expect(colours.dot).not.toBe(colours.cell);
+  expect(colours.dot).not.toBe('rgba(0, 0, 0, 0)');
+  expect(colours.dot).toBe('rgb(31, 95, 191)'); // the blue of "Meine Termine"
   expect(errors).toEqual([]);
 });

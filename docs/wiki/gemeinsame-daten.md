@@ -40,7 +40,7 @@ Weiteres (Wiederholungen, Erinnerungen, ICS, geteilte Kalender): Runbook `kalend
 ### Bilder, Farben und Orte auf der Karte
 
 - **Bilder:** Hat ein Eintrag ein Bild (der Sportplaner schickt das Titelbild seiner Einheiten als kleines Vorschaubild mit), zeigen die **Listenansicht** und
-  die **Tagesansicht** es klein an. In der Tagesansicht nur bei Einträgen, die länger als eine Stunde dauern (sonst ist kein Platz). In jeder der beiden
+  die **Tagesansicht** es klein an. In der Tagesansicht steht es links im Eintrag, so hoch wie eine Stunde im Raster, und nur bei Einträgen, die länger als eine Stunde dauern (sonst ist kein Platz). In jeder der beiden
   Ansichten gibt es oben rechts einen kleinen Schalter **Bilder**; er merkt sich deine Wahl getrennt für Liste und Tag.
 - **Farben pro App:** Unter **Quellen verwalten** hat jede App oben eine Farbwahl („Farbe für alles aus …“); darunter kann jede Quelle (etwa
   „Sportplaner · Sporteinheit“) eine eigene Farbe bekommen. Die Farbe gilt in Monat, Woche, Tag, Liste und auf der Karte.
