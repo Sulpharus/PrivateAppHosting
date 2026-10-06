@@ -5,6 +5,7 @@ mininode doctor <app-dir> | --all          Check hosted apps
 mininode dev <app-dir> [--port 8790]       Serve an app locally behind the gate (local Supabase)
 mininode deploy <app-dir> [--env staging]  Build, migrate, deploy and register one app
 mininode deploy --changed <base-ref>       Deploy every app changed since <base-ref> (--dry-run)
+mininode deploy --since-deployed [--env]   Deploy every app changed since its own registered deployed_version (the deploy workflow; unreadable registry = all apps)
 mininode changed <base-ref>                List hosted apps changed since <base-ref>
 mininode prune [--env staging] [--dry-run] Delete Workers of apps gone from hosted/ (--force if empty)
 mininode export <app-dir> --out <dir>      One app as a shareable folder; stops on keys and private data (ADR 0012)

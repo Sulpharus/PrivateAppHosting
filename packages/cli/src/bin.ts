@@ -2,7 +2,8 @@
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename, join, resolve } from 'node:path';
 import { createBackup, currentCommit, restoreBackup, verifyBackup } from './backup/index.ts';
-import { changedApps } from './changed.ts';
+import { appsToDeploy, changedApps } from './changed.ts';
+import { appsSinceDeployed, readDeployedVersions } from './deploy/deployed.ts';
 import type { DeployEnv } from './deploy/environment.ts';
 import { deployApp, devApp, readVersion } from './deploy/index.ts';
 import { checkLibraryInstall, installLibraryApp, removeLibraryApp } from './deploy/library.ts';
@@ -23,6 +24,7 @@ const USAGE = `mininode <command>
   dev <app-dir> [--port 8790]       Serve an app locally behind the gate (local Supabase)
   deploy <app-dir> [--env staging]  Build, migrate, deploy and register one app
   deploy --changed <base-ref>       Deploy every app changed since <base-ref>
+  deploy --since-deployed           Deploy every app changed since the commit it was last deployed from
   changed <base-ref>                List hosted apps changed since <base-ref>
   prune [--env staging] [--dry-run]  Delete Workers of apps removed from hosted/, disable them
   export <app-dir> --out <dir>      Copy one app as a shareable project (no data, no keys)
@@ -266,11 +268,25 @@ async function main(args: string[]): Promise<number> {
       const env = envFlag(args);
       const dryRun = args.includes('--dry-run');
       const base = flag(args, '--changed');
-      const dirs = base
-        ? changedApps(base, ROOT)
-            .map((slug) => join(ROOT, 'hosted', slug))
-            .filter((dir) => existsSync(join(dir, 'mininode.json')))
-        : [resolve(process.cwd(), target)];
+      const sinceDeployed = args.includes('--since-deployed');
+      const withManifest = (slugs: string[]) =>
+        slugs
+          .map((slug) => join(ROOT, 'hosted', slug))
+          .filter((dir) => existsSync(join(dir, 'mininode.json')));
+      let dirs: string[];
+      if (sinceDeployed) {
+        const all = hostedApps(ROOT).map((dir) => basename(dir));
+        const slugs = await appsSinceDeployed(
+          all,
+          () => readDeployedVersions(env),
+          (list, deployed) => appsToDeploy(list, deployed, ROOT),
+        );
+        dirs = withManifest(slugs);
+      } else if (base) {
+        dirs = withManifest(changedApps(base, ROOT));
+      } else {
+        dirs = [resolve(process.cwd(), target)];
+      }
       const version = readVersion();
       // One broken app must not keep the others from shipping: deploy them all, then fail.
       const failed: string[] = [];

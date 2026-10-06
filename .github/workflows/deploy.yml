@@ -208,16 +208,11 @@ jobs:
         run: scripts/ci-clean-secret.sh CLOUDFLARE_API_TOKEN
       - name: Deploy changed apps
         run: |
-          before="${{ github.event.before }}"
-          # Every app ships the SDK bundle and the app kit and runs behind the gate: when those change, all apps
-          # have to be redeployed, not only the ones whose folder changed.
-          shared=""
-          if [ -n "$before" ] && [ "$before" != "0000000000000000000000000000000000000000" ]; then
-            shared=$(git diff --name-only "$before" HEAD -- pnpm-lock.yaml \
-              'packages/sdk/src' 'packages/ui/kit' 'packages/gate/src' 'packages/manifest/src' 'packages/cli/src' || echo all)
-          fi
-          if [ "${{ inputs.all_apps }}" = "true" ] || [ -z "$before" ] || [ -n "$shared" ] \
-             || [ "$before" = "0000000000000000000000000000000000000000" ]; then
+          # Each app is compared with the commit it was last deployed from (its registered version in
+          # this environment), not with the previous push: an earlier failed run must not make its
+          # changes get skipped by the next green one. Changes to the SDK, kit, gate, manifest or CLI
+          # count for every app.
+          if [ "${{ inputs.all_apps }}" = "true" ]; then
             # one broken app must not keep the others from shipping: deploy all, then fail
             failed=""
             for dir in hosted/*/; do
@@ -226,7 +221,7 @@ jobs:
             done
             if [ -n "$failed" ]; then echo "::error::Deploy failed for:$failed"; exit 1; fi
           else
-            pnpm mininode deploy --changed "$before" --env "$DEPLOY_ENV"
+            pnpm mininode deploy --since-deployed --env "$DEPLOY_ENV"
           fi
       - name: Remove Workers of deleted apps
         run: pnpm mininode prune --env "$DEPLOY_ENV"
