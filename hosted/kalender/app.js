@@ -939,6 +939,7 @@ function timeGrid(days, { images = false } = {}) {
       );
       ev.style.top = `${top}px`;
       ev.style.height = `${height}px`;
+      if (withImage) ev.style.setProperty('--img', `${HOUR_PX}px`);
       ev.style.left = `${(p.lane / p.lanes) * 100}%`;
       ev.style.width = `calc(${100 / p.lanes}% - 3px)`;
       ev.addEventListener('click', () => {

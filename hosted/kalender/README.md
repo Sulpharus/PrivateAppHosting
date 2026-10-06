@@ -14,7 +14,7 @@ Nothing app-specific: the calendar works only on suite records (ADR 0002, `mn.su
   (`suite.uses` in `mininode.json`). Bookings (`transaction`) start hidden.
 - **Pictures:** a record may carry a tiny inline picture in `data.image` (event and activity types; the Sportplaner
   sends its cover photo at about 80 px). `items.js` `imageOf` accepts only `data:image/jpeg|png|webp;base64,…`. The list
-  view and the day view (entries longer than an hour) show it; a switch inside each view turns it on or off
+  view and the day view (entries longer than an hour; on the left, one grid hour tall) show it; a switch inside each view turns it on or off
   (`prefs.images.list` / `prefs.images.day`).
 - **Preferences** (visible sources, colours, default calendar) live in `mn.kv` under `prefs`. An app's colour for all
   its sources is `prefs.appColors[app]` (a source's own saved colour wins).

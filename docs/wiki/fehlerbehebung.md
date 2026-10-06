@@ -56,6 +56,7 @@ Meist eine **zwischengespeicherte** PWA-Version: Seite neu laden oder die App sc
 | Alter Dev-Server blockiert Port | Prozess per PID beenden (`ps -eo pid,args \| grep -E "[w]rangler\|[v]ite"`), nicht `pkill -f` |
 | Deploy bricht bei `supabase link` ab: „FGA Authentication Error. Unauthorized“ | Fehler der Supabase-Seite, nicht des Tokens (Projekt-Abfrage 200, Listen-Abfragen 500). Der Deploy versucht den Link jetzt bis zu 5-mal; sonst Deploy neu starten |
 | Eine App ist nach einem Deploy nicht auf dem neuesten Stand | Der Deploy vergleicht jede App mit `platform.apps.deployed_version` (Verwaltung → Apps zeigt sie). Alles neu ausliefern: Actions → Deploy → Run workflow → `all_apps`. Apps, die nur registriert werden (NucBox, Remote), bekommen ihre Version schon beim Registrieren; schlägt ihr Rollout-Job fehl, `all_apps` ausführen |
+| Punkte im Monat sind weiß statt farbig | Der ausgewählte Tag ist dunkel; das Kit färbte dort alle Punkte in die Hintergrundfarbe. Der Kalender setzt jetzt die Quellenfarbe mit hellem Ring. Im Sportplaner sind **noch nicht erledigte** Einheiten im Modus „Geplant“ absichtlich Ringe, erledigte gefüllt |
 | Echte Schlüssel in Chat/Terminal gelandet | widerrufen, neu erstellen |
 
 Mehr: die Runbooks ([Liste](wiki:ref-runbooks)) und [Wissen aktuell halten](wiki:wissen-pflegen), falls hier ein Fall fehlt: ergänze ihn.

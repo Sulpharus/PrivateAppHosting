@@ -562,20 +562,19 @@
   transform: translateX(16px);
 }
 
-/* day view: the picture of a longer entry sits in its upper right corner */
+/* day view: the picture of a longer entry sits on the left, as tall as one hour of the grid */
 .cal-ev.has-image {
-  padding-right: 42px;
+  padding-left: calc(var(--img, 48px) + 6px);
 }
 .cal-ev-img {
   position: absolute;
-  top: 4px;
-  right: 4px;
-  width: 32px;
-  height: 32px;
+  top: 0;
+  left: 0;
+  width: var(--img, 48px);
+  height: var(--img, 48px);
   object-fit: cover;
-  border-radius: 6px;
+  border-radius: 0 0 var(--mn-r-sm) 0;
   background: var(--mn-surface-2);
-  box-shadow: 0 0 0 2px var(--mn-surface);
 }
 .cal-agenda {
   display: grid;
@@ -979,4 +978,11 @@
 .cal-app-colour-label {
   font-size: var(--mn-fs-sm);
   color: var(--mn-muted);
+}
+
+/* month: the selected day is dark and the kit turns its dots into the background colour (white).
+   Keep the colour of each source and give the dot a light ring so it shows on the dark cell. */
+.mn-cell[aria-pressed="true"] .mn-dots i[data-cat] {
+  background: var(--mn-cat);
+  box-shadow: 0 0 0 1.5px var(--mn-bg);
 }
