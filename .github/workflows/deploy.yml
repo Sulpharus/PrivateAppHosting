@@ -53,7 +53,16 @@ jobs:
             'Expected a personal access token (supabase.com → Account → Access Tokens, sbp_…), not a project API key.'
       - name: Link and push migrations
         run: |
-          if ! supabase link --project-ref "$SUPABASE_PROJECT_REF"; then
+          # Supabase's authorization service ("FGA") sometimes answers 500/"Unauthorized" for a valid
+          # token and then works seconds later (seen 2026-10-06: GET project 200, list endpoints 500,
+          # a second `link` succeeded). So retry the link a few times before giving up.
+          linked=false
+          for attempt in 1 2 3 4 5; do
+            if supabase link --project-ref "$SUPABASE_PROJECT_REF"; then linked=true; break; fi
+            echo "::warning::supabase link failed (attempt $attempt of 5); retrying"
+            sleep $((attempt * 10))
+          done
+          if [ "$linked" != "true" ]; then
             # Say why Supabase refused, without printing a secret: only status codes and error bodies.
             echo "::group::Why the link failed (Management API)"
             for path in "projects/$SUPABASE_PROJECT_REF" "projects" "organizations"; do
@@ -61,13 +70,8 @@ jobs:
                 -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" "https://api.supabase.com/v1/$path" || true)
               echo "GET /v1/$path -> HTTP $code"
               if [ "$code" != "200" ]; then head -c 400 /tmp/api.json; echo; fi
-              if [ "$path" = "projects" ] && [ "$code" = "200" ]; then
-                echo "projects the token can see (ref, status):"
-                jq -r '.[] | "  \(.id // .ref) \(.status)"' /tmp/api.json
-              fi
             done
             echo "::endgroup::"
-            supabase link --project-ref "$SUPABASE_PROJECT_REF" --debug || true
             exit 1
           fi
           supabase db push
