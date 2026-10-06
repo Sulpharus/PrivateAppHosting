@@ -84,4 +84,23 @@ describe('appsToDeploy', () => {
     expect(appsToDeploy(['a', 'b', 'c'], deployed, dir)).toEqual(['a', 'b']);
     expect(appsToDeploy(['a'], new Map(), dir)).toEqual(['a']);
   });
+
+  it('ships an app with a version that is no commit of this repository', () => {
+    write('hosted/a/app.js', '1');
+    commit('first');
+    expect(appsToDeploy(['a'], new Map([['a', 'not-a-commit']]), dir)).toEqual(['a']);
+  });
+
+  it('does not ship an app again for a shared change it was deployed after', () => {
+    write('hosted/a/app.js', '1');
+    write('hosted/b/app.js', '1');
+    const first = commit('first');
+    write('packages/sdk/src/index.ts', 'export {};');
+    const afterSdk = commit('sdk');
+    const deployed = new Map([
+      ['a', afterSdk],
+      ['b', first],
+    ]);
+    expect(appsToDeploy(['a', 'b'], deployed, dir)).toEqual(['b']);
+  });
 });

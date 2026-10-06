@@ -3,7 +3,7 @@ import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename, join, resolve } from 'node:path';
 import { createBackup, currentCommit, restoreBackup, verifyBackup } from './backup/index.ts';
 import { appsToDeploy, changedApps } from './changed.ts';
-import { readDeployedVersions } from './deploy/deployed.ts';
+import { appsSinceDeployed, readDeployedVersions } from './deploy/deployed.ts';
 import type { DeployEnv } from './deploy/environment.ts';
 import { deployApp, devApp, readVersion } from './deploy/index.ts';
 import { checkLibraryInstall, installLibraryApp, removeLibraryApp } from './deploy/library.ts';
@@ -276,8 +276,12 @@ async function main(args: string[]): Promise<number> {
       let dirs: string[];
       if (sinceDeployed) {
         const all = hostedApps(ROOT).map((dir) => basename(dir));
-        const deployed = await readDeployedVersions(env);
-        dirs = withManifest(appsToDeploy(all, deployed, ROOT));
+        const slugs = await appsSinceDeployed(
+          all,
+          () => readDeployedVersions(env),
+          (list, deployed) => appsToDeploy(list, deployed, ROOT),
+        );
+        dirs = withManifest(slugs);
       } else if (base) {
         dirs = withManifest(changedApps(base, ROOT));
       } else {
