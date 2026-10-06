@@ -16,7 +16,7 @@ import {
   withExdate,
 } from './edit.js';
 import { parseIcs, toIcs } from './ics.js';
-import { appName, COLORS, itemsFor, onDay, SELF, sourcesFrom, spanOf } from './items.js';
+import { appName, COLORS, imageFits, itemsFor, onDay, SELF, sourcesFrom, spanOf } from './items.js';
 import { isoWeek, layoutDay, monthGrid, startOfWeek } from './layout.js';
 import { geocode, initMap, mapView, reasonOf } from './map.js';
 import { validPoint } from './route.js';
@@ -280,6 +280,7 @@ function refresh() {
     S.types,
     S.prefs.sources ?? {},
     t('calendar.sharedName'),
+    S.prefs.appColors ?? {},
   );
   // calendars that come from Google get their own group
   const fromGoogle = new Set((S.google?.calendars ?? []).map((c) => `col:${c.collectionId}`));
@@ -333,6 +334,51 @@ function savePrefs() {
       toast(t('error.prefsSave'));
     }
   }, 400);
+}
+
+/** One colour for everything an app puts into the calendar (its sources can still differ). */
+function setAppColor(app, color) {
+  S.prefs.appColors = { ...(S.prefs.appColors ?? {}), [app]: color };
+  S.prefs.sources ??= {};
+  for (const s of S.sources.filter((x) => x.group === 'apps' && x.app === app))
+    S.prefs.sources[s.id] = {
+      ...(S.prefs.sources[s.id] ?? {}),
+      visible: s.visible,
+      name: s.name,
+      color,
+    };
+  refresh();
+  render();
+  savePrefs();
+}
+
+/** Whether pictures show in a view ("day" or "list"): on until the person turns them off. */
+const imagesOn = (view) => S.prefs.images?.[view] !== false;
+
+/** A small switch inside the view: pictures of the entries on or off (kept in the prefs). */
+function imageSwitch(view) {
+  const on = imagesOn(view);
+  return h(
+    'div',
+    { class: 'cal-viewbar' },
+    h(
+      'button',
+      {
+        type: 'button',
+        class: 'cal-switch',
+        role: 'switch',
+        'aria-checked': on ? 'true' : 'false',
+        'data-key': `images:${view}`,
+        onclick: () => {
+          S.prefs.images = { ...(S.prefs.images ?? {}), [view]: !on };
+          savePrefs();
+          render();
+        },
+      },
+      h('span', { class: 'cal-switch-track', 'aria-hidden': 'true' }, h('span', {})),
+      h('span', { class: 'cal-switch-label' }, t('images.switch')),
+    ),
+  );
 }
 
 const sourceName = (item) => S.sources.find((s) => s.id === item.sourceId)?.name ?? '';
@@ -513,7 +559,7 @@ function viewBody() {
     const from = startOfWeek(S.anchor);
     return timeGrid(Array.from({ length: 7 }, (_, i) => addDays(from, i)));
   }
-  if (S.view === 'day') return timeGrid([S.anchor]);
+  if (S.view === 'day') return timeGrid([S.anchor], { images: true });
   if (S.view === 'map') return mapView();
   return agenda();
 }
@@ -683,7 +729,7 @@ function monthCompact() {
   );
 }
 
-function row(item) {
+function row(item, { image = false } = {}) {
   const sub = [item.recurring ? t('event.series') : null, sourceName(item), item.record.place_name]
     .filter(Boolean)
     .join(' · ');
@@ -691,11 +737,14 @@ function row(item) {
     'button',
     {
       type: 'button',
-      class: `mn-row cal-row${item.cancelled ? ' is-cancelled' : ''}`,
+      class: `mn-row cal-row${item.cancelled ? ' is-cancelled' : ''}${image && item.image ? ' has-image' : ''}`,
       'data-cat': item.color,
       onclick: () => openDetail(item),
     },
     h('span', { class: 'cal-swatch', 'aria-hidden': 'true' }),
+    image && item.image
+      ? h('img', { class: 'cal-row-img', src: item.image, alt: '', decoding: 'async' })
+      : null,
     h(
       'span',
       {},
@@ -747,6 +796,8 @@ function agenda() {
   const { from, to } = rangeOf('list', S.anchor);
   const out = h('div', { class: 'cal-agenda' });
   const today = new Date();
+  const showImages = imagesOn('list');
+  if (S.items.some((i) => i.image)) out.append(imageSwitch('list'));
   for (let d = from; d < to; d = addDays(d, 1)) {
     const its = onDay(S.items, d);
     if (!its.length) continue;
@@ -766,11 +817,15 @@ function agenda() {
             h('small', {}, String(its.length)),
           ),
         ),
-        h('div', { class: 'mn-list' }, its.map(row)),
+        h(
+          'div',
+          { class: 'mn-list' },
+          its.map((i) => row(i, { image: showImages })),
+        ),
       ),
     );
   }
-  if (!out.children.length)
+  if (!out.querySelector('.cal-agenda-day'))
     out.append(
       h(
         'div',
@@ -791,7 +846,8 @@ function agenda() {
 const isBanner = (i) => i.allDay || i.end - i.start >= DAY;
 let suppressClick = false;
 
-function timeGrid(days) {
+const narrow = window.matchMedia('(max-width: 600px)');
+function timeGrid(days, { images = false } = {}) {
   const today = new Date();
   const grid = h('div', { class: 'cal-grid' });
   grid.style.setProperty('--days', String(days.length));
@@ -855,14 +911,20 @@ function timeGrid(days) {
     for (const p of layoutDay(timed)) {
       const top = ((p.start - start) / 60_000) * (HOUR_PX / 60);
       const height = Math.max(((p.end - p.start) / 60_000) * (HOUR_PX / 60), 22);
+      // a picture needs room: only entries longer than an hour, and not squeezed into narrow lanes
+      const withImage =
+        images && imagesOn('day') && imageFits(p.orig, p.lanes, narrow.matches ? 1 : 2);
       const ev = h(
         'button',
         {
           type: 'button',
-          class: `cal-ev${p.cancelled ? ' is-cancelled' : ''}${p.orig.editable ? ' is-editable' : ''}`,
+          class: `cal-ev${p.cancelled ? ' is-cancelled' : ''}${p.orig.editable ? ' is-editable' : ''}${withImage ? ' has-image' : ''}`,
           'data-cat': p.color,
           'aria-label': itemLabel(p.orig),
         },
+        withImage
+          ? h('img', { class: 'cal-ev-img', src: p.orig.image, alt: '', decoding: 'async' })
+          : null,
         h('span', { class: 'cal-ev-title' }, p.title),
         height >= 40
           ? h(
@@ -901,7 +963,13 @@ function timeGrid(days) {
     cols.append(col);
   }
   body.append(hours, cols);
-  grid.append(head, allDay, h('div', { class: 'cal-scroll' }, body));
+  const anyImage = images && days.some((d) => onDay(S.items, d).some((i) => i.image));
+  grid.append(
+    ...(anyImage ? [imageSwitch('day')] : []),
+    head,
+    allDay,
+    h('div', { class: 'cal-scroll' }, body),
+  );
   return grid;
 }
 
@@ -2060,6 +2128,39 @@ function colorPicker(source, redraw) {
   );
 }
 
+/** The colour of all entries an app brings: shown in the day, list, month and on the map. */
+function appColorPicker(app, list, redraw) {
+  const same = list.every((s) => s.color === list[0]?.color) ? list[0]?.color : null;
+  return h(
+    'div',
+    { class: 'cal-app-colour' },
+    h('span', { class: 'cal-app-colour-label' }, t('manage.colourForApp', { name: appName(app) })),
+    h(
+      'div',
+      {
+        class: 'cal-swatches',
+        role: 'group',
+        'aria-label': t('manage.colourForApp', { name: appName(app) }),
+      },
+      COLORS.map((c) =>
+        h('button', {
+          type: 'button',
+          class: 'cal-swatch-btn',
+          'data-cat': c,
+          'aria-pressed': same === c ? 'true' : 'false',
+          'aria-label': colorName(c),
+          title: colorName(c),
+          'data-key': `ac:${app}:${c}`,
+          onclick: () => {
+            setAppColor(app, c);
+            redraw();
+          },
+        }),
+      ),
+    ),
+  );
+}
+
 function confirmButton(label, confirmLabel, action) {
   let armed = false;
   return h(
@@ -2197,9 +2298,18 @@ function manageContent(redraw) {
       { class: 'cal-manage-sect' },
       h('div', { class: 'mn-sect' }, h('h2', {}, t('sources.apps'))),
       apps.length
-        ? apps.map((s) =>
-            withToggle(s, s.hiddenByDefault && !s.visible ? t('manage.hiddenByDefault') : null),
-          )
+        ? [...new Set(apps.map((s) => s.app))].map((app) => {
+            const list = apps.filter((s) => s.app === app);
+            return h(
+              'div',
+              { class: 'cal-app-block', 'data-key': `app:${app}` },
+              h('h3', { class: 'cal-app-name' }, appName(app)),
+              appColorPicker(app, list, redraw),
+              list.map((s) =>
+                withToggle(s, s.hiddenByDefault && !s.visible ? t('manage.hiddenByDefault') : null),
+              ),
+            );
+          })
         : h('p', { class: 'mn-note' }, t('manage.appsEmpty')),
     ),
     h(

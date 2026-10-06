@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { cleanup, createUser, PASSWORD } from './seed.ts';
+import { admin, cleanup, createUser, PASSWORD } from './seed.ts';
 
 // hosted/sportplaner behind its local gate: private activities in mn.kv, photos in mn.files.
 const run = `e2es${Date.now().toString(36)}`;
@@ -18,8 +18,15 @@ test.afterAll(async () => {
 test('sportplaner stores activities with photos per user', async ({ browser }) => {
   const fiona = `${run}-fiona@example.com`;
   const gus = `${run}-gus@example.com`;
-  await createUser(fiona, 'user', 'Fiona');
+  const fionaId = await createUser(fiona, 'user', 'Fiona');
   await createUser(gus, 'user', 'Gus');
+  // the admin has approved what the Sportplaner asked for, so its planned sessions go to the Kalender
+  const db = admin.schema('platform');
+  const { data: asked } = await db
+    .from('app_type_requests')
+    .select('app_slug, type, access')
+    .eq('app_slug', 'sportplaner');
+  await db.from('app_type_grants').upsert(asked ?? []);
 
   const page = await (await browser.newContext()).newPage();
   const errors: string[] = [];
@@ -56,6 +63,24 @@ test('sportplaner stores activities with photos per user', async ({ browser }) =
   await expect(tile).toBeVisible();
   // The photo comes back from mn.files as a blob: URL.
   await expect(page.locator('.tile img')).toHaveAttribute('src', /^blob:/);
+
+  // Planned for today, the session reaches the Kalender with a tiny inline picture of its photo.
+  await page.getByRole('button', { name: 'Bouldern einplanen' }).first().click();
+  await expect
+    .poll(
+      async () => {
+        const { data } = await db
+          .from('records')
+          .select('title, data')
+          .eq('created_by', fionaId)
+          .eq('source_app', 'sportplaner')
+          .eq('type', 'activity')
+          .limit(1);
+        return (data?.[0]?.data as { image?: string } | undefined)?.image?.slice(0, 23) ?? null;
+      },
+      { timeout: 40_000, intervals: [1000] },
+    )
+    .toBe('data:image/jpeg;base64,');
 
   await page.getByRole('button', { name: 'Statistik' }).click();
   await expect(page.getByRole('heading', { name: 'Tarife und Mitgliedschaften' })).toBeVisible();

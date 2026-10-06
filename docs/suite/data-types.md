@@ -65,7 +65,7 @@ other record. None of that is repeated in the tables below.
 | `milestone` | title, due_at, status | project | project + title | K | 2 |
 | `list` | title | kind (shopping/packing/todo/other), sort order | title | – | 1 |
 | `list_item` | title, status | list, quantity, unit, category, added_by | list + title while open | – | 1 |
-| `event` | title, starts_at, ends_at, geo, place_name | all_day, recurrence, reminders[], attendees[] (+ RSVP), url, color, busy/free, visibility | title + starts_at | K M | 1 |
+| `event` | title, starts_at, ends_at, geo, place_name | all_day, recurrence, reminders[], attendees[] (+ RSVP), url, color, **image**, busy/free, visibility | title + starts_at | K M | 1 |
 | `reminder` | title, due_at, status | on (any record), repeat | src | K | 1 |
 | `habit` | title, status (active/paused) | schedule (days, times per period), target, unit, streak | title | – | 2 |
 | `habit_log` | starts_at, amount | habit, value, note | habit + day | K | 2 |
@@ -167,6 +167,12 @@ other record. None of that is repeated in the tables below.
 | `album` | title, starts_at, ends_at | cover, description, trip, sort | title | K M | 2 |
 | `story` | title, starts_at | ordered media[] + text blocks (e.g. a holiday photo walk) | src | K T | 3 |
 
+`image` (on `event` and `activity`): a tiny inline picture (a `data:image/jpeg|png|webp;base64,…` string of
+at most 16,000 characters, about 64 px wide, 2–3 KB) that the Kalender shows in its list, its day view and as a pin on the
+map. The app that owns the big picture makes the small one; no app needs access to another app's files.
+**Cost:** a record per occurrence carries its own copy (a daily session over 97 days is about 250 KB of pictures that
+the calendar and the owning app load), so keep it small and send it only for what people look at.
+
 A holiday photo walk: `trip` → `album`/`story` → `media`. Each `media` has `starts_at` + `geo`,
 so the universal calendar shows photos on their day and the map shows them where they were
 taken, without the calendar or map knowing about photos. Images inside any type are `media`
@@ -211,7 +217,7 @@ Two layers keep shared catalogs and personal progress apart:
 
 | Type | Common columns | `data` | Id | View | St |
 |---|---|---|---|---|---|
-| `activity` | title, starts_at, ends_at, geo | sport, provider, plan status (planned/done), cost (transaction/contract), track | src | K M | 2 |
+| `activity` | title, starts_at, ends_at, geo | sport, provider, plan status (planned/done), **image**, cost (transaction/contract), track | src | K M | 2 |
 | `workout` | title, starts_at, ends_at | exercises[] (exercise, sets[] reps/weight/duration), rpe, notes | src | K | 2 |
 | `exercise` | title | muscle groups[], equipment, instructions, media | title | – | 3 |
 | `measurement` | starts_at | kind (weight/body fat/blood pressure/sleep/steps/heart rate/…), value, unit, source device | kind + starts_at | K (chart) | 2 |

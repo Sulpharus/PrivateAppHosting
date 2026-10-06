@@ -206,3 +206,47 @@ describe('the keyed provider', () => {
     expect(notSetUp(null)).toBe(false);
   });
 });
+
+describe('clusterPixels', () => {
+  it('puts points at the same place into one group', async () => {
+    const { clusterPixels } = await import('../route.js');
+    expect(
+      clusterPixels(
+        [
+          { x: 10, y: 10 },
+          { x: 10, y: 10 },
+          { x: 400, y: 10 },
+        ],
+        38,
+      ),
+    ).toEqual([[0, 1], [2]]);
+  });
+  it('joins points that are very close and keeps the others apart', async () => {
+    const { clusterPixels } = await import('../route.js');
+    const points = [
+      { x: 0, y: 0 },
+      { x: 30, y: 0 },
+      { x: 200, y: 200 },
+      { x: 210, y: 205 },
+      { x: 500, y: 0 },
+    ];
+    expect(clusterPixels(points, 38)).toEqual([[0, 1], [2, 3], [4]]);
+  });
+  it('does not chain: a point beyond the radius of the group starts its own', async () => {
+    const { clusterPixels } = await import('../route.js');
+    expect(
+      clusterPixels(
+        [
+          { x: 0, y: 0 },
+          { x: 30, y: 0 },
+          { x: 60, y: 0 },
+        ],
+        38,
+      ),
+    ).toEqual([[0, 1], [2]]);
+  });
+  it('returns nothing for no points', async () => {
+    const { clusterPixels } = await import('../route.js');
+    expect(clusterPixels([], 38)).toEqual([]);
+  });
+});

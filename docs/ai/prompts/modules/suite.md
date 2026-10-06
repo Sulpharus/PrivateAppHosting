@@ -23,6 +23,10 @@ group: anbindungen
   { sourceKey: 'course-12#2026-10-05' })`.
   - Times are ISO strings with a zone.
   - Only the type's fields are allowed in `data`; unknown ones are refused.
+  - `event` and `activity` take an optional `data.image`: a tiny picture the Kalender shows in its list, day
+    and map. Send a `data:image/jpeg|png|webp;base64,…` string of at most 16000 characters (about 64 px wide
+    JPEG, 2–3 KB); make it in the browser from your own photo with a canvas. A link or a big picture is refused,
+    and every occurrence of a series carries its own copy, so keep it small.
   - The result has `merged` and `rejectedFields`. Show a short note when fields were
     rejected: another app owns them.
 - Remove what no longer exists with `mn.suite.type(t).delete(id)` (it goes to a 30-day bin).

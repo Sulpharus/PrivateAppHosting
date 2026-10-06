@@ -24,7 +24,14 @@ export function sourceOf(record) {
 }
 
 /** Labels and default colours for every source seen in the records and collections. */
-export function sourcesFrom(records, collections, types, known = {}, shared = 'Shared calendar') {
+export function sourcesFrom(
+  records,
+  collections,
+  types,
+  known = {},
+  shared = 'Shared calendar',
+  appColors = {},
+) {
   const label = Object.fromEntries(types.map((t) => [t.type, t.label]));
   const map = new Map();
   // Default colours avoid the ones already chosen, so they stay stable when choices are saved.
@@ -45,7 +52,7 @@ export function sourcesFrom(records, collections, types, known = {}, shared = 'S
       id,
       name,
       group,
-      color: saved.color ?? extra.collection?.color ?? pick(),
+      color: saved.color ?? extra.appColor ?? extra.collection?.color ?? pick(),
       visible: saved.visible ?? !(extra.hiddenByDefault ?? false),
       ...extra,
     });
@@ -63,6 +70,7 @@ export function sourcesFrom(records, collections, types, known = {}, shared = 'S
       add(id, `${appName(app)} · ${label[type] ?? type}`, 'apps', {
         app,
         type,
+        appColor: appColors[app],
         hiddenByDefault: type === 'transaction',
       });
     }
@@ -71,10 +79,26 @@ export function sourcesFrom(records, collections, types, known = {}, shared = 'S
   for (const [id, saved] of Object.entries(known)) {
     if (!id.startsWith('app:') || !saved.name) continue;
     const [, app, type] = id.split(':');
-    add(id, saved.name, 'apps', { app, type });
+    add(id, saved.name, 'apps', { app, type, appColor: appColors[app] });
   }
   return [...map.values()];
 }
+
+/** A small picture a record brings along (an inline JPEG, PNG or WebP), else null. */
+export function imageOf(record) {
+  const image = record.data?.image;
+  return typeof image === 'string' &&
+    /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(image)
+    ? image
+    : null;
+}
+
+/**
+ * Whether the day view has room for an entry's picture: it needs a picture, an entry longer than an
+ * hour (shorter ones are too low) and not more than `maxLanes` side by side (narrow columns).
+ */
+export const imageFits = (item, lanes, maxLanes = 2) =>
+  Boolean(item.image) && item.end - item.start > 3_600_000 && lanes <= maxLanes;
 
 const DAY = 86_400_000;
 const isMidnight = (d) => d.getHours() === 0 && d.getMinutes() === 0;
@@ -142,6 +166,7 @@ export function itemsFor(
         occurrence: rule ? occurrenceKey(start) : null,
         sourceId: source?.id ?? sourceOf(r),
         color: COLORS.includes(r.data?.color) ? r.data.color : (source?.color ?? 'gray'),
+        image: imageOf(r),
         cancelled: r.data?.status === 'cancelled' || r.data?.plan_status === 'cancelled',
         editable:
           r.type === 'event' &&

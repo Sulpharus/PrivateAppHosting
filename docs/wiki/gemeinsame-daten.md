@@ -37,6 +37,17 @@ Haushalt (Typ `contract`, „Bearbeiten“). Nach dem ersten Deploy genehmigst d
 Jede App schreibt ihre Datensätze beim nächsten Öffnen. Ohne Genehmigung zeigt der Kalender nichts und kann nicht speichern.
 Weiteres (Wiederholungen, Erinnerungen, ICS, geteilte Kalender): Runbook `kalender.md`.
 
+### Bilder, Farben und Orte auf der Karte
+
+- **Bilder:** Hat ein Eintrag ein Bild (der Sportplaner schickt das Titelbild seiner Einheiten als kleines Vorschaubild mit), zeigen die **Listenansicht** und
+  die **Tagesansicht** es klein an. In der Tagesansicht nur bei Einträgen, die länger als eine Stunde dauern (sonst ist kein Platz). In jeder der beiden
+  Ansichten gibt es oben rechts einen kleinen Schalter **Bilder**; er merkt sich deine Wahl getrennt für Liste und Tag.
+- **Farben pro App:** Unter **Quellen verwalten** hat jede App oben eine Farbwahl („Farbe für alles aus …“); darunter kann jede Quelle (etwa
+  „Sportplaner · Sporteinheit“) eine eigene Farbe bekommen. Die Farbe gilt in Monat, Woche, Tag, Liste und auf der Karte.
+- **Karte:** Liegen mehrere Einträge an derselben Adresse oder sehr dicht beieinander, zeigt die Karte **einen Pin mit der Anzahl**; ein Klick öffnet eine
+  kleine Liste, was dort stattfindet (Klick auf eine Zeile öffnet den Eintrag). Beim Hineinzoomen trennen sich nahe Pins. Ein einzelner Eintrag mit Bild
+  erscheint **mit seinem Bild als Pin**, mit einem Rand in der Farbe der Quelle; ohne Bild bleibt es der nummerierte Pin.
+
 ### Karte und Wege
 
 Die Ansicht **Karte** (Taste O) zeigt die Termine mit Ort als nummerierte Markierungen für einen Tag, eine Woche oder sieben Wochen, in wählbarem Kartenstil

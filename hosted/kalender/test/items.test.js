@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { itemsFor, onDay, sourceOf, sourcesFrom, spanOf } from '../items.js';
+import { imageFits, imageOf, itemsFor, onDay, sourceOf, sourcesFrom, spanOf } from '../items.js';
 
 const rec = (over) => ({
   id: 'r1',
@@ -30,6 +30,89 @@ describe('source colours', () => {
     const second = sourcesFrom(records, cols, types, saved);
     expect(second.map((s) => s.color)).toEqual(first.map((s) => s.color));
     expect(new Set(first.map((s) => s.color)).size).toBe(2);
+  });
+});
+
+describe('app colours', () => {
+  const records = [
+    rec({ id: 'r2', created_by_app: 'sportplaner', type: 'activity' }),
+    rec({ id: 'r3', created_by_app: 'sportplaner', type: 'activity' }),
+    rec({ id: 'r4', created_by_app: 'haushalt', type: 'transaction' }),
+  ];
+  const cols = [{ id: 'c1', name: 'Meine Termine', family: 'kalender' }];
+
+  it('colour every source of an app, unless a source has its own saved colour', () => {
+    const sources = sourcesFrom(records, cols, types, {}, 'Shared', { sportplaner: 'rose' });
+    expect(sources.find((s) => s.id === 'app:sportplaner:activity').color).toBe('rose');
+    expect(sources.find((s) => s.id === 'app:haushalt:transaction').color).not.toBe('rose');
+    const own = sourcesFrom(
+      records,
+      cols,
+      types,
+      { 'app:sportplaner:activity': { color: 'teal', visible: true } },
+      'Shared',
+      { sportplaner: 'rose' },
+    );
+    expect(own.find((s) => s.id === 'app:sportplaner:activity').color).toBe('teal');
+  });
+
+  it('show up as the colour of the items, so the map uses the same one', () => {
+    const sources = sourcesFrom(records, cols, types, {}, 'Shared', { sportplaner: 'rose' });
+    const items = itemsFor(records, {
+      from: new Date('2026-10-05T00:00:00Z'),
+      to: new Date('2026-10-06T00:00:00Z'),
+      projections,
+      sources,
+      roles: {},
+    });
+    expect(
+      items.filter((i) => i.record.created_by_app === 'sportplaner').map((i) => i.color),
+    ).toEqual(['rose', 'rose']);
+  });
+});
+
+describe('pictures', () => {
+  const png = 'data:image/png;base64,iVBORw0KGgo=';
+  it('take only small inline pictures of a known type', () => {
+    expect(imageOf(rec({ data: { image: png } }))).toBe(png);
+    expect(imageOf(rec({ data: { image: 'data:image/jpeg;base64,/9j/4AAQ' } }))).toMatch(
+      /^data:image\/jpeg/,
+    );
+    expect(imageOf(rec({ data: { image: 'https://example.com/a.png' } }))).toBeNull();
+    expect(imageOf(rec({ data: { image: 'data:image/svg+xml;base64,PHN2Zz4=' } }))).toBeNull();
+    expect(imageOf(rec({ data: { image: 'data:text/html;base64,PGI+' } }))).toBeNull();
+    expect(imageOf(rec({ data: { image: 'data:image/png;base64,AAAA" onerror="x' } }))).toBeNull();
+    expect(imageOf(rec({ data: {} }))).toBeNull();
+    expect(imageOf(rec({ data: { image: 42 } }))).toBeNull();
+  });
+
+  it('fit into the day view only for entries longer than an hour in wide lanes', () => {
+    const at = (min) => new Date(2026, 9, 5, 10, min);
+    const item = (minutes, image = png) => ({ image, start: at(0), end: at(minutes) });
+    expect(imageFits(item(120), 1)).toBe(true);
+    expect(imageFits(item(120), 2)).toBe(true);
+    expect(imageFits(item(120), 3)).toBe(false);
+    expect(imageFits(item(120), 2, 1)).toBe(false);
+    expect(imageFits(item(60), 1)).toBe(false);
+    expect(imageFits(item(61), 1)).toBe(true);
+    expect(imageFits(item(120, null), 1)).toBe(false);
+  });
+
+  it('come along on the items', () => {
+    const sources = sourcesFrom(
+      [rec()],
+      [{ id: 'c1', name: 'Meine Termine', family: 'kalender' }],
+      types,
+      {},
+    );
+    const [item] = itemsFor([rec({ data: { image: png } })], {
+      from: new Date('2026-10-05T00:00:00Z'),
+      to: new Date('2026-10-06T00:00:00Z'),
+      projections,
+      sources,
+      roles: {},
+    });
+    expect(item.image).toBe(png);
   });
 });
 

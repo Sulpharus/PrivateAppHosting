@@ -360,5 +360,8 @@
   "map.problem.upstream_error": "Der Dienst hat mit Fehler {status} geantwortet.",
   "map.problem.unauthenticated": "Du bist nicht angemeldet.",
   "map.problem.forbidden": "Zugriff verweigert.",
-  "map.problem.network": "Keine Verbindung zum MiniNode-Server."
+  "map.problem.network": "Keine Verbindung zum MiniNode-Server.",
+  "images.switch": "Bilder",
+  "map.cluster": "{n} Termine hier",
+  "manage.colourForApp": "Farbe für alles aus {name}"
 }
