@@ -286,7 +286,44 @@ describe('offline tables', () => {
     const { table } = setupTables();
     expect(() => table('Recipes')).toThrow(/bad table name/);
     expect(() => table('a/b')).toThrow(/bad table name/);
+    expect(() => table('recipes', { conflict: 'owner_id' })).toThrow(/conflict key/);
+    expect(() => table('recipes', { conflict: 'owner_id,id' })).not.toThrow();
     await expect(table<Recipe>('recipes').get('a/b')).rejects.toThrow(/without/);
     await expect(table<Recipe>('recipes').upsert({ id: '', title: 'x' })).rejects.toThrow(/id/);
+  });
+  it('keeps a row deleted offline away when the server still lists it', async () => {
+    const { server, table, offline } = setupTables();
+    const recipes = table<Recipe>('recipes');
+    server.data.set('table:recipes/a', { id: 'a', title: 'Suppe' });
+    server.data.set('table:recipes/b', { id: 'b', title: 'Brot' });
+    await recipes.list();
+    server.setDown(true);
+    await recipes.remove('a');
+    server.setDown(false);
+    expect((await recipes.list()).map((row) => row.id)).toEqual(['b']);
+    expect(await offline.pending()).toBe(1);
+  });
+
+  it('drops local rows the server no longer has, but not unsent ones', async () => {
+    const { server, table } = setupTables();
+    const recipes = table<Recipe>('recipes');
+    server.data.set('table:recipes/a', { id: 'a', title: 'Suppe' });
+    await recipes.list();
+    server.data.delete('table:recipes/a');
+    server.setDown(true);
+    await recipes.upsert({ id: 'n', title: 'Neu' });
+    server.setDown(false);
+    expect((await recipes.list()).map((row) => row.id)).toEqual(['n']);
+  });
+
+  it('removes a new row the server refuses', async () => {
+    const { server, table, offline } = setupTables();
+    const recipes = table<Recipe>('recipes');
+    server.setDown(true);
+    await recipes.upsert({ id: 'x', title: 'Verboten' });
+    server.setDown(false);
+    server.setRefuse(true);
+    await offline.sync();
+    expect(await recipes.get('x')).toBeNull();
   });
 });

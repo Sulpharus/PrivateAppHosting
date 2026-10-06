@@ -29,12 +29,17 @@ stay with kv: `mn.db` talks to PostgREST and needs a connection.
    fixed keys.
 3. **`mn.table(name)` gives tables the offline behaviour of kv** (`packages/sdk/src/tables.ts`):
    `list`, `get`, `upsert`, `upsertMany`, `remove`, `newId`. Rows share the local copy and the queue of
-   changes with kv, so `mn.offline.pending()` and `onSynced` count both. A row needs `id uuid primary key`
-   made on the device (`newId()`), so it can be added offline. The last change that reaches the server wins
-   (whole row). For queries, joins and sums on the server use `mn.db` (online only).
+   changes with kv, so `mn.offline.pending()` and `onSynced` count both. A row needs an `id` (`uuid` made on the
+   device by `newId()`, or `text` when the app already has stable ids) that is unique per user, so it can be
+   added offline; a table with a composite key says so: `mn.table('t', { conflict: 'owner_id,id' })`.
+   The last change that reaches the server wins (whole row: `upsert` sends every column, `null` clears
+   one). A row written on the device lacks `owner_id`/`created_at`/`updated_at` until the next `list()`
+   online, and `list()` is ordered by id, so the app sorts. For queries, joins and sums on the server use `mn.db` (online only).
 4. **`mininode doctor` warns** (rule `entity-collection-in-kv`) when an app writes one kv key per
    entry or lists kv by prefix. A conscious exception is marked with `// kv-collection-ok: <reason>`
-   in the file (for example a handful of small entries nobody queries).
+   in the file (for example a handful of small entries nobody queries). The check reads the code, not
+   the intent: it can warn about a settings key built from a variable (`settings:${userId}`) or any
+   `kv.list(`; that is what the exception comment is for. It cannot see keys built in a variable.
 5. **Existing apps move one by one**, the way ADR 0002 and the rules for live data say (expand and
    contract): create the tables, copy the entries from kv the first time the app is opened (idempotent
    per `id`, kv is not touched), switch the app to the tables, and drop the kv entries only in a later

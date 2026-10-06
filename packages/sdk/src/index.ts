@@ -19,7 +19,12 @@ import {
 import { createPush } from './push.ts';
 import { cookieSessionUserId } from './session-cookie.ts';
 import { createSuite } from './suite.ts';
-import { createTableRemote, createTables, type TableFactory } from './tables.ts';
+import {
+  type ConflictTargets,
+  createTableRemote,
+  createTables,
+  type TableFactory,
+} from './tables.ts';
 
 export { ExternalApiError } from './api.ts';
 export { installLocalStorageSync, installMiniNodeCompat } from './compat.ts';
@@ -35,7 +40,7 @@ export type {
   SuiteType,
   SuiteWrite,
 } from './suite.ts';
-export type { TableFactory, TableHandle, TableRow } from './tables.ts';
+export type { TableFactory, TableHandle, TableOptions, TableRow } from './tables.ts';
 export type { AiChatOptions, AiMessage, KvScope, MininodeConfig };
 
 export type Role = 'admin' | 'trusted' | 'user';
@@ -201,7 +206,8 @@ export function createMininode(config: MininodeConfig): Mininode {
     return store;
   };
   const kvRemote = createKv(supabase, config.appSlug);
-  const tableRemote = createTableRemote(supabase, config.appSlug);
+  const conflictTargets: ConflictTargets = new Map();
+  const tableRemote = createTableRemote(supabase, config.appSlug, conflictTargets);
   // One local copy and one queue for kv and tables; the scope `table` goes to the app's tables.
   const offlineKv = createOfflineKv(
     {
@@ -249,7 +255,7 @@ export function createMininode(config: MininodeConfig): Mininode {
     db: supabase.schema(appSchema(config.appSlug)),
     kv: offlineKv.kv,
     offline: offlineKv.offline,
-    table: createTables(offlineKv.rows),
+    table: createTables(offlineKv.rows, conflictTargets),
     files: {
       async upload(path, body, options = {}) {
         const target = await objectPath(path, options.shared);

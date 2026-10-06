@@ -25,7 +25,8 @@ needs a backend. Do not build your own login, backend or API-key handling.**
    `await mn.auth.requireLogin()` once at start-up. There is no sign-up/login UI in the app.
 4. **Persistence:** never use `localStorage` or `IndexedDB` for user data (it does not sync
    across devices). **A list of entries (bookings, items, plans, contacts, …) is a table** (below,
-   `mn.table`; also offline); `mn.kv` is for settings and small state only (ADR 0022). Do not add a service worker, web manifest or push code: the platform makes
+   `mn.table`; also offline); `mn.kv` is for settings and small state only (ADR 0022).
+   Do not add a service worker, web manifest or push code: the platform makes
    every app installable and offline-capable and delivers notifications (`mn.notify`,
    `mn.push`).
 5. **UI in German and English.** Every text for people lives in two language packages,
@@ -118,7 +119,7 @@ try {
 // Lists of entries: tables in your own schema (see "Tables"). mn.table works offline like kv:
 const recipes = mn.table('recipes');
 await recipes.upsert({ id: recipes.newId(), title: 'Suppe', minutes: 30 });
-const all = await recipes.list();                // rows; the local copy when offline
+const all = await recipes.list();                // rows; the local copy when offline; sort them yourself
 await recipes.remove(all[0].id);
 // Server-side queries, filters and sums (online only):
 const { data } = await mn.db.from('recipes').select('*').gt('minutes', 20).order('created_at');
@@ -147,6 +148,8 @@ select platform.secure_table('<slug>', 'recipes', 'private');
 create index on app_<slug_with_underscores>.recipes (cooked_on);
 ```
 
+- `upsert` writes the whole row: send every column (`null` clears one). Rows lack `owner_id` and the
+  timestamps until the next `list()` online.
 - Related tables get foreign keys (`references … on delete cascade`).
 - Money is an integer in cents, a day is a `date`, a moment a `timestamptz`.
 - Always schema-qualify tables with `app_<slug>`; call `platform.secure_table` for every table.

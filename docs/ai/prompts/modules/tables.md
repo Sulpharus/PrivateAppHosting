@@ -20,5 +20,8 @@ entry (ADR 0022). `mn.kv` stays for settings and small state.
 - Use `mn.table('<table>')` for `list`, `get`, `upsert`, `upsertMany`, `remove`: it works offline like
   kv (local copy, queue, `mn.offline.onSynced`). Use `mn.db.from('<table>')` for server-side
   filters, sums and paging (online only).
+- `upsert` sends the whole row (every column, `null` clears one); `list()` is ordered by id, so sort
+  in the app; rows written on the device have no `owner_id`/timestamps until the next `list()` online.
+  A table with a composite primary key: `mn.table('t', { conflict: 'owner_id,id' })`.
 - Index the columns you filter and sort by.
 - Changes go into new numbered files (`db/002_add_rating.sql`); never edit an applied file.

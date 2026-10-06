@@ -72,10 +72,10 @@ function* walk(dir: string): Generator<string> {
  * file marks a conscious exception.
  */
 const KV_COLLECTION = [
-  /\bkv\s*\.\s*(?:set|get|delete)\s*\(\s*`[^`$]*[:/_-]\$\{/,
-  /\bkv\s*\.\s*(?:set|get|delete)\s*\(\s*`\$\{[^}]*\}[:/_-]\$\{/,
-  /\bkv\s*\.\s*(?:set|delete)\s*\(\s*(?:'[^']*'|"[^"]*"|[A-Za-z_][\w.]*)\s*\+/,
-  /\bkv\s*\.\s*list\s*\(/,
+  /\bkv\s*\??\.\s*(?:set|get|delete)\s*(?:<[^>()]*>)?\s*\(\s*`[^`$]*[:/_-]\$\{/,
+  /\bkv\s*\??\.\s*(?:set|get|delete)\s*(?:<[^>()]*>)?\s*\(\s*`\$\{[^}]*\}[:/_-]?\$\{/,
+  /\bkv\s*\??\.\s*(?:set|delete)\s*(?:<[^>()]*>)?\s*\(\s*(?:'[^']*'|"[^"]*"|[A-Za-z_][\w.]*)\s*\+/,
+  /\bkv\s*\??\.\s*list\s*(?:<[^>()]*>)?\s*\(/,
 ];
 
 /** `class FallbackMiniNodeClient`, `LocalMiniNodeShim`, `const mockMininode = …`. */
