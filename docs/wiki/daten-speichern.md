@@ -17,7 +17,7 @@ liegt in der Datenbank: Jede Tabelle hat **Zeilenschutz** (*Row Level Security*,
 | `mn.files` | Fotos, Belege, Anhänge | Dateispeicher je App; signierte Adressen (1 h); Grenze 50 MB je Datei |
 
 Die Regel dahinter (ADR 0022): Listen sind Tabellen, kv ist für Einstellungen. `mininode doctor` warnt, wenn eine App je Eintrag einen
-kv-Schlüssel anlegt (`entity-collection-in-kv`). Ältere Apps ziehen nach und nach um; die kv-Einträge bleiben zunächst als Sicherung stehen.
+kv-Schlüssel anlegt (`entity-collection-in-kv`). Sportplaner und Haushalt sind umgezogen: beim ersten Öffnen nach dem Update werden ihre alten kv-Einträge einmal in Tabellen kopiert (bestehende Zeilen werden nie überschrieben); die alten Einträge bleiben als Sicherung stehen, bis eine spätere Version sie entfernt. Andere ältere Apps ziehen nach und nach um.
 
 `localStorage` und IndexedDB sind für Nutzerdaten **verboten** (sie wandern nicht zwischen Geräten). Apps, die sie dennoch nutzen,
 bekommen beim Einbau eine Schicht, die `localStorage` im Konto hält (`installLocalStorageSync`).

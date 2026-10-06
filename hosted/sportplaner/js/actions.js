@@ -11,13 +11,13 @@ let writes = 0;
 async function persist(act) {
   writes++;
   const mn = await ready;
-  await mn.kv.set(ACT + act.id, act);
+  await actTable(mn).upsert(actRow(act));
   applyLocal(act);
 }
 async function removeAct(a) {
   writes++;
   const mn = await ready;
-  await mn.kv.delete(ACT + a.id);
+  await actTable(mn).remove(a.id);
   applyLocal(a, true);
   (a.photos || []).forEach(dropAsset);
   Object.values(a.thumbs || {}).forEach(dropAsset);

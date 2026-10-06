@@ -215,7 +215,8 @@ S.month = (() => {
   const d = parse(S.date);
   return new Date(d.getFullYear(), d.getMonth(), 1);
 })();
-/* data: one private mn.kv entry per activity (act:<id>) and per tariff (plan:<id>) */
+/* data: rows of the tables activities and plans (tables.js); the kv entries act:<id> and plan:<id>
+   are what older versions wrote and are only read once, to copy them over */
 const ACT = 'act:',
   PLAN = 'plan:',
   LAST_BACKUP = 'meta:lastBackup';

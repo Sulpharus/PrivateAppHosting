@@ -43,7 +43,9 @@ stay with kv: `mn.db` talks to PostgREST and needs a connection.
 5. **Existing apps move one by one**, the way ADR 0002 and the rules for live data say (expand and
    contract): create the tables, copy the entries from kv the first time the app is opened (idempotent
    per `id`, kv is not touched), switch the app to the tables, and drop the kv entries only in a later
-   release. Haushalt and Sportplaner go first.
+   release. Haushalt and Sportplaner went first (tables `activities`, `plans`; `bookings`, `recurring`,
+   `categories`, `rules`, `tax_profiles`; flag `meta:tablesFrom` in kv marks the copy as done). Their
+   kv entries are removed in a later release, after the owner confirms.
 
 ## Consequences
 

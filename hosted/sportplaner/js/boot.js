@@ -8,22 +8,14 @@ function load() {
     try {
       const mn = await ready;
       const before = writes;
-      const [acts, plans, last] = await Promise.all([
-        mn.kv.list(ACT),
-        mn.kv.list(PLAN),
-        mn.kv.get(LAST_BACKUP),
-      ]);
+      const [{ acts, plans }, last] = await Promise.all([readAll(mn), mn.kv.get(LAST_BACKUP)]);
       // A save finished while we were reading: this snapshot may miss it, so read again.
       if (writes !== before) {
         retry = true;
         return;
       }
-      S.acts = acts
-        .filter((x) => x.value && typeof x.value === 'object')
-        .map((x) => sanitizeAct({ ...x.value, id: x.key.slice(ACT.length) }, true));
-      S.plans = plans
-        .filter((x) => x.value && typeof x.value === 'object')
-        .map((x) => sanitizePlan({ ...x.value, id: x.key.slice(PLAN.length) }));
+      S.acts = acts;
+      S.plans = plans;
       S.lastBackup = typeof last === 'number' ? last : null;
       dataChanged();
       plansChanged();

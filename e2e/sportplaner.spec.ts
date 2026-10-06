@@ -1,7 +1,8 @@
 import { expect, test } from '@playwright/test';
 import { admin, cleanup, createUser, PASSWORD } from './seed.ts';
 
-// hosted/sportplaner behind its local gate: private activities in mn.kv, photos in mn.files.
+// hosted/sportplaner behind its local gate: activities and tariffs in tables (copied once from the
+// kv entries older versions wrote), photos in mn.files.
 const run = `e2es${Date.now().toString(36)}`;
 const APP = 'http://localhost:8794';
 const shots = process.env.SCREENSHOT_DIR;
@@ -391,5 +392,67 @@ test('a membership with credits asks what an activity costs and counts the month
   }
   await expect(page.getByText(/Credits von ClassPass überschritten: 12 von 10/)).toBeVisible();
   await expect(page.getByText(/12 von 10 Credits im .* verbraucht, 0 übrig\./)).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
+test('entries of the old kv storage are copied into the tables once and kept as a backup', async ({
+  browser,
+}) => {
+  const email = `${run}-olga@example.com`;
+  const userId = await createUser(email, 'user', 'Olga');
+  const kv = admin.schema('platform').from('app_kv');
+  const old = [
+    {
+      key: 'act:alt-1',
+      value: {
+        id: 'ignored',
+        name: 'Tischtennis',
+        category: 'Racket',
+        slots: [{ kind: 'weekly', days: [0, 1, 2, 3, 4, 5, 6], start: '18:00', end: '19:00' }],
+        planned: { mode: 'none' },
+        done: ['2026-01-10'],
+        legacyNote: 'older field',
+      },
+    },
+    { key: 'plan:alt-1', value: { name: 'Vereinsbeitrag', type: 'recurring', amount: 12.5 } },
+  ];
+  for (const { key, value } of old) {
+    const { error } = await kv.insert({ app_slug: 'sportplaner', owner_id: userId, key, value });
+    if (error) throw error;
+  }
+
+  const page = await (await browser.newContext()).newPage();
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  await page.goto(APP);
+  await page.getByLabel('E-Mail').fill(email);
+  await page.getByLabel('Passwort', { exact: true }).fill(PASSWORD);
+  await page.getByRole('button', { name: 'Anmelden', exact: true }).click();
+  await expect(page.getByText('Tischtennis').first()).toBeVisible({ timeout: 15_000 });
+
+  const tables = admin.schema('app_sportplaner');
+  await expect
+    .poll(async () => (await tables.from('activities').select('id').eq('owner_id', userId)).data)
+    .toEqual([{ id: 'alt-1' }]);
+  const { data: act } = await tables.from('activities').select('*').eq('owner_id', userId).single();
+  expect(act).toMatchObject({
+    name: 'Tischtennis',
+    category: 'Racket',
+    done: ['2026-01-10'],
+    details: { legacyNote: 'older field' },
+  });
+  const { data: plan } = await tables.from('plans').select('*').eq('owner_id', userId).single();
+  expect(plan).toMatchObject({ id: 'alt-1', name: 'Vereinsbeitrag', amount: 12.5 });
+
+  // The kv entries stay, and a flag stops the copy: a second start adds nothing.
+  const { data: left } = await kv.select('key').eq('owner_id', userId).order('key');
+  expect(left?.map((row) => row.key)).toEqual(['act:alt-1', 'meta:tablesFrom', 'plan:alt-1']);
+  await page.reload();
+  await expect(page.getByText('Tischtennis').first()).toBeVisible();
+  const { count } = await tables
+    .from('activities')
+    .select('id', { count: 'exact', head: true })
+    .eq('owner_id', userId);
+  expect(count).toBe(1);
   expect(errors).toEqual([]);
 });

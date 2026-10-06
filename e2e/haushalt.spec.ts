@@ -1,7 +1,8 @@
 import { expect, type Page, test } from '@playwright/test';
-import { cleanup, createUser, PASSWORD } from './seed.ts';
+import { admin, cleanup, createUser, PASSWORD } from './seed.ts';
 
-// hosted/haushalt behind its local gate: bookings, bank CSV import and the tax forms.
+// hosted/haushalt behind its local gate: bookings, bank CSV import and the tax forms, stored in
+// tables (copied once from the kv entries older versions wrote).
 const run = `e2eb${Date.now().toString(36)}`;
 const APP = 'http://localhost:8795';
 const year = new Date().getFullYear();
@@ -215,5 +216,91 @@ test('haushalt plans fixed costs, spots a changed price and shows the month', as
   if (shots) await page.screenshot({ path: `${shots}/haushalt-stats.png`, fullPage: true });
   await page.getByRole('button', { name: 'Übersicht' }).first().click();
   if (shots) await page.screenshot({ path: `${shots}/haushalt-overview.png`, fullPage: true });
+  expect(errors).toEqual([]);
+});
+
+test('entries of the old kv storage are copied into the tables once and kept as a backup', async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  const email = `${run}-karl@example.com`;
+  const userId = await createUser(email, 'user', 'Karl');
+  const date = `${year}-${month}-03`;
+  const kv = admin.schema('platform').from('app_kv');
+  const old = [
+    {
+      key: `tx:${date}:alt1`,
+      value: {
+        id: 'alt1',
+        date,
+        cents: 4250,
+        kind: 'expense',
+        cat: 'lebensmittel',
+        text: 'Wocheneinkauf',
+        party: 'REWE',
+      },
+    },
+    {
+      key: 'rec:miete',
+      value: {
+        id: 'miete',
+        text: 'Miete',
+        cents: 90000,
+        kind: 'expense',
+        cat: 'miete',
+        every: 1,
+        day: 1,
+        start: `${year}-01`,
+      },
+    },
+    { key: `profile:${year}`, value: { commuteKm: 12, commuteDays: 200, income: 48000 } },
+    {
+      key: 'settings',
+      value: {
+        categories: [
+          { id: 'lebensmittel', name: 'Essen daheim', kind: 'expense', budget: 40000, tax: '' },
+        ],
+        rules: [],
+      },
+    },
+  ];
+  for (const { key, value } of old) {
+    const { error } = await kv.insert({ app_slug: 'haushalt', owner_id: userId, key, value });
+    if (error) throw error;
+  }
+
+  await signIn(page, email);
+  await expect(page.getByText('2 Buchungen')).toBeVisible({ timeout: 15_000 });
+  await page.getByRole('button', { name: 'Buchungen', exact: true }).click();
+  await expect(page.getByText('Wocheneinkauf')).toBeVisible();
+
+  const tables = admin.schema('app_haushalt');
+  const one = async (table: string) =>
+    (await tables.from(table).select('*').eq('owner_id', userId)).data ?? [];
+  await expect.poll(async () => (await one('bookings')).map((row) => row.id)).toContain('alt1');
+  const bookings = await one('bookings');
+  expect(bookings.find((row) => row.id === 'alt1')).toMatchObject({
+    booked_on: date,
+    cents: 4250,
+    cat: 'lebensmittel',
+    party: 'REWE',
+  });
+  // the fixed cost is booked up to today by the app itself: its row has the deterministic id
+  expect((await one('recurring')).map((row) => row.id)).toEqual(['miete']);
+  expect(await one('tax_profiles')).toMatchObject([
+    { id: `${year}`, commute_km: 12, income: 48000 },
+  ]);
+  expect(await one('categories')).toMatchObject([
+    { id: 'lebensmittel', name: 'Essen daheim', budget_cents: 40000 },
+  ]);
+
+  const { data: left } = await kv.select('key').eq('owner_id', userId);
+  expect(left?.map((row) => row.key)).toEqual(expect.arrayContaining(old.map((o) => o.key)));
+  expect(left?.map((row) => row.key)).toContain('meta:tablesFrom');
+  const before = bookings.length;
+  await page.reload();
+  await expect(page.getByText('2 Buchungen')).toBeVisible();
+  expect((await one('bookings')).length).toBe(before);
   expect(errors).toEqual([]);
 });
