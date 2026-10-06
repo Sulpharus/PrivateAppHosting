@@ -156,6 +156,46 @@ describe('doctor', () => {
   });
 });
 
+describe('doctor: lists are tables', () => {
+  const rulesOf = (dir: string) =>
+    doctor(dir)
+      .findings.filter((f) => f.severity === 'warning')
+      .map((f) => f.rule);
+  const warns = (code: string) =>
+    rulesOf(app({ ...healthy, 'src/store.ts': code })).includes('entity-collection-in-kv');
+
+  it('warns about one kv key per entry', () => {
+    expect(warns('await mn.kv.set(`item:${item.id}`, item);')).toBe(true);
+    expect(warns('await mn.kv.get(`${collection}:${id}`);')).toBe(true);
+    expect(warns('await mn.kv.set(PREFIX + item.id, item);')).toBe(true);
+    expect(warns("await mn.kv.delete('act:' + id);")).toBe(true);
+    expect(warns("const rows = await mn.kv.list('tx:');")).toBe(true);
+    expect(warns('await mn.kv.get<Item>(`item:${id}`);')).toBe(true);
+    expect(warns('await mn.kv?.set(`item:${id}`, item);')).toBe(true);
+    expect(warns('await mn.kv.set(`${table}${id}`, item);')).toBe(true);
+  });
+
+  it('leaves settings alone', () => {
+    expect(warns("await mn.kv.set('settings', { theme: 'dark' });")).toBe(false);
+    expect(warns('await mn.kv.get(`prefs`);')).toBe(false);
+    expect(warns("await mn.kv.set('group:main', group, 'shared');")).toBe(false);
+  });
+
+  it('accepts a conscious exception, and ignores apps without data', () => {
+    expect(
+      warns(
+        '// kv-collection-ok: five bookmarks, nobody queries them\nawait mn.kv.set(`b:${id}`, x);',
+      ),
+    ).toBe(false);
+    const none = app({
+      ...healthy,
+      'mininode.json': manifest({ ...I18N, data: { mode: 'none' } }),
+      'src/store.ts': 'await mn.kv.set(`item:${id}`, x);',
+    });
+    expect(rulesOf(none)).not.toContain('entity-collection-in-kv');
+  });
+});
+
 describe('doctor: what the export and the platform refuse', () => {
   it('finds personal email addresses in sample data, but not example.com', () => {
     const dir = app({

@@ -12,11 +12,12 @@ Every MiniNode app can be installed (it is a PWA: *Zum Startbildschirm* on the p
 *Installieren* in the desktop browser). The platform caches the app's files, so it opens
 without internet once it has been opened online. The app makes its data work offline:
 
-- **Use `mn.kv` for everything that must work offline.** It keeps a local copy (IndexedDB):
-  `get`/`list` answer from it when offline, `set`/`delete` apply locally at once and are sent
-  when the connection is back. Conflicts: the last change that reaches the server wins, so store
-  one item per key (`task:<id>`) instead of one big array, and add `updatedAt` to items.
-- `mn.db` tables and `mn.files` uploads need a connection. Show their views read-only from what
+- **Use `mn.table('<table>')` for lists and `mn.kv` for settings; both work offline.** They keep a
+  local copy (IndexedDB): `get`/`list` answer from it when offline, `upsert`/`set`/`remove`/`delete`
+  apply locally at once and are sent when the connection is back, in one queue. Conflicts: the last
+  change that reaches the server wins (a whole row, a whole kv value), so keep one row per entry
+  instead of one big array.
+- Queries, filters and sums on the server (`mn.db`) and `mn.files` uploads need a connection. Show their views read-only from what
   the app last loaded (keep it in memory or in kv under `cache:<view>`), and disable adding
   with the hint "Offline nicht möglich". Photos taken offline: keep them in the item as a
   `pendingUpload` blob in IndexedDB and upload on reconnect.

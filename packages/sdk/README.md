@@ -9,7 +9,9 @@ import { mininode } from '@mininode/sdk';
 const mn = await mininode();
 const user = await mn.auth.requireLogin();          // redirects to mininode.app/login if needed
 
-await mn.kv.set('settings', { theme: 'dark' });      // private per user (or per owner in shared-account apps)
+await mn.kv.set('settings', { theme: 'dark' });      // settings and small state; private per user (or per owner in shared-account apps)
+const recipes = mn.table('recipes');                // a list of entries = a table; offline like kv (ADR 0022)
+await recipes.upsert({ id: recipes.newId(), title: 'Suppe' }); await recipes.list(); await recipes.remove(id);
 await mn.kv.set('motd', 'Hallo', 'shared');          // visible to everyone with the app
 const { data } = await mn.db.from('recipes').select(); // tables in app_<slug>, secured by RLS
 await mn.files.upload('fotos/a.jpg', file);

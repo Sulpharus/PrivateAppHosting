@@ -16,6 +16,7 @@ const FILES = [
   'stats',
   'map',
   'backup',
+  'tables',
 ];
 
 function translator(code) {
@@ -113,6 +114,16 @@ function boot(code) {
     openPlanEditor(plan);
     out.planQuota = document.querySelector('#sheet-root').textContent;
     closeSheet();
+    // Rows of the tables and back: nothing gets lost, also for fields of older versions.
+    const full = sanitizeAct({ ...S.acts[0], signupUrl: 'https://x.test', geo: { lat: 52.5, lon: 13.4, label: 'Park', q: 'Park, Berlin' }, course: { from: '2026-01-05', until: '2026-03-30', price: 90, priceType: 'month' }, slots: [{ kind: 'date', date: '2026-10-12', start: '10:00', end: '11:00' }], cancelled: ['2026-10-19'], from: '2025-01-01', updatedAt: 1760000000000, legacyNote: 'kept' }, true);
+    out.actBack = [rowAct(actRow(full)), sanitizeAct(full, true)];
+    out.actRow = actRow(full);
+    out.planBack = [rowPlan(planRow(plan)), sanitizePlan(plan)];
+    out.planOpen = rowPlan(planRow(sanitizePlan({ id: 'p0', name: 'Einzel', type: 'once', amount: 5 })));
+    // Values the columns refuse are cut or cleaned before they reach a row.
+    const odd = sanitizeAct({ id: 'o', name: 'x'.repeat(900), description: 'd'.repeat(30000), visitPrice: 1e12, signup: 'constructor', done: ['2026-02-31', '2026-03-01'], course: { from: '2026-01-01', until: '2026-02-01', price: 0.001 }, updatedAt: 1e30 }, true);
+    out.oddRow = actRow(odd);
+    out.oddPlan = planRow(sanitizePlan({ id: 'q', type: 'toString', unit: 'constructor', amount: 1e12, visits: 1e12 }));
     out.clean = [sanitizePlan({ ...plan, quota: { mode: 'credits', month: '12.7', day: -3 } }), sanitizePlan({ ...plan, quota: { mode: 'weird' } })];
     return out;`;
   window.mininode = { mininode: () => new Promise(() => {}) }; // no connection: never answers
@@ -154,6 +165,33 @@ describe('sportplaner views', () => {
     expect(out.planQuota).toContain('Credits pro Monat');
     expect(out.clean[0].quota).toEqual({ mode: 'credits', month: 12, day: 0 });
     expect(out.clean[1].quota).toBeUndefined();
+  });
+
+  it('keeps everything on the way into and out of the tables', () => {
+    const out = boot('de');
+    expect(out.actBack[0]).toEqual(out.actBack[1]);
+    expect(out.actRow.details).toEqual({ legacyNote: 'kept', from: '2025-01-01' });
+    expect(out.actRow.signup_url).toBe('https://x.test');
+    expect(out.actRow.course_price_type).toBe('month');
+    expect(out.actRow.geo_lat).toBe(52.5);
+    expect(out.actRow.owner_id).toBeUndefined();
+    expect(out.planBack[0]).toEqual(out.planBack[1]);
+    expect(out.planOpen.start).toBe('');
+    expect(out.planOpen.quota).toBeUndefined();
+  });
+
+  it('keeps what the columns refuse out of the rows', () => {
+    const { oddRow, oddPlan } = boot('de');
+    expect(oddRow.name).toHaveLength(500);
+    expect(oddRow.description).toHaveLength(20000);
+    expect(oddRow.visit_price).toBeLessThan(1e8);
+    expect(oddRow.signup).toBe('none');
+    expect(oddRow.done).toEqual(['2026-03-01']);
+    expect(oddRow.course_price).toBeNull();
+    expect(oddRow.edited_ms).toBeLessThanOrEqual(1e15);
+    expect(oddPlan).toMatchObject({ type: 'recurring', unit: 'month' });
+    expect(oddPlan.amount).toBeLessThan(1e8);
+    expect(oddPlan.visits).toBeLessThanOrEqual(1e9);
   });
 
   it('render in English', () => {

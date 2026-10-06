@@ -10,9 +10,15 @@ user (`data.mode: private`). Static HTML, no build.
 Ported from a Claude artifact (`claude.ai/artifact/NALo6ADH5SFsmfWTRBDbTN`). The UI and
 scheduling logic are unchanged. What changed:
 
-- **Storage:** `localStorage` and the artifact `db` became `mn.kv`, with one key per activity
-  (`act:<id>`) and per tariff (`plan:<id>`), so two devices saving different activities never
-  overwrite each other. Data reloads when the tab becomes visible again.
+- **Storage:** `localStorage` and the artifact `db` became `mn.kv` and, since ADR 0022, two tables
+  in `app_sportplaner` (`db/001_init.sql`): `activities` and `plans`, one row each, with typed
+  columns (days as `date[]`, prices as `numeric`, the geo position and course as columns; slots,
+  season and the plan to take part as `jsonb`, fields of older versions in `details`). `js/tables.js`
+  maps rows and the objects of the app and is used through `mn.table`, so everything still works
+  offline. The first start after the update copies the old kv entries (`act:<id>`, `plan:<id>`)
+  once and sets the flag `meta:tablesFrom`; the kv entries stay as a backup until a later release
+  removes them. Two devices saving different activities never overwrite each other. Data reloads
+  when the tab becomes visible again.
 - **Photos:** the artifact `assets` store became `mn.files` (`photos/<id>.jpg` plus a 640 px
   thumbnail `photos/<id>-klein.jpg`). Images are fetched with signed URLs and shown from `blob:`
   URLs, which also works under the gate's CSP. At most four load at once.

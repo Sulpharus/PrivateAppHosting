@@ -66,6 +66,18 @@ function* walk(dir: string): Generator<string> {
   }
 }
 
+/**
+ * One kv key per entry (`kv.set(`item:${id}`)`, `kv.set(PREFIX + id)`) or a kv listing by prefix:
+ * a list of entries that belongs in a table (ADR 0022). `// kv-collection-ok: <reason>` in the
+ * file marks a conscious exception.
+ */
+const KV_COLLECTION = [
+  /\bkv\s*\??\.\s*(?:set|get|delete)\s*(?:<[^>()]*>)?\s*\(\s*`[^`$]*[:/_-]\$\{/,
+  /\bkv\s*\??\.\s*(?:set|get|delete)\s*(?:<[^>()]*>)?\s*\(\s*`\$\{[^}]*\}[:/_-]?\$\{/,
+  /\bkv\s*\??\.\s*(?:set|delete)\s*(?:<[^>()]*>)?\s*\(\s*(?:'[^']*'|"[^"]*"|[A-Za-z_][\w.]*)\s*\+/,
+  /\bkv\s*\??\.\s*list\s*(?:<[^>()]*>)?\s*\(/,
+];
+
 /** `class FallbackMiniNodeClient`, `LocalMiniNodeShim`, `const mockMininode = …`. */
 const STAND_IN =
   /\b(?:class|function|const|let)\s+(?:\w*(?:Fallback|Shim|Mock|Fake|Stub|Local)\w*(?:MiniNode|Mininode)\w*|\w*(?:MiniNode|Mininode)\w*(?:Fallback|Shim|Mock|Fake|Stub)\w*)\b/;
@@ -111,6 +123,19 @@ function checkSources(
         file: rel,
         message:
           'defines its own stand-in for the platform client (a fallback or shim): where it takes over, data stays in this browser and never reaches the account; use the SDK directly',
+      });
+    }
+    if (
+      manifest.data.mode !== 'none' &&
+      KV_COLLECTION.some((pattern) => pattern.test(code)) &&
+      !/kv-collection-ok/.test(text)
+    ) {
+      findings.push({
+        severity: 'warning',
+        rule: 'entity-collection-in-kv',
+        file: rel,
+        message:
+          'keeps one kv key per entry (or lists kv by prefix): a list of entries belongs in a table (db/NNN_*.sql, used through mn.table, which also works offline; ADR 0022). Mark a real exception with "// kv-collection-ok: <reason>"',
       });
     }
     if (/\bwindow\.MiniNode\b|\)\.MiniNode\b/.test(code)) usesMiniNodeGlobal = true;

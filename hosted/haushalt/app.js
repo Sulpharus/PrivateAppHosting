@@ -28,6 +28,21 @@ import {
   nextDue,
 } from './plan.js';
 import { parseStatement, readPdf } from './statement.js';
+import {
+  bookingTable,
+  bookingToRow,
+  copyFromKv,
+  loadBookings,
+  loadProfile,
+  loadProfiles,
+  loadRecurring,
+  loadSettings,
+  profileRow,
+  profileTable,
+  recRow,
+  recTable,
+  saveSettingsRows,
+} from './store.js';
 import { buildReturn, euro, FIELDS, FORMS } from './tax.js';
 
 // ---------- helpers ----------
@@ -147,10 +162,10 @@ const sum = (list, kind) => list.filter((b) => b.kind === kind).reduce((s, b) =>
 async function ensureYear(year) {
   if (S.years.has(year)) return;
   const mn = await ready;
-  const rows = await mn.kv.list(`tx:${year}-`);
-  for (const { key, value } of rows) {
-    const b = cleanBooking(value, FIELDS);
-    if (b) S.tx.set(key, b);
+  // One list for all years: the table is read as a whole, also offline.
+  for (const b of await loadBookings(mn, FIELDS)) {
+    S.tx.set(keyOf(b), b);
+    S.years.add(Number(b.date.slice(0, 4)));
   }
   S.years.add(year);
 }
@@ -160,34 +175,32 @@ async function saveBooking(b, oldKey) {
   writes++;
   const mn = await ready;
   const key = keyOf(b);
-  await mn.kv.set(key, b);
+  await bookingTable(mn).upsert(bookingToRow(b));
   S.tx.set(key, b);
-  if (oldKey && oldKey !== key) {
-    await mn.kv.delete(oldKey);
-    S.tx.delete(oldKey);
-  }
+  // A new date changes the key in memory; the row is the same one.
+  if (oldKey && oldKey !== key) S.tx.delete(oldKey);
 }
 async function deleteBooking(key) {
   writes++;
   const mn = await ready;
   const b = S.tx.get(key);
-  await mn.kv.delete(key);
+  if (b) await bookingTable(mn).remove(b.id);
   S.tx.delete(key);
   if (b?.receipt) mn.files.remove(b.receipt).catch(() => {});
 }
 async function saveSettings() {
   const mn = await ready;
-  await mn.kv.set('settings', S.settings);
+  await saveSettingsRows(mn, S.settings);
 }
 async function saveProfile(year, profile) {
   const mn = await ready;
-  await mn.kv.set(`profile:${year}`, profile);
+  await profileTable(mn).upsert(profileRow(year, profile));
   S.profiles.set(year, profile);
 }
 async function ensureProfile(year) {
   if (S.profiles.has(year)) return;
   const mn = await ready;
-  S.profiles.set(year, cleanProfile(await mn.kv.get(`profile:${year}`)));
+  S.profiles.set(year, await loadProfile(mn, year));
 }
 
 /** Books what standing orders owe up to today. Ids are deterministic, so a second device or a
@@ -204,13 +217,13 @@ async function runRecurring() {
       // paid through the bank (imported and recognised): not booked a second time
       if (paidByBank(rec.id, month)) continue;
       if (!S.tx.has(key)) {
-        await mn.kv.set(key, booking);
+        await bookingTable(mn).upsert(bookingToRow(booking));
         S.tx.set(key, booking);
         added++;
       }
     }
     const next = { ...rec, until: due[due.length - 1].month };
-    await mn.kv.set(`rec:${rec.id}`, next);
+    await recTable(mn).upsert(recRow(next));
     S.recs.set(rec.id, next);
   }
   if (added) toast(t('toast.fixedBooked', { n: added }));
@@ -273,18 +286,15 @@ const paidByBank = (recId, month) =>
 async function load() {
   try {
     const mn = await ready;
-    const [settings, recs] = await Promise.all([mn.kv.get('settings'), mn.kv.list('rec:')]);
-    if (settings) S.settings = cleanSettings(settings, FIELDS);
+    // Older versions kept everything as kv entries: copy them into the tables once.
+    await copyFromKv(mn, FIELDS);
+    const [settings, recs] = await Promise.all([loadSettings(mn, FIELDS), loadRecurring(mn)]);
+    if (settings) S.settings = settings;
     else {
       S.settings = { categories: DEFAULT_CATEGORIES, rules: DEFAULT_RULES };
       await saveSettings();
     }
-    S.recs = new Map(
-      recs
-        .map((r) => cleanRecurring(r.value))
-        .filter(Boolean)
-        .map((r) => [r.id, r]),
-    );
+    S.recs = new Map(recs.map((r) => [r.id, r]));
     const year = Number(today().slice(0, 4));
     // Standing orders may reach back into last year; the tax view usually wants it too.
     await Promise.all([ensureYear(year), ensureYear(year - 1), ensureProfile(S.year)]);
@@ -622,7 +632,7 @@ async function adoptAmount(rec, booking) {
     changes: [...rec.changes.filter((c) => c.from < from), { from, cents: booking.cents }],
   });
   const mn = await ready;
-  await mn.kv.set(`rec:${next.id}`, next);
+  await recTable(mn).upsert(recRow(next));
   S.recs.set(next.id, next);
   calendarSoon();
   toast(
@@ -2517,7 +2527,7 @@ function editRecurring(id) {
               onclick: async () => {
                 try {
                   const mn = await ready;
-                  await mn.kv.delete(`rec:${id}`);
+                  await recTable(mn).remove(id);
                   S.recs.delete(id);
                   calendarSoon();
                   closeDialog();
@@ -2579,7 +2589,7 @@ function editRecurring(id) {
             if (!next) return formError(form, t('error.checkInput'));
             try {
               const mn = await ready;
-              await mn.kv.set(`rec:${next.id}`, next);
+              await recTable(mn).upsert(recRow(next));
               S.recs.set(next.id, next);
               const years = [
                 ...new Set(dueRecurring(next, today()).map((d) => Number(d.month.slice(0, 4)))),
@@ -2857,15 +2867,15 @@ async function exportYearCsv() {
 async function exportBackup() {
   try {
     const mn = await ready;
-    const [tx, profiles] = await Promise.all([mn.kv.list('tx:'), mn.kv.list('profile:')]);
+    const [bookings, profiles] = await Promise.all([loadBookings(mn, FIELDS), loadProfiles(mn)]);
     const data = {
       app: 'mininode-haushalt',
       version: 1,
       exportedAt: new Date().toISOString(),
       settings: S.settings,
       recurring: [...S.recs.values()],
-      profiles: Object.fromEntries(profiles.map((p) => [p.key.slice(8), p.value])),
-      bookings: tx.map((row) => row.value),
+      profiles,
+      bookings,
     };
     download(t('backup.file', { date: today() }), JSON.stringify(data), 'application/json');
   } catch {
@@ -2892,7 +2902,7 @@ async function importBackup(file) {
     for (const raw of Array.isArray(data.recurring) ? data.recurring : []) {
       const r = cleanRecurring(raw);
       if (r) {
-        await mn.kv.set(`rec:${r.id}`, r);
+        await recTable(mn).upsert(recRow(r));
         S.recs.set(r.id, r);
       }
     }
@@ -3016,27 +3026,17 @@ for (const add of document.querySelectorAll('[data-add]'))
 let refreshedAt = Date.now();
 async function refresh() {
   const mn = await ready;
-  const years = [...S.years];
   const before = writes;
-  const [settings, recs, ...lists] = await Promise.all([
-    mn.kv.get('settings'),
-    mn.kv.list('rec:'),
-    ...years.map((y) => mn.kv.list(`tx:${y}-`)),
+  const [settings, recs, list] = await Promise.all([
+    loadSettings(mn, FIELDS),
+    loadRecurring(mn),
+    loadBookings(mn, FIELDS),
   ]);
-  const next = new Map();
-  for (const rows of lists)
-    for (const { key, value } of rows) {
-      const b = cleanBooking(value, FIELDS);
-      if (b) next.set(key, b);
-    }
+  const next = new Map(list.map((b) => [keyOf(b), b]));
   if (writes !== before) return;
-  if (settings) S.settings = cleanSettings(settings, FIELDS);
-  S.recs = new Map(
-    recs
-      .map((r) => cleanRecurring(r.value))
-      .filter(Boolean)
-      .map((r) => [r.id, r]),
-  );
+  if (settings) S.settings = settings;
+  S.recs = new Map(recs.map((r) => [r.id, r]));
+  for (const b of list) S.years.add(Number(b.date.slice(0, 4)));
   S.tx = next;
   S.profiles.clear();
   await ensureProfile(S.year);

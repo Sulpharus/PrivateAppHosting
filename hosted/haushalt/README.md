@@ -60,8 +60,13 @@ in the yearly details).
 
 ## Data
 
-`mn.kv`, private: `settings` (categories, budgets, rules), `tx:<date>:<id>` per booking,
-`rec:<id>` per fixed cost, `profile:<year>` for the tax details. *Einstellungen → Daten*
+Tables in `app_haushalt` (`db/001_init.sql`, ADR 0022, used through `mn.table` so the app works
+offline; `store.js` maps rows and objects), private per person: `bookings`, `recurring` (fixed
+costs), `categories` and `rules` (what was `settings`), `tax_profiles` (one row per year). Money
+is integer cents, days are `date`, months the first day of the month. Older versions kept
+`settings`, `tx:<date>:<id>`, `rec:<id>` and `profile:<year>` in `mn.kv`; the first start after
+the update copies them once (flag `meta:tablesFrom`, existing rows are never overwritten) and the
+kv entries stay as a backup until a later release removes them. *Einstellungen → Daten*
 exports and imports a JSON backup (receipts are not included) and a CSV per year.
 
 ## Check

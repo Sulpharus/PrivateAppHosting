@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Json } from './kv.ts';
 import { createKv } from './kv.ts';
 import { createOfflineKv, isRefusal, memoryStore, type RemoteKv } from './offline.ts';
+import { createTables } from './tables.ts';
 
 /** A server kv that can be switched offline (throws like a failed fetch). */
 function fakeRemote() {
@@ -213,5 +214,116 @@ describe('on top of the real kv client', () => {
     for (const status of [401, 408, 429, 500, 503])
       expect(isRefusal(Object.assign(new Error('x'), { status }))).toBe(false);
     expect(isRefusal(new TypeError('Failed to fetch'))).toBe(false);
+  });
+});
+
+describe('offline tables', () => {
+  type Recipe = { id: string; title: string; owner_id?: string };
+
+  /** Server rows of one app table, keyed like the kv adapter does: `<table>/<id>`. */
+  function setupTables() {
+    const server = fakeRemote();
+    const store = memoryStore();
+    const engine = createOfflineKv(server.remote, async () => store);
+    return { server, ...engine, table: createTables(engine.rows) };
+  }
+
+  it('lists rows of the server and keeps them for offline', async () => {
+    const { server, table, offline } = setupTables();
+    const recipes = table<Recipe>('recipes');
+    server.data.set('table:recipes/a', { id: 'a', title: 'Suppe' });
+    server.data.set('table:recipes/b', { id: 'b', title: 'Brot' });
+    server.data.set('table:other/c', { id: 'c', title: 'nicht hier' });
+    expect((await recipes.list()).map((row) => row.title)).toEqual(['Suppe', 'Brot']);
+    server.setDown(true);
+    expect((await recipes.list()).map((row) => row.title)).toEqual(['Suppe', 'Brot']);
+    expect(await offline.pending()).toBe(0);
+  });
+
+  it('queues rows written offline and sends them in order when the connection is back', async () => {
+    const { server, table, offline } = setupTables();
+    const recipes = table<Recipe>('recipes');
+    server.setDown(true);
+    await recipes.upsert({ id: 'a', title: 'Suppe' });
+    await recipes.upsertMany([
+      { id: 'b', title: 'Brot' },
+      { id: 'a', title: 'Gemüsesuppe' },
+    ]);
+    await recipes.remove('b');
+    expect(await offline.pending()).toBe(4);
+    expect((await recipes.list()).map((row) => row.title)).toEqual(['Gemüsesuppe']);
+    server.setDown(false);
+    expect(await offline.sync()).toBe(4);
+    expect(server.data.get('table:recipes/a')).toEqual({ id: 'a', title: 'Gemüsesuppe' });
+    expect(server.data.has('table:recipes/b')).toBe(false);
+    expect(await offline.pending()).toBe(0);
+  });
+
+  it('gets one row and does not mix tables with kv', async () => {
+    const { server, kv, table } = setupTables();
+    await table<Recipe>('recipes').upsert({ id: 'a', title: 'Suppe' });
+    await kv.set('recipes/a', { x: 1 });
+    expect(await table<Recipe>('recipes').get('a')).toEqual({ id: 'a', title: 'Suppe' });
+    expect(await table<Recipe>('recipes').get('zzz')).toBeNull();
+    expect((await kv.list('')).map((entry) => entry.key)).toEqual(['recipes/a']);
+    expect(server.data.get('user:recipes/a')).toEqual({ x: 1 });
+  });
+
+  it('takes the server row again when the server refuses a queued row', async () => {
+    const { server, table, offline } = setupTables();
+    const recipes = table<Recipe>('recipes');
+    server.data.set('table:recipes/a', { id: 'a', title: 'Alt' });
+    await recipes.list();
+    server.setDown(true);
+    await recipes.upsert({ id: 'a', title: 'Neu' });
+    server.setDown(false);
+    server.setRefuse(true);
+    await offline.sync();
+    expect((await recipes.get('a'))?.title).toBe('Alt');
+  });
+
+  it('refuses names and ids that are no table or row', async () => {
+    const { table } = setupTables();
+    expect(() => table('Recipes')).toThrow(/bad table name/);
+    expect(() => table('a/b')).toThrow(/bad table name/);
+    expect(() => table('recipes', { conflict: 'owner_id' })).toThrow(/conflict key/);
+    expect(() => table('recipes', { conflict: 'owner_id,id' })).not.toThrow();
+    await expect(table<Recipe>('recipes').get('a/b')).rejects.toThrow(/without/);
+    await expect(table<Recipe>('recipes').upsert({ id: '', title: 'x' })).rejects.toThrow(/id/);
+  });
+  it('keeps a row deleted offline away when the server still lists it', async () => {
+    const { server, table, offline } = setupTables();
+    const recipes = table<Recipe>('recipes');
+    server.data.set('table:recipes/a', { id: 'a', title: 'Suppe' });
+    server.data.set('table:recipes/b', { id: 'b', title: 'Brot' });
+    await recipes.list();
+    server.setDown(true);
+    await recipes.remove('a');
+    server.setDown(false);
+    expect((await recipes.list()).map((row) => row.id)).toEqual(['b']);
+    expect(await offline.pending()).toBe(1);
+  });
+
+  it('drops local rows the server no longer has, but not unsent ones', async () => {
+    const { server, table } = setupTables();
+    const recipes = table<Recipe>('recipes');
+    server.data.set('table:recipes/a', { id: 'a', title: 'Suppe' });
+    await recipes.list();
+    server.data.delete('table:recipes/a');
+    server.setDown(true);
+    await recipes.upsert({ id: 'n', title: 'Neu' });
+    server.setDown(false);
+    expect((await recipes.list()).map((row) => row.id)).toEqual(['n']);
+  });
+
+  it('removes a new row the server refuses', async () => {
+    const { server, table, offline } = setupTables();
+    const recipes = table<Recipe>('recipes');
+    server.setDown(true);
+    await recipes.upsert({ id: 'x', title: 'Verboten' });
+    server.setDown(false);
+    server.setRefuse(true);
+    await offline.sync();
+    expect(await recipes.get('x')).toBeNull();
   });
 });

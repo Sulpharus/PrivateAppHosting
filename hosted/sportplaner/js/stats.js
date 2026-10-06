@@ -455,14 +455,14 @@ async function savePlan() {
 async function persistPlan(p) {
   writes++;
   const mn = await ready;
-  await mn.kv.set(PLAN + p.id, p);
+  await planTable(mn).upsert(planRow(p));
   S.plans = [...S.plans.filter((x) => x.id !== p.id), p];
   plansChanged();
 }
 async function removePlan(p) {
   writes++;
   const mn = await ready;
-  await mn.kv.delete(PLAN + p.id);
+  await planTable(mn).remove(p.id);
   S.plans = S.plans.filter((x) => x.id !== p.id);
   plansChanged();
 }

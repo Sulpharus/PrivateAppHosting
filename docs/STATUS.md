@@ -62,6 +62,7 @@ Where things are documented:
 | Language switch | Per person in Konto → "Sprache / Language" (de/en, profile + `mn-lang` cookie); every hosted app has `i18n/de.json` + `en.json`; new apps must ship both; doctor checks them; the KI-Werkstatt has a ready prompt to retrofit them (`docs/ai/RETROFIT-LANGUAGE.md`) | ADR 0017, `docs/ai/LANGUAGE-PACKAGES.md`, `packages/ui/kit/i18n.js`, `e2e/language.spec.ts` |
 | App logos | Verwaltung → Apps uploads a logo per app (bucket `app-icons`); deploy picks up `icon.svg`; prompt module "App-Logo"; tile buttons in their own row | ADR 0018, `apps/portal/src/lib/appIcon.ts`, `packages/cli/src/deploy/icon.ts`, `e2e/app-icons.spec.ts` |
 | Haushaltsinventar | Upload review `ee7721bb` (AI Studio "Steward") rebuilt on the platform: items with photo, receipt, warranty, owner, households, service dates and reminders (`mn.push`), backups that restore, Excel report; data mode `shared-account`, rose accent | `hosted/haushalts-inventar`, `e2e/haushalts-inventar.spec.ts` |
+| Tables for lists | `mn.table` (offline like kv), rule "lists are tables, kv is for settings" in CLAUDE.md, spec, prompts and the integrate skill, doctor rule `entity-collection-in-kv`. Sportplaner (`activities`, `plans`) and Haushalt (`bookings`, `recurring`, `categories`, `rules`, `tax_profiles`) moved from kv entries to tables; the first start copies the old entries once (flag `meta:tablesFrom`) and leaves them as a backup | ADR 0022, `packages/sdk/src/tables.ts`, `hosted/*/db/001_init.sql`, `hosted/sportplaner/js/tables.js`, `hosted/haushalt/store.js` |
 | Wissen | Verwaltung → Wissen: Wiki (34 German articles, search, generated reference pages for apps, workflows, commands, ADRs, runbooks) and a Startup-Guide checklist; the rule and a CI test keep it current | ADR 0021, `docs/wiki/`, `apps/portal/src/admin/{Wiki,Guide}.tsx`, `apps/portal/src/lib/wiki*.ts`, `e2e/wiki.spec.ts` |
 | Backups | Verwaltung → Sicherung: one password-protected archive (accounts with passwords, platform and app data, files, settings) made by `backup.yml`, downloaded from the page; `mininode backup create|verify|restore`; restore tested by a round trip on the local stack | ADR 0019, `docs/runbooks/backups.md`, `packages/cli/src/backup`, `apps/api/src/routes/backups.ts`, `e2e/backups.spec.ts` |
 | Uninstall | Verwaltung → Apps → Löschen: typed address, optional deletion of all data; `uninstall-app.yml` deletes the Worker (and schema, files, registry entry) and opens a pull request that removes `hosted/<slug>`; `mininode uninstall` | ADR 0020, `docs/runbooks/uninstall.md`, `packages/cli/src/deploy/uninstall.ts`, `e2e/uninstall.spec.ts` |
@@ -143,6 +144,10 @@ since the PR #12 deploy. Earlier deploys stopped at medialog and never shipped t
 
 ## Open and proposed work
 
+- **Contract step of the table move (ADR 0022):** Sportplaner and Haushalt still carry their old kv
+  entries (`act:`, `plan:`, `tx:`, `rec:`, `profile:`, `settings`) as a backup, and the copy code
+  (`copyFromKv`). After the owner has used both apps on the tables for a while and says so, a
+  release deletes the old entries and the copy code. Not before.
 - **Sharing the whole platform** (PLAN §15.2): proposed, the owner has not decided yet.
   - Next steps would be to move instance settings into one `mininode.config.json`, then
     generate a clean public template repository.
