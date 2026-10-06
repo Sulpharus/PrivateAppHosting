@@ -1,6 +1,6 @@
 // Rows of the app's own tables (`app_<slug>`), offline like `mn.kv`: the same local copy and the
-// same queue of changes (offline.ts). A table needs `id uuid primary key`; `owner_id` is filled by
-// the database (`platform.secure_table`). For queries, joins and sums on the server use `mn.db`.
+// same queue of changes (offline.ts). A table needs an `id` (a uuid, or text with the
+// primary key `(owner_id, id)`); `owner_id` is filled by the database (`platform.secure_table`). For queries, joins and sums on the server use `mn.db`.
 //
 // Things to know when using it:
 // - `upsert` sends the whole row: give every column (`null` clears one, a missing key or `undefined`

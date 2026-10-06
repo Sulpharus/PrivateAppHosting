@@ -211,7 +211,7 @@ export async function saveSettingsRows(mn, settings) {
  */
 // kv-collection-ok: reads the old kv entries once to copy them into the tables
 export async function copyFromKv(mn, fields) {
-  if (await mn.kv.get(MIGRATED)) return;
+  if ((await mn.kv.get(MIGRATED)) || !mn.offline.online()) return; // offline: the next start copies
   const [txs, recs, profiles, settings, haveBookings, haveRecs, haveProfiles, haveCats] =
     await Promise.all([
       mn.kv.list('tx:'),
@@ -235,24 +235,35 @@ export async function copyFromKv(mn, fields) {
     inRun.add(b.id);
     bookings.push(b);
   }
-  await bookingTable(mn).upsertMany(bookings.map(bookingToRow));
+  // One refused entry must not stop the others. What failed is counted: the flag is only set
+  // when everything was copied, so the next start tries the rest again.
+  let failed = 0;
+  const copy = async (job) => {
+    try {
+      await job();
+    } catch {
+      failed++;
+    }
+  };
+  for (const b of bookings) await copy(() => bookingTable(mn).upsert(bookingToRow(b)));
 
   const hasRec = new Set(haveRecs.map((r) => r.id));
   for (const { value } of recs) {
     const r = cleanRecurring(value);
-    if (r && !hasRec.has(r.id)) await recTable(mn).upsert(recRow(r));
+    if (r && !hasRec.has(r.id)) await copy(() => recTable(mn).upsert(recRow(r)));
   }
   const hasProfile = new Set(haveProfiles.map((r) => r.id));
   for (const { key, value } of profiles) {
     const year = key.slice('profile:'.length);
-    if (/^\d{4}$/.test(year) && !hasProfile.has(year))
-      await profileTable(mn).upsert(profileRow(Number(year), cleanProfile(value)));
+    if (/^\d{4}$/.test(year) && +year >= 1900 && +year <= 2200 && !hasProfile.has(year))
+      await copy(() => profileTable(mn).upsert(profileRow(Number(year), cleanProfile(value))));
   }
   if (!haveCats.length) {
     const next = settings
       ? cleanSettings(settings, fields)
       : { categories: DEFAULT_CATEGORIES, rules: DEFAULT_RULES };
-    await saveSettingsRows(mn, next);
+    await copy(() => saveSettingsRows(mn, next));
   }
+  if (failed) return;
   await mn.kv.set(MIGRATED, Date.now());
 }

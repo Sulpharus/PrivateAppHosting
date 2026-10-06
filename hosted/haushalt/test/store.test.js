@@ -33,6 +33,7 @@ function fakeMn(kv = {}) {
     };
   };
   const mn = {
+    offline: { online: () => true },
     table,
     kv: {
       get: async (key) => store.get(key) ?? null,
@@ -150,7 +151,81 @@ describe('rows and objects', () => {
   });
 });
 
+describe('what the columns refuse', () => {
+  it('drops impossible days and months instead of passing them on', () => {
+    expect(cleanBooking({ id: 'a', date: '2026-02-31', cents: 1 }, FIELDS)).toBeNull();
+    expect(cleanBooking({ id: 'a', date: '2026-13-01', cents: 1 }, FIELDS)).toBeNull();
+    const r = { id: 'r', cents: 1, start: '2026-13' };
+    expect(
+      rowRec({
+        ...recRow({
+          ...r,
+          start: '2026-01',
+          every: 1,
+          day: 1,
+          kind: 'expense',
+          cat: '',
+          type: 'abo',
+          match: '',
+          changes: [],
+          note: '',
+          text: '',
+          end: '',
+          until: '',
+        }),
+      }),
+    ).not.toBeNull();
+    expect(rowRec({ id: 'r', cents: 1, start_month: '2026-13-01' })).toBeNull();
+  });
+
+  it('keeps a category whose name is no text out', () => {
+    const s = rowsSettings(
+      [{ id: 'x', name: 42, kind: 'expense', budget_cents: 0, tax_field: '', position: 0 }],
+      [],
+      FIELDS,
+    );
+    expect(s.categories).toEqual([]);
+  });
+});
+
 describe('copy from the old kv storage', () => {
+  it('goes on after a refused entry, leaves the flag unset and tries again later', async () => {
+    const { mn, store, tables } = fakeMn({
+      'tx:2026-03-04:a': { id: 'a', date: '2026-03-04', cents: 5, text: 'x' },
+      'tx:2026-03-05:b': { id: 'b', date: '2026-03-05', cents: 6, text: 'y' },
+    });
+    const plain = mn.table;
+    let broken = true;
+    mn.table = (name) => {
+      const t = plain(name);
+      return {
+        ...t,
+        upsert: async (row) =>
+          broken && row.id === 'a' ? Promise.reject(new Error('refused')) : t.upsert(row),
+      };
+    };
+    await copyFromKv(mn, FIELDS);
+    expect([...tables.get('bookings').keys()]).toEqual(['b']);
+    expect(store.has(MIGRATED)).toBe(false);
+    broken = false;
+    await copyFromKv(mn, FIELDS);
+    expect([...tables.get('bookings').keys()].sort()).toEqual(['a', 'b']);
+    expect(store.has(MIGRATED)).toBe(true);
+  });
+
+  it('waits while offline', async () => {
+    const { mn, store } = fakeMn({ 'tx:2026-03-04:a': { id: 'a', date: '2026-03-04', cents: 5 } });
+    mn.offline.online = () => false;
+    await copyFromKv(mn, FIELDS);
+    expect(store.has(MIGRATED)).toBe(false);
+  });
+
+  it('skips a tax year the column refuses', async () => {
+    const { mn, tables } = fakeMn({ 'profile:0000': {}, 'profile:2025': { income: 1 } });
+    await copyFromKv(mn, FIELDS);
+    expect([...tables.get('tax_profiles').keys()]).toEqual(['2025']);
+  });
+
   const old = {
     'tx:2026-03-04:abc': {
       id: 'abc',

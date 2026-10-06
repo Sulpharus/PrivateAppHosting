@@ -185,7 +185,7 @@ function sanitizeAct(raw, keepMedia = false) {
     ...raw,
     ...texts,
     id: text(raw.id),
-    signup: raw.signup in SIGNUP ? raw.signup : 'none',
+    signup: Object.hasOwn(SIGNUP, raw.signup) ? raw.signup : 'none',
     visitPrice: Number.isFinite(raw.visitPrice) && raw.visitPrice > 0 ? raw.visitPrice : 0,
     access: {
       guest: acc.guest === true,
@@ -220,7 +220,7 @@ function sanitizeAct(raw, keepMedia = false) {
             from: raw.course.from,
             until: raw.course.until,
             ...(Number.isFinite(+raw.course.price) &&
-            +raw.course.price > 0 &&
+            Math.round(+raw.course.price * 100) > 0 &&
             +raw.course.price <= 100000
               ? {
                   price: Math.round(+raw.course.price * 100) / 100,
@@ -252,8 +252,8 @@ function sanitizePlan(raw) {
     provider: text(raw.provider),
     category: text(raw.category),
     notes: text(raw.notes),
-    type: raw.type in PTYPES ? raw.type : 'recurring',
-    unit: raw.unit in UNITS ? raw.unit : 'month',
+    type: Object.hasOwn(PTYPES, raw.type) ? raw.type : 'recurring',
+    unit: Object.hasOwn(UNITS, raw.unit) ? raw.unit : 'month',
     every: Number.isInteger(raw.every) && raw.every >= 1 && raw.every <= 100 ? raw.every : 1,
     visits: Number.isInteger(raw.visits) && raw.visits >= 1 ? raw.visits : 10,
     amount: Number.isFinite(amount) && amount >= 0 ? amount : 0,

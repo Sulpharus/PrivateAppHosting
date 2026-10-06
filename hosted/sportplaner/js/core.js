@@ -100,7 +100,11 @@ async function fetchBlob(r) {
 }
 const thumbSrc = (a, r) => (a.thumbs && a.thumbs[r] ? photoSrc(a.thumbs[r]) : photoSrc(r));
 const safeUrl = (u) => (/^https?:\/\//i.test(u || '') ? u : '#');
-const isDay = (v) => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v);
+const isDay = (v) => {
+  if (typeof v !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(v)) return false;
+  const d = new Date(`${v}T00:00:00Z`); // 2026-02-31 and 2026-13-40 are no days
+  return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === v;
+};
 const arr = (v) => (Array.isArray(v) ? v : []);
 const initials = (n) =>
   (n || '?')

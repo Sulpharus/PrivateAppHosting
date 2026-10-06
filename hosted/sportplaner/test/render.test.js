@@ -120,6 +120,10 @@ function boot(code) {
     out.actRow = actRow(full);
     out.planBack = [rowPlan(planRow(plan)), sanitizePlan(plan)];
     out.planOpen = rowPlan(planRow(sanitizePlan({ id: 'p0', name: 'Einzel', type: 'once', amount: 5 })));
+    // Values the columns refuse are cut or cleaned before they reach a row.
+    const odd = sanitizeAct({ id: 'o', name: 'x'.repeat(900), description: 'd'.repeat(30000), visitPrice: 1e12, signup: 'constructor', done: ['2026-02-31', '2026-03-01'], course: { from: '2026-01-01', until: '2026-02-01', price: 0.001 }, updatedAt: 1e30 }, true);
+    out.oddRow = actRow(odd);
+    out.oddPlan = planRow(sanitizePlan({ id: 'q', type: 'toString', unit: 'constructor', amount: 1e12, visits: 1e12 }));
     out.clean = [sanitizePlan({ ...plan, quota: { mode: 'credits', month: '12.7', day: -3 } }), sanitizePlan({ ...plan, quota: { mode: 'weird' } })];
     return out;`;
   window.mininode = { mininode: () => new Promise(() => {}) }; // no connection: never answers
@@ -174,6 +178,20 @@ describe('sportplaner views', () => {
     expect(out.planBack[0]).toEqual(out.planBack[1]);
     expect(out.planOpen.start).toBe('');
     expect(out.planOpen.quota).toBeUndefined();
+  });
+
+  it('keeps what the columns refuse out of the rows', () => {
+    const { oddRow, oddPlan } = boot('de');
+    expect(oddRow.name).toHaveLength(500);
+    expect(oddRow.description).toHaveLength(20000);
+    expect(oddRow.visit_price).toBeLessThan(1e8);
+    expect(oddRow.signup).toBe('none');
+    expect(oddRow.done).toEqual(['2026-03-01']);
+    expect(oddRow.course_price).toBeNull();
+    expect(oddRow.edited_ms).toBeLessThanOrEqual(1e15);
+    expect(oddPlan).toMatchObject({ type: 'recurring', unit: 'month' });
+    expect(oddPlan.amount).toBeLessThan(1e8);
+    expect(oddPlan.visits).toBeLessThanOrEqual(1e9);
   });
 
   it('render in English', () => {

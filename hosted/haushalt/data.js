@@ -49,8 +49,12 @@ export const DEFAULT_RULES = [
   ['KINDERGELD|FAMILIENKASSE', 'kindergeld'],
 ].map(([match, cat]) => ({ match, cat }));
 
-export const isDay = (v) => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v);
-export const isMonth = (v) => typeof v === 'string' && /^\d{4}-\d{2}$/.test(v);
+export const isDay = (v) => {
+  if (typeof v !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(v)) return false;
+  const d = new Date(`${v}T00:00:00Z`); // 2026-02-31 is no day
+  return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === v;
+};
+export const isMonth = (v) => typeof v === 'string' && /^\d{4}-(0[1-9]|1[0-2])$/.test(v);
 const str = (v, max) => (typeof v === 'string' ? v.slice(0, max) : '');
 const cents = (v) => (Number.isInteger(v) && v >= 0 && v < 1e11 ? v : null);
 
@@ -64,12 +68,15 @@ export function cleanBooking(raw, fields) {
     id,
     date: raw.date,
     cents: amount,
-    kind: raw.kind in KINDS ? raw.kind : 'expense',
+    kind: Object.hasOwn(KINDS, raw.kind) ? raw.kind : 'expense',
     cat: str(raw.cat, 60),
     text: str(raw.text, 200),
     party: str(raw.party, 120),
   };
-  if (raw.taxField === 'none' || (typeof raw.taxField === 'string' && raw.taxField in fields))
+  if (
+    raw.taxField === 'none' ||
+    (typeof raw.taxField === 'string' && Object.hasOwn(fields, raw.taxField))
+  )
     b.taxField = raw.taxField;
   if (cents(raw.taxCents) !== null) b.taxCents = raw.taxCents;
   if (
@@ -87,13 +94,15 @@ export function cleanBooking(raw, fields) {
 export function cleanSettings(raw, fields) {
   const cats = Array.isArray(raw?.categories) ? raw.categories : [];
   const categories = cats
-    .filter((c) => c && typeof c.id === 'string' && /^[\w-]{1,60}$/.test(c.id) && c.name)
+    .filter(
+      (c) => c && typeof c.id === 'string' && /^[\w-]{1,60}$/.test(c.id) && str(c.name, 60).trim(),
+    )
     .map((c) => ({
       id: c.id,
       name: str(c.name, 60),
-      kind: c.kind in KINDS ? c.kind : 'expense',
+      kind: Object.hasOwn(KINDS, c.kind) ? c.kind : 'expense',
       budget: cents(c.budget) ?? 0,
-      tax: typeof c.tax === 'string' && c.tax in fields ? c.tax : '',
+      tax: typeof c.tax === 'string' && Object.hasOwn(fields, c.tax) ? c.tax : '',
     }));
   const rules = (Array.isArray(raw?.rules) ? raw.rules : [])
     .filter((r) => r && typeof r.match === 'string' && r.match.trim() && typeof r.cat === 'string')
@@ -128,14 +137,18 @@ export function cleanRecurring(raw) {
     id: raw.id,
     text: str(raw.text, 200),
     cents: amount,
-    kind: raw.kind in KINDS ? raw.kind : 'expense',
+    kind: Object.hasOwn(KINDS, raw.kind) ? raw.kind : 'expense',
     cat: str(raw.cat, 60),
     every: [1, 3, 6, 12].includes(raw.every) ? raw.every : 1,
     day: Number.isInteger(raw.day) && raw.day >= 1 && raw.day <= 28 ? raw.day : 1,
     start: raw.start,
     end: isMonth(raw.end) ? raw.end : '',
     until: isMonth(raw.until) ? raw.until : '',
-    type: raw.type in FIXED_TYPES ? raw.type : raw.kind === 'income' ? 'einnahme' : 'sonstiges',
+    type: Object.hasOwn(FIXED_TYPES, raw.type)
+      ? raw.type
+      : raw.kind === 'income'
+        ? 'einnahme'
+        : 'sonstiges',
     // words that identify its payments in a bank import ("NETFLIX|NETFLIX.COM")
     match: str(raw.match, 200),
     // price changes: from this month on, this amount

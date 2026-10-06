@@ -49,6 +49,11 @@ stay with kv: `mn.db` talks to PostgREST and needs a connection.
 
 ## Consequences
 
+- The one-time copy runs per entry: a refused entry is skipped and counted, the flag `meta:tablesFrom`
+  is only set when everything was copied, and it waits while offline. Two devices copying at the same
+  moment can let the older kv copy overwrite a fresh edit of the other device (the table has no
+  insert-or-ignore); accepted, because it needs two first starts within seconds.
+
 - New apps get tables for their lists from the first version; the spec, the prompts and the
   integration skill say so, and doctor flags the old habit.
 - Offline works for rows as before, with the same limits as kv (no merge inside a row; the last
