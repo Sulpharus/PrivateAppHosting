@@ -53,7 +53,23 @@ jobs:
             'Expected a personal access token (supabase.com → Account → Access Tokens, sbp_…), not a project API key.'
       - name: Link and push migrations
         run: |
-          supabase link --project-ref "$SUPABASE_PROJECT_REF"
+          if ! supabase link --project-ref "$SUPABASE_PROJECT_REF"; then
+            # Say why Supabase refused, without printing a secret: only status codes and error bodies.
+            echo "::group::Why the link failed (Management API)"
+            for path in "projects/$SUPABASE_PROJECT_REF" "projects" "organizations"; do
+              code=$(curl -sS -o /tmp/api.json -w '%{http_code}' \
+                -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" "https://api.supabase.com/v1/$path" || true)
+              echo "GET /v1/$path -> HTTP $code"
+              if [ "$code" != "200" ]; then head -c 400 /tmp/api.json; echo; fi
+              if [ "$path" = "projects" ] && [ "$code" = "200" ]; then
+                echo "projects the token can see (ref, status):"
+                jq -r '.[] | "  \(.id // .ref) \(.status)"' /tmp/api.json
+              fi
+            done
+            echo "::endgroup::"
+            supabase link --project-ref "$SUPABASE_PROJECT_REF" --debug || true
+            exit 1
+          fi
           supabase db push
       - name: Push auth settings (production only; staging has no domain yet)
         if: env.DEPLOY_ENV == 'production'
