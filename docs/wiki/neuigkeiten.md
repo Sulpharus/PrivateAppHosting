@@ -11,6 +11,7 @@ Jede Änderung am System bekommt hier eine Zeile (siehe [Wissen aktuell halten](
 
 | Datum | Neu | Wo |
 | --- | --- | --- |
+| 06.10. | **Wunschliste lädt wieder**: das Schema der Daten-Schnittstelle wird nach dem Foto-Update neu geladen; bei einem Ladefehler steht jetzt die Ursache in der Meldung | App Wunschliste |
 | 06.10. | **Karte zeigt wieder Kacheln**: die Stile „Hell“ und „Dunkel“ nutzten CARTO, das jetzt einen API-Schlüssel verlangt; sie laufen nun über OpenStreetMap (Dunkel per Farbfilter) | Kalender → Karte, Aether Notes → Karte |
 | 05.10. | **Karten-Dienst mit Schlüssel**: Kalender und Aether Notes melden Geoapify (Adressen, Wege) bei den API-Schlüsseln an; ohne Schlüssel laufen die freien OpenStreetMap-Dienste weiter | Verwaltung → API-Schlüssel |
 | 05.10. | **Kalender: Karte** mit Terminen, Wegen und Fahrzeiten (Warnung bei zu knapper Zeit, Startpunkt, Auto/Fahrrad/zu Fuß, mehrere Kartenstile); **Aether Notes: Karte** der Wohnorte als Markierungen, Heatmap und Orte, „Wer wohnt in der Nähe?“ (auch um den Ort eines Treffens), Treffen mit Ort erscheinen im Kalender; „CRM“ und „Karte“ jetzt auch auf dem Handy erreichbar | Kalender → Karte, Aether Notes → Karte |

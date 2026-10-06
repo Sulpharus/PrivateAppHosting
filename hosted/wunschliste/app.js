@@ -113,8 +113,10 @@ async function load() {
     S.people = people.data.filter((p) => !p.mine);
     S.reservations = reservations.data;
     if (S.person) await loadPerson();
-  } catch {
-    S.error = t('error.load');
+  } catch (err) {
+    console.error('wunschliste: load failed', err);
+    const detail = err instanceof Error || (err && typeof err === 'object') ? err.message : '';
+    S.error = detail ? `${t('error.load')} (${detail})` : t('error.load');
   }
   S.loading = false;
   render();
