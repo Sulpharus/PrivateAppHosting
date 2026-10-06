@@ -920,10 +920,11 @@ export default function App() {
       description: parsedDesc,
       amount: parsedAmount,
       paidById: payerId,
-      date: 'Today',
+      date: localIso(),
       category: 'Dining',
       splitType: 'equal',
       splitDetails,
+      participantIds: splitWithIds,
     };
 
     const newActivity: ActivityLog = {
@@ -1170,7 +1171,8 @@ export default function App() {
     setCustomSplitDetails(exp.splitDetails ?? {});
     setBillPaidById(exp.paidById);
     setBillParticipants(group ? participantsOf(exp, group.memberIds) : (exp.participantIds ?? []));
-    setBillDate(/^\d{4}-\d{2}-\d{2}$/.test(exp.date) ? exp.date : localIso());
+    // An older record may say "Today"; it keeps that until a date is chosen.
+    setBillDate(/^\d{4}-\d{2}-\d{2}$/.test(exp.date) ? exp.date : '');
     setBillDueDate(exp.dueDate ?? '');
     setBillReceiptUrl(exp.receiptUrl ?? '');
     setBillReceiptName(exp.receiptName ?? '');
@@ -1280,7 +1282,10 @@ export default function App() {
       description: billDescription.trim(),
       amount,
       paidById: payerId,
-      date: billDate || localIso(),
+      date:
+        billDate ||
+        (editingExpenseId ? expenses.find((x) => x.id === editingExpenseId)?.date : '') ||
+        localIso(),
       dueDate: billDueDate || undefined,
       category: billCategory,
       splitType: billSplitType,
@@ -1302,7 +1307,7 @@ export default function App() {
         memberId: payerId,
         type: 'expense_added',
         title: `${findMember(payerId).name} ${t.expenseAddedLog} "${expense.description}"`,
-        amount: -(amount / billParticipants.length),
+        amount: -(fromCents(expenseShares(expense, targetGroup.memberIds)[payerId] ?? 0)),
         date: new Date().toISOString(),
       };
       setActivities((prev) => {
@@ -1395,7 +1400,7 @@ export default function App() {
       fromMemberId: isUserOwes ? currentPayerId : settleTargetMemberId,
       toMemberId: isUserOwes ? settleTargetMemberId : currentPayerId,
       amount,
-      date: 'Today',
+      date: localIso(),
       verified: true,
     };
 
@@ -1585,7 +1590,7 @@ export default function App() {
         description: billDescription || (lang === 'de' ? 'Neue Rechnung' : 'New Bill'),
         amount: parsedAmount || share * memberCount,
         paidById: currentPayerId,
-        date: 'Today',
+        date: localIso(),
         category: billCategory,
         splitType: billSplitType,
         splitDetails: {},
@@ -1617,7 +1622,7 @@ export default function App() {
       fromMemberId: currentUserId,
       toMemberId: payer.id,
       amount,
-      date: 'Today',
+      date: localIso(),
       verified: true,
     };
 
@@ -3682,7 +3687,7 @@ export default function App() {
                                     description: billDescription || 'Receipt Preview',
                                     amount: billAmountValue,
                                     paidById: currentUser?.id || 'u1',
-                                    date: 'Today',
+                                    date: localIso(),
                                     dueDate: billDueDate,
                                     category: billCategory,
                                     splitType: billSplitType,
@@ -3724,7 +3729,7 @@ export default function App() {
                                     description: billDescription || 'Receipt Preview',
                                     amount: billAmountValue,
                                     paidById: currentUser?.id || 'u1',
-                                    date: 'Today',
+                                    date: localIso(),
                                     dueDate: billDueDate,
                                     category: billCategory,
                                     splitType: billSplitType,

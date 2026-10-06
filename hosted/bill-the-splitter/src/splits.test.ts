@@ -130,3 +130,10 @@ describe('formatMoney', () => {
     expect(formatMoney(1234.5, 'en')).toBe('€1,234.50');
   });
 });
+
+describe('legacy records', () => {
+  it('splits an old expense without participants among all members', () => {
+    const old = { id: 'e', groupId: 'g', description: 'x', amount: 30, paidById: 'a', date: 'Today', category: 'Food', splitType: 'equal' as const, splitDetails: {}, };
+    expect(expenseShares(old, ['a', 'b', 'c'])).toEqual({ a: 1000, b: 1000, c: 1000 });
+  });
+});

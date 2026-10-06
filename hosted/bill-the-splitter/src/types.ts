@@ -65,5 +65,5 @@ export interface ActivityLog {
   type: 'expense_added' | 'settlement_made' | 'reminder_sent' | 'group_updated';
   title: string;
   amount?: number;
-  date: string; // e.g. "2 hours ago", "Yesterday"
+  date: string; // ISO timestamp; older records may hold words like "Just now"
 }
