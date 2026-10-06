@@ -11,6 +11,7 @@ Jede Änderung am System bekommt hier eine Zeile (siehe [Wissen aktuell halten](
 
 | Datum | Neu | Wo |
 | --- | --- | --- |
+| 06.10. | **Geburtstage in der Wunschliste**: neuer Tab mit Countdown für Personen auf MiniNode (wenn sie ihren Geburtstag im Konto freigegeben haben), Kontakte aus Aether Notes und selbst eingetragene Personen; Geschenkideen mit Stand und Budget, Erinnerung vor dem Geburtstag (Standard 14 Tage, 9 Uhr). **Aether Notes** zeigt die Geburtstage seiner Kontakte jetzt im Kalender (Einstellungen → Geburtstage; Admin-Freigabe `event` nötig, die Wunschliste braucht Lesen) | Wunschliste → Geburtstage; Aether Notes → Einstellungen |
 | 06.10. | **Fertige App-Aufträge** (`docs/ai/briefs/`) für Projekte (Teams), Fahrzeuge (mit KI-Websuche) und Geburtstage; `scripts/compose-brief.ts` baut daraus den vollständigen Prompt für AI Studio | Wissen → KI-Werkstatt |
 | 06.10. | **Geburtstag im Konto** (ADR 0025, freiwillig, nur für Personen derselben Apps sichtbar, wenn du es erlaubst) mit `mn.birthdays()` für Apps; **KI mit Websuche und Quellen** (ADR 0024, `mn.ai.search`, Manifest `ai.search`) | Dein Konto → Geburtstag; Wissen → KI-Proxy |
 | 06.10. | **Teams für Apps** (ADR 0023): neuer Datenmodus `team`, `mn.team` (Teams, Rollen Ansehen/Bearbeiten/Verwalten, Hinweise an Mitglieder), Dateien je Team, Google-Drive-Bereich `drive.file` für Apps; Grundlage für einen Projektmanager | Wissen → Daten speichern, Google |

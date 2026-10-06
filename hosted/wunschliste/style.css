@@ -99,3 +99,59 @@
   min-height: 44px;
   max-width: 100%;
 }
+
+/* Birthdays tab: filter chips, groups, the day counter in front of a row. */
+.bd-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mn-s2);
+  margin-bottom: var(--mn-s3);
+}
+.bd-chip {
+  min-height: 44px;
+  cursor: pointer;
+}
+.bd-chip[aria-pressed="true"] {
+  background: var(--mn-accent-soft);
+  color: var(--mn-accent-ink);
+  border-color: var(--mn-accent);
+}
+.bd-group {
+  font-size: var(--mn-fs-sm);
+  color: var(--mn-muted);
+  margin: var(--mn-s4) 0 var(--mn-s1);
+  font-weight: 600;
+}
+.bd-days {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+.bd-days--today {
+  background: var(--mn-accent);
+  color: var(--mn-accent-ink);
+}
+.bd-days svg {
+  width: 20px;
+  height: 20px;
+}
+.bd-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mn-s1);
+  margin-top: var(--mn-s1);
+}
+.bd-row--hidden {
+  opacity: 0.6;
+}
+.bd-sub {
+  font-size: var(--mn-fs-md);
+  margin: var(--mn-s3) 0 0;
+}
+.bd-ideas {
+  margin: var(--mn-s2) 0;
+}
+.mn-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--mn-s3);
+}

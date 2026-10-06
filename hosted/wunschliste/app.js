@@ -3,6 +3,7 @@
 // Tables: wishes (own list) and reservations (own shopping list); the functions people(),
 // wishlist(owner) and reserve(wish) show and reserve other people's wishes.
 import { euro, parseLink, parsePrice } from './amazon.js';
+import { createBirthdayView } from './birthday-view.js';
 import { buildWishlistPdf } from './wishlist-pdf.js';
 
 // ---------- helpers ----------
@@ -72,7 +73,7 @@ const dateLabel = (iso) => window.mnui.date.format(new Date(iso));
 // ---------- state ----------
 const params = new URLSearchParams(location.search);
 const S = {
-  tab: params.get('person') ? 'others' : 'mine',
+  tab: params.get('person') ? 'others' : params.get('tab') === 'birthdays' ? 'birthdays' : 'mine',
   person: params.get('person'),
   me: null,
   wishes: [],
@@ -89,6 +90,18 @@ const ready = (async () => {
   S.me = user?.id ?? null;
   return client;
 })();
+
+const birthdays = createBirthdayView({
+  h,
+  t,
+  icon,
+  toast,
+  ready,
+  locale,
+  S,
+  render: () => render(),
+  openPerson: (id) => openPerson(id),
+});
 
 async function load() {
   const mn = await ready;
@@ -113,6 +126,8 @@ async function load() {
     S.people = people.data.filter((p) => !p.mine);
     S.reservations = reservations.data;
     if (S.person) await loadPerson();
+    // The birthdays have their own sources; one that fails never breaks the other tabs.
+    await birthdays.load().catch((err) => console.error('wunschliste: birthdays failed', err));
   } catch (err) {
     console.error('wunschliste: load failed', err);
     const detail = err instanceof Error || (err && typeof err === 'object') ? err.message : '';
@@ -148,6 +163,7 @@ function render() {
   if (S.error) main.append(h('div', { class: 'mn-banner mn-banner--bad', role: 'alert' }, S.error));
   if (S.tab === 'mine') renderMine(main, tools);
   else if (S.tab === 'others') renderOthers(main, tools);
+  else if (S.tab === 'birthdays') birthdays.renderTab(main, tools, header);
   else renderShopping(main);
 }
 
@@ -357,7 +373,9 @@ function renderOthers(main, tools) {
 
 function renderPerson(main, tools) {
   const person = S.people.find((p) => p.user_id === S.person);
-  const name = person?.display_name ?? t('app.title');
+  // A person from the birthday list may not have a wishlist yet: the name is still known.
+  const name =
+    person?.display_name ?? S.bd?.mn.find((p) => p.id === S.person)?.name ?? t('app.title');
   const open = S.personWishes.filter((w) => w.status === 'frei').length;
   header(
     name,

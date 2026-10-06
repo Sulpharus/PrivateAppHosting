@@ -7,6 +7,16 @@ with the rose accent. Built on MiniNode (not ported from an export).
 
 ## What it does
 
+- **Geburtstage:** a tab that counts down to birthdays (`birthday-view.js`, pure logic in
+  `birthdays.js`, tests in `test/birthdays.test.js`). Three sources, merged into one list (one row per
+  person, MiniNode first): people on MiniNode who shared their birthday in "Dein Konto"
+  (`mn.birthdays()`, ADR 0025), contacts of Aether Notes (yearly all-day suite events with the key
+  `birthday:…`, read with `suite.uses` `event` `read`, which the admin approves; year 1904 means "no
+  year") and people typed in here (`birthday_people`). Per person: reminder (days before, default
+  14, 9:00, `mn.push`, one per person and year), budget, hide, and gift ideas with status
+  idea/bought/given (`gift_ideas`, `birthday_prefs`, see `db/004_birthdays.sql`). The settings
+  default lives in `mn.kv` (`birthday-settings`).
+
 - **Meine Liste:** add wishes by hand or from a link. An Amazon link is shortened to
   `amazon.<tld>/dp/<ASIN>` (tracking removed), and its readable part becomes the title
   (`amazon.js`; nothing is fetched from Amazon). Optional price, priority (Sehr gern / Gern /

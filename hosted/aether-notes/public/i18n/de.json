@@ -546,5 +546,9 @@
   "ui.upcomingReminders": "Anstehende Erinnerungen",
   "ui.viewInCrm": "Im CRM öffnen",
   "ui.workCategory": "Arbeit",
-  "ui.workTasks": "Aufgaben"
+  "ui.workTasks": "Aufgaben",
+  "suite.birthday": "Geburtstag",
+  "settings.birthdaysTitle": "Geburtstage",
+  "settings.birthdaysInCalendar": "Geburtstage im Kalender zeigen",
+  "settings.birthdaysHint": "Der Kalender und die Wunschliste zeigen die Geburtstage deiner Kontakte und Personen an, damit du rechtzeitig an ein Geschenk denkst. Ausgeschaltet entfernt Aether sie dort wieder."
 }

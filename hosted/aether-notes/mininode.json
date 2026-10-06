@@ -51,7 +51,7 @@
       {
         "type": "event",
         "access": "delete",
-        "why": "Treffen im Kalender mit Ort zeigen"
+        "why": "Treffen und Geburtstage im Kalender zeigen"
       }
     ]
   }

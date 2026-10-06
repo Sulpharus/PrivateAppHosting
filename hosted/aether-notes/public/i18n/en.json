@@ -546,5 +546,9 @@
   "ui.upcomingReminders": "Upcoming Reminders",
   "ui.viewInCrm": "Open in CRM",
   "ui.workCategory": "Work",
-  "ui.workTasks": "Tasks"
+  "ui.workTasks": "Tasks",
+  "suite.birthday": "Birthday",
+  "settings.birthdaysTitle": "Birthdays",
+  "settings.birthdaysInCalendar": "Show birthdays in the calendar",
+  "settings.birthdaysHint": "The Kalender and the Wunschliste show the birthdays of your contacts and people so you think of a present in time. Switched off, Aether removes them there again."
 }

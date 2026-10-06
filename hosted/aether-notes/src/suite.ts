@@ -1,3 +1,4 @@
+import { birthdayFields } from './birthdays';
 import { loadGeo, lookUp, pointOf } from './geo';
 import { MiniNode } from './mininode';
 
@@ -5,6 +6,8 @@ import { MiniNode } from './mininode';
 // map. Each meetup is one record with the source key "meetup:<id>" (or "people:<id>" for the ones of
 // the people view); changed ones are written again, deleted ones removed. Without the admin's
 // approval of `suite.uses` the database refuses and the app simply goes on without it.
+// The birthdays of contacts and people are yearly all-day records too ("birthday:c:<id>",
+// "birthday:p:<id>"), unless the person switched them off in the settings (BIRTHDAYS_OFF).
 
 interface Wanted {
   title: string;
@@ -29,6 +32,8 @@ interface Meetup {
   personId?: string;
 }
 
+/** kv key: set to true when birthdays should not go to the Kalender. */
+export const BIRTHDAYS_OFF = 'aether_birthdays_off';
 const PAST_DAYS = 30;
 const LOOKUPS_PER_RUN = 12;
 let off = false;
@@ -79,11 +84,12 @@ async function sync() {
   if (off || running) return;
   running = true;
   try {
-    const [crm, contactsMap, peopleMap, peopleMeetups] = await Promise.all([
+    const [crm, contactsMap, peopleMap, peopleMeetups, birthdaysOff] = await Promise.all([
       MiniNode.db.list('meetups') as Promise<Record<string, Meetup>>,
-      MiniNode.db.list('contacts') as Promise<Record<string, { name: string }>>,
-      MiniNode.db.list('people') as Promise<Record<string, { name: string }>>,
+      MiniNode.db.list('contacts') as Promise<Record<string, { name: string; birthday?: string }>>,
+      MiniNode.db.list('people') as Promise<Record<string, { name: string; birthday?: string }>>,
       MiniNode.db.getItem('aether_people_meetups') as Promise<Meetup[] | undefined>,
+      MiniNode.db.getItem(BIRTHDAYS_OFF) as Promise<boolean | undefined>,
     ]);
     const nameOf = (ids: (string | undefined)[], from: Record<string, { name: string }>) =>
       ids
@@ -101,6 +107,20 @@ async function sync() {
         `people:${m.id}`,
         wantedOf(m, nameOf(m.personIds?.length ? m.personIds : [m.personId], peopleMap)),
       );
+
+    // birthdays: one yearly record per contact or person with a valid birthday
+    const birthdays = new Map<string, NonNullable<ReturnType<typeof birthdayFields>>>();
+    if (birthdaysOff !== true) {
+      const label = window.mnI18n.t('suite.birthday');
+      for (const [prefix, from] of [
+        ['c', contactsMap],
+        ['p', peopleMap],
+      ] as const)
+        for (const [id, who] of Object.entries(from)) {
+          const fields = birthdayFields(who.name, who.birthday, label);
+          if (fields) birthdays.set(`birthday:${prefix}:${id}`, fields);
+        }
+    }
 
     // places: look up what is unknown (a few per run), then every record carries its point
     await loadGeo();
@@ -122,6 +142,16 @@ async function sync() {
     const byKey = new Map(mine.map((r) => [r.source_key, r]));
     const same = (a: unknown, b: unknown) => (a ?? null) === (b ?? null);
     const jobs: (() => Promise<unknown>)[] = [];
+    for (const [key, fields] of birthdays) {
+      const rec = byKey.get(key);
+      const unchanged =
+        rec &&
+        same(rec.title, fields.title) &&
+        new Date(rec.starts_at ?? 0).getTime() === new Date(fields.starts_at).getTime() &&
+        same(rec.data?.description, fields.data.description) &&
+        same((rec.data?.recurrence as { rrule?: string } | undefined)?.rrule, 'FREQ=YEARLY');
+      if (!unchanged) jobs.push(() => events.upsert(fields, { sourceKey: key }));
+    }
     for (const [key, w] of wanted) {
       if (!w) continue;
       const point = pointOf(w.fields.place_name);
@@ -152,9 +182,15 @@ async function sync() {
     // Meetups that are gone leave the Kalender (old ones stay as history). Only when the lists were
     // really read: a device that is offline with an empty local copy must not empty the Kalender.
     const listsRead =
-      navigator.onLine && Object.keys(crm).length + (peopleMeetups?.length ?? 0) > 0;
+      navigator.onLine &&
+      Object.keys(crm).length +
+        (peopleMeetups?.length ?? 0) +
+        Object.keys(contactsMap).length +
+        Object.keys(peopleMap).length >
+        0;
     for (const rec of mine)
-      if (listsRead && !wanted.has(rec.source_key ?? '')) jobs.push(() => events.delete(rec.id));
+      if (listsRead && !wanted.has(rec.source_key ?? '') && !birthdays.has(rec.source_key ?? ''))
+        jobs.push(() => events.delete(rec.id));
     const queue = [...jobs];
     await MiniNode.db.setItem('aether_suite_places', written).catch(() => undefined);
     const worker = async () => {

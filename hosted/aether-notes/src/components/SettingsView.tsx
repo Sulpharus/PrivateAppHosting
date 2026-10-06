@@ -4,9 +4,10 @@
  */
 
 import type React from 'react';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from '../contexts/TranslationContext';
-import { exportContactsCsv, exportMiniNodeBackup } from '../mininode';
+import { exportContactsCsv, exportMiniNodeBackup, MiniNode } from '../mininode';
+import { BIRTHDAYS_OFF, scheduleSuiteSync } from '../suite';
 import type {
   Contact,
   Interaction,
@@ -50,6 +51,19 @@ export default function SettingsView({
   const [importStatus, setImportStatus] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Birthdays go to the Kalender (and the Wunschliste) unless this is switched off.
+  const [birthdaysOn, setBirthdaysOn] = useState(true);
+  useEffect(() => {
+    void Promise.resolve(MiniNode.db.getItem(BIRTHDAYS_OFF)).then((off) =>
+      setBirthdaysOn(off !== true),
+    );
+  }, []);
+  const toggleBirthdays = async (on: boolean) => {
+    setBirthdaysOn(on);
+    await MiniNode.db.setItem(BIRTHDAYS_OFF, !on);
+    scheduleSuiteSync(500);
+  };
 
   const handleExportBackup = () => {
     exportMiniNodeBackup(workspaceData);
@@ -163,6 +177,26 @@ export default function SettingsView({
             </button>
           </div>
         </div>
+      </div>
+
+      <div className="bg-surface-container-low p-6 md:p-8 rounded-2xl border border-outline-variant/30 flex flex-col gap-3 shadow-sm">
+        <h4 className="font-sans text-base font-bold text-on-surface">
+          {t('settings.birthdaysTitle')}
+        </h4>
+        <label className="flex items-center gap-3 min-h-11 cursor-pointer">
+          <input
+            type="checkbox"
+            className="h-5 w-5"
+            checked={birthdaysOn}
+            onChange={(event) => void toggleBirthdays(event.target.checked)}
+          />
+          <span className="font-sans text-sm text-on-surface">
+            {t('settings.birthdaysInCalendar')}
+          </span>
+        </label>
+        <p className="font-serif text-xs text-on-surface-variant leading-relaxed">
+          {t('settings.birthdaysHint')}
+        </p>
       </div>
 
       {/* MiniNode Data & Backup Section */}
