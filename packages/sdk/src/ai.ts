@@ -13,6 +13,13 @@ export interface AiChatOptions {
   maxOutputTokens?: number;
   temperature?: number;
   signal?: AbortSignal;
+  /** Let the model search the web (apps with `ai.search` in mininode.json; chat only). */
+  search?: boolean;
+}
+
+export interface AiSource {
+  title: string;
+  url: string;
 }
 
 export class AiError extends Error {
@@ -58,6 +65,7 @@ export function createAi(config: MininodeConfig, token: TokenSource) {
     system: options.system,
     maxOutputTokens: options.maxOutputTokens,
     temperature: options.temperature,
+    search: options.search ? true : undefined,
   });
 
   return {
@@ -66,6 +74,25 @@ export function createAi(config: MininodeConfig, token: TokenSource) {
       const response = await post('/v1/chat', toRequest(messages, options), options.signal);
       const data = (await response.json()) as { text: string };
       return data.text;
+    },
+
+    /**
+     * Like `chat` with the web search on, and the pages the answer relies on:
+     * `{ text, sources: [{ title, url }] }`. The app needs `ai.search` in mininode.json; every
+     * request costs a bit extra. To get structured data from the result, call `json` afterwards
+     * with the text as input.
+     */
+    async search(
+      messages: AiMessage[] | string,
+      options: AiChatOptions = {},
+    ): Promise<{ text: string; sources: AiSource[] }> {
+      const response = await post(
+        '/v1/chat',
+        toRequest(messages, { ...options, search: true }),
+        options.signal,
+      );
+      const data = (await response.json()) as { text: string; sources?: AiSource[] };
+      return { text: data.text, sources: data.sources ?? [] };
     },
 
     /** Streams the answer; yields text deltas as they arrive. */

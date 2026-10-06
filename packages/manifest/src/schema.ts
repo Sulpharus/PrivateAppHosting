@@ -41,7 +41,14 @@ export const slugSchema = z
 export const roleSchema = z.enum(['admin', 'trusted', 'user']);
 export const kindSchema = z.enum(['static', 'spa', 'nextjs', 'container', 'remote']);
 export const targetSchema = z.enum(['cloudflare', 'vercel', 'nucbox', 'remote']);
-export const dataModeSchema = z.enum(['none', 'private', 'shared-account', 'group', 'readonly']);
+export const dataModeSchema = z.enum([
+  'none',
+  'private',
+  'shared-account',
+  'group',
+  'readonly',
+  'team',
+]);
 export const aiModelSchema = z.enum([
   'gemini-flash',
   'gemini-pro',
@@ -68,10 +75,14 @@ const aiSchema = z
     models: z.array(aiModelSchema).min(1),
     monthlyBudgetEur: z.number().positive().max(100).default(2),
     maxOutputTokens: z.number().int().positive().max(16_000).default(2_000),
+    /** The app may let the model search the web (costs extra per request, ADR 0024). */
+    search: z.boolean().default(false),
   })
   .strict();
 
 export const googleAccessSchema = z.enum(['read', 'write']);
+/** Drive: only files the app created or the person opened with it (`drive.file`), never all of Drive. */
+export const googleDriveAccessSchema = z.enum(['file']);
 
 /**
  * Google services the app uses on behalf of the signed-in user (ADR 0004). `read` sees mails or
@@ -81,9 +92,13 @@ const googleSchema = z
   .object({
     gmail: googleAccessSchema.optional(),
     calendar: googleAccessSchema.optional(),
+    drive: googleDriveAccessSchema.optional(),
   })
   .strict()
-  .refine((g) => g.gmail || g.calendar, 'google needs at least one service (gmail, calendar)');
+  .refine(
+    (g) => g.gmail || g.calendar || g.drive,
+    'google needs at least one service (gmail, calendar, drive)',
+  );
 
 /** OAuth scope for each service and access level. */
 export const GOOGLE_SCOPES = {
@@ -94,6 +109,9 @@ export const GOOGLE_SCOPES = {
   calendar: {
     read: 'https://www.googleapis.com/auth/calendar.readonly',
     write: 'https://www.googleapis.com/auth/calendar',
+  },
+  drive: {
+    file: 'https://www.googleapis.com/auth/drive.file',
   },
 } as const;
 
@@ -108,6 +126,7 @@ export function googleScopes(google: Manifest['google']): string[] {
   const scopes: string[] = [];
   if (google.gmail) scopes.push(GOOGLE_SCOPES.gmail[google.gmail]);
   if (google.calendar) scopes.push(GOOGLE_SCOPES.calendar[google.calendar]);
+  if (google.drive) scopes.push(GOOGLE_SCOPES.drive[google.drive]);
   return scopes;
 }
 
@@ -116,7 +135,7 @@ export function googleConnectSrc(google: Manifest['google']): string[] {
   if (!google) return [];
   return [
     ...(google.gmail ? ['https://gmail.googleapis.com'] : []),
-    ...(google.calendar ? ['https://www.googleapis.com'] : []),
+    ...(google.calendar || google.drive ? ['https://www.googleapis.com'] : []),
   ];
 }
 

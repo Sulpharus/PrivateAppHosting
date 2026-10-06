@@ -60,6 +60,46 @@ test('the account page switches the language and keeps it in the profile and the
   await expect.poll(() => cookieOf(context)).toBe('de');
 });
 
+test('the account page keeps a birthday and shares it only when asked', async ({ page }) => {
+  await page.goto('/login');
+  await page.getByLabel('E-Mail').fill(email);
+  await page.getByLabel('Passwort', { exact: true }).fill(PASSWORD);
+  await page.getByRole('button', { name: 'Anmelden', exact: true }).click();
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('Lena');
+  await page.goto('/account');
+  const section = page.getByRole('region', { name: 'Geburtstag' });
+  await section.getByLabel('Tag').fill('30');
+  await section.getByLabel('Monat').fill('2');
+  await section.getByRole('button', { name: 'Speichern' }).click();
+  await expect(page.getByText('Das Datum gibt es nicht')).toBeVisible();
+
+  await section.getByLabel('Tag').fill('14');
+  await section.getByLabel('Monat').fill('3');
+  await section.getByLabel('Für andere Personen sichtbar').check();
+  await section.getByRole('button', { name: 'Speichern' }).click();
+  await expect(page.getByText('Geburtstag gespeichert.')).toBeVisible();
+  const row = async () =>
+    (
+      await admin
+        .schema('platform')
+        .from('profiles')
+        .select('birthday_month, birthday_day, birthday_year, birthday_shared')
+        .eq('user_id', userId)
+        .single()
+    ).data;
+  expect(await row()).toEqual({
+    birthday_month: 3,
+    birthday_day: 14,
+    birthday_year: null,
+    birthday_shared: true,
+  });
+  await page.reload();
+  await expect(section.getByLabel('Tag')).toHaveValue('14');
+  await section.getByRole('button', { name: 'Entfernen' }).click();
+  await expect(page.getByText('Geburtstag entfernt.')).toBeVisible();
+  expect(await row()).toMatchObject({ birthday_month: null, birthday_shared: false });
+});
+
 // The line under a game's title is the intro until the SDK connects, then the player greeting
 // (kit/game.js); both are English, and which one is on screen depends on the speed of the run.
 const gameLine = (intro: string) => (p: Page) =>

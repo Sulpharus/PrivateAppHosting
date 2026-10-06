@@ -23,6 +23,13 @@ const data = await mn.ai.json<Recipe[]>('Drei Rezepte mit Reis', jsonSchema);
 
 Fehler (`AiError`, Code `budget_exceeded`, `model_not_allowed` …) zeigt die App freundlich an.
 
+## Websuche (ADR 0024)
+
+Apps, die aktuelle Fakten brauchen (Wartungsintervalle, Teilenummern), dürfen das Modell im Web suchen lassen: `mn.ai.search(…)` liefert Text **und
+Quellen**. Der Manifest-Eintrag `"ai": { …, "search": true }` schaltet das frei, sonst antwortet der Proxy mit „Die Websuche ist für diese App nicht
+aktiviert“. Jede Suchanfrage reserviert und verrechnet pauschal 0,05 € zusätzlich zu den Token, damit das Monatsbudget weiter greift. Suche und
+JSON-Schema gehen nicht in einem Aufruf: erst suchen, dann das Ergebnis mit `mn.ai.json` ordnen.
+
 ## Verwaltung → KI-Proxy
 
 Kosten diesen Monat, Anfragen, Verbrauch je App und die **Budgets** zum Einstellen (in Euro). Ein Manifest kann `monthlyBudgetEur` vorschlagen.

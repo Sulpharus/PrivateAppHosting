@@ -23,7 +23,7 @@ export interface Library {
   modules: PromptPart[];
 }
 
-export type Audience = 'me' | 'household' | 'group';
+export type Audience = 'me' | 'household' | 'group' | 'team';
 export type Builder = 'claude-artifact' | 'ai-studio' | 'claude-code' | 'other';
 
 export interface Brief {
@@ -120,6 +120,11 @@ export const AUDIENCES: Record<Audience, { label: string; mode: string; note: st
     label: 'Für eine Gruppe (alle sehen alles)',
     mode: 'group',
     note: 'Everyone who has the app shares all data.',
+  },
+  team: {
+    label: 'In Teams (nur eingeladene Personen sehen ein Team)',
+    mode: 'team',
+    note: 'People work in small teams (projects, trips); each team sees only its own data, with roles viewer, editor and owner.',
   },
 };
 

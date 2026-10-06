@@ -10,7 +10,8 @@ group: teilen
 
 - Choose the data mode in `mininode.json` by who shares what:
   `shared-account` (trusted users work on the owner's data, e.g. a household),
-  `group` (everyone with the app shares all data, e.g. a club), `private` otherwise.
+  `group` (everyone with the app shares all data, e.g. a club), `team` (several small teams with
+  roles, each seeing only its own data, e.g. projects; module `teams`), `private` otherwise.
 - Show who changed what: store `by` (display name) and `at` on each item and show them in the
   detail view ("Geändert von Jana, gestern").
 - Live updates: `mn.realtime('<channel>')` broadcasts small events (`{ type: 'changed', id }`);

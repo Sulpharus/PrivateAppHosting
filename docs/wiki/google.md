@@ -21,6 +21,9 @@ Neue Konten entstehen nicht über Google: die Google-Adresse muss zu einem einge
 - Das Portal gibt das Token an die API, die es mit `GOOGLE_TOKEN_KEY` verschlüsselt in `platform.google_grants` ablegt (nur die API kann es lesen).
 - Eine App **deklariert** im Manifest `"google": { "gmail": "read", "calendar": "write" }`. `mn.google.fetch(url)` holt über die API ein
   kurzlebiges Token, das nur diese Bereiche erlaubt; geprüft werden Adresse der App, Freigabe, Manifest und zweiter Faktor.
+- Dazu kommt `"drive": "file"` (Google Drive, ADR 0023): die App sieht **nur Dateien, die sie selbst angelegt hat**, nie dein ganzes Drive; sie legt
+  einen Ordner an, lädt hinein und teilt ihn über Drives eigene Freigabe. Bereits verbundene Konten müssen Google einmal neu verbinden
+  (*Dein Konto*), weil der Drive-Bereich neu ist.
 - Der Browser ruft Google dann **direkt** auf; das Gate erlaubt die Google-Adressen nur Apps mit `google`-Block.
 - *Dein Konto → Zugriff entziehen* widerruft das Token bei Google und löscht den Eintrag.
 - **`GOOGLE_TOKEN_KEY` aufbewahren:** ohne ihn sind die gespeicherten Verbindungen unlesbar ([Geheimnisse](wiki:geheimnisse)).

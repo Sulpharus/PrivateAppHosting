@@ -92,7 +92,8 @@
             "private",
             "shared-account",
             "group",
-            "readonly"
+            "readonly",
+            "team"
           ]
         }
       },
@@ -125,6 +126,10 @@
           "type": "integer",
           "exclusiveMinimum": 0,
           "maximum": 16000
+        },
+        "search": {
+          "default": false,
+          "type": "boolean"
         }
       },
       "required": [
@@ -147,6 +152,12 @@
           "enum": [
             "read",
             "write"
+          ]
+        },
+        "drive": {
+          "type": "string",
+          "enum": [
+            "file"
           ]
         }
       },

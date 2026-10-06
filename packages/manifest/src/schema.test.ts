@@ -104,9 +104,24 @@ describe('google', () => {
       expect(ALL_GOOGLE_SCOPES).toContain(scope);
   });
 
+  it('drive is limited to the files the app made or opened', () => {
+    const result = parseManifest({ ...spa, google: { drive: 'file' } });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(googleScopes(result.manifest.google)).toEqual([
+      'https://www.googleapis.com/auth/drive.file',
+    ]);
+    expect(googleConnectSrc(result.manifest.google)).toEqual(['https://www.googleapis.com']);
+  });
+
+  it('team is a data mode', () => {
+    expect(parseManifest({ ...spa, data: { mode: 'team' } }).ok).toBe(true);
+  });
+
   it('rejects an empty or unknown google block', () => {
     expect(parseManifest({ ...spa, google: {} }).ok).toBe(false);
     expect(parseManifest({ ...spa, google: { drive: 'read' } }).ok).toBe(false);
+    expect(parseManifest({ ...spa, google: { drive: 'all' } }).ok).toBe(false);
     expect(parseManifest({ ...spa, google: { gmail: 'admin' } }).ok).toBe(false);
   });
 

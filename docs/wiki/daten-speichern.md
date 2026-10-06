@@ -31,9 +31,19 @@ bekommen beim Einbau eine Schicht, die `localStorage` im Konto hält (`installLo
 | `shared-account` | vertraute Personen (`trusted`) arbeiten mit dem Konto des Eigentümers; jede Änderung steht mit der echten Person im Protokoll. Die App braucht einen Admin als Besitzer |
 | `group` | alle mit Freigabe teilen alles |
 | `readonly` | alle mit Freigabe dürfen nur lesen |
+| `team` | Daten gehören zu **Teams** (Projekt, Reisegruppe, Band): nur die Personen im Team sehen sie, je nach Rolle *Ansehen*, *Bearbeiten* oder *Verwalten* (ADR 0023) |
 
 Die Vorlagen für Tabellen (`platform.secure_table`) setzen die Zeilenschutz-Regeln passend zum Modus. Eine Selbstprüfung (pgTAP) schlägt
 fehl, wenn eine Tabelle in einem `app_*`-Schema keinen Zeilenschutz hat oder eine Regel `platform.app_access('<name>')` nicht aufruft.
+
+## Teams (ADR 0023)
+
+Apps mit Datenmodus `team` (zum Beispiel ein Projektmanager) arbeiten mit kleinen Teams von 2 bis 6 Personen. Die App legt über `mn.team` Teams an,
+Besitzer fügen Personen hinzu (nur wer die App nutzen darf) und vergeben Rollen. Jede Zeile in den Tabellen der App trägt eine `team_id`; die
+Datenbank prüft bei jedem Lesen und Schreiben die Rolle (Ansehen liest, Bearbeiten schreibt, Verwalten verwaltet das Team). Dateien eines Teams liegen
+unter `team-<id>` und folgen derselben Regel. Wird ein Team gelöscht, gehen seine Zeilen mit. Das Team braucht immer einen Besitzer. Live-Aktualisierung
+läuft über kleine Signale (`team:<id>`), nie über Inhalte. Große Dateien (Videos, Entwürfe) kommen später auf die NucBox; bis dahin gelten
+5 MB je Anhang, alles Größere wird als Link (Google Drive oder Adresse) angehängt.
 
 ## Wie die Trennung funktioniert (ADR 0002)
 

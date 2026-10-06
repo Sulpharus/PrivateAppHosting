@@ -86,6 +86,7 @@ const DATA_MODE: Record<string, string> = {
   'shared-account': 'gemeinsames Konto',
   group: 'Gruppe',
   readonly: 'nur lesen',
+  team: 'Teams',
 };
 
 /** The apps in hosted/, from their manifests. */

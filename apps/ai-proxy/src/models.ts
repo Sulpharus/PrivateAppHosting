@@ -30,6 +30,13 @@ export function catalog(override: string | undefined): Record<ModelAlias, ModelE
   return merged;
 }
 
+/**
+ * Web search is billed per search on top of the tokens (Anthropic about $10 per 1,000 searches,
+ * Gemini grounding per search query). One request may search several times, so a flat, generous
+ * amount (micro-€) is added to the reservation and to the settled cost.
+ */
+export const SEARCH_SURCHARGE_MICRO = 50_000;
+
 /** Conservative token estimate for the reservation (~3 chars per token). */
 export function estimateTokens(text: string): number {
   return Math.ceil(text.length / 3) + 16;

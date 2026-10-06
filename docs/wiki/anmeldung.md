@@ -41,6 +41,7 @@ Die Seite *Dein Konto* (Menü oben rechts) bündelt:
 - Name, Rolle, Passwort ändern;
 - **Passkeys** und Authenticator-App;
 - **Google** verbinden (für Kalender-Sync und Apps, die Gmail/Kalender nutzen; ADR 0004), mit Widerruf;
+- **Geburtstag** (ADR 0025): Tag, Monat, Jahr freiwillig; erst wenn du „Für andere Personen sichtbar“ einschaltest, sehen ihn Personen, die dieselben Apps nutzen (zum Beispiel die Wunschliste für Geschenke); jederzeit wieder entfernbar;
 - **Sprache** (Deutsch/English; gilt für alle Apps, ADR 0017, siehe [Sprache und Formate](wiki:sprachen-formate));
 - **Benachrichtigungen:** Push je Gerät einschalten ([Push und Offline](wiki:push-offline));
 - **Persönliche API-Schlüssel**, wenn ein Admin eine API auf „persönlich“ gestellt hat ([API-Schlüssel](wiki:api-schluessel)).
