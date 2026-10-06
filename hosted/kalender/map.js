@@ -5,6 +5,7 @@
 // remembered in kv `geo`; the person's choices (layer, way of travelling, start point) in `prefs.map`.
 import {
   assessLeg,
+  clusterPixels,
   dayGroups,
   directionsUrl,
   hoursMinutes,
@@ -49,6 +50,9 @@ let leafletLoad = null;
 let lmap = null;
 let lmapEl = null;
 let drawn = [];
+let pinLayer = null;
+let pinState = null; // the entries that get pins; they are clustered again at every zoom
+const PIN_RADIUS_PX = 38; // pins closer than this (same address, very near) become one numbered pin
 let geo = {}; // place text → { lat, lon } | 0 (not found)
 let geoLoaded = false;
 let geoSave = 0;
@@ -404,30 +408,21 @@ async function paint(items, canvas, list, status, mine) {
   drawn.push(base);
 
   const bounds = [];
-  const mark = (entry, label, faded) => {
-    const { item, point } = entry;
-    const icon = L.divIcon({
-      className: 'cal-pin-wrap',
-      html: `<span class="cal-pin${faded ? ' is-faded' : ''}" data-cat="${item.color}" aria-hidden="true"><span>${label}</span></span>`,
-      iconSize: [32, 32],
-      iconAnchor: [16, 16],
-      popupAnchor: [0, -14],
-    });
-    const m = L.marker([point.lat, point.lon], {
-      icon,
-      title: item.title,
-      alt: item.title,
-      keyboard: true,
-    });
-    m.bindPopup(popup(item, point));
-    m.addTo(lmap);
-    drawn.push(m);
-    entry.marker = m;
-    bounds.push([point.lat, point.lon]);
-  };
+  // numbered like the list: appointments with a time in order, those without a time get a dot
+  const entries = [];
   let n = 0;
-  for (const g of groups) for (const entry of g.items) mark(entry, String(++n), false);
-  for (const item of allDay) mark({ item, point: pointOf(item, geo) }, '•', true);
+  for (const g of groups) for (const entry of g.items) entries.push({ ...entry, n: ++n });
+  for (const item of allDay) entries.push({ item, point: pointOf(item, geo), n: 0, faded: true });
+  // the list rows point at the pins: keep the same objects
+  let k = 0;
+  for (const g of groups) for (const entry of g.items) Object.assign(entry, { pin: entries[k++] });
+  pinLayer = L.layerGroup().addTo(lmap);
+  drawn.push(pinLayer);
+  pinState = { entries };
+  lmap.off('zoomend', renderPins);
+  lmap.on('zoomend', renderPins);
+  renderPins();
+  for (const e of entries) bounds.push([e.point.lat, e.point.lon]);
   if (p.home && validPoint(p.home)) {
     const home = L.marker([p.home.lat, p.home.lon], {
       icon: L.divIcon({
@@ -454,6 +449,130 @@ async function paint(items, canvas, list, status, mine) {
 // a tiny element builder for the failure notes (the view's own h is not in scope here)
 function h0(tag, props, text) {
   return ctx.h(tag, props, text);
+}
+
+/** Draws the pins for the current zoom: one pin per place, or a numbered pin where several meet. */
+function renderPins() {
+  const L = window.L;
+  if (!lmap || !pinLayer || !pinState) return;
+  pinLayer.clearLayers();
+  const zoom = lmap.getZoom();
+  const pixels = pinState.entries.map((e) => lmap.project([e.point.lat, e.point.lon], zoom));
+  for (const indices of clusterPixels(pixels, PIN_RADIUS_PX)) {
+    const members = indices.map((i) => pinState.entries[i]);
+    const marker = members.length === 1 ? singlePin(L, members[0]) : clusterPin(L, members);
+    marker.addTo(pinLayer);
+    for (const e of members) e.marker = marker;
+  }
+}
+
+/** One appointment: its picture with a coloured outline when it has one, else the numbered pin. */
+function singlePin(L, entry) {
+  const { item, point } = entry;
+  const withImage = Boolean(item.image) && !entry.faded;
+  const icon = withImage
+    ? L.divIcon({
+        className: 'cal-pin-wrap',
+        html: `<span class="cal-pin cal-pin--img" data-cat="${item.color}" aria-hidden="true"><img src="${item.image}" alt=""></span>`,
+        iconSize: [48, 48],
+        iconAnchor: [24, 24],
+        popupAnchor: [0, -24],
+      })
+    : L.divIcon({
+        className: 'cal-pin-wrap',
+        html: `<span class="cal-pin${entry.faded ? ' is-faded' : ''}" data-cat="${item.color}" aria-hidden="true"><span>${entry.faded ? '•' : entry.n}</span></span>`,
+        iconSize: [32, 32],
+        iconAnchor: [16, 16],
+        popupAnchor: [0, -14],
+      });
+  const m = L.marker([point.lat, point.lon], {
+    icon,
+    title: item.title,
+    alt: item.title,
+    keyboard: true,
+  });
+  m.bindPopup(popup(item, point));
+  return m;
+}
+
+/** Several appointments at one place: a pin with their number; a click lists what takes place. */
+function clusterPin(L, members) {
+  const { t } = ctx;
+  const colors = new Set(members.map((e) => e.item.color));
+  const only = colors.size === 1 ? [...colors][0] : null;
+  const lat = members.reduce((sum, e) => sum + e.point.lat, 0) / members.length;
+  const lon = members.reduce((sum, e) => sum + e.point.lon, 0) / members.length;
+  const label = t('map.cluster', { n: members.length });
+  const m = L.marker([lat, lon], {
+    icon: L.divIcon({
+      className: 'cal-pin-wrap',
+      html: `<span class="cal-pin cal-pin--cluster${only ? '' : ' is-mixed'}"${only ? ` data-cat="${only}"` : ''} aria-hidden="true"><span>${members.length}</span></span>`,
+      iconSize: [40, 40],
+      iconAnchor: [20, 20],
+      popupAnchor: [0, -20],
+    }),
+    title: label,
+    alt: label,
+    keyboard: true,
+  });
+  m.bindPopup(clusterPopup(members, { lat, lon }), { maxWidth: 300 });
+  return m;
+}
+
+function clusterPopup(members, point) {
+  const { h, t } = ctx;
+  const p = prefs();
+  const place = members.find((e) => e.item.record.place_name)?.item.record.place_name;
+  const when = (item) =>
+    item.allDay
+      ? ctx.F.day.format(item.start)
+      : `${ctx.F.day.format(item.start)}, ${timeOf(item.start)}–${timeOf(item.end)}`;
+  return h(
+    'div',
+    { class: 'cal-map-pop' },
+    h('b', null, t('map.cluster', { n: members.length })),
+    place ? h('span', null, place) : null,
+    h(
+      'ul',
+      { class: 'cal-map-cluster' },
+      [...members]
+        .sort((a, b) => a.item.start - b.item.start)
+        .map(({ item }) =>
+          h(
+            'li',
+            null,
+            h(
+              'button',
+              {
+                type: 'button',
+                class: 'cal-map-cl-row',
+                'data-cat': item.color,
+                onclick: () => ctx.openDetail(item),
+              },
+              item.image
+                ? h('img', { class: 'cal-map-cl-img', src: item.image, alt: '' })
+                : h('span', { class: 'cal-swatch', 'aria-hidden': 'true' }),
+              h(
+                'span',
+                { class: 'cal-map-row-text' },
+                h('b', null, item.title),
+                h('span', null, when(item)),
+              ),
+            ),
+          ),
+        ),
+    ),
+    h(
+      'a',
+      {
+        class: 'mn-btn',
+        href: directionsUrl(p.home && validPoint(p.home) ? p.home : null, point, p.mode),
+        target: '_blank',
+        rel: 'noopener noreferrer',
+      },
+      t('map.navigate'),
+    ),
+  );
 }
 
 function popup(item, point) {
@@ -592,10 +711,13 @@ function drawList(list, groups, allDay, unlocated) {
             type: 'button',
             class: 'cal-map-row',
             onclick: () => {
-              if (entry.marker) {
-                lmap?.setView(entry.marker.getLatLng(), Math.max(lmap.getZoom(), 15));
-                entry.marker.openPopup();
-              }
+              const pin = entry.pin;
+              if (!pin?.marker || !lmap) return;
+              lmap.setView(pin.marker.getLatLng(), Math.max(lmap.getZoom(), 15), {
+                animate: false,
+              });
+              // zooming draws the pins again: the entry's pin is now in its new marker
+              pin.marker.openPopup();
             },
           },
           h(

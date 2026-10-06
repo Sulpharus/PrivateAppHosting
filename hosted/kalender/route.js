@@ -219,4 +219,31 @@ export const notSetUp = (err) =>
     err?.code,
   );
 
+/**
+ * Groups points that lie within `radius` pixels of each other (same address, or very close at the
+ * current zoom). Takes `{x, y}` points, returns lists of their indices; each point is in exactly
+ * one list, and the order of the points is kept inside a list.
+ */
+export function clusterPixels(points, radius) {
+  const clusters = [];
+  points.forEach((p, i) => {
+    let best = null;
+    let bestDistance = radius;
+    for (const c of clusters) {
+      const d = Math.hypot(c.x - p.x, c.y - p.y);
+      if (d <= bestDistance) {
+        best = c;
+        bestDistance = d;
+      }
+    }
+    if (best) {
+      const n = best.members.length;
+      best.x = (best.x * n + p.x) / (n + 1);
+      best.y = (best.y * n + p.y) / (n + 1);
+      best.members.push(i);
+    } else clusters.push({ x: p.x, y: p.y, members: [i] });
+  });
+  return clusters.map((c) => c.members);
+}
+
 export { DAY_MS };

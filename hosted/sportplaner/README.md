@@ -65,6 +65,8 @@ scheduling logic are unchanged. What changed:
 Planned sessions from a week ago to 90 days ahead are written as shared `activity` records
 (`js/suite.js`, ADR 0002; source key `<activity>#<date>`), with time, place, sport and whether a
 session was done or cancelled. Sessions no longer planned leave the Kalender; past ones stay.
+Each record also carries a tiny picture of the activity's cover photo (`data.image`, about 80 px, made in the browser
+from the stored thumbnail and cached per visit), so the Kalender can show it in its list, day and map.
 It needs the admin's approval of `suite.uses` (Verwaltung → Gemeinsame Daten); until then the
 Sportplaner works as before.
 

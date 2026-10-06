@@ -12,11 +12,19 @@ Nothing app-specific: the calendar works only on suite records (ADR 0002, `mn.su
 - **Other apps** show up read-only, grouped as "App · Type" (e.g. "Sportplaner · Sporteinheit").
   The admin decides in Verwaltung → Gemeinsame Daten which types the calendar may read
   (`suite.uses` in `mininode.json`). Bookings (`transaction`) start hidden.
-- **Preferences** (visible sources, colours, default calendar) live in `mn.kv` under `prefs`.
+- **Pictures:** a record may carry a tiny inline picture in `data.image` (event and activity types; the Sportplaner
+  sends its cover photo at about 80 px). `items.js` `imageOf` accepts only `data:image/jpeg|png|webp;base64,…`. The list
+  view and the day view (entries longer than an hour) show it; a switch inside each view turns it on or off
+  (`prefs.images.list` / `prefs.images.day`).
+- **Preferences** (visible sources, colours, default calendar) live in `mn.kv` under `prefs`. An app's colour for all
+  its sources is `prefs.appColors[app]` (a source's own saved colour wins).
 
 ## Map (`map.js`, `route.js`)
 
-Events with a place as numbered pins (Leaflet from `/vendor`), for a day, a week or seven weeks. Places without
+Events with a place as pins (Leaflet from `/vendor`), for a day, a week or seven weeks: a single entry with a picture is
+its own pin (picture with an outline in the colour of its source), otherwise a numbered pin like in the list; entries at
+the same address or within 38 px at the current zoom become one pin with their count and a list in its popup
+(`clusterPixels` in `route.js`, drawn again at every zoom). Places without
 coordinates are looked up with Nominatim (one request per second, cached in `mn.kv` under `geo`); the editor's
 "Ort prüfen" stores the point on the record (`lat`, `lon`). Layer, way of travelling, buffer and start point live in
 `prefs.map`. Addresses and routes come from Geoapify (`apis` → `geoapify`, one shared key under Verwaltung → API-Schlüssel);

@@ -496,6 +496,87 @@
 .cal-row {
   grid-template-columns: 6px minmax(0, 1fr) auto;
 }
+.cal-row.has-image {
+  grid-template-columns: 6px 44px minmax(0, 1fr) auto;
+}
+.cal-row-img {
+  width: 44px;
+  height: 44px;
+  object-fit: cover;
+  border-radius: var(--mn-r-md);
+  background: var(--mn-surface-2);
+}
+
+/* a small switch inside the list and day view: pictures of the entries on or off */
+.cal-viewbar {
+  display: flex;
+  justify-content: flex-end;
+}
+.cal-grid > .cal-viewbar {
+  padding: 0 var(--mn-s2);
+  border-bottom: 1px solid var(--mn-line);
+}
+.cal-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mn-s2);
+  min-height: var(--mn-tap, 44px);
+  padding: 0 var(--mn-s2);
+  border: 0;
+  border-radius: var(--mn-r-md);
+  background: transparent;
+  color: var(--mn-muted);
+  font: inherit;
+  font-size: var(--mn-fs-sm);
+  cursor: pointer;
+}
+.cal-switch:hover {
+  color: var(--mn-ink);
+}
+.cal-switch:focus-visible {
+  outline: 2px solid var(--mn-accent);
+  outline-offset: 2px;
+}
+.cal-switch-track {
+  position: relative;
+  width: 36px;
+  height: 20px;
+  border-radius: 10px;
+  background: var(--mn-line-strong);
+}
+.cal-switch-track span {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--mn-surface);
+  box-shadow: 0 0 0 1px var(--mn-line);
+  transition: transform 0.15s var(--mn-ease, ease);
+}
+.cal-switch[aria-checked="true"] .cal-switch-track {
+  background: var(--mn-accent);
+}
+.cal-switch[aria-checked="true"] .cal-switch-track span {
+  transform: translateX(16px);
+}
+
+/* day view: the picture of a longer entry sits in its upper right corner */
+.cal-ev.has-image {
+  padding-right: 46px;
+}
+.cal-ev-img {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 36px;
+  height: 36px;
+  object-fit: cover;
+  border-radius: 6px;
+  background: var(--mn-surface-2);
+  box-shadow: 0 0 0 2px var(--mn-surface);
+}
 .cal-agenda {
   display: grid;
   gap: var(--mn-s5);
@@ -754,6 +835,48 @@
   background: transparent;
   border: 0;
 }
+/* a single entry with a picture: the picture itself is the pin, outlined in the colour of its
+   source and with a white ring so it stands out on any map */
+.cal-pin.cal-pin--img {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  transform: none;
+  border-radius: 12px;
+  border: 3px solid var(--mn-cat, #1f5fbf);
+  box-shadow:
+    0 0 0 2px #fff,
+    0 2px 6px rgb(0 0 0 / 40%);
+  overflow: hidden;
+}
+.cal-pin--img > img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: none;
+  display: block;
+}
+/* several entries at one place: a round pin with their number (grey-black when the colours differ) */
+.cal-pin.cal-pin--cluster {
+  width: 40px;
+  height: 40px;
+  transform: none;
+  border-radius: 50%;
+  border: 3px solid #fff;
+  font-size: 16px;
+  box-shadow:
+    0 0 0 2px var(--mn-cat, #17160f),
+    0 2px 6px rgb(0 0 0 / 40%);
+}
+.cal-pin--cluster.is-mixed {
+  background: #17160f;
+  box-shadow:
+    0 0 0 2px #fff,
+    0 2px 6px rgb(0 0 0 / 40%);
+}
+.cal-pin--cluster > * {
+  transform: none;
+}
 /* the number sits upright: the shape turns, the text turns back */
 .cal-pin {
   line-height: 1;
@@ -774,6 +897,51 @@
 .cal-map-pop .mn-btn {
   min-height: 40px;
 }
+.cal-map-cluster {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+.cal-map-cl-row {
+  display: flex;
+  align-items: center;
+  gap: var(--mn-s2);
+  width: 100%;
+  min-height: 44px;
+  padding: 2px var(--mn-s2);
+  border: 1px solid var(--mn-line);
+  border-radius: var(--mn-r-md);
+  background: var(--mn-surface);
+  color: var(--mn-ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.cal-map-cl-row:hover {
+  border-color: var(--mn-muted);
+}
+.cal-map-cl-row:focus-visible {
+  outline: 2px solid var(--mn-accent);
+  outline-offset: 2px;
+}
+.cal-map-cl-row .cal-swatch {
+  width: 6px;
+  min-height: 28px;
+  flex-shrink: 0;
+}
+.cal-map-cl-img {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  object-fit: cover;
+  border-radius: 6px;
+  border-left: 0;
+  box-shadow: 0 0 0 2px var(--mn-cat);
+}
 .cal-place-check {
   display: grid;
   gap: var(--mn-s2);
@@ -781,11 +949,33 @@
   margin-bottom: var(--mn-s3);
 }
 @media (prefers-reduced-motion: reduce) {
-  .cal-map-canvas * {
+  .cal-map-canvas *,
+  .cal-switch-track span {
     transition: none !important;
   }
 }
 
 .map-tiles-dark {
   filter: invert(1) hue-rotate(180deg) brightness(0.95) contrast(0.9);
+}
+
+/* manage sheet: one block per app with its own colour choice on top */
+.cal-app-block {
+  display: grid;
+  gap: var(--mn-s2);
+  margin-bottom: var(--mn-s4);
+}
+.cal-app-name {
+  margin: 0;
+  font-size: var(--mn-fs-md);
+}
+.cal-app-colour {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--mn-s2) var(--mn-s3);
+}
+.cal-app-colour-label {
+  font-size: var(--mn-fs-sm);
+  color: var(--mn-muted);
 }

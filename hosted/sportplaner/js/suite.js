@@ -16,8 +16,57 @@ function suiteInstant(ds, time) {
   return new Date(y, m - 1, d, hh || 0, mm || 0).toISOString();
 }
 
+/* A tiny picture (about 80 px) of the first photo travels inside the record, so the Kalender can
+   show it in its list, day and map without access to this app's files. One per photo and visit. */
+const suiteImages = new Map(); // photo ref → data URL or null
+const SUITE_IMAGE_MAX = 15000;
+async function suiteTiny(blob) {
+  const url = URL.createObjectURL(blob);
+  try {
+    const img = await new Promise((resolve, reject) => {
+      const el = new Image();
+      el.onload = () => resolve(el);
+      el.onerror = reject;
+      el.src = url;
+    });
+    const data = scaleTo(img, 80, 0.6, false);
+    return data.length <= SUITE_IMAGE_MAX ? data : null;
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+async function suiteImageOf(a) {
+  const ref = a.photos && a.photos[0];
+  if (!ref) return null;
+  const src = (a.thumbs && a.thumbs[ref]) || ref;
+  if (suiteImages.has(src)) return suiteImages.get(src);
+  let out = null;
+  try {
+    out = await suiteTiny(
+      src.startsWith('data:') ? await (await fetch(src)).blob() : await fetchBlob(src),
+    );
+  } catch {
+    out = null; // the session goes to the Kalender without a picture
+  }
+  suiteImages.set(src, out);
+  return out;
+}
+/** Activity id → tiny picture, for the activities that have a photo (4 fetches at a time). */
+async function suiteImagesFor() {
+  const queue = S.acts.filter((a) => a.photos && a.photos[0]);
+  const out = new Map();
+  const worker = async () => {
+    for (let a = queue.shift(); a; a = queue.shift()) {
+      const image = await suiteImageOf(a);
+      if (image) out.set(a.id, image);
+    }
+  };
+  await Promise.all([worker(), worker(), worker(), worker()]);
+  return out;
+}
+
 /** The records the planned sessions should be: source key → fields. */
-function suiteWanted() {
+function suiteWanted(images = new Map()) {
   const out = new Map();
   const base = parse(todayStr());
   for (let i = -SUITE_DAYS_BACK; i <= SUITE_DAYS_AHEAD; i++) {
@@ -42,6 +91,7 @@ function suiteWanted() {
           all_day: timed ? null : true,
           sport: (a.category || '').slice(0, 100) || null,
           provider: (a.provider || '').slice(0, 200) || null,
+          image: images.get(a.id) || null,
           plan_status: isCancelled(a, ds)
             ? 'cancelled'
             : (a.done || []).includes(ds)
@@ -76,7 +126,7 @@ async function suiteSync() {
   const act = mn.suite.type('activity');
   try {
     const mine = (await act.list({ limit: 5000 })).filter((r) => r.source_app === 'sportplaner');
-    const wanted = suiteWanted();
+    const wanted = suiteWanted(await suiteImagesFor());
     const byKey = new Map(mine.map((r) => [r.source_key, r]));
     const from = ymd(addDays(parse(todayStr()), -SUITE_DAYS_BACK));
     const jobs = [];

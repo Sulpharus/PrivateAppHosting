@@ -360,5 +360,8 @@
   "map.problem.upstream_error": "The service answered with error {status}.",
   "map.problem.unauthenticated": "You are not signed in.",
   "map.problem.forbidden": "Access denied.",
-  "map.problem.network": "No connection to the MiniNode server."
+  "map.problem.network": "No connection to the MiniNode server.",
+  "images.switch": "Pictures",
+  "map.cluster": "{n} appointments here",
+  "manage.colourForApp": "Colour for everything from {name}"
 }
