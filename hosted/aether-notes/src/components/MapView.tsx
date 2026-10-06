@@ -42,19 +42,11 @@ const PREFS_KEY = 'aether_map_prefs';
 
 const OSM =
   '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>';
-const CARTO = `${OSM} &copy; <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a>`;
-const TILES: Record<Layer, { url: string; attr: string; max: number }> = {
+// CARTO's free basemaps now demand an API key, so light and dark both use OSM (dark = CSS filter).
+const TILES: Record<Layer, { url: string; attr: string; max: number; dim?: boolean }> = {
   standard: { url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', attr: OSM, max: 19 },
-  light: {
-    url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-    attr: CARTO,
-    max: 20,
-  },
-  dark: {
-    url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-    attr: CARTO,
-    max: 20,
-  },
+  light: { url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', attr: OSM, max: 19 },
+  dark: { url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', attr: OSM, max: 19, dim: true },
   topo: {
     url: 'https://tile.opentopomap.org/{z}/{x}/{y}.png',
     attr: `${OSM}, SRTM | &copy; <a href="https://opentopomap.org" target="_blank" rel="noopener">OpenTopoMap</a>`,
@@ -281,7 +273,7 @@ export default function MapView({ contacts, people, meetups }: Props) {
     tiles.current = L.tileLayer(spec.url, {
       maxZoom: spec.max,
       attribution: spec.attr,
-      subdomains: 'abcd',
+      className: spec.dim ? 'map-tiles-dark' : '',
     }).addTo(m);
     tiles.current.bringToBack?.();
   }, [prefs.layer, dark]);
