@@ -49,3 +49,13 @@ Sicherheitsregeln der Plattform (CSP) sperren: die Icon-Namen standen als Text i
 - `<body>` ohne `mn-app`: die App hat ein eigenes Tailwind-Design, die Formular- und Link-Regeln
   des App Kits überschrieben es (Eingabefelder, Schaltflächenfarben).
 - `package.json`/`vite.config.ts` bereinigt (Name je App, kein Server).
+
+## Geburtstage im Kalender
+
+Der Geburtstag eines Kontakts oder einer Person (`YYYY-MM-DD` oder `MM-DD`) wird als jährlich
+wiederkehrender ganztägiger Kalendereintrag veröffentlicht (`src/birthdays.ts`, Quellschlüssel
+`birthday:c:<id>` und `birthday:p:<id>`, ein unbekanntes Jahr wird als 1904 geschrieben). Die
+Wunschliste liest diese Einträge für ihren Geburtstage-Tab. Ungültige Daten (30. Februar) werden
+übergangen. Unter *Bereichs-Einstellungen → Geburtstage* lässt sich das abschalten; dann werden die
+Einträge wieder entfernt. Tests: `pnpm --filter @mininode-hosted/aether-notes test`,
+`e2e/aether-birthdays.spec.ts`.

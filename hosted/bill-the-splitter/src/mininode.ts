@@ -206,6 +206,7 @@ export const MiniNodeAPI = {
     },
     saveExpense: reported((expense: Expense) => saveOne('expense', expense)),
     saveExpenses: reported((expenses: Expense[]) => saveList('expense', expenses)),
+    removeExpense: reported((id: string) => removeOne('expense', id)),
 
     listSettlements: (): Promise<Settlement[]> => loadAll<Settlement>('settlement'),
     saveSettlements: reported((settlements: Settlement[]) => saveList('settlement', settlements)),

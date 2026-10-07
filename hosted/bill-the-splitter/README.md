@@ -3,6 +3,18 @@
 Gruppenabrechnung: Gruppen, Ausgaben mit Belegfoto und Zahlungsfrist, Ausgleichszahlungen,
 Push-Erinnerungen, Orte, PDF-Export und Direct Pay (PayPal-Link, SEPA-Überweisung mit EPC-QR-Code).
 
+## Bedienung (Oktober 2026)
+
+- Neue Rechnung in einem Formular: Betrag zuerst, dann Beschreibung, Gruppe, **wer bezahlt hat**
+  (nicht nur du), **wer dabei ist** (Chips, „Alle“) und **wie geteilt wird**: gleich, Prozent,
+  Beträge oder Anteile (z. B. 2 Zimmer : 1 Zimmer). Die Vorschau zeigt je Person den Betrag und
+  sagt, was noch fehlt; Cent-Reste werden gerecht verteilt (`src/splits.ts`, getestet).
+- Rechnungen lassen sich bearbeiten; Löschen kann mit „Rückgängig“ zurückgenommen werden.
+- **So gleicht ihr aus**: die wenigsten Zahlungen, die alles ausgleichen, jede mit „Als bezahlt
+  buchen“. Beträge und Daten im Format der Sprache (1.234,50 €), Kategorien übersetzt.
+- Zeitpunkte im Aktivitätsprotokoll sind echte Uhrzeiten statt „Just now“.
+- Weniger-wichtige Felder (Frist, Beleg, Direkt bezahlen) stecken hinter „Mehr Optionen“.
+
 ## Herkunft
 
 Ein Google-AI-Studio-Export („lumina-ledger.zip“, Prüf-Issue #29). Er sprach mit einem erfundenen

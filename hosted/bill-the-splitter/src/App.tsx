@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'motion/react';
-import { type ChangeEvent, type FormEvent, useEffect, useMemo, useState } from 'react';
+import { type ChangeEvent, type FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import {
   INITIAL_ACTIVITIES,
   INITIAL_EXPENSES,
@@ -27,9 +27,34 @@ import {
   fileToCompressedBase64,
   generateSampleReceiptUrl,
 } from './receiptUtils';
+import {
+  allocate,
+  expenseShares,
+  participantsOf,
+  fromCents,
+  formatMoney,
+  parseAmount,
+  suggestTransfers,
+  type Transfer,
+  toCents,
+} from './splits';
 import { TRANSLATIONS } from './translations';
 import type { ActivityLog, Expense, Group, Member, PaymentInfo, Settlement } from './types';
 import { calculateGlobalOverview, calculateGroupBalances } from './utils';
+
+/** The categories of an expense: the stored value stays English, the label follows the language. */
+const CATEGORIES = [
+  'Dining',
+  'Groceries',
+  'Accommodation',
+  'Transport',
+  'Fuel',
+  'Entertainment',
+  'Tickets',
+  'Gifts',
+  'Rent, Utilities',
+  'Other',
+];
 
 export default function App() {
   // Navigation & View State
@@ -50,6 +75,37 @@ export default function App() {
     return false;
   });
   const t = TRANSLATIONS[lang];
+  const categoryLabel = (key: string) =>
+    TRANSLATIONS[lang].categories[key.replace(/[^A-Za-z]/g, '')] ?? key;
+  /** An amount as money in the language of the person: 1.234,50 € in German, €1,234.50 in English. */
+  const money = (amount: number) => formatMoney(amount, lang);
+  const localIso = (date = new Date()) =>
+    `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  /** An expense date for display: "Heute", "Gestern" or the date; older records may say "Today". */
+  const dayText = (value: string) => {
+    if (!value || /today|just now/i.test(value)) return t.today;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+    if (value === localIso()) return t.today;
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    if (value === localIso(yesterday)) return lang === 'de' ? 'Gestern' : 'Yesterday';
+    return new Date(`${value}T12:00:00`).toLocaleDateString(lang === 'de' ? 'de-DE' : 'en-GB', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
+  };
+  /** When something happened: today with the time, otherwise the date. Older records hold words like "Just now". */
+  const actTime = (value: string) => {
+    if (!/^\d{4}-\d{2}-\d{2}T/.test(value)) return dayText(value);
+    const at = new Date(value);
+    if (Number.isNaN(at.getTime())) return value;
+    const time = at.toLocaleTimeString(lang === 'de' ? 'de-DE' : 'en-GB', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+    return `${dayText(localIso(at))}, ${time}`;
+  };
   const [portalUrl, setPortalUrl] = useState('/');
   useEffect(() => {
     portalUrlOf()
@@ -156,6 +212,16 @@ export default function App() {
   const [billSplitType, setBillSplitType] = useState<'equal' | 'percentage' | 'exact'>('equal');
   const [customSplitDetails, setCustomSplitDetails] = useState<{ [memberId: string]: number }>({});
   const [showSplitEditor, setShowSplitEditor] = useState(false);
+  const [billPaidById, setBillPaidById] = useState('');
+  const [billParticipants, setBillParticipants] = useState<string[]>([]);
+  const [billDate, setBillDate] = useState('');
+  const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
+  const [billError, setBillError] = useState<string | null>(null);
+  /** The typed amount as a number (0 while it is empty or no amount). */
+  const billAmountValue = (() => {
+    const v = parseAmount(billAmount);
+    return Number.isNaN(v) ? 0 : v;
+  })();
 
   // Receipt & Deadline States
   const [billReceiptUrl, setBillReceiptUrl] = useState<string>('');
@@ -204,10 +270,21 @@ export default function App() {
   const [inviteName, setInviteName] = useState('');
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [toastAction, setToastAction] = useState<{ label: string; run: () => void } | null>(null);
 
-  const triggerToast = (msg: string) => {
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const triggerToast = (msg: string, action?: { label: string; run: () => void }) => {
+    if (toastTimer.current) clearTimeout(toastTimer.current);
     setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3000);
+    setToastAction(action ?? null);
+    // A toast with an action stays long enough to use it.
+    toastTimer.current = setTimeout(
+      () => {
+        setToastMessage(null);
+        setToastAction(null);
+      },
+      action ? 7000 : 3000,
+    );
   };
 
   const findMember = (id: string): Member => {
@@ -585,10 +662,10 @@ export default function App() {
   // Handler: Save Group
   const handleCreateGroup = async (e: FormEvent) => {
     e.preventDefault();
-    if (!newGroupName.trim() || !newGroupLocation.trim()) {
+    if (!newGroupName.trim()) {
       triggerToast(
         lang === 'de'
-          ? 'Bitte füllen Sie alle Pflichtfelder aus.'
+          ? 'Bitte fülle alle Pflichtfelder aus.'
           : 'Please fill in all required fields.',
       );
       return;
@@ -843,10 +920,11 @@ export default function App() {
       description: parsedDesc,
       amount: parsedAmount,
       paidById: payerId,
-      date: 'Today',
+      date: localIso(),
       category: 'Dining',
       splitType: 'equal',
       splitDetails,
+      participantIds: splitWithIds,
     };
 
     const newActivity: ActivityLog = {
@@ -854,9 +932,9 @@ export default function App() {
       groupId: selectedGroupId,
       memberId: payerId,
       type: 'expense_added',
-      title: `${findMember(payerId).name} added "${parsedDesc}" (${t.newBillAddedWithDesc})`,
+      title: `${findMember(payerId).name} ${t.expenseAddedLog} "${parsedDesc}" (${t.newBillAddedWithDesc})`,
       amount: -(parsedAmount / splitWithIds.length),
-      date: 'Just now',
+      date: new Date().toISOString(),
     };
 
     if (joinedRoom) {
@@ -896,7 +974,7 @@ export default function App() {
   };
 
   const handleUseSampleReceipt = () => {
-    const amountVal = parseFloat(billAmount) || 28.5;
+    const amountVal = billAmountValue || 28.5;
     const descVal =
       billDescription.trim() || (lang === 'de' ? 'Restaurant & Ausgaben' : 'Restaurant & Dining');
     const sample = generateSampleReceiptUrl(
@@ -937,8 +1015,8 @@ export default function App() {
         : `Payment Reminder: ${exp.description}`;
     const body =
       lang === 'de'
-        ? `${currentUser?.username || payer.name} erinnert an die Rechnung über ${exp.amount.toFixed(2)} € in "${grpName}". ${deadlineNotice}`
-        : `${currentUser?.username || payer.name} sent a reminder for ${exp.amount.toFixed(2)} € in "${grpName}". ${deadlineNotice}`;
+        ? `${currentUser?.username || payer.name} erinnert an die Rechnung über ${money(exp.amount)} in "${grpName}". ${deadlineNotice}`
+        : `${currentUser?.username || payer.name} sent a reminder for ${money(exp.amount)} in "${grpName}". ${deadlineNotice}`;
 
     await MiniNodeAPI.notify(title, body);
 
@@ -958,7 +1036,7 @@ export default function App() {
       type: 'reminder_sent',
       title: `${currentUserName} ${t.reminderLogged} "${exp.description}"`,
       amount: exp.amount,
-      date: 'Just now',
+      date: new Date().toISOString(),
     };
     setActivities((prev) => {
       const updated = [newActivity, ...prev];
@@ -990,8 +1068,8 @@ export default function App() {
         : `Balance Reminder from ${currentUserName}`;
     const body =
       lang === 'de'
-        ? `Hallo ${mem.name}, bitte gleiche deinen offenen Betrag von ${Math.abs(balance).toFixed(2)} € in "${grpName}" aus.`
-        : `Hi ${mem.name}, please settle your outstanding balance of ${Math.abs(balance).toFixed(2)} € in "${grpName}".`;
+        ? `Hallo ${mem.name}, bitte gleiche deinen offenen Betrag von ${money(Math.abs(balance))} in "${grpName}" aus.`
+        : `Hi ${mem.name}, please settle your outstanding balance of ${money(Math.abs(balance))} in "${grpName}".`;
 
     await MiniNodeAPI.notify(title, body);
 
@@ -1000,9 +1078,9 @@ export default function App() {
       groupId: selectedGroupId,
       memberId: currentUserId,
       type: 'reminder_sent',
-      title: `${currentUserName} ${t.reminderLogged} ${mem.name} (${Math.abs(balance).toFixed(2)} €)`,
+      title: `${currentUserName} ${t.reminderLogged} ${mem.name} (${money(Math.abs(balance))})`,
       amount: Math.abs(balance),
-      date: 'Just now',
+      date: new Date().toISOString(),
     };
     setActivities((prev) => {
       const updated = [newActivity, ...prev];
@@ -1050,105 +1128,268 @@ export default function App() {
     );
   };
 
-  // Handler: Add Bill Manually
+  // ---- Add, change and delete an expense ----
+  const meId = currentUser?.id || 'user_me';
+
+  const resetBillForm = (groupId: string) => {
+    const group = groups.find((g) => g.id === groupId);
+    setBillGroupId(groupId);
+    setBillAmount('');
+    setBillDescription('');
+    setBillCategory('Dining');
+    setBillSplitType('equal');
+    setCustomSplitDetails({});
+    setBillPaidById(group?.memberIds.includes(meId) ? meId : (group?.memberIds[0] ?? meId));
+    setBillParticipants(group?.memberIds ?? []);
+    setBillDate(localIso());
+    setBillDueDate('');
+    setBillReceiptUrl('');
+    setBillReceiptName('');
+    setBillEnablePayment(false);
+    setBillError(null);
+    setShowSplitEditor(false);
+  };
+
+  /** Opens the form for a new expense (in the given or the current group). */
+  const startNewBill = (groupId?: string) => {
+    const id = groupId || selectedGroupId || groups[0]?.id || '';
+    setEditingExpenseId(null);
+    resetBillForm(id);
+    setCurrentView('add-bill');
+    window.scrollTo(0, 0);
+  };
+
+  /** Opens the form with an existing expense, to change it. */
+  const startEditBill = (exp: Expense) => {
+    const group = groups.find((g) => g.id === exp.groupId);
+    resetBillForm(exp.groupId);
+    setEditingExpenseId(exp.id);
+    setBillAmount(String(exp.amount).replace('.', lang === 'de' ? ',' : '.'));
+    setBillDescription(exp.description);
+    setBillCategory(exp.category);
+    setBillSplitType(exp.splitType);
+    setCustomSplitDetails(exp.splitDetails ?? {});
+    setBillPaidById(exp.paidById);
+    setBillParticipants(group ? participantsOf(exp, group.memberIds) : (exp.participantIds ?? []));
+    // An older record may say "Today"; it keeps that until a date is chosen.
+    setBillDate(/^\d{4}-\d{2}-\d{2}$/.test(exp.date) ? exp.date : '');
+    setBillDueDate(exp.dueDate ?? '');
+    setBillReceiptUrl(exp.receiptUrl ?? '');
+    setBillReceiptName(exp.receiptName ?? '');
+    setBillEnablePayment(Boolean(exp.paymentInfo));
+    setBillPaypalHandle(exp.paymentInfo?.paypalHandle ?? '');
+    setBillIban(exp.paymentInfo?.iban ?? '');
+    setBillBic(exp.paymentInfo?.bic ?? '');
+    setBillAccountHolder(exp.paymentInfo?.accountHolder ?? '');
+    setShowSplitEditor(exp.splitType !== 'equal');
+    setCurrentView('add-bill');
+    window.scrollTo(0, 0);
+  };
+
+  /** A different group was chosen in the form: everybody takes part again, the payer is checked. */
+  const changeBillGroup = (groupId: string) => {
+    const group = groups.find((g) => g.id === groupId);
+    setBillGroupId(groupId);
+    setBillParticipants(group?.memberIds ?? []);
+    setCustomSplitDetails({});
+    setBillSplitType('equal');
+    setBillPaidById(group?.memberIds.includes(meId) ? meId : (group?.memberIds[0] ?? meId));
+  };
+
+  /** The shares each method starts with, so the numbers are never empty. */
+  const defaultSplitValues = (method: Expense['splitType'], who: string[], amount: number) => {
+    const values: { [memberId: string]: number } = {};
+    if (who.length === 0) return values;
+    if (method === 'percentage') {
+      const parts = allocate(10000, who.map(() => 1));
+      who.forEach((id, i) => {
+        values[id] = fromCents(parts[i] ?? 0);
+      });
+    } else if (method === 'exact') {
+      const parts = allocate(Number.isFinite(amount) ? toCents(amount) : 0, who.map(() => 1));
+      who.forEach((id, i) => {
+        values[id] = fromCents(parts[i] ?? 0);
+      });
+    } else if (method === 'shares') {
+      for (const id of who) values[id] = 1;
+    }
+    return values;
+  };
+
+  const chooseSplitMethod = (method: Expense['splitType']) => {
+    setBillSplitType(method);
+    setCustomSplitDetails(defaultSplitValues(method, billParticipants, parseAmount(billAmount)));
+  };
+
+  const toggleParticipant = (id: string) => {
+    const next = billParticipants.includes(id)
+      ? billParticipants.filter((x) => x !== id)
+      : [...billParticipants, id];
+    setBillParticipants(next);
+    if (billSplitType !== 'equal')
+      setCustomSplitDetails(defaultSplitValues(billSplitType, next, parseAmount(billAmount)));
+  };
+
   const handleAddBillSubmit = (e: FormEvent) => {
     e.preventDefault();
-    const parsedAmount = parseFloat(billAmount);
-    if (isNaN(parsedAmount) || parsedAmount <= 0 || !billDescription.trim()) {
-      triggerToast(lang === 'de' ? 'Ungültige Eingaben.' : 'Invalid inputs.');
+    const fail = (de: string, en: string) => {
+      setBillError(lang === 'de' ? de : en);
       return;
-    }
+    };
+    const amount = parseAmount(billAmount);
+    if (Number.isNaN(amount) || amount <= 0) return fail('Bitte gib einen Betrag über 0 ein.', 'Please enter an amount above 0.');
+    if (!billDescription.trim()) return fail('Wofür war die Ausgabe? Bitte gib eine Beschreibung ein.', 'What was the expense for? Please add a description.');
 
     const targetGroup = groups.find((g) => g.id === billGroupId) || activeGroup;
     if (!targetGroup) return;
+    if (billParticipants.length === 0)
+      return fail('Mindestens eine Person muss dabei sein.', 'At least one person has to take part.');
 
+    // The numbers of the chosen method, only for the people who take part.
     const splitDetails: { [memberId: string]: number } = {};
-    if (billSplitType === 'equal') {
-      const shareValue = 100 / targetGroup.memberIds.length;
-      targetGroup.memberIds.forEach((mId) => {
-        splitDetails[mId] = shareValue;
-      });
-    } else {
-      targetGroup.memberIds.forEach((mId) => {
-        splitDetails[mId] = customSplitDetails[mId] || 100 / targetGroup.memberIds.length;
-      });
+    if (billSplitType !== 'equal') {
+      for (const id of billParticipants) splitDetails[id] = customSplitDetails[id] ?? 0;
+      const sum = billParticipants.reduce((a, id) => a + (splitDetails[id] ?? 0), 0);
+      if (billSplitType === 'percentage' && Math.abs(sum - 100) > 0.01)
+        return fail(
+          `Die Prozente ergeben ${String(Math.round(sum * 100) / 100).replace('.', ',')} %, es müssen 100 % sein.`,
+          `The percentages add up to ${Math.round(sum * 100) / 100} %, they must be 100 %.`,
+        );
+      if (billSplitType === 'exact' && toCents(sum) !== toCents(amount))
+        return fail(
+          `Die Beträge ergeben ${money(sum)}, die Ausgabe hat ${money(amount)}.`,
+          `The amounts add up to ${money(sum)}, the expense is ${money(amount)}.`,
+        );
+      if (billSplitType === 'shares' && sum <= 0)
+        return fail('Mindestens ein Anteil muss größer als 0 sein.', 'At least one share must be above 0.');
     }
 
-    const currentPayerId = currentUser?.id || 'user_me';
+    const existing = editingExpenseId ? expenses.find((x) => x.id === editingExpenseId) : undefined;
+    const payerId = billPaidById || meId;
     const paymentInfoData: PaymentInfo | undefined = billEnablePayment
       ? {
           paypalHandle: cleanPayPalHandle(billPaypalHandle),
           iban: billIban.trim(),
           bic: billBic.trim(),
-          accountHolder: billAccountHolder.trim() || findMember(currentPayerId).name,
+          accountHolder: billAccountHolder.trim() || findMember(payerId).name,
         }
       : undefined;
 
-    const newExpense: Expense = {
-      id: `exp_${Date.now()}`,
-      groupId: billGroupId,
-      description: billDescription,
-      amount: parsedAmount,
-      paidById: currentPayerId,
-      date: 'Today',
+    const expense: Expense = {
+      ...(existing ?? {}),
+      id: existing?.id ?? `exp_${Date.now()}`,
+      groupId: targetGroup.id,
+      description: billDescription.trim(),
+      amount,
+      paidById: payerId,
+      date:
+        billDate ||
+        (editingExpenseId ? expenses.find((x) => x.id === editingExpenseId)?.date : '') ||
+        localIso(),
       dueDate: billDueDate || undefined,
       category: billCategory,
       splitType: billSplitType,
+      participantIds: billParticipants,
       splitDetails,
       receiptUrl: billReceiptUrl || undefined,
       receiptName: billReceiptName || undefined,
       paymentInfo: paymentInfoData,
     };
 
-    const newActivity: ActivityLog = {
-      id: `act_${Date.now()}`,
-      groupId: billGroupId,
-      memberId: currentPayerId,
-      type: 'expense_added',
-      title: `${findMember(currentPayerId).name} added "${billDescription}"`,
-      amount: -(parsedAmount / targetGroup.memberIds.length),
-      date: 'Just now',
-    };
-
-    MiniNodeAPI.db.saveExpense(newExpense);
-    setExpenses((prev) => [newExpense, ...prev]);
-
-    setActivities((prev) => {
-      const updated = [newActivity, ...prev];
-      MiniNodeAPI.db.saveActivities(updated);
-      return updated;
-    });
-
-    if (joinedRoom && billGroupId === selectedGroupId) {
-      joinedRoom.setState({
-        expenses: { ...(joinedRoom.state.expenses || {}), [newExpense.id]: newExpense },
-        activities: { ...(joinedRoom.state.activities || {}), [newActivity.id]: newActivity },
+    MiniNodeAPI.db.saveExpense(expense);
+    if (existing) {
+      setExpenses((prev) => prev.map((x) => (x.id === expense.id ? expense : x)));
+    } else {
+      setExpenses((prev) => [expense, ...prev]);
+      const newActivity: ActivityLog = {
+        id: `act_${Date.now()}`,
+        groupId: targetGroup.id,
+        memberId: payerId,
+        type: 'expense_added',
+        title: `${findMember(payerId).name} ${t.expenseAddedLog} "${expense.description}"`,
+        amount: -(fromCents(expenseShares(expense, targetGroup.memberIds)[payerId] ?? 0)),
+        date: new Date().toISOString(),
+      };
+      setActivities((prev) => {
+        const updated = [newActivity, ...prev];
+        MiniNodeAPI.db.saveActivities(updated);
+        return updated;
       });
     }
 
     triggerToast(
-      lang === 'de' ? `Ausgabe "${billDescription}" gespeichert!` : `Added "${billDescription}"!`,
+      existing
+        ? lang === 'de'
+          ? `„${expense.description}“ geändert.`
+          : `Changed "${expense.description}".`
+        : lang === 'de'
+          ? `„${expense.description}“ gespeichert.`
+          : `Saved "${expense.description}".`,
     );
-    setBillAmount('');
-    setBillDescription('');
-    setBillReceiptUrl('');
-    setBillReceiptName('');
-    setBillDueDate('');
-    setShowSplitEditor(false);
-    setSelectedGroupId(billGroupId);
+    setEditingExpenseId(null);
+    resetBillForm(targetGroup.id);
+    setSelectedGroupId(targetGroup.id);
     setCurrentView('group-detail');
+    window.scrollTo(0, 0);
+  };
+
+  /** Deletes an expense; the toast offers to bring it back. */
+  const deleteExpense = (exp: Expense) => {
+    void MiniNodeAPI.db.removeExpense(exp.id);
+    setExpenses((prev) => prev.filter((x) => x.id !== exp.id));
+    triggerToast(lang === 'de' ? `„${exp.description}“ gelöscht.` : `Deleted "${exp.description}".`, {
+      label: lang === 'de' ? 'Rückgängig' : 'Undo',
+      run: () => {
+        MiniNodeAPI.db.saveExpense(exp);
+        setExpenses((prev) => (prev.some((x) => x.id === exp.id) ? prev : [exp, ...prev]));
+      },
+    });
+  };
+
+  /** Books one of the suggested payments ("Bea pays Lisa 12,40 €") as done. */
+  const recordTransfer = (transfer: Transfer) => {
+    const amount = fromCents(transfer.amount);
+    const settlement: Settlement = {
+      id: `set_${Date.now()}_${transfer.from}`,
+      groupId: selectedGroupId,
+      fromMemberId: transfer.from,
+      toMemberId: transfer.to,
+      amount,
+      date: localIso(),
+      verified: true,
+    };
+    const activity: ActivityLog = {
+      id: `act_${Date.now()}`,
+      groupId: selectedGroupId,
+      memberId: meId,
+      type: 'settlement_made',
+      title: `${findMember(transfer.from).name} → ${findMember(transfer.to).name}`,
+      amount,
+      date: new Date().toISOString(),
+    };
+    setSettlements((prev) => {
+      const updated = [...prev, settlement];
+      MiniNodeAPI.db.saveSettlements(updated);
+      return updated;
+    });
+    setActivities((prev) => {
+      const updated = [activity, ...prev];
+      MiniNodeAPI.db.saveActivities(updated);
+      return updated;
+    });
+    triggerToast(lang === 'de' ? 'Zahlung verbucht.' : 'Payment recorded.');
   };
 
   const openSettleForMember = (mId: string, balance: number) => {
     setSettleTargetMemberId(mId);
-    setSettleAmount(Math.abs(balance).toFixed(2));
+    setSettleAmount(Math.abs(balance).toFixed(2).replace('.', lang === 'de' ? ',' : '.'));
     setIsSettleModalOpen(true);
   };
 
   const handleSettleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    const amount = parseFloat(settleAmount);
-    if (isNaN(amount) || amount <= 0) return;
+    const amount = parseAmount(settleAmount);
+    if (Number.isNaN(amount) || amount <= 0) return;
 
     const currentPayerId = currentUser?.id || 'user_me';
     const isUserOwes = activeGroupBalances.memberBalances[settleTargetMemberId] > 0;
@@ -1159,7 +1400,7 @@ export default function App() {
       fromMemberId: isUserOwes ? currentPayerId : settleTargetMemberId,
       toMemberId: isUserOwes ? settleTargetMemberId : currentPayerId,
       amount,
-      date: 'Today',
+      date: localIso(),
       verified: true,
     };
 
@@ -1175,7 +1416,7 @@ export default function App() {
       type: 'settlement_made',
       title: logTitle,
       amount: isUserOwes ? -amount : amount,
-      date: 'Just now',
+      date: new Date().toISOString(),
     };
 
     setSettlements((prev) => {
@@ -1327,7 +1568,7 @@ export default function App() {
   };
 
   const handlePreviewBillDirectPay = () => {
-    const parsedAmount = parseFloat(billAmount) || 0;
+    const parsedAmount = billAmountValue;
     const targetGroup = groups.find((g) => g.id === billGroupId) || activeGroup;
     const memberCount = targetGroup?.memberIds.length || 1;
     const share = parsedAmount > 0 ? parsedAmount / memberCount : 25;
@@ -1349,7 +1590,7 @@ export default function App() {
         description: billDescription || (lang === 'de' ? 'Neue Rechnung' : 'New Bill'),
         amount: parsedAmount || share * memberCount,
         paidById: currentPayerId,
-        date: 'Today',
+        date: localIso(),
         category: billCategory,
         splitType: billSplitType,
         splitDetails: {},
@@ -1381,7 +1622,7 @@ export default function App() {
       fromMemberId: currentUserId,
       toMemberId: payer.id,
       amount,
-      date: 'Today',
+      date: localIso(),
       verified: true,
     };
 
@@ -1390,9 +1631,9 @@ export default function App() {
       groupId,
       memberId: currentUserId,
       type: 'settlement_made',
-      title: `${currentUser?.username || (lang === 'de' ? 'Ich' : 'You')} ${t.settlementRegistered} ${payer.name} (${amount.toFixed(2)} €)`,
+      title: `${currentUser?.username || (lang === 'de' ? 'Ich' : 'You')} ${t.settlementRegistered} ${payer.name} (${money(amount)})`,
       amount: -amount,
-      date: 'Just now',
+      date: new Date().toISOString(),
     };
 
     setSettlements((prev) => {
@@ -1417,8 +1658,8 @@ export default function App() {
     setDirectPayModalData(null);
     triggerToast(
       lang === 'de'
-        ? `Zahlung über ${amount.toFixed(2)} € verbucht!`
-        : `Payment of ${amount.toFixed(2)} € recorded!`,
+        ? `Zahlung über ${money(amount)} verbucht!`
+        : `Payment of ${money(amount)} recorded!`,
     );
   };
 
@@ -1510,6 +1751,19 @@ export default function App() {
           >
             <span className="material-symbols-outlined text-[18px]">check_circle</span>
             <span>{toastMessage}</span>
+            {toastAction && (
+              <button
+                type="button"
+                onClick={() => {
+                  toastAction.run();
+                  setToastMessage(null);
+                  setToastAction(null);
+                }}
+                className="ml-2 min-h-9 px-3 rounded-full bg-white/20 hover:bg-white/30 text-white font-bold text-sm underline-offset-2"
+              >
+                {toastAction.label}
+              </button>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
@@ -1607,13 +1861,7 @@ export default function App() {
           {/* Bottom Left Navigation Area with Controls */}
           <div className="pt-8 border-t border-slate-200/60 dark:border-slate-800/60">
             <button
-              onClick={() => {
-                if (groups.length > 0) {
-                  setBillGroupId(selectedGroupId || groups[0].id);
-                }
-                setBillCategory('Dining');
-                setCurrentView('add-bill');
-              }}
+              onClick={() => startNewBill()}
               className="w-full bg-[#006c49] hover:bg-[#005236] dark:bg-emerald-600 dark:hover:bg-emerald-700 text-white py-4 rounded-xl font-bold text-sm transition-all shadow-md flex items-center justify-center gap-2 active:scale-95"
             >
               <span className="material-symbols-outlined text-[18px]">add</span>
@@ -1673,7 +1921,7 @@ export default function App() {
                         </h2>
                         <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
                           {lang === 'de'
-                            ? 'Ihre finanzielle Übersicht über alle aktiven Gruppen.'
+                            ? 'Deine finanzielle Übersicht über alle aktiven Gruppen.'
                             : 'Your financial standing across all shared ledgers.'}
                         </p>
                       </div>
@@ -1690,7 +1938,7 @@ export default function App() {
                           <div className="flex items-baseline gap-2">
                             <span className="font-mono text-5xl font-black text-[#006c49] dark:text-[#10b981]">
                               {globalOverview.totalBalance >= 0 ? '+' : '-'}
-                              {Math.abs(globalOverview.totalBalance).toFixed(2)} {t.currencySymbol}
+                              {money(Math.abs(globalOverview.totalBalance))}
                             </span>
                             <span className="text-slate-500 dark:text-slate-400 font-bold text-sm">
                               {globalOverview.totalBalance >= 0 ? t.youAreOwed : t.youOwe}
@@ -1704,7 +1952,7 @@ export default function App() {
                               {t.youAreOwed}
                             </span>
                             <p className="font-mono text-xl font-bold text-[#006c49] dark:text-[#10b981] mt-0.5">
-                              {globalOverview.owedToYou.toFixed(2)} {t.currencySymbol}
+                              {money(globalOverview.owedToYou)}
                             </p>
                           </div>
                           <div>
@@ -1712,7 +1960,7 @@ export default function App() {
                               {t.youOwe}
                             </span>
                             <p className="font-mono text-xl font-bold text-rose-500 dark:text-rose-400 mt-0.5">
-                              {globalOverview.youOwe.toFixed(2)} {t.currencySymbol}
+                              {money(globalOverview.youOwe)}
                             </p>
                           </div>
                         </div>
@@ -1726,7 +1974,7 @@ export default function App() {
                               {lang === 'de' ? 'Ausgaben diesen Monat' : 'Monthly Spend'}
                             </span>
                             <h4 className="font-mono text-2xl font-black text-slate-900 dark:text-white mt-1">
-                              {currentMonthExpensesTotal.toFixed(2)} {t.currencySymbol}
+                              {money(currentMonthExpensesTotal)}
                             </h4>
                           </div>
                           <span className="material-symbols-outlined text-[#006c49] dark:text-[#10b981] bg-emerald-50 dark:bg-emerald-950 p-2 rounded-xl">
@@ -1743,7 +1991,7 @@ export default function App() {
                               <div
                                 key={idx}
                                 className="flex-1 flex flex-col items-center gap-1 group cursor-pointer"
-                                title={`${item.label}: ${item.amount.toFixed(2)} ${t.currencySymbol}`}
+                                title={`${item.label}: ${money(item.amount)}`}
                               >
                                 <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-t h-16 relative overflow-hidden">
                                   <div
@@ -1797,7 +2045,7 @@ export default function App() {
                                 </div>
                                 <div className="text-right flex-shrink-0">
                                   <p className="font-mono font-bold text-xs text-slate-900 dark:text-white">
-                                    {exp.amount.toFixed(2)} {t.currencySymbol}
+                                    {money(exp.amount)}
                                   </p>
                                   <button
                                     onClick={() => handleSendExpenseReminder(exp)}
@@ -1888,17 +2136,12 @@ export default function App() {
                                   <div className="space-y-1.5 pt-4 border-t border-slate-100 dark:border-slate-800">
                                     <div className="flex justify-between items-center text-xs">
                                       <span className="text-slate-400 font-bold">
-                                        {lang === 'de' ? 'Ihr Saldo' : 'Your standing'}
+                                        {lang === 'de' ? 'Dein Saldo' : 'Your standing'}
                                       </span>
                                       <span
                                         className={`font-mono font-bold ${stats.userNetBalance > 0 ? 'text-[#006c49] dark:text-[#10b981]' : stats.userNetBalance < 0 ? 'text-rose-500 dark:text-rose-400' : 'text-slate-400'}`}
                                       >
-                                        {stats.userNetBalance > 0
-                                          ? `+${stats.userNetBalance.toFixed(2)}`
-                                          : stats.userNetBalance < 0
-                                            ? `${stats.userNetBalance.toFixed(2)}`
-                                            : '0.00'}{' '}
-                                        {t.currencySymbol}
+                                        {stats.userNetBalance > 0 ? `+${money(stats.userNetBalance)}` : money(stats.userNetBalance)}
                                       </span>
                                     </div>
                                   </div>
@@ -1934,7 +2177,7 @@ export default function App() {
                                     {act.title}
                                   </p>
                                   <span className="text-[10px] text-slate-400 dark:text-slate-500">
-                                    {act.date}
+                                    {actTime(act.date)}
                                   </span>
                                 </div>
                               </div>
@@ -1956,7 +2199,7 @@ export default function App() {
                         </h2>
                         <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
                           {lang === 'de'
-                            ? 'Verwalten Sie Ihre geteilten Rechnungen und Reisekosten.'
+                            ? 'Verwalte deine geteilten Rechnungen und Reisekosten.'
                             : 'Manage your sharing agreements and trip ledgers.'}
                         </p>
                       </div>
@@ -2026,12 +2269,7 @@ export default function App() {
                               <p
                                 className={`text-sm font-mono font-bold ${stats.userNetBalance > 0 ? 'text-[#006c49] dark:text-[#10b981]' : stats.userNetBalance < 0 ? 'text-rose-500 dark:text-rose-400' : 'text-slate-400'}`}
                               >
-                                {stats.userNetBalance > 0
-                                  ? `+${stats.userNetBalance.toFixed(2)}`
-                                  : stats.userNetBalance < 0
-                                    ? `${stats.userNetBalance.toFixed(2)}`
-                                    : '0.00'}{' '}
-                                {t.currencySymbol}
+                                {stats.userNetBalance > 0 ? `+${money(stats.userNetBalance)}` : money(stats.userNetBalance)}
                               </p>
                             </div>
                           </div>
@@ -2067,7 +2305,9 @@ export default function App() {
                           </h2>
                         </div>
                         <p className="text-slate-400 dark:text-slate-500 text-xs mt-1 pl-8">
-                          {activeGroup.location} • {activeGroup.memberIds.length} {t.members}
+                          {[activeGroup.location, `${activeGroup.memberIds.length} ${t.members}`]
+                            .filter(Boolean)
+                            .join(' • ')}
                         </p>
 
                         {/* Multiplayer status badge */}
@@ -2121,11 +2361,7 @@ export default function App() {
                           <span className="material-symbols-outlined text-[18px]">settings</span>
                         </button>
                         <button
-                          onClick={() => {
-                            setBillGroupId(activeGroup.id);
-                            setBillCategory('Dining');
-                            setCurrentView('add-bill');
-                          }}
+                          onClick={() => startNewBill(activeGroup.id)}
                           className="bg-[#006c49] dark:bg-emerald-600 text-white px-5 py-2.5 rounded-xl text-xs font-bold transition-all shadow"
                         >
                           {t.addExpense}
@@ -2202,7 +2438,7 @@ export default function App() {
                                     {t.amount}
                                   </span>
                                   <span className="font-mono font-bold text-[#006c49] dark:text-[#10b981]">
-                                    {aiParsedResult.amount.toFixed(2)} {t.currencySymbol}
+                                    {money(aiParsedResult.amount)}
                                   </span>
                                 </div>
                                 <div>
@@ -2266,7 +2502,16 @@ export default function App() {
                             <div className="divide-y divide-slate-100 dark:divide-slate-800">
                               {displayedExpenses.map((exp) => {
                                 const isUserPayer = exp.paidById === (currentUser?.id || 'u1');
-                                const share = exp.amount / activeGroup.memberIds.length;
+                                const myId = currentUser?.id || 'u1';
+                                const partCount = participantsOf(exp, activeGroup.memberIds).length;
+                                // What the signed-in person owes for this expense (0: not part of it).
+                                const share = fromCents(
+                                  expenseShares(exp, activeGroup.memberIds)[myId] ?? 0,
+                                );
+                                // The average part, for the link the payer shares with the others.
+                                const perHead = fromCents(
+                                  Math.round(toCents(exp.amount) / Math.max(1, partCount)),
+                                );
                                 const deadlineInfo = computeDeadlineStatus(exp.dueDate);
 
                                 return (
@@ -2304,7 +2549,9 @@ export default function App() {
                                           {exp.description}
                                         </h4>
                                         <p className="text-xs text-slate-400">
-                                          {findMember(exp.paidById).name} • {exp.date}
+                                          {findMember(exp.paidById).name} • {dayText(exp.date)}
+                                          {partCount < activeGroup.memberIds.length &&
+                                            ` • ${t.splitWith.replace('{n}', String(partCount))}`}
                                         </p>
 
                                         {/* Status Tags Row: Receipts, Deadlines, Reminders, Direct Pay */}
@@ -2358,13 +2605,14 @@ export default function App() {
                                     <div className="flex items-center sm:flex-col sm:items-end justify-between gap-2 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-slate-800">
                                       <div className="text-left sm:text-right">
                                         <p className="font-mono font-bold text-slate-900 dark:text-white text-sm">
-                                          {exp.amount.toFixed(2)} {t.currencySymbol}
+                                          {money(exp.amount)}
                                         </p>
                                         <p className="text-[10px] text-slate-400 font-bold">
                                           {isUserPayer
-                                            ? `${lang === 'de' ? 'Du verliehst' : 'You lent'} ${(exp.amount - share).toFixed(2)}`
-                                            : `${lang === 'de' ? 'Du schuldest' : 'You owe'} ${share.toFixed(2)}`}{' '}
-                                          {t.currencySymbol}
+                                            ? `${lang === 'de' ? 'Du verleihst' : 'You lent'} ${money(exp.amount - share)}`
+                                            : share > 0
+                                              ? `${lang === 'de' ? 'Du schuldest' : 'You owe'} ${money(share)}`
+                                              : t.notInvolved}
                                         </p>
                                       </div>
 
@@ -2373,7 +2621,7 @@ export default function App() {
                                           <>
                                             {/* Payer Actions: Share payment link, edit payment info, remind */}
                                             <button
-                                              onClick={() => handleShareDirectPay(exp, share)}
+                                              onClick={() => handleShareDirectPay(exp, perHead)}
                                               className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-[#006c49]/10 hover:bg-[#006c49]/20 text-[#006c49] dark:text-[#10b981] transition-colors"
                                               title={
                                                 lang === 'de'
@@ -2415,7 +2663,7 @@ export default function App() {
                                               </span>
                                             </button>
                                           </>
-                                        ) : (
+                                        ) : share <= 0 ? null : (
                                           <>
                                             {/* Debtor Actions: Direct Pay button & fast PayPal button */}
                                             <button
@@ -2431,7 +2679,7 @@ export default function App() {
                                                 payments
                                               </span>
                                               <span>
-                                                {t.directPay} ({share.toFixed(2)} €)
+                                                {t.directPay} ({money(share)})
                                               </span>
                                             </button>
 
@@ -2468,6 +2716,24 @@ export default function App() {
                                             </button>
                                           </>
                                         )}
+                                        <button
+                                          type="button"
+                                          onClick={() => startEditBill(exp)}
+                                          className="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-600 dark:text-slate-300"
+                                          title={t.editBill}
+                                          aria-label={`${t.editBill}: ${exp.description}`}
+                                        >
+                                          <span className="material-symbols-outlined text-[16px]">edit</span>
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => deleteExpense(exp)}
+                                          className="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-rose-50 text-slate-500 hover:text-rose-600"
+                                          title={t.deleteExpense}
+                                          aria-label={`${t.deleteExpense}: ${exp.description}`}
+                                        >
+                                          <span className="material-symbols-outlined text-[16px]">delete</span>
+                                        </button>
                                       </div>
                                     </div>
                                   </div>
@@ -2491,19 +2757,81 @@ export default function App() {
                                 {lang === 'de' ? 'Ausgaben gesamt' : 'Total Spent'}
                               </span>
                               <span className="font-mono text-xl font-black text-slate-900 dark:text-white">
-                                {activeGroupBalances.totalSpent.toFixed(2)} {t.currencySymbol}
+                                {money(activeGroupBalances.totalSpent)}
                               </span>
                             </div>
                             <div className="flex justify-between items-center pt-2 border-t border-slate-200 dark:border-slate-800">
                               <span className="text-slate-400 text-xs font-semibold">
-                                {lang === 'de' ? 'Ihr Anteil' : 'Your share'}
+                                {lang === 'de' ? 'Dein Anteil' : 'Your share'}
                               </span>
                               <span className="font-mono text-xl font-black text-slate-900 dark:text-white">
-                                {activeGroupBalances.userShare.toFixed(2)} {t.currencySymbol}
+                                {money(activeGroupBalances.userShare)}
                               </span>
                             </div>
                           </div>
                         </div>
+
+                        {/* Who pays whom: the fewest payments that settle the group */}
+                        {(() => {
+                          const cents: { [id: string]: number } = {};
+                          for (const [id, value] of Object.entries(
+                            activeGroupBalances.memberBalances,
+                          ))
+                            cents[id] = toCents(Number(value));
+                          const transfers = suggestTransfers(cents);
+                          return (
+                            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 space-y-3">
+                              <div>
+                                <h4 className="font-bold text-slate-900 dark:text-white text-sm">
+                                  {t.howToSettle}
+                                </h4>
+                                <p className="text-xs text-slate-400 mt-0.5">{t.howToSettleHint}</p>
+                              </div>
+                              {transfers.length === 0 ? (
+                                <p className="text-sm font-bold text-[#006c49] dark:text-[#10b981]">
+                                  {t.allSettled}
+                                </p>
+                              ) : (
+                                <ul className="space-y-2">
+                                  {transfers.map((transfer) => (
+                                    <li
+                                      key={`${transfer.from}-${transfer.to}`}
+                                      className="flex items-center justify-between gap-3"
+                                    >
+                                      <div className="min-w-0">
+                                        <p className="text-sm font-bold dark:text-white">
+                                          {t.payerPays
+                                            .replace(
+                                              '{from}',
+                                              transfer.from === meId
+                                                ? t.you
+                                                : findMember(transfer.from).name,
+                                            )
+                                            .replace(
+                                              '{to}',
+                                              transfer.to === meId
+                                                ? t.youTo
+                                                : findMember(transfer.to).name,
+                                            )}
+                                        </p>
+                                        <p className="font-mono text-sm text-slate-600 dark:text-slate-300">
+                                          {money(fromCents(transfer.amount))}
+                                        </p>
+                                      </div>
+                                      <button
+                                        type="button"
+                                        onClick={() => recordTransfer(transfer)}
+                                        className="min-h-11 px-3 rounded-xl text-xs font-bold bg-[#006c49] hover:bg-[#005236] text-white flex-shrink-0"
+                                      >
+                                        {t.bookAsPaid}
+                                      </button>
+                                    </li>
+                                  ))}
+                                </ul>
+                              )}
+                            </div>
+                          );
+                        })()}
 
                         {/* Members outstanding balances list with individual reminder actions */}
                         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 space-y-4">
@@ -2557,14 +2885,13 @@ export default function App() {
                                         {isMe ? (lang === 'de' ? 'Du' : 'You') : m.name}
                                       </p>
                                       <p
-                                        className={`text-[10px] font-bold ${balance > 0 ? 'text-[#006c49] dark:text-[#10b981]' : balance < 0 ? 'text-rose-500' : 'text-slate-400'}`}
+                                        className={`text-xs font-bold ${balance > 0 ? 'text-[#006c49] dark:text-[#10b981]' : balance < 0 ? 'text-rose-500' : 'text-slate-400'}`}
                                       >
                                         {balance > 0
-                                          ? `${lang === 'de' ? 'Bekommt' : 'Gets back'} ${balance.toFixed(2)}`
+                                          ? `${lang === 'de' ? 'Bekommt' : 'Gets back'} ${money(balance)}`
                                           : balance < 0
-                                            ? `${lang === 'de' ? 'Schuldet' : 'Owes'} ${Math.abs(balance).toFixed(2)}`
-                                            : t.settledUp}{' '}
-                                        {t.currencySymbol}
+                                            ? `${lang === 'de' ? 'Schuldet' : 'Owes'} ${money(Math.abs(balance))}`
+                                            : t.settledUp}
                                       </p>
                                     </div>
                                   </div>
@@ -2679,7 +3006,7 @@ export default function App() {
                               <p className="font-bold text-slate-800 dark:text-slate-100 text-sm leading-tight">
                                 {act.title}
                               </p>
-                              <p className="text-xs text-slate-400 mt-1">{act.date}</p>
+                              <p className="text-xs text-slate-400 mt-1">{actTime(act.date)}</p>
                             </div>
                           </div>
                         ))
@@ -2697,7 +3024,7 @@ export default function App() {
                       </h2>
                       <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
                         {lang === 'de'
-                          ? 'Verwalten Sie Ihre persönlichen Präferenzen.'
+                          ? 'Verwalte deine persönlichen Einstellungen.'
                           : 'Configure your personal dashboard setup and preferences.'}
                       </p>
                     </header>
@@ -2864,7 +3191,7 @@ export default function App() {
                                 })
                               }
                               placeholder={
-                                currentUser?.username || (lang === 'de' ? 'Ihr Name' : 'Your Name')
+                                currentUser?.username || (lang === 'de' ? 'Dein Name' : 'Your Name')
                               }
                               className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 h-11 text-xs font-bold text-slate-850 dark:text-slate-100 outline-none"
                             />
@@ -2887,78 +3214,90 @@ export default function App() {
                 {currentView === 'add-bill' && (
                   <form
                     onSubmit={handleAddBillSubmit}
-                    className="max-w-2xl mx-auto space-y-8 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 md:p-8 shadow-sm"
+                    noValidate
+                    className="max-w-2xl mx-auto bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 md:p-8 pb-28 shadow-sm"
                   >
-                    <header className="flex justify-between items-center pb-4 border-b border-slate-100 dark:border-slate-800">
+                    <header className="flex items-center gap-3 pb-4 mb-6 border-b border-slate-100 dark:border-slate-800">
                       <button
                         type="button"
-                        onClick={() => setCurrentView('dashboard')}
-                        className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-slate-800"
+                        aria-label={t.cancel}
+                        onClick={() => {
+                          setEditingExpenseId(null);
+                          setCurrentView(selectedGroupId ? 'group-detail' : 'dashboard');
+                        }}
+                        className="w-11 h-11 flex items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-slate-800"
                       >
                         <span className="material-symbols-outlined">close</span>
                       </button>
                       <h2 className="font-display text-xl font-bold dark:text-white">
-                        {t.addBill}
+                        {editingExpenseId ? t.editBill : t.addBill}
                       </h2>
-                      <button
-                        type="submit"
-                        className="text-[#006c49] dark:text-[#10b981] font-bold text-sm px-4 py-2 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 rounded-lg"
-                      >
-                        {t.save}
-                      </button>
                     </header>
 
-                    {/* Big beautiful money amount input */}
-                    <div className="py-8 flex flex-col items-center">
-                      <div className="relative w-full text-center">
-                        <span className="absolute left-[28%] md:left-[35%] top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-600 font-bold text-4xl">
-                          {t.currencySymbol}
-                        </span>
-                        <input
-                          type="number"
-                          step="0.01"
-                          placeholder="0.00"
-                          value={billAmount}
-                          onChange={(e) => setBillAmount(e.target.value)}
-                          className="w-full bg-transparent border-none text-center font-display text-6xl font-black text-slate-900 dark:text-white focus:ring-0 placeholder:text-slate-200 dark:placeholder:text-slate-800"
-                          autoFocus
-                          required
-                        />
+                    <div className="space-y-6">
+                      {/* The amount: big, with the comma of the language, no spinner */}
+                      <div className="flex flex-col items-center py-2">
+                        <label htmlFor="bill-amount" className="sr-only">
+                          {t.totalAmount}
+                        </label>
+                        <div className="flex items-baseline justify-center gap-2 w-full">
+                          <input
+                            id="bill-amount"
+                            type="text"
+                            inputMode="decimal"
+                            autoComplete="off"
+                            placeholder={lang === 'de' ? '0,00' : '0.00'}
+                            value={billAmount}
+                            onChange={(e) => {
+                              setBillAmount(e.target.value);
+                              setBillError(null);
+                            }}
+                            className="min-w-0 w-48 bg-transparent border-none text-right font-display text-5xl font-black text-slate-900 dark:text-white focus:ring-0 outline-none placeholder:text-slate-300 dark:placeholder:text-slate-700"
+                            autoFocus={!editingExpenseId}
+                          />
+                          <span className="text-slate-400 dark:text-slate-500 font-bold text-4xl">
+                            {t.currencySymbol}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider mt-2">
+                          {t.totalAmount}
+                        </p>
                       </div>
-                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-3">
-                        {t.totalAmount}
-                      </p>
-                    </div>
 
-                    <div className="space-y-5">
                       <div className="space-y-1.5">
-                        <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">
+                        <label
+                          htmlFor="bill-desc"
+                          className="text-xs text-slate-400 font-bold uppercase tracking-wider"
+                        >
                           {t.description}
                         </label>
-                        <div className="flex items-center bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl px-4 h-14">
-                          <span className="material-symbols-outlined text-slate-400 mr-3">
-                            description
-                          </span>
-                          <input
-                            type="text"
-                            placeholder={t.whatWasThisFor}
-                            value={billDescription}
-                            onChange={(e) => setBillDescription(e.target.value)}
-                            className="bg-transparent border-none w-full focus:ring-0 text-slate-850 dark:text-slate-200 text-sm outline-none"
-                            required
-                          />
-                        </div>
+                        <input
+                          id="bill-desc"
+                          type="text"
+                          placeholder={t.whatWasThisFor}
+                          value={billDescription}
+                          onChange={(e) => {
+                            setBillDescription(e.target.value);
+                            setBillError(null);
+                          }}
+                          className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl px-4 h-14 text-sm text-slate-800 dark:text-slate-200 outline-none focus:border-[#006c49]"
+                        />
                       </div>
 
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-1.5">
-                          <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">
-                            {t.groups}
+                          <label
+                            htmlFor="bill-group"
+                            className="text-xs text-slate-400 font-bold uppercase tracking-wider"
+                          >
+                            {t.group}
                           </label>
                           <select
+                            id="bill-group"
                             value={billGroupId}
-                            onChange={(e) => setBillGroupId(e.target.value)}
-                            className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl px-4 h-14 text-sm text-slate-750 dark:text-slate-200 focus:ring-0 cursor-pointer"
+                            disabled={Boolean(editingExpenseId)}
+                            onChange={(e) => changeBillGroup(e.target.value)}
+                            className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl px-4 h-14 text-sm text-slate-800 dark:text-slate-200 cursor-pointer disabled:opacity-60"
                           >
                             {groups.map((g) => (
                               <option key={g.id} value={g.id}>
@@ -2967,129 +3306,256 @@ export default function App() {
                             ))}
                           </select>
                         </div>
-
                         <div className="space-y-1.5">
-                          <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">
-                            {t.category}
+                          <label
+                            htmlFor="bill-paidby"
+                            className="text-xs text-slate-400 font-bold uppercase tracking-wider"
+                          >
+                            {t.paidBy}
                           </label>
                           <select
-                            value={billCategory}
-                            onChange={(e) => setBillCategory(e.target.value)}
-                            className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl px-4 h-14 text-sm text-slate-750 dark:text-slate-200 focus:ring-0 cursor-pointer"
+                            id="bill-paidby"
+                            value={billPaidById}
+                            onChange={(e) => setBillPaidById(e.target.value)}
+                            className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl px-4 h-14 text-sm text-slate-800 dark:text-slate-200 cursor-pointer"
                           >
-                            {[
-                              'Dining',
-                              'Accommodation',
-                              'Transport',
-                              'Rent, Utilities',
-                              'Other',
-                            ].map((cat) => (
-                              <option key={cat} value={cat}>
-                                {cat}
+                            {(groups.find((g) => g.id === billGroupId)?.memberIds ?? []).map((id) => (
+                              <option key={id} value={id}>
+                                {id === meId ? `${findMember(id).name} (${t.you})` : findMember(id).name}
                               </option>
                             ))}
                           </select>
                         </div>
                       </div>
 
-                      {/* Custom Split Details component */}
+                      {/* Who takes part: tap a name to leave it out */}
+                      {(() => {
+                        const group = groups.find((g) => g.id === billGroupId);
+                        const everyone = group?.memberIds ?? [];
+                        return (
+                          <fieldset className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <legend className="text-xs text-slate-400 font-bold uppercase tracking-wider">
+                                {t.whoIsIn}
+                              </legend>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setBillParticipants(everyone);
+                                  if (billSplitType !== 'equal')
+                                    setCustomSplitDetails(
+                                      defaultSplitValues(billSplitType, everyone, parseAmount(billAmount)),
+                                    );
+                                }}
+                                className="min-h-9 px-2 text-xs font-bold text-[#006c49] dark:text-[#10b981]"
+                              >
+                                {t.everyone}
+                              </button>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                              {everyone.map((id) => {
+                                const on = billParticipants.includes(id);
+                                return (
+                                  <button
+                                    key={id}
+                                    type="button"
+                                    aria-pressed={on}
+                                    onClick={() => toggleParticipant(id)}
+                                    className={`min-h-11 px-3.5 rounded-full text-sm font-bold border transition-colors ${
+                                      on
+                                        ? 'bg-[#006c49] text-white border-[#006c49]'
+                                        : 'bg-white dark:bg-slate-900 text-slate-500 border-slate-200 dark:border-slate-700 line-through decoration-slate-300'
+                                    }`}
+                                  >
+                                    {id === meId ? t.you : findMember(id).name}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </fieldset>
+                        );
+                      })()}
+
+                      {/* How it is split: equal by default, the rest one tap away */}
                       <div className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 space-y-3">
-                        <div className="flex justify-between items-center">
-                          <h4 className="text-xs text-slate-400 font-bold uppercase tracking-wider">
-                            {lang === 'de' ? 'Aufteilungs-Details' : 'Split Details'}
-                          </h4>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setShowSplitEditor(!showSplitEditor);
-                              const activeGrpObj =
-                                groups.find((g) => g.id === billGroupId) || activeGroup;
-                              if (activeGrpObj) {
-                                const details: { [key: string]: number } = {};
-                                const splitVal = 100 / activeGrpObj.memberIds.length;
-                                activeGrpObj.memberIds.forEach((mId) => {
-                                  details[mId] = splitVal;
-                                });
-                                setCustomSplitDetails(details);
-                              }
-                            }}
-                            className="text-[#006c49] dark:text-[#10b981] font-bold text-xs"
-                          >
-                            {showSplitEditor ? t.saveSplit : t.editSplit}
-                          </button>
+                        <div
+                          className="grid grid-cols-4 gap-1.5"
+                          role="group"
+                          aria-label={t.splitMethod}
+                        >
+                          {(
+                            [
+                              ['equal', t.splitEqual],
+                              ['percentage', t.splitPercent],
+                              ['exact', t.splitAmounts],
+                              ['shares', t.splitShares],
+                            ] as const
+                          ).map(([method, label]) => (
+                            <button
+                              key={method}
+                              type="button"
+                              aria-pressed={billSplitType === method}
+                              onClick={() => chooseSplitMethod(method)}
+                              className={`min-h-11 rounded-xl text-xs font-bold px-1 ${
+                                billSplitType === method
+                                  ? 'bg-[#006c49] text-white'
+                                  : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
+                              }`}
+                            >
+                              {label}
+                            </button>
+                          ))}
                         </div>
 
-                        {!showSplitEditor && (
-                          <p className="text-xs text-slate-600 dark:text-slate-300">
-                            {billSplitType === 'equal'
-                              ? `${lang === 'de' ? 'Gleichmäßig geteilt unter allen Mitgliedern.' : 'Split equally among all members.'}`
-                              : `${lang === 'de' ? 'Individuelle Gewichtung konfiguriert.' : 'Custom split configured.'}`}
-                          </p>
-                        )}
-
-                        {showSplitEditor && (
-                          <div className="space-y-4 pt-3 border-t border-slate-200/50 dark:border-slate-800/50">
-                            <div className="flex items-center gap-3">
-                              <span className="text-xs text-slate-400 font-bold">
-                                {t.splitMethod}:
-                              </span>
-                              {['equal', 'percentage', 'exact'].map((method) => (
-                                <button
-                                  key={method}
-                                  type="button"
-                                  onClick={() => setBillSplitType(method as any)}
-                                  className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase ${billSplitType === method ? 'bg-[#006c49] text-white' : 'bg-slate-200 text-slate-600'}`}
-                                >
-                                  {method}
-                                </button>
-                              ))}
-                            </div>
-
-                            {/* Render inputs per member */}
-                            {(
-                              groups.find((g) => g.id === billGroupId) || activeGroup
-                            )?.memberIds.map((mId) => {
-                              const m = findMember(mId);
-                              return (
-                                <div key={mId} className="flex justify-between items-center gap-4">
-                                  <div className="flex items-center gap-2">
+                        {(() => {
+                          const amount = parseAmount(billAmount);
+                          const preview = expenseShares(
+                            {
+                              id: 'preview',
+                              groupId: billGroupId,
+                              description: '',
+                              amount: Number.isNaN(amount) ? 0 : amount,
+                              paidById: billPaidById,
+                              date: '',
+                              category: '',
+                              splitType: billSplitType,
+                              participantIds: billParticipants,
+                              splitDetails: customSplitDetails,
+                            },
+                            billParticipants,
+                          );
+                          const sum = billParticipants.reduce(
+                            (a, id) => a + (customSplitDetails[id] ?? 0),
+                            0,
+                          );
+                          const unit =
+                            billSplitType === 'percentage'
+                              ? '%'
+                              : billSplitType === 'exact'
+                                ? t.currencySymbol
+                                : '×';
+                          const rest =
+                            billSplitType === 'percentage'
+                              ? 100 - sum
+                              : billSplitType === 'exact'
+                                ? (Number.isNaN(amount) ? 0 : amount) - sum
+                                : 0;
+                          return (
+                            <div className="space-y-2">
+                              {billParticipants.map((id) => (
+                                <div key={id} className="flex items-center justify-between gap-3">
+                                  <div className="flex items-center gap-2 min-w-0">
                                     <img
-                                      className="w-7 h-7 rounded-full"
-                                      src={m.avatarUrl}
+                                      className="w-7 h-7 rounded-full flex-shrink-0"
+                                      src={findMember(id).avatarUrl}
                                       alt=""
+                                      referrerPolicy="no-referrer"
                                     />
-                                    <span className="text-xs font-bold dark:text-slate-200">
-                                      {m.name}
+                                    <span className="text-sm font-bold dark:text-slate-200 truncate">
+                                      {id === meId ? t.you : findMember(id).name}
                                     </span>
                                   </div>
-                                  <div className="flex items-center gap-1.5">
-                                    <input
-                                      type="number"
-                                      className="w-16 h-8 text-xs text-center border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-800 dark:text-white rounded"
-                                      value={
-                                        customSplitDetails[mId] !== undefined
-                                          ? customSplitDetails[mId]
-                                          : ''
-                                      }
-                                      onChange={(e) => {
-                                        setBillSplitType('percentage');
-                                        setCustomSplitDetails({
-                                          ...customSplitDetails,
-                                          [mId]: parseFloat(e.target.value) || 0,
-                                        });
-                                      }}
-                                    />
-                                    <span className="text-xs text-slate-400 font-bold">
-                                      {billSplitType === 'exact' ? t.currencySymbol : '%'}
+                                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                                    {billSplitType !== 'equal' && (
+                                      <div className="flex items-center gap-1">
+                                        <input
+                                          type="text"
+                                          inputMode="decimal"
+                                          aria-label={`${findMember(id).name} ${unit}`}
+                                          className="w-16 min-h-11 text-sm text-center border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-white rounded-lg"
+                                          value={
+                                            customSplitDetails[id] === undefined
+                                              ? ''
+                                              : String(customSplitDetails[id]).replace(
+                                                  '.',
+                                                  lang === 'de' ? ',' : '.',
+                                                )
+                                          }
+                                          onChange={(e) => {
+                                            const v = parseAmount(e.target.value);
+                                            setCustomSplitDetails({
+                                              ...customSplitDetails,
+                                              [id]: Number.isNaN(v) ? 0 : v,
+                                            });
+                                            setBillError(null);
+                                          }}
+                                        />
+                                        <span className="text-xs text-slate-400 font-bold w-3">
+                                          {unit}
+                                        </span>
+                                      </div>
+                                    )}
+                                    <span className="font-mono text-sm font-bold text-slate-700 dark:text-slate-200 w-20 text-right">
+                                      {money(fromCents(preview[id] ?? 0))}
                                     </span>
                                   </div>
                                 </div>
-                              );
-                            })}
-                          </div>
-                        )}
+                              ))}
+                              {billSplitType !== 'equal' && billSplitType !== 'shares' && (
+                                <p
+                                  className={`text-xs font-bold ${Math.abs(rest) < 0.005 ? 'text-[#006c49] dark:text-[#10b981]' : 'text-amber-600 dark:text-amber-400'}`}
+                                  aria-live="polite"
+                                >
+                                  {Math.abs(rest) < 0.005
+                                    ? t.splitAddsUp
+                                    : billSplitType === 'percentage'
+                                      ? t.splitRestPercent.replace(
+                                          '{n}',
+                                          String(Math.round(rest * 100) / 100).replace('.', ','),
+                                        )
+                                      : t.splitRestAmount.replace('{n}', money(rest))}
+                                </p>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </div>
 
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                          <label
+                            htmlFor="bill-date"
+                            className="text-xs text-slate-400 font-bold uppercase tracking-wider"
+                          >
+                            {t.date}
+                          </label>
+                          <input
+                            id="bill-date"
+                            type="date"
+                            value={billDate}
+                            max={localIso()}
+                            onChange={(e) => setBillDate(e.target.value)}
+                            className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl px-4 h-14 text-sm text-slate-800 dark:text-slate-200"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label
+                            htmlFor="bill-cat"
+                            className="text-xs text-slate-400 font-bold uppercase tracking-wider"
+                          >
+                            {t.category}
+                          </label>
+                          <select
+                            id="bill-cat"
+                            value={billCategory}
+                            onChange={(e) => setBillCategory(e.target.value)}
+                            className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl px-4 h-14 text-sm text-slate-800 dark:text-slate-200 cursor-pointer"
+                          >
+                            {CATEGORIES.map((cat) => (
+                              <option key={cat} value={cat}>
+                                {categoryLabel(cat)}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+
+                      <details className="group rounded-2xl border border-slate-200 dark:border-slate-800">
+                        <summary className="min-h-12 px-4 flex items-center justify-between cursor-pointer text-sm font-bold text-slate-700 dark:text-slate-200 list-none">
+                          <span>{t.moreOptions}</span>
+                          <span className="text-xs text-slate-400 font-normal">{t.moreOptionsHint}</span>
+                        </summary>
+                        <div className="p-4 pt-0 space-y-5">
                       {/* Deadline Setting Section */}
                       <div className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 space-y-3">
                         <div className="flex justify-between items-center">
@@ -3219,9 +3685,9 @@ export default function App() {
                                     id: 'preview',
                                     groupId: billGroupId,
                                     description: billDescription || 'Receipt Preview',
-                                    amount: parseFloat(billAmount) || 0,
+                                    amount: billAmountValue,
                                     paidById: currentUser?.id || 'u1',
-                                    date: 'Today',
+                                    date: localIso(),
                                     dueDate: billDueDate,
                                     category: billCategory,
                                     splitType: billSplitType,
@@ -3261,9 +3727,9 @@ export default function App() {
                                     id: 'preview',
                                     groupId: billGroupId,
                                     description: billDescription || 'Receipt Preview',
-                                    amount: parseFloat(billAmount) || 0,
+                                    amount: billAmountValue,
                                     paidById: currentUser?.id || 'u1',
-                                    date: 'Today',
+                                    date: localIso(),
                                     dueDate: billDueDate,
                                     category: billCategory,
                                     splitType: billSplitType,
@@ -3326,10 +3792,10 @@ export default function App() {
                           <div className="space-y-4 pt-3 border-t border-slate-200/60 dark:border-slate-800/60">
                             {/* Live calculation banner */}
                             {(() => {
-                              const pAmount = parseFloat(billAmount) || 0;
+                              const pAmount = billAmountValue;
                               const targetGrp =
                                 groups.find((g) => g.id === billGroupId) || activeGroup;
-                              const count = targetGrp?.memberIds.length || 1;
+                              const count = billParticipants.length || targetGrp?.memberIds.length || 1;
                               const sharePerMember = pAmount > 0 ? pAmount / count : 0;
                               return (
                                 <div className="bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-900/50 rounded-xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
@@ -3346,8 +3812,8 @@ export default function App() {
                                     </span>
                                     <p className="text-xs text-slate-700 dark:text-slate-300">
                                       {lang === 'de'
-                                        ? `Jedes Mitglied zahlt genau ${sharePerMember > 0 ? sharePerMember.toFixed(2) : '0,00'} € direkt an dich.`
-                                        : `Each member will pay exactly ${sharePerMember > 0 ? sharePerMember.toFixed(2) : '0.00'} € directly to you.`}
+                                        ? `Jedes Mitglied zahlt genau ${sharePerMember > 0 ? money(sharePerMember) : money(0)} direkt an dich.`
+                                        : `Each member will pay exactly ${sharePerMember > 0 ? money(sharePerMember) : money(0)} directly to you.`}
                                     </p>
                                   </div>
                                   <button
@@ -3376,12 +3842,8 @@ export default function App() {
                                 {billPaypalHandle && (
                                   <span className="text-[#006c49] dark:text-[#10b981] font-mono text-[9px]">
                                     paypal.me/{cleanPayPalHandle(billPaypalHandle)}/
-                                    {(parseFloat(billAmount) || 0) > 0
-                                      ? (
-                                          (parseFloat(billAmount) || 0) /
-                                          ((groups.find((g) => g.id === billGroupId) || activeGroup)
-                                            ?.memberIds.length || 1)
-                                        ).toFixed(2)
+                                    {billAmountValue > 0
+                                      ? (billAmountValue / (billParticipants.length || 1)).toFixed(2)
                                       : '10.00'}
                                     EUR
                                   </span>
@@ -3423,7 +3885,7 @@ export default function App() {
                                   type="text"
                                   placeholder={
                                     currentUser?.username ||
-                                    (lang === 'de' ? 'Ihr Name' : 'Your Name')
+                                    (lang === 'de' ? 'Dein Name' : 'Your Name')
                                   }
                                   value={billAccountHolder}
                                   onChange={(e) => setBillAccountHolder(e.target.value)}
@@ -3434,6 +3896,37 @@ export default function App() {
                           </div>
                         )}
                       </div>
+                        </div>
+                      </details>
+
+                      {billError && (
+                        <p
+                          role="alert"
+                          className="rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 text-sm font-bold px-4 py-3"
+                        >
+                          {billError}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* The save button stays in reach, also on long forms */}
+                    <div className="sticky bottom-20 md:bottom-4 mt-6 flex gap-3 bg-white/90 dark:bg-slate-900/90 backdrop-blur py-3">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingExpenseId(null);
+                          setCurrentView(selectedGroupId ? 'group-detail' : 'dashboard');
+                        }}
+                        className="min-h-12 px-5 rounded-xl font-bold text-sm bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200"
+                      >
+                        {t.cancel}
+                      </button>
+                      <button
+                        type="submit"
+                        className="flex-1 min-h-12 rounded-xl font-bold text-sm bg-[#006c49] hover:bg-[#005236] text-white"
+                      >
+                        {editingExpenseId ? t.saveChanges : t.save}
+                      </button>
                     </div>
                   </form>
                 )}
@@ -3444,12 +3937,8 @@ export default function App() {
           {/* FLOATING ACTION BUTTON (FAB) FOR MOBILE */}
           {currentView !== 'add-bill' && (
             <button
-              onClick={() => {
-                if (groups.length > 0) {
-                  setBillGroupId(selectedGroupId || groups[0].id);
-                }
-                setCurrentView('add-bill');
-              }}
+              onClick={() => startNewBill()}
+              aria-label={t.addBill}
               className="md:hidden fixed right-6 bottom-24 w-14 h-14 bg-[#006c49] dark:bg-emerald-600 hover:bg-[#005236] text-white rounded-full shadow-lg flex items-center justify-center active:scale-90 transition-all z-40"
             >
               <span className="material-symbols-outlined text-[28px]">add</span>
@@ -3540,7 +4029,7 @@ export default function App() {
                     onChange={(e) => {
                       setSettleTargetMemberId(e.target.value);
                       const bal = activeGroupBalances.memberBalances[e.target.value] || 0;
-                      setSettleAmount(Math.abs(bal).toFixed(2));
+                      setSettleAmount(Math.abs(bal).toFixed(2).replace('.', lang === 'de' ? ',' : '.'));
                     }}
                     className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 h-12 text-sm text-slate-800 dark:text-white"
                   >
@@ -3564,8 +4053,8 @@ export default function App() {
                       {t.currencySymbol}
                     </span>
                     <input
-                      type="number"
-                      step="0.01"
+                      type="text"
+                      inputMode="decimal"
                       value={settleAmount}
                       onChange={(e) => setSettleAmount(e.target.value)}
                       className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl pl-8 pr-4 h-12 text-sm text-slate-800 dark:text-white"
@@ -3574,7 +4063,7 @@ export default function App() {
                   </div>
                 </div>
 
-                {settleTargetMemberId && parseFloat(settleAmount) > 0 && (
+                {settleTargetMemberId && parseAmount(settleAmount) > 0 && (
                   <div className="bg-[#006c49]/5 dark:bg-[#10b981]/10 border border-[#006c49]/20 dark:border-[#10b981]/30 rounded-xl p-3 flex items-center justify-between">
                     <div>
                       <span className="text-[10px] font-extrabold uppercase text-[#006c49] dark:text-[#10b981] flex items-center gap-1">
@@ -3593,7 +4082,7 @@ export default function App() {
                         setIsSettleModalOpen(false);
                         handleOpenDirectPayForMember(
                           settleTargetMemberId,
-                          parseFloat(settleAmount) || 0,
+                          parseAmount(settleAmount) || 0,
                         );
                       }}
                       className="px-3 py-1.5 bg-[#006c49] dark:bg-emerald-600 hover:bg-[#005236] text-white rounded-lg text-xs font-bold flex items-center gap-1 shadow-2xs"
@@ -3711,14 +4200,14 @@ export default function App() {
                 </button>
               </div>
 
-              <form onSubmit={handleCreateGroup} className="space-y-4">
+              <form onSubmit={handleCreateGroup} noValidate className="space-y-4">
                 <div className="space-y-1.5">
                   <label className="text-xs text-slate-400 font-bold uppercase">
                     {t.groupName}
                   </label>
                   <input
                     type="text"
-                    placeholder="Weekend Trip"
+                    placeholder={t.groupNamePlaceholder}
                     value={newGroupName}
                     onChange={(e) => setNewGroupName(e.target.value)}
                     className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 h-12 text-sm text-slate-800 dark:text-white"
@@ -3732,11 +4221,10 @@ export default function App() {
                   </label>
                   <input
                     type="text"
-                    placeholder="Portland, OR"
+                    placeholder={t.locationPlaceholder}
                     value={newGroupLocation}
                     onChange={(e) => setNewGroupLocation(e.target.value)}
                     className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 h-12 text-sm text-slate-800 dark:text-white"
-                    required
                   />
                 </div>
 
@@ -3750,6 +4238,8 @@ export default function App() {
                     <option value="Travel">{t.travel || 'Travel'}</option>
                     <option value="Rent, Utilities">{t.rentUtilities || 'Rent, Utilities'}</option>
                     <option value="Dining Out">{t.diningOut || 'Dining Out'}</option>
+                    <option value="Household">{t.householdGroup}</option>
+                    <option value="Event">{t.eventGroup}</option>
                     <option value="Other">{t.general || 'General'}</option>
                   </select>
                 </div>
@@ -3776,7 +4266,7 @@ export default function App() {
                   />
                   <p className="text-[10px] text-slate-400">
                     {lang === 'de'
-                      ? 'Sie können später jederzeit weitere Personen einladen.'
+                      ? 'Du kannst später jederzeit weitere Personen einladen.'
                       : 'You can also invite additional people later.'}
                   </p>
                 </div>
@@ -3793,7 +4283,7 @@ export default function App() {
                     type="submit"
                     className="flex-1 bg-[#006c49] dark:bg-emerald-600 text-white rounded-xl py-3 text-xs font-bold"
                   >
-                    {t.newGroup}
+                    {t.createGroupButton}
                   </button>
                 </div>
               </form>
@@ -3869,7 +4359,6 @@ export default function App() {
                     value={newGroupLocation}
                     onChange={(e) => setNewGroupLocation(e.target.value)}
                     className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 h-12 text-sm text-slate-800 dark:text-white"
-                    required
                   />
                 </div>
 
@@ -3983,7 +4472,7 @@ export default function App() {
 
                   <p className="text-sm text-slate-500 dark:text-slate-300 leading-relaxed">
                     {lang === 'de'
-                      ? `Möchten Sie die Gruppe "${grp.name}" wirklich löschen? Alle zugehörigen Ausgaben und Abrechnungen gehen dauerhaft verloren.`
+                      ? `Willst du die Gruppe "${grp.name}" wirklich löschen? Alle zugehörigen Ausgaben und Abrechnungen gehen dauerhaft verloren.`
                       : `Are you sure you want to delete the group "${grp.name}"? All associated expenses and settlements will be permanently deleted.`}
                   </p>
 
@@ -4034,7 +4523,7 @@ export default function App() {
 
               <p className="text-sm text-slate-500 dark:text-slate-300 leading-relaxed">
                 {lang === 'de'
-                  ? 'Möchten Sie wirklich alle aktiven Gruppen löschen? Dies kann nicht rückgängig gemacht werden und löscht alle Ausgaben.'
+                  ? 'Willst du wirklich alle aktiven Gruppen löschen? Dies kann nicht rückgängig gemacht werden und löscht alle Ausgaben.'
                   : 'Are you sure you want to delete all active groups? This cannot be undone and will delete all expenses.'}
               </p>
 
@@ -4123,7 +4612,7 @@ export default function App() {
                   </span>
                   <div className="flex items-center gap-2">
                     <span className="font-mono text-xl font-black text-[#006c49] dark:text-[#10b981]">
-                      {activeReceiptModal.amount.toFixed(2)} {t.currencySymbol}
+                      {money(activeReceiptModal.amount)}
                     </span>
                     {activeReceiptModal.dueDate && (
                       <span
@@ -4207,7 +4696,7 @@ export default function App() {
                   {lang === 'de' ? 'Zu zahlender Betrag' : 'Amount to Pay'}
                 </span>
                 <div className="font-display font-black text-4xl text-[#006c49] dark:text-[#10b981]">
-                  {directPayModalData.amount.toFixed(2)} {t.currencySymbol}
+                  {money(directPayModalData.amount)}
                 </div>
                 {directPayModalData.expense && (
                   <p className="text-xs text-slate-500 dark:text-slate-400">
@@ -4266,7 +4755,7 @@ export default function App() {
                           <p className="text-[10px] text-slate-400 font-mono">
                             paypal.me/
                             {cleanPayPalHandle(directPayModalData.paymentInfo.paypalHandle)}/
-                            {directPayModalData.amount.toFixed(2)}EUR
+                            {money(directPayModalData.amount)}
                           </p>
                         </div>
                       </div>
@@ -4287,7 +4776,7 @@ export default function App() {
                       >
                         <span className="material-symbols-outlined text-[16px]">open_in_new</span>
                         <span>
-                          {t.openPaypal} ({directPayModalData.amount.toFixed(2)} €)
+                          {t.openPaypal} ({money(directPayModalData.amount)})
                         </span>
                       </a>
                       <button
@@ -4642,7 +5131,7 @@ export default function App() {
                   <input
                     type="text"
                     placeholder={
-                      currentUser?.username || (lang === 'de' ? 'Ihr Name' : 'Your Name')
+                      currentUser?.username || (lang === 'de' ? 'Dein Name' : 'Your Name')
                     }
                     value={editPaymentAccountHolder}
                     onChange={(e) => setEditPaymentAccountHolder(e.target.value)}

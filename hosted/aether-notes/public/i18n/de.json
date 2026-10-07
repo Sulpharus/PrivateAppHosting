@@ -546,5 +546,19 @@
   "ui.upcomingReminders": "Anstehende Erinnerungen",
   "ui.viewInCrm": "Im CRM öffnen",
   "ui.workCategory": "Arbeit",
-  "ui.workTasks": "Aufgaben"
+  "ui.workTasks": "Aufgaben",
+  "suite.birthday": "Geburtstag",
+  "settings.birthdaysTitle": "Geburtstage",
+  "settings.birthdaysInCalendar": "Geburtstage im Kalender zeigen",
+  "settings.birthdaysHint": "Der Kalender und die Wunschliste zeigen die Geburtstage deiner Kontakte und Personen an, damit du rechtzeitig an ein Geschenk denkst. Ausgeschaltet entfernt Aether sie dort wieder.",
+  "birthday.label": "Geburtstag",
+  "birthday.day": "Tag",
+  "birthday.month": "Monat",
+  "birthday.year": "Jahr (freiwillig)",
+  "birthday.invalid": "Dieses Datum gibt es nicht. Bitte Tag, Monat und Jahr prüfen.",
+  "birthday.legacy": "Bisher eingetragen: „{text}“. Gib ein Datum ein, um es zu ersetzen.",
+  "birthday.share": "Für andere Apps freigeben (Kalender, Wunschliste)",
+  "birthday.hint": "Freigegeben erscheint der Geburtstag als jährlicher Eintrag im Kalender und in der Wunschliste. Nicht freigegeben bleibt er nur in Aether Notes.",
+  "birthday.private": "nur in Aether",
+  "birthday.sharedShort": "für andere Apps freigegeben"
 }

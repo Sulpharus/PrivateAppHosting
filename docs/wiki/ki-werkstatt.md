@@ -41,8 +41,7 @@ das App-Verhalten betreffen, in die Spezifikation: sonst baut die KI Apps ohne d
 
 ## Fertige Aufträge (Briefs)
 
-Für Apps, die schon beschrieben sind, liegen Aufträge unter `docs/ai/briefs/` (zurzeit: Projekte, Fahrzeuge, Geburtstage in der Wunschliste und in
-Aether Notes). `node scripts/compose-brief.ts docs/ai/briefs/<name>.brief.md` macht daraus denselben vollständigen Prompt wie die Werkstatt
+Für Apps, die schon beschrieben sind, liegen Aufträge unter `docs/ai/briefs/` (zurzeit: Projekte und Fahrzeuge). `node scripts/compose-brief.ts docs/ai/briefs/<name>.brief.md` macht daraus denselben vollständigen Prompt wie die Werkstatt
 (Auftrag, Spezifikation, Designsystem, Bausteine, Kit-CSS); er wird aus den aktuellen Dokumenten gebaut, nach Änderungen also neu erzeugen.
 
 ## Danach

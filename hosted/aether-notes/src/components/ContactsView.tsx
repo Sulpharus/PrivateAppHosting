@@ -7,6 +7,7 @@ import type React from 'react';
 import { useMemo, useState } from 'react';
 import { useTranslation } from '../contexts/TranslationContext';
 import type { Contact, Interaction, Meetup, Note } from '../types';
+import BirthdayField from './BirthdayField';
 
 interface ContactsViewProps {
   contacts: Contact[];
@@ -69,6 +70,8 @@ export default function ContactsView({
   const [contactNotes, setContactNotes] = useState('');
   const [contactFollowUpDate, setContactFollowUpDate] = useState('');
   const [contactFollowUpNote, setContactFollowUpNote] = useState('');
+  const [contactBirthday, setContactBirthday] = useState('');
+  const [contactBirthdayShared, setContactBirthdayShared] = useState(true);
 
   // Form Fields for Interaction
   const [interactionDate, setInteractionDate] = useState(() =>
@@ -176,6 +179,8 @@ export default function ContactsView({
     setContactNotes('');
     setContactFollowUpDate('');
     setContactFollowUpNote('');
+    setContactBirthday('');
+    setContactBirthdayShared(true);
     setIsEditingContact(false);
     setShowAddContactForm(true);
   };
@@ -192,6 +197,8 @@ export default function ContactsView({
     setContactNotes(c.notes || '');
     setContactFollowUpDate(c.followUpDate || '');
     setContactFollowUpNote(c.followUpNote || '');
+    setContactBirthday(c.birthday || '');
+    setContactBirthdayShared(c.birthdayShared !== false);
     setIsEditingContact(true);
     setShowAddContactForm(true);
   };
@@ -217,6 +224,8 @@ export default function ContactsView({
       notes: contactNotes.trim() || undefined,
       followUpDate: contactFollowUpDate || null,
       followUpNote: contactFollowUpNote.trim() || undefined,
+      birthday: contactBirthday || undefined,
+      birthdayShared: contactBirthday ? contactBirthdayShared : undefined,
     };
 
     if (isEditingContact && selectedContact) {
@@ -1038,6 +1047,15 @@ export default function ContactsView({
                   />
                 </div>
 
+                <BirthdayField
+                  value={contactBirthday}
+                  shared={contactBirthdayShared}
+                  onChange={(value, shared) => {
+                    setContactBirthday(value);
+                    setContactBirthdayShared(shared);
+                  }}
+                />
+
                 <div className="space-y-1 col-span-1 sm:col-span-2">
                   <label className="text-[10px] font-bold uppercase text-on-surface-variant tracking-wider">
                     {t('contacts.tagsLabel')}
@@ -1200,6 +1218,20 @@ export default function ContactsView({
                         pin_drop
                       </span>
                       <span className="leading-relaxed">{selectedContact.address}</span>
+                    </div>
+                  </div>
+                )}
+
+                {selectedContact.birthday && (
+                  <div className="sm:col-span-2 space-y-1">
+                    <span className="text-[10px] uppercase font-bold text-on-surface-variant/75 tracking-wider block">
+                      {t('birthday.label')}
+                    </span>
+                    <div className="text-on-surface font-sans p-2.5 rounded-xl bg-surface-container/30 border border-outline-variant/10">
+                      {selectedContact.birthday}
+                      {selectedContact.birthdayShared === false
+                        ? ` · ${t('birthday.private')}`
+                        : ` · ${t('birthday.sharedShort')}`}
                     </div>
                   </div>
                 )}

@@ -546,5 +546,19 @@
   "ui.upcomingReminders": "Upcoming Reminders",
   "ui.viewInCrm": "Open in CRM",
   "ui.workCategory": "Work",
-  "ui.workTasks": "Tasks"
+  "ui.workTasks": "Tasks",
+  "suite.birthday": "Birthday",
+  "settings.birthdaysTitle": "Birthdays",
+  "settings.birthdaysInCalendar": "Show birthdays in the calendar",
+  "settings.birthdaysHint": "The Kalender and the Wunschliste show the birthdays of your contacts and people so you think of a present in time. Switched off, Aether removes them there again.",
+  "birthday.label": "Birthday",
+  "birthday.day": "Day",
+  "birthday.month": "Month",
+  "birthday.year": "Year (optional)",
+  "birthday.invalid": "That date does not exist. Please check day, month and year.",
+  "birthday.legacy": "Entered so far: \"{text}\". Enter a date to replace it.",
+  "birthday.share": "Share with other apps (Kalender, Wunschliste)",
+  "birthday.hint": "Shared, the birthday appears as a yearly entry in the Kalender and in the Wunschliste. Not shared, it stays in Aether Notes only.",
+  "birthday.private": "Aether only",
+  "birthday.sharedShort": "shared with other apps"
 }

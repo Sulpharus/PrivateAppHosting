@@ -10,6 +10,7 @@ import { useTranslation } from '../contexts/TranslationContext';
 import { MiniNode } from '../mininode';
 import { scheduleSuiteSync } from '../suite';
 import type { ConnectionCategory, Person, PersonInteractionLog } from '../types';
+import BirthdayField from './BirthdayField';
 import RelationshipMap from './RelationshipMap';
 
 export interface PersonMeetup {
@@ -79,6 +80,7 @@ export default function PeopleView({
   const [newCoffeePreference, setNewCoffeePreference] = useState('');
   const [newGiftIdeas, setNewGiftIdeas] = useState('');
   const [newBirthday, setNewBirthday] = useState('');
+  const [newBirthdayShared, setNewBirthdayShared] = useState(true);
   const [newPersonalityType, setNewPersonalityType] = useState('');
   const [newFavoriteFood, setNewFavoriteFood] = useState('');
   const [newSensitiveTopics, setNewSensitiveTopics] = useState('');
@@ -103,6 +105,7 @@ export default function PeopleView({
   const [editCoffeePreference, setEditCoffeePreference] = useState('');
   const [editGiftIdeas, setEditGiftIdeas] = useState('');
   const [editBirthday, setEditBirthday] = useState('');
+  const [editBirthdayShared, setEditBirthdayShared] = useState(true);
   const [editPersonalityType, setEditPersonalityType] = useState('');
   const [editFavoriteFood, setEditFavoriteFood] = useState('');
   const [editSensitiveTopics, setEditSensitiveTopics] = useState('');
@@ -255,6 +258,7 @@ export default function PeopleView({
       setEditCoffeePreference(selectedPerson.coffeePreference || '');
       setEditGiftIdeas(selectedPerson.giftIdeas || '');
       setEditBirthday(selectedPerson.birthday || '');
+      setEditBirthdayShared(selectedPerson.birthdayShared !== false);
       setEditPersonalityType(selectedPerson.personalityType || '');
       setEditFavoriteFood(selectedPerson.favoriteFood || '');
       setEditSensitiveTopics(selectedPerson.sensitiveTopics || '');
@@ -330,6 +334,7 @@ export default function PeopleView({
       coffeePreference: newCoffeePreference || undefined,
       giftIdeas: newGiftIdeas || undefined,
       birthday: newBirthday || undefined,
+      birthdayShared: newBirthday ? newBirthdayShared : undefined,
       personalityType: newPersonalityType || undefined,
       favoriteFood: newFavoriteFood || undefined,
       sensitiveTopics: newSensitiveTopics || undefined,
@@ -352,6 +357,7 @@ export default function PeopleView({
     setNewCoffeePreference('');
     setNewGiftIdeas('');
     setNewBirthday('');
+    setNewBirthdayShared(true);
     setNewPersonalityType('');
     setNewFavoriteFood('');
     setNewSensitiveTopics('');
@@ -423,6 +429,7 @@ export default function PeopleView({
       coffeePreference: editCoffeePreference.trim() || undefined,
       giftIdeas: editGiftIdeas.trim() || undefined,
       birthday: editBirthday.trim() || undefined,
+      birthdayShared: editBirthday.trim() ? editBirthdayShared : undefined,
       personalityType: editPersonalityType.trim() || undefined,
       favoriteFood: editFavoriteFood.trim() || undefined,
       sensitiveTopics: editSensitiveTopics.trim() || undefined,
@@ -1155,17 +1162,14 @@ export default function PeopleView({
                       />
                     </div>
 
-                    <div>
-                      <label className="block text-xs font-semibold text-on-surface-variant mb-1 font-sans">
-                        {t('people.birthdayAnniversary')}
-                      </label>
-                      <input
-                        value={newBirthday}
-                        onChange={(e) => setNewBirthday(e.target.value)}
-                        placeholder={t('people.eGNovember23rd05')}
-                        className="w-full bg-surface-container-lowest border border-outline-variant/20 px-3 py-2 rounded-xl text-sm font-sans focus:outline-primary placeholder:text-on-surface-variant/40 text-on-surface"
-                      />
-                    </div>
+                    <BirthdayField
+                      value={newBirthday}
+                      shared={newBirthdayShared}
+                      onChange={(value, shared) => {
+                        setNewBirthday(value);
+                        setNewBirthdayShared(shared);
+                      }}
+                    />
 
                     <div className="md:col-span-2">
                       <label className="block text-xs font-semibold text-on-surface-variant mb-1 font-sans">
@@ -1692,17 +1696,14 @@ export default function PeopleView({
                           />
                         </div>
 
-                        <div>
-                          <label className="block text-on-surface-variant font-bold uppercase tracking-wider mb-1 font-sans text-[10px]">
-                            {t('people.birthdayAnniversary')}
-                          </label>
-                          <input
-                            value={editBirthday}
-                            onChange={(e) => setEditBirthday(e.target.value)}
-                            placeholder={t('people.eGNovember23rd05')}
-                            className="w-full bg-surface-container-low border border-outline-variant/15 p-2.5 rounded-xl text-xs font-sans focus:outline-primary placeholder:text-on-surface-variant/30 select-text text-on-surface font-medium"
-                          />
-                        </div>
+                        <BirthdayField
+                          value={editBirthday}
+                          shared={editBirthdayShared}
+                          onChange={(value, shared) => {
+                            setEditBirthday(value);
+                            setEditBirthdayShared(shared);
+                          }}
+                        />
 
                         <div>
                           <label className="block text-on-surface-variant font-bold uppercase tracking-wider mb-1 font-sans text-[10px]">

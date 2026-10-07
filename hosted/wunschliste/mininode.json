@@ -15,5 +15,14 @@
   "i18n": {
     "languages": ["de", "en"],
     "default": "de"
+  },
+  "suite": {
+    "uses": [
+      {
+        "type": "event",
+        "access": "read",
+        "why": "Geburtstage deiner Kontakte aus Aether Notes anzeigen"
+      }
+    ]
   }
 }

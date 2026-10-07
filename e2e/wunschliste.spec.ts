@@ -1,6 +1,6 @@
 import { deflateSync } from 'node:zlib';
 import { type Browser, expect, type Page, test } from '@playwright/test';
-import { cleanup, createUser, PASSWORD } from './seed.ts';
+import { admin, cleanup, createUser, PASSWORD } from './seed.ts';
 
 // hosted/wunschliste behind its local gate: Lena keeps a list, Tom reserves a wish, Mia sees it
 // as given, and Lena never learns who gives what.
@@ -213,4 +213,92 @@ test('a wish with an uploaded photo: others see it, and the list exports as a PD
   await expect(lena.locator('.wish', { hasText: 'Rennrad mit Foto' }).locator('img')).toHaveCount(
     0,
   );
+});
+
+test('birthdays: shared ones of other people, own entries, gift ideas', async ({ browser }) => {
+  test.setTimeout(120_000);
+  // Tom shares his birthday, Mia has one that stays private.
+  const soon = new Date();
+  soon.setDate(soon.getDate() + 3);
+  const profiles = admin.schema('platform').from('profiles');
+  const byName = async (name: string) =>
+    (await profiles.select('user_id').eq('display_name', name).single()).data?.user_id as string;
+  const [tomId, miaId, lenaId] = await Promise.all([
+    byName(people.tom.name),
+    byName(people.mia.name),
+    byName(people.lena.name),
+  ]);
+  await profiles
+    .update({
+      birthday_month: soon.getMonth() + 1,
+      birthday_day: soon.getDate(),
+      birthday_year: 1990,
+      birthday_shared: true,
+    })
+    .eq('user_id', tomId);
+  await profiles
+    .update({ birthday_month: 1, birthday_day: 2, birthday_shared: false })
+    .eq('user_id', miaId);
+
+  const lena = await signedIn(browser, people.lena.email);
+  await lena.getByRole('button', { name: 'Geburtstage' }).first().click();
+  await expect(lena.getByRole('heading', { level: 1, name: 'Geburtstage' })).toBeVisible();
+  const tom = lena.getByRole('button', { name: new RegExp(people.tom.name) });
+  await expect(tom).toBeVisible();
+  await expect(tom).toContainText('in 3 Tagen');
+  await expect(tom).toContainText('wird 36');
+  await expect(lena.getByText(people.mia.name)).toHaveCount(0);
+  // The contacts of Aether Notes come through the suite, which the admin has to approve.
+  await expect(lena.getByText(/Geburtstage deiner Kontakte erscheinen hier/)).toBeVisible();
+
+  // A person typed in: the day after tomorrow's date shows as "morgen", a bad date is refused.
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  await lena.getByRole('button', { name: 'Person hinzufügen' }).click();
+  const dialog = lena.getByRole('dialog');
+  await dialog.getByLabel('Name').fill('Oma Lotte');
+  await dialog.getByLabel('Tag').fill('30');
+  await dialog.getByLabel('Monat').fill('2');
+  await dialog.getByRole('button', { name: 'Speichern' }).click();
+  await expect(dialog.getByText('Dieses Datum gibt es nicht')).toBeVisible();
+  await dialog.getByLabel('Tag').fill(String(tomorrow.getDate()));
+  await dialog.getByLabel('Monat').fill(String(tomorrow.getMonth() + 1));
+  await dialog.getByRole('button', { name: 'Speichern' }).click();
+  const oma = lena.getByRole('button', { name: /Oma Lotte/ });
+  await expect(oma).toContainText('morgen');
+  await expect(oma).toContainText('selbst eingetragen');
+
+  // A gift idea for Oma, kept in the app's own table.
+  await oma.click();
+  await lena.getByRole('button', { name: 'Geschenkidee hinzufügen' }).click();
+  await lena.getByLabel('Was könnte passen?').fill('Wollschal');
+  await lena.getByLabel('Preis in € (ungefähr)').fill('29,90');
+  await lena.getByRole('button', { name: 'Speichern' }).last().click();
+  await expect
+    .poll(
+      async () =>
+        (
+          await admin
+            .schema('app_wunschliste')
+            .from('gift_ideas')
+            .select('title, price_cents, status')
+            .eq('owner_id', lenaId)
+        ).data,
+    )
+    .toEqual([{ title: 'Wollschal', price_cents: 2990, status: 'idea' }]);
+  const people_ = await admin
+    .schema('app_wunschliste')
+    .from('birthday_people')
+    .select('name, month, day')
+    .eq('owner_id', lenaId);
+  expect(people_.data).toEqual([
+    { name: 'Oma Lotte', month: tomorrow.getMonth() + 1, day: tomorrow.getDate() },
+  ]);
+
+  // Tom, a person on MiniNode, leads to his list.
+  await lena.reload();
+  await lena.getByRole('button', { name: 'Geburtstage' }).first().click();
+  await lena.getByRole('button', { name: new RegExp(people.tom.name) }).click();
+  await lena.getByRole('button', { name: /Wunschliste von .* ansehen/ }).click();
+  await expect(lena.getByRole('heading', { level: 1, name: people.tom.name })).toBeVisible();
 });
