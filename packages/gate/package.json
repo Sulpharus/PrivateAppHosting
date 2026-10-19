@@ -17,6 +17,7 @@
   "devDependencies": {
     "@cloudflare/workers-types": "5.20260923.1",
     "@mininode/config": "workspace:*",
+    "happy-dom": "20.14.5",
     "vitest": "5.0.1"
   }
 }

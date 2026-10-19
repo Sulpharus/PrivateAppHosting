@@ -12,6 +12,7 @@ import {
   mkdirSync,
   readdirSync,
   readFileSync,
+  renameSync,
   rmSync,
   statSync,
   writeFileSync,
@@ -73,8 +74,8 @@ const page = html
     '<div id="wordcraft_loading">Loading WordCraft&hellip;</div>',
     '<div id="wordcraft_loading" data-i18n="app.loading">WordCraft wird geladen …</div>',
   );
-if (!page.includes('data-i18n="app.loading"'))
-  throw new Error('index.html: loading text not found');
+for (const marker of ['<html lang="de">', '/_mininode/i18n.js', 'data-i18n="app.loading"'])
+  if (!page.includes(marker)) throw new Error(`index.html: the release markup changed (${marker})`);
 writeFileSync(join(dist, 'index.html'), page);
 
 for (const name of readdirSync(dist)) {
@@ -85,12 +86,15 @@ for (const name of readdirSync(dist)) {
   if (!existsSync(cached)) {
     const packed = brotliCompressSync(readFileSync(file), {
       params: {
-        [constants.BROTLI_PARAM_QUALITY]: 11,
+        // 9 takes under a minute (11 takes three for 1.5 MiB less); CI and deploy build it fresh.
+        [constants.BROTLI_PARAM_QUALITY]: 9,
         [constants.BROTLI_PARAM_LGWIN]: 24,
         [constants.BROTLI_PARAM_SIZE_HINT]: statSync(file).size,
       },
     });
-    writeFileSync(cached, packed);
+    // Written under a temporary name first: a cut-off run must not leave a broken cache.
+    writeFileSync(`${cached}.part`, packed);
+    renameSync(`${cached}.part`, cached);
   }
   const packed = readFileSync(cached);
   writeFileSync(`${file}.br`, packed);

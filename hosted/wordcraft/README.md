@@ -19,9 +19,11 @@ release and checks its SHA-256. No Rust toolchain is needed.
   sends `mn:ready`, so the start screen goes away. The gate checked the login before serving the
   page.
 - **Size:** the `.wasm` is 42 MB, and one Cloudflare asset may be at most 25 MiB. The build stores
-  it Brotli-compressed as `<name>.wasm.br` (9 MB). The gate serves it under its own name with
+  it Brotli-compressed as `<name>.wasm.br` (10.5 MB). The gate serves it under its own name with
   `Content-Encoding: br`, so the browser unpacks it and checks the integrity hash in `index.html`.
-  Compression takes about three minutes, and `.cache/` keeps the result between local builds.
+  Compression (Brotli quality 9) takes under a minute, and `.cache/` keeps the result between
+  local builds. Upstream `HOSTING.md` says the wasm is about 13 MB; this release's is 42 MB. If a
+  later release fits under 25 MiB, the `.br` step can go.
 - **WebAssembly:** `"wasm": true` in `mininode.json` adds `'wasm-unsafe-eval'` to the app's CSP.
   This allows compiling WebAssembly, not JavaScript `eval`.
 - **Language:** the page is German by default and the loading text has language packages
@@ -42,7 +44,7 @@ IndexedDB, on that device only. This is the upstream app's behaviour, and it hol
 ## Requirements
 
 WebGPU, or WebGL2 as the fallback (every current browser). `?webgl` forces WebGL2 when a WebGPU
-driver misbehaves. The first start loads about 9.5 MB; after that the service worker keeps the
+driver misbehaves. The first start loads about 11 MB; after that the service worker keeps the
 files.
 
 ## Updating
@@ -55,6 +57,9 @@ Delete `.cache/`, run `node build.mjs`, then check the app locally with
 
 - **Saving to MiniNode:** documents in `mn.files`, so they are on every device, would need a
   change in WordCraft's Rust code. Not planned.
-- **No e2e test in CI:** each run would download 16 MB and compress for three minutes. The gate's
-  pre-compressed `.wasm` path has unit tests in `packages/gate`. The app was checked locally:
-  sign in, start, open the sample document.
+- **No e2e test:** CI builds the app, in the dry-run deploy whenever the app or the platform
+  changes, but no browser test opens it there. The gate's pre-compressed `.wasm` path has unit
+  tests in `packages/gate`. The app was checked locally: sign in, start, open the sample document.
+- **After the first deploy,** check that production sends the module compressed:
+  `curl -sI https://wordcraft.mininode.app/wordcraft-web-dac7e7b375acbaf2_bg.wasm -H 'Accept-Encoding: br'`
+  should show `content-encoding: br` and `content-type: application/wasm`.

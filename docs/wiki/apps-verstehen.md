@@ -62,7 +62,7 @@ Das Manifest beschreibt die App und wird bei jedem Deploy geprüft (JSON-Schema 
 | `suite.uses` | Gemeinsame Datentypen, die sie lesen oder schreiben will ([Gemeinsame Daten](wiki:gemeinsame-daten)) |
 | `game` | Spiel-Werte für den Gaming Hub ([Gaming Hub](wiki:gaming-hub)) |
 | `i18n` | Sprachpakete ([Sprache und Formate](wiki:sprachen-formate)) |
-| `wasm` | Die App führt WebAssembly aus (z. B. WordCraft); erst dann erlaubt die Sicherheitsrichtlinie (CSP) das Übersetzen von `.wasm`-Dateien. Eine `.wasm`-Datei über 25 MiB legt der Build als `<name>.wasm.br` (Brotli) ab, das Tor liefert sie unter ihrem eigenen Namen aus |
+| `wasm` | Die App führt WebAssembly aus (z. B. WordCraft); erst dann erlaubt die Sicherheitsrichtlinie (CSP) das Übersetzen von `.wasm`-Dateien. Eine `.wasm`-Datei über 25 MiB legt der App-Build selbst als `<name>.wasm.br` (Brotli) ab (nicht unter `assets/`); das Gate liefert sie unter ihrem eigenen Namen aus |
 
 Dazu kommen je nach Art `build`, `container` und `remote`. Alles Weitere: `docs/ai/NEW-APP-SPEC.md` und `packages/manifest`.
 

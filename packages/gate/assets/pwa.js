@@ -25,7 +25,7 @@ if ('serviceWorker' in navigator) {
     [...document.body.children].some((node) => {
       if (node === splash || /^(SCRIPT|STYLE|NOSCRIPT|LINK|TEMPLATE)$/.test(node.tagName))
         return false;
-      const visual = 'canvas,img,svg,video,button,input';
+      const visual = 'canvas,img,svg,video,button,input:not([type=hidden])';
       return (
         (node.textContent ?? '').trim().length > 0 ||
         node.matches(visual) ||

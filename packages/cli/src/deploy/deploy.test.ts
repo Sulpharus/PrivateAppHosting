@@ -50,6 +50,19 @@ describe('wrangler config', () => {
     ).toBe('https://www.googleapis.com');
   });
 
+  it('allows WebAssembly only for apps that declare it', () => {
+    expect(appWranglerConfig({ manifest, env: production, assetsDir: '/tmp/a' }).vars.WASM).toBe(
+      '',
+    );
+    expect(
+      appWranglerConfig({
+        manifest: { ...manifest, wasm: true },
+        env: production,
+        assetsDir: '/tmp/a',
+      }).vars.WASM,
+    ).toBe('1');
+  });
+
   it('has no routes locally', () => {
     const local = environmentSettings('local', { SUPABASE_PUBLISHABLE_KEY: 'pk' });
     expect(appWranglerConfig({ manifest, env: local, assetsDir: '/tmp/a' })).not.toHaveProperty(

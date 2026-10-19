@@ -89,6 +89,8 @@ export function connectSources(env: Pick<AppEnv, 'PORTAL_URL' | 'CONNECT_SRC'>):
 /**
  * A `.wasm` file above the 25 MiB asset limit ships as `<name>.wasm.br` (Brotli). It is served
  * under its own name, still encoded, so the browser unpacks it and checks its integrity hash.
+ * Only for apps with `wasm: true`, outside `/assets/` (those skip the Worker), and the name must
+ * carry a content hash: the file is cached for a year.
  */
 async function precompressedWasm(
   request: Request,
@@ -96,11 +98,13 @@ async function precompressedWasm(
   headers: Record<string, string>,
 ): Promise<Response | undefined> {
   const url = new URL(request.url);
-  if (!url.pathname.endsWith('.wasm') || !['GET', 'HEAD'].includes(request.method)) return;
+  if (env.WASM !== '1' || !url.pathname.endsWith('.wasm')) return;
+  if (!['GET', 'HEAD'].includes(request.method)) return;
   const found = await env.ASSETS.fetch(
     new Request(new URL(`${url.pathname}.br`, url), { method: request.method }),
   );
-  if (!found.ok) return;
+  // A single-page app answers a missing file with its index.html (status 200): not a module.
+  if (!found.ok || found.headers.get('Content-Type')?.startsWith('text/html')) return;
   return new Response(found.body, {
     // Set here: copying the response (withHeaders) would drop encodeBody.
     headers: {

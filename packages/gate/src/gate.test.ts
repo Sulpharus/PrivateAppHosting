@@ -181,16 +181,18 @@ describe('helpers', () => {
 });
 
 describe('precompressed WebAssembly', () => {
-  const env = (files: Record<string, string>) => ({
+  const env = (files: Record<string, string>, wasm = '1', fallback?: string) => ({
     APP_SLUG: 'wordcraft',
     APP_NAME: 'WordCraft',
     SUPABASE_URL,
     SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_test',
     PORTAL_URL: PORTAL,
-    WASM: '1',
+    WASM: wasm,
     ASSETS: {
       fetch: async (input: Request) => {
         const body = files[new URL(input.url).pathname];
+        if (body === undefined && fallback !== undefined)
+          return new Response(fallback, { headers: { 'Content-Type': 'text/html' } });
         return body === undefined
           ? new Response('not found', { status: 404 })
           : new Response(body, { headers: { 'Content-Type': 'application/octet-stream' } });
@@ -209,6 +211,26 @@ describe('precompressed WebAssembly', () => {
     expect(response.headers.get('Content-Encoding')).toBe('br');
     expect(response.headers.get('Content-Security-Policy')).toContain("'wasm-unsafe-eval'");
     expect(await response.text()).toBe('BROTLI');
+  });
+
+  it('ignores .wasm.br files of apps without wasm', async () => {
+    const { handleAppRequest } = await import('./worker.ts');
+    const response = await handleAppRequest(
+      new Request('https://other.mininode.app/app.wasm'),
+      env({ '/app.wasm.br': 'BROTLI' }, ''),
+    );
+    expect(response.headers.get('Content-Encoding')).toBeNull();
+    expect(response.status).toBe(404);
+  });
+
+  it('never sends a single-page app’s index.html as WebAssembly', async () => {
+    const { handleAppRequest } = await import('./worker.ts');
+    const response = await handleAppRequest(
+      new Request('https://spa.mininode.app/missing.wasm'),
+      env({}, '1', '<!doctype html><title>SPA</title>'),
+    );
+    expect(response.headers.get('Content-Encoding')).toBeNull();
+    expect(response.headers.get('Content-Type')).toContain('text/html');
   });
 
   it('serves a plain .wasm file as it is', async () => {
