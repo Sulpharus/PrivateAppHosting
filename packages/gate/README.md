@@ -39,9 +39,10 @@ WebAssembly (manifest `wasm: true`, var `WASM=1`):
 - A `.wasm` file above the 25 MiB asset limit can ship as `<name>.wasm.br` (Brotli, made by the app's
   own build, e.g. `hosted/wordcraft/build.mjs`). A request for `<name>.wasm` is then answered with
   that file, `Content-Type: application/wasm` and `Content-Encoding: br` (`encodeBody: 'manual'`).
-- This works only outside `/assets/`, because those requests skip the Worker. The name must carry a
-  content hash, because the file is cached for a year. An HTML answer (a single-page app's fallback)
-  is never sent as WebAssembly.
+- This works only outside `/assets/`, because those requests skip the Worker.
+- A name with a content hash (`app-6020ded28f149c6b_bg.wasm`) is cached for a year. Any other name
+  is checked again on every load, using the asset's `ETag`.
+- An HTML answer (a single-page app's fallback) is never sent as WebAssembly.
 
 The start screen also ends when the page shows a canvas, picture or control directly in `<body>`
 (`assets/pwa.js`, tested in `src/pwa-script.test.js`).

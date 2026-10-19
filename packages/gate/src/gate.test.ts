@@ -193,9 +193,13 @@ describe('precompressed WebAssembly', () => {
         const body = files[new URL(input.url).pathname];
         if (body === undefined && fallback !== undefined)
           return new Response(fallback, { headers: { 'Content-Type': 'text/html' } });
-        return body === undefined
-          ? new Response('not found', { status: 404 })
-          : new Response(body, { headers: { 'Content-Type': 'application/octet-stream' } });
+        if (body === undefined) return new Response('not found', { status: 404 });
+        const etag = `"${body.length}-etag"`;
+        if (input.headers.get('If-None-Match') === etag)
+          return new Response(null, { status: 304, headers: { ETag: etag } });
+        return new Response(body, {
+          headers: { 'Content-Type': 'application/octet-stream', ETag: etag },
+        });
       },
     } as unknown as Fetcher,
   });
@@ -211,6 +215,46 @@ describe('precompressed WebAssembly', () => {
     expect(response.headers.get('Content-Encoding')).toBe('br');
     expect(response.headers.get('Content-Security-Policy')).toContain("'wasm-unsafe-eval'");
     expect(await response.text()).toBe('BROTLI');
+  });
+
+  it('caches only names with a content hash for a year', async () => {
+    const { handleAppRequest, hasContentHash } = await import('./worker.ts');
+    expect(hasContentHash('/wordcraft-web-dac7e7b375acbaf2_bg.wasm')).toBe(true);
+    expect(hasContentHash('/lightcraft_web_bg.wasm')).toBe(false);
+    expect(hasContentHash('/build-2026/app.wasm')).toBe(false);
+    const hashed = await handleAppRequest(
+      new Request('https://wordcraft.mininode.app/app-dac7e7b375acbaf2_bg.wasm'),
+      env({ '/app-dac7e7b375acbaf2_bg.wasm.br': 'BROTLI' }),
+    );
+    expect(hashed.headers.get('Cache-Control')).toBe('public, max-age=31536000, immutable');
+    const plain = await handleAppRequest(
+      new Request('https://lightcraft.mininode.app/app_bg.wasm'),
+      env({ '/app_bg.wasm.br': 'BROTLI' }),
+    );
+    expect(plain.headers.get('Content-Encoding')).toBe('br');
+    expect(plain.headers.get('Cache-Control')).toBe('no-cache');
+    expect(plain.headers.get('ETag')).toBe('"6-etag"');
+  });
+
+  it('answers 304 while an unhashed module is unchanged', async () => {
+    const { handleAppRequest } = await import('./worker.ts');
+    const files = { '/app_bg.wasm.br': 'BROTLI' };
+    const same = await handleAppRequest(
+      new Request('https://lightcraft.mininode.app/app_bg.wasm', {
+        headers: { 'If-None-Match': '"6-etag"' },
+      }),
+      env(files),
+    );
+    expect(same.status).toBe(304);
+    expect(same.headers.get('ETag')).toBe('"6-etag"');
+    const changed = await handleAppRequest(
+      new Request('https://lightcraft.mininode.app/app_bg.wasm', {
+        headers: { 'If-None-Match': '"old"' },
+      }),
+      env(files),
+    );
+    expect(changed.status).toBe(200);
+    expect(await changed.text()).toBe('BROTLI');
   });
 
   it('ignores .wasm.br files of apps without wasm', async () => {
