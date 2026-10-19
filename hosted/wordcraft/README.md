@@ -74,8 +74,13 @@ own. `release.json` names the release (`name`, `version`, `sha256`), the app's l
 - **Save** and **Export** save to MiniNode (`mn.files`, the person's own folder) or, as before, to
   the device with the browser's save dialog or a download.
 
-WordCraft keeps its own preferences in the browser's `localStorage`, and fonts you add in
-IndexedDB, on that device only. This is the upstream app's behaviour, and it holds no documents.
+Settings follow the account: upstream's web build keeps none, so the patch stores the app's
+settings (the desktop `ui.json`: theme, language, editing preferences, author and initials,
+dictionary, shortcuts, ribbon layout, recent names) in `localStorage` under `wordcraft.preferences`,
+which MiniNode syncs. On "Auto" the interface follows the MiniNode language, the appearance starts
+as System (light or dark like the device), and the author for comments and tracked changes is the
+name from the account until the person sets one. Fonts you add stay in the browser's IndexedDB, on
+that device only.
 
 ## Requirements
 

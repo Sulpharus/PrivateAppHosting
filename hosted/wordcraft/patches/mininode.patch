@@ -1,5 +1,221 @@
+diff --git a/apps/wordcraft-web/Cargo.toml b/apps/wordcraft-web/Cargo.toml
+index d9b44aa..9152db3 100644
+--- a/apps/wordcraft-web/Cargo.toml
++++ b/apps/wordcraft-web/Cargo.toml
+@@ -29,4 +29,4 @@ rfd = { workspace = true }
+ wasm-bindgen = "0.2"
+ wasm-bindgen-futures = "0.4"
+ js-sys = "0.3"
+-web-sys = { version = "0.3", features = ["Window", "Document", "Element", "HtmlElement", "HtmlCanvasElement", "HtmlAnchorElement", "HtmlIFrameElement", "Blob", "BlobPropertyBag", "Url", "Location", "CssStyleDeclaration", "Event", "EventTarget", "BeforeUnloadEvent", "ClipboardEvent", "DataTransfer", "FileList", "File", "DomStringList", "IdbFactory", "IdbOpenDbRequest", "IdbRequest", "IdbDatabase", "IdbObjectStore", "IdbTransaction", "IdbTransactionMode", "MediaQueryList"] }
++web-sys = { version = "0.3", features = ["Window", "Document", "Element", "HtmlElement", "HtmlCanvasElement", "HtmlAnchorElement", "HtmlIFrameElement", "Blob", "BlobPropertyBag", "Url", "Location", "CssStyleDeclaration", "Event", "EventTarget", "BeforeUnloadEvent", "ClipboardEvent", "DataTransfer", "FileList", "File", "DomStringList", "IdbFactory", "IdbOpenDbRequest", "IdbRequest", "IdbDatabase", "IdbObjectStore", "IdbTransaction", "IdbTransactionMode", "MediaQueryList", "Storage"] }
+diff --git a/apps/wordcraft-web/src/web.rs b/apps/wordcraft-web/src/web.rs
+index 0e40099..37e6e00 100644
+--- a/apps/wordcraft-web/src/web.rs
++++ b/apps/wordcraft-web/src/web.rs
+@@ -7,7 +7,7 @@ use std::rc::Rc;
+ use wasm_bindgen::JsCast as _;
+ use wordcraft_engine::Session;
+ use wordcraft_ui_egui::async_saves::{AsyncSaves, SaveOutcome};
+-use wordcraft_ui_egui::{Inbox, Services, WordApp};
++use wordcraft_ui_egui::{Inbox, Services, UiState, WordApp};
+ 
+ const DOC_EXTS: &[&str] = &["docx", "docm", "dotx", "dotm", "doc", "dot", "odt", "rtf", "txt", "md", "html", "htm", "tex", "json", "xml"];
+ const IMAGE_EXTS: &[&str] = &["png", "jpg", "jpeg", "gif", "webp", "bmp", "wmf", "emf"];
+@@ -62,6 +62,8 @@ pub fn start() {
+                     session.system_region = region;
+                     let messages = Rc::new(RefCell::new(Vec::new()));
+                     let mut app = WordApp::new(session, services(inbox.clone(), cc.egui_ctx.clone(), dirty, saves.clone(), messages.clone()));
++                    // MiniNode: the saved preferences apply before the first frame (and before the Start screen reads its setting).
++                    let prefs = Rc::new(Prefs::load(&mut app));
+                     // Pasted pictures wait apart from dropped files: the app inserts one only when the page is the edit target (#1349).
+                     app.services.pasted = Some(pasted);
+                     app.autosave = false;
+@@ -69,7 +71,11 @@ pub fn start() {
+                     if !sample {
+                         app.start_screen();
+                     }
+-                    Ok(Box::new(WebShell { app, inbox, messages }))
++                    let app = Rc::new(RefCell::new(app));
++                    if let Err(e) = save_prefs_when_hidden(app.clone(), prefs.clone()) {
++                        log::error!("preferences are not saved when the page is hidden: {e}");
++                    }
++                    Ok(Box::new(WebShell { app, inbox, messages, prefs }))
+                 }),
+             )
+             .await;
+@@ -89,9 +95,11 @@ fn query() -> String {
+ /// Wraps the app to read dropped files asynchronously (browsers can't read them synchronously)
+ /// and feed them through the inbox.
+ struct WebShell {
+-    app: WordApp,
++    /// Shared with the page-hidden listener, which saves the preferences ([`save_prefs_when_hidden`]).
++    app: Rc<RefCell<WordApp>>,
+     inbox: Inbox,
+     messages: Rc<RefCell<Vec<String>>>,
++    prefs: Rc<Prefs>,
+ }
+ 
+ impl eframe::App for WebShell {
+@@ -111,22 +119,127 @@ impl eframe::App for WebShell {
+                 }
+             });
+         }
++        let mut app = self.app.borrow_mut();
+         let msgs = std::mem::take(&mut *self.messages.borrow_mut());
+         for msg in msgs {
+-            self.app.status(msg);
++            app.status(msg);
+         }
+-        self.app.logic(ctx);
++        app.logic(ctx);
++        self.prefs.tick(&app, ctx.input(|i| i.time));
+     }
+ 
+     fn raw_input_hook(&mut self, _ctx: &egui::Context, raw: &mut egui::RawInput) {
+-        self.app.raw_input_hook(raw);
++        self.app.borrow_mut().raw_input_hook(raw);
+     }
+ 
+     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+-        self.app.ui(ui);
++        self.app.borrow_mut().ui(ui);
+     }
+ }
+ 
++/// MiniNode: the `localStorage` key holding the preferences. MiniNode syncs `localStorage` to the
++/// person's account, so the settings follow them to their other devices.
++const PREFS_KEY: &str = "wordcraft.preferences";
++/// Seconds between looks at whether the preferences changed.
++const PREFS_CHECK_SECS: f64 = 1.0;
++
++/// MiniNode: the preferences the desktop app keeps in `ui.json` ([`WordApp::prefs`], the same
++/// JSON), kept in `localStorage` under [`PREFS_KEY`]. Written only when the JSON changed: at most
++/// once per [`PREFS_CHECK_SECS`], and when the page is hidden.
++struct Prefs {
++    /// The person's MiniNode name (`data-mn-user`): the author while they haven't set one.
++    mn_user: Option<String>,
++    /// The JSON last read or written.
++    saved: RefCell<String>,
++    next_check: Cell<f64>,
++}
++
++impl Prefs {
++    /// Apply the saved preferences, then the web's defaults where nothing was saved: the interface
++    /// follows the system's light or dark appearance, and the author is the MiniNode name.
++    fn load(app: &mut WordApp) -> Prefs {
++        app.ui.theme = wordcraft_ui_egui::theme::Appearance::System;
++        let default_author = app.session.author.clone();
++        if let Some(ui) = local_storage().and_then(|s| s.get_item(PREFS_KEY).ok().flatten()).and_then(|json| UiState::from_json(json.as_bytes())) {
++            app.apply_prefs(ui);
++        }
++        let mn_user = web_sys::window()
++            .and_then(|w| w.document())
++            .and_then(|d| d.document_element())
++            .and_then(|e| e.get_attribute("data-mn-user"))
++            .map(|n| n.trim().to_string())
++            .filter(|n| !n.is_empty());
++        if let Some(name) = &mn_user
++            && (app.session.author.trim().is_empty() || app.session.author == default_author)
++        {
++            app.session.author = name.clone();
++        }
++        let prefs = Prefs { mn_user, saved: RefCell::new(String::new()), next_check: Cell::new(0.0) };
++        if let Some(json) = prefs.json(app) {
++            prefs.saved.replace(json);
++        }
++        prefs
++    }
++
++    fn json(&self, app: &WordApp) -> Option<String> {
++        let mut ui = app.prefs();
++        // Not restored at start-up (`apply_prefs`), so not worth a write on every tab switch.
++        ui.tab = wordcraft_ui_egui::DEFAULT_TAB.into();
++        ui.backstage = false;
++        ui.backstage_page = "home".into();
++        // The MiniNode name stays a default, so a new name there still shows.
++        if self.mn_user.as_deref() == Some(ui.author.as_str()) {
++            ui.author.clear();
++        }
++        serde_json::to_string(&ui).ok()
++    }
++
++    fn save(&self, app: &WordApp) {
++        let Some(json) = self.json(app) else { return };
++        if *self.saved.borrow() == json {
++            return;
++        }
++        match local_storage().map(|s| s.set_item(PREFS_KEY, &json)) {
++            Some(Ok(())) => {
++                self.saved.replace(json);
++            }
++            Some(Err(e)) => log::warn!("preferences not saved: {e:?}"),
++            None => log::warn!("preferences not saved: no localStorage"),
++        }
++    }
++
++    fn tick(&self, app: &WordApp, now: f64) {
++        if now >= self.next_check.get() {
++            self.next_check.set(now + PREFS_CHECK_SECS);
++            self.save(app);
++        }
++    }
++}
++
++fn local_storage() -> Option<web_sys::Storage> {
++    web_sys::window()?.local_storage().ok().flatten()
++}
++
++/// MiniNode: save the preferences when the page is hidden or left, which the next frame may not
++/// live to see. Events run between frames, so the app is free to borrow then.
++fn save_prefs_when_hidden(app: Rc<RefCell<WordApp>>, prefs: Rc<Prefs>) -> Result<(), String> {
++    let window = web_sys::window().ok_or("no window")?;
++    let document = window.document().ok_or("no document")?;
++    let doc = document.clone();
++    let on_hide = wasm_bindgen::closure::Closure::<dyn FnMut(web_sys::Event)>::new(move |e: web_sys::Event| {
++        if (e.type_() == "pagehide" || doc.hidden())
++            && let Ok(app) = app.try_borrow()
++        {
++            prefs.save(&app);
++        }
++    });
++    document.add_event_listener_with_callback("visibilitychange", on_hide.as_ref().unchecked_ref()).map_err(|e| format!("{e:?}"))?;
++    window.add_event_listener_with_callback("pagehide", on_hide.as_ref().unchecked_ref()).map_err(|e| format!("{e:?}"))?;
++    // The listener lives as long as the page.
++    on_hide.forget();
++    Ok(())
++}
++
+ /// Largest picture pasted from the browser's clipboard (as `insert.picture` allows).
+ const MAX_PASTED_BYTES: f64 = (200u32 << 20) as f64;
+ /// Most pictures one paste inserts.
+diff --git a/crates/engine/src/sample.rs b/crates/engine/src/sample.rs
+index fd5ac64..15271e6 100644
+--- a/crates/engine/src/sample.rs
++++ b/crates/engine/src/sample.rs
+@@ -112,7 +112,7 @@ pub fn sample_document() -> Document {
+     add(
+         &mut h,
+         "Visit the community board",
+-        CharProps { style: Some("Hyperlink".into()), link: Some("https://getartcraft.com/".into()), ..Default::default() },
++        CharProps { style: Some("Hyperlink".into()), link: Some("https://example.org/".into()), ..Default::default() },
+     );
+     add(&mut h, " for events.", CharProps::default());
+     b.push(Block::Para(h));
+diff --git a/crates/formats/src/latex.rs b/crates/formats/src/latex.rs
+index c7c555b..a3c5335 100644
+--- a/crates/formats/src/latex.rs
++++ b/crates/formats/src/latex.rs
+@@ -52,7 +52,7 @@ pub fn export(doc: &Document) -> String {
+ 
+     let meta = &flow.meta;
+     let mut o = String::new();
+-    o.push_str("% Written by WordCraft (https://getartcraft.com/apps/wordcraft).\n");
++    o.push_str("% Written by WordCraft (https://github.com/storytold/wordcraft).\n");
+     o.push_str("\\documentclass{article}\n");
+     o.push_str("\\usepackage[T1]{fontenc}\n");
+     if w.uses.ulem {
 diff --git a/crates/ui-egui/src/backstage.rs b/crates/ui-egui/src/backstage.rs
-index b89665a..f207490 100644
+index b89665a..225e3e8 100644
 --- a/crates/ui-egui/src/backstage.rs
 +++ b/crates/ui-egui/src/backstage.rs
 @@ -118,7 +118,7 @@ pub fn show(app: &mut WordApp, ui: &mut Ui) {
@@ -11,10 +227,32 @@ index b89665a..f207490 100644
                      let (r, resp) = ui.allocate_exact_size(vec2(200.0, 32.0), Sense::click());
                      resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, ui.is_enabled(), tl!(label)));
                      if resp.hovered() {
+@@ -126,11 +126,7 @@ pub fn show(app: &mut WordApp, ui: &mut Ui) {
+                     }
+                     ui.painter().text(pos2(r.min.x + 22.0, r.center().y), Align2::LEFT_CENTER, tl!(label), regular(13.0), egui::Color32::WHITE);
+                     if resp.clicked() {
+-                        if id == "discord" {
+-                            let _ = app.run("ui.discord", json!({}));
+-                        } else {
+-                            app.dialog = crate::dialogs::Dialog::open("about", app);
+-                        }
++                        app.dialog = crate::dialogs::Dialog::open(id, app);
+                     }
+                 }
+             });
 diff --git a/crates/ui-egui/src/chrome.rs b/crates/ui-egui/src/chrome.rs
-index c057992..c495f13 100644
+index c057992..8cc54bf 100644
 --- a/crates/ui-egui/src/chrome.rs
 +++ b/crates/ui-egui/src/chrome.rs
+@@ -4,7 +4,7 @@ use egui::{Align2, Rect, Sense, Stroke, Ui, pos2, vec2};
+ use serde_json::json;
+ use wordcraft_doc::StoryRef;
+ 
+-use crate::theme::{Tokens, TypeRung, medium, paint_text, regular, semibold, text_width};
++use crate::theme::{Tokens, TypeRung, paint_text, regular, semibold, text_width};
+ use crate::{WordApp, icons};
+ 
+ fn qat_button(ui: &mut Ui, app: &mut WordApp, icon: &str, tip: &str, id: &str, enabled: bool) -> egui::Response {
 @@ -293,22 +293,7 @@ pub fn title_bar(app: &mut WordApp, ui: &mut Ui) {
                          let _ = app.run("ui.backstage", json!({"value": true, "page": "options", "pane": "general"}));
                      }
@@ -56,6 +294,36 @@ index c636f4c..02f653f 100644
                      ui.hyperlink_to(tl!("Source code: github.com/storytold/wordcraft"), "https://github.com/storytold/wordcraft");
                      ui.add_space(6.0);
                      ui.label(
+diff --git a/crates/ui-egui/src/i18n/mod.rs b/crates/ui-egui/src/i18n/mod.rs
+index 092e376..3e68350 100644
+--- a/crates/ui-egui/src/i18n/mod.rs
++++ b/crates/ui-egui/src/i18n/mod.rs
+@@ -319,10 +319,25 @@ fn detect_system_lang() -> Lang {
+     if let Some(l) = std::env::var("WORDCRAFT_LANGUAGE").ok().and_then(|v| lang_from_tag(&v)) {
+         return l;
+     }
++    // MiniNode: the page's `<html lang>` carries the person's MiniNode language; it comes first.
++    #[cfg(target_arch = "wasm32")]
++    if let Some(l) = page_lang().and_then(|v| lang_from_tag(&v)) {
++        return l;
++    }
+     let tags: Vec<String> = sys_locale::get_locales().take(16).collect();
+     first_supported(tags.iter().map(String::as_str)).unwrap_or(Lang::EN)
+ }
+ 
++/// MiniNode: `document.documentElement.lang`, when the page sets one.
++#[cfg(target_arch = "wasm32")]
++fn page_lang() -> Option<String> {
++    use js_sys::wasm_bindgen::JsValue;
++    let get = |obj: &JsValue, key: &str| js_sys::Reflect::get(obj, &JsValue::from_str(key)).ok().filter(|v| !v.is_undefined() && !v.is_null());
++    let document = get(&js_sys::global(), "document")?;
++    let root = get(&document, "documentElement")?;
++    get(&root, "lang")?.as_string().map(|s| s.trim().to_string()).filter(|s| !s.is_empty())
++}
++
+ /// The system region (#838): it picks the paper File › New starts on, the default measurement
+ /// unit and the decimal separator, independently of the interface language (an English
+ /// interface in Germany still gets A4 and centimetres). `en-US` in tests.
 diff --git a/crates/ui-egui/src/keytips.rs b/crates/ui-egui/src/keytips.rs
 index 45c8a1c..317e4ed 100644
 --- a/crates/ui-egui/src/keytips.rs
@@ -69,6 +337,63 @@ index 45c8a1c..317e4ed 100644
          "Table Design" => {
              vec![m("Shading", "table.shading"), m("Borders", "table.borders"), c("Border Painter", "table.borderPainter")]
          }
+diff --git a/crates/ui-egui/src/lib.rs b/crates/ui-egui/src/lib.rs
+index 662516f..e5d71d3 100644
+--- a/crates/ui-egui/src/lib.rs
++++ b/crates/ui-egui/src/lib.rs
+@@ -256,7 +256,6 @@ pub struct UiState {
+     #[serde(rename = "dark", skip_serializing)]
+     pub(crate) legacy_dark: Option<bool>,
+     pub nav_tab: String,
+-    pub show_discord: bool,
+     /// User name (File › Options) for comments and tracked changes; empty keeps the default.
+     pub author: String,
+     /// Desktop: the main window's size and position, restored at the next launch.
+@@ -351,7 +350,6 @@ impl Default for UiState {
+             animations: theme::Animations::default(),
+             legacy_dark: None,
+             nav_tab: "headings".into(),
+-            show_discord: true,
+             author: String::new(),
+             window: None,
+             language: i18n::AUTO.into(),
+@@ -1492,10 +1490,6 @@ impl WordApp {
+                         .into(),
+                 ));
+             }
+-            "ui.discord" => {
+-                self.canvas.open_url = Some("https://discord.gg/artcraft".into());
+-                json!({})
+-            }
+             "ui.caretAnimation" => {
+                 // File › Options › Advanced › Animation: `value` true or false turns the caret's
+                 // glide and fading blink on or off; no value reads it.
+@@ -2390,7 +2384,6 @@ pub(crate) fn works_without_document(id: &str) -> bool {
+             | "ui.openFileDialog"
+             | "ui.fileBrowser"
+             | "ui.makeDefaultApp"
+-            | "ui.discord"
+             | "ui.caretAnimation"
+             | "ui.startScreen"
+     ) || id.starts_with("help.")
+@@ -2703,7 +2696,7 @@ mod tests {
+         for id in ["format.bold", "text.insert", "file.save", "file.saveAs", "file.print", "edit.paste", "insert.table", "ui.print"] {
+             assert!(!widgets::enabled(a, id), "{id} is off with no document");
+         }
+-        for id in ["file.new", "file.open", "ui.backstage", "ui.tab", "ui.discord", "file.options", "ui.theme"] {
++        for id in ["file.new", "file.open", "ui.backstage", "ui.tab", "file.options", "ui.theme"] {
+             assert!(widgets::enabled(a, id), "{id} works with no document");
+         }
+         assert!(!chrome::qat_enabled(a, "file.save"));
+@@ -4540,7 +4533,7 @@ mod tests {
+                 a,
+             );
+             h.run_steps(4);
+-            assert!(h.query_by_label("Show the community button in the title bar").is_some(), "hook {hook}: the Options page rendered");
++            assert!(h.query_by_label("Show the mini toolbar when text is selected").is_some(), "hook {hook}: the Options page rendered");
+             assert_eq!(h.query_by_label(LABEL).is_some(), hook, "hook {hook}: the button");
+             if hook {
+                 h.get_by_label(LABEL).click();
 diff --git a/crates/ui-egui/src/options.rs b/crates/ui-egui/src/options.rs
 index c7f26c3..2bf5e2d 100644
 --- a/crates/ui-egui/src/options.rs
