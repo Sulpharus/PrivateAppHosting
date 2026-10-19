@@ -1,0 +1,74 @@
+name: Craft builds
+
+# The Craft apps whose release.json lists patches (hosted/wordcraft/README.md) are built from the
+# patched upstream source: one runner per app, `node hosted/<app>/build.mjs --source`. The result
+# is cached under the app's build key, so Rust only compiles when the version or a patch changes,
+# and handed to the calling job as the artifact craft-<app>.
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  list:
+    name: Craft apps with patches
+    runs-on: ubuntu-latest
+    outputs:
+      apps: ${{ steps.list.outputs.apps }}
+    steps:
+      - uses: actions/checkout@v5
+      - id: list
+        run: |
+          apps=$(node -e '
+            const fs = require("node:fs");
+            const apps = fs.readdirSync("hosted").filter((slug) => {
+              try { return (JSON.parse(fs.readFileSync(`hosted/${slug}/release.json`, "utf8")).patches ?? []).length > 0; }
+              catch { return false; }
+            });
+            console.log(JSON.stringify(apps));
+          ')
+          echo "apps=$apps" >> "$GITHUB_OUTPUT"
+
+  build:
+    name: Build ${{ matrix.app }}
+    needs: list
+    if: needs.list.outputs.apps != '[]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    strategy:
+      fail-fast: false
+      matrix:
+        app: ${{ fromJson(needs.list.outputs.apps) }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+      - id: key
+        run: echo "key=$(node hosted/${{ matrix.app }}/build.mjs --key)" >> "$GITHUB_OUTPUT"
+      - id: cache
+        uses: actions/cache@v4
+        with:
+          path: hosted/${{ matrix.app }}/.cache/source-*.zip
+          key: craft-${{ matrix.app }}-${{ steps.key.outputs.key }}
+      - if: steps.cache.outputs.cache-hit != 'true'
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - name: Trunk and binaryen
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          curl -fsSL https://github.com/trunk-rs/trunk/releases/download/v0.21.14/trunk-x86_64-unknown-linux-gnu.tar.gz \
+            | tar xz -C "$HOME/.cargo/bin"
+          sudo apt-get install -y --no-install-recommends binaryen
+      - name: Build from the patched source
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: node hosted/${{ matrix.app }}/build.mjs --source
+      - uses: actions/upload-artifact@v4
+        with:
+          name: craft-${{ matrix.app }}
+          path: hosted/${{ matrix.app }}/.cache/source-*.zip
+          if-no-files-found: error
+          retention-days: 1

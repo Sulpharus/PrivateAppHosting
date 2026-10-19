@@ -1,0 +1,128 @@
+diff --git a/crates/ui-egui/src/about.rs b/crates/ui-egui/src/about.rs
+index 1474560..c3ac5f6 100644
+--- a/crates/ui-egui/src/about.rs
++++ b/crates/ui-egui/src/about.rs
+@@ -167,31 +167,12 @@ pub fn show(app: &mut DesignApp, ctx: &egui::Context) {
+                     .size(13.0)
+                     .color(t.text),
+             ));
+-            ui.label(crate::rtl::widget(
+-                ui,
+-                egui::RichText::new(crate::i18n::tr(&app.ui.language, "Part of the ArtCraft suite of open creative tools."))
+-                    .size(12.0)
+-                    .color(t.text_dim),
+-            ));
+-            ui.add_space(16.0);
+-            if discord_button(ui, crate::i18n::tr(&app.ui.language, "Join the ArtCraft Discord"), vec2(300.0, 40.0)) {
+-                open = Some("discord");
+-            }
+-            ui.add_space(4.0);
+-            ui.label(crate::rtl::widget(
+-                ui,
+-                egui::RichText::new(crate::i18n::tr(&app.ui.language, "discord.gg/artcraft — help, feedback and show-and-tell"))
+-                    .size(11.0)
+-                    .color(t.text_dim),
+-            ));
+             ui.add_space(14.0);
+             ui.horizontal(|ui| {
+                 // Centre the row of links.
+-                let w = 330.0;
++                let w = 160.0;
+                 ui.add_space(((ui.available_width() - w) / 2.0).max(0.0));
+-                for (text, key) in
+-                    [("DesignCraft page", "appPage"), ("GitHub", "github"), ("getartcraft.com", "website"), ("Report an issue", "issues")]
+-                {
++                for (text, key) in [("GitHub", "github"), ("Report an issue", "issues")] {
+                     if link(ui, crate::i18n::tr(&app.ui.language, text), links::get(key).unwrap_or_default(), t.accent) {
+                         open = Some(key);
+                     }
+@@ -199,32 +180,6 @@ pub fn show(app: &mut DesignApp, ctx: &egui::Context) {
+                 }
+             });
+             ui.add_space(16.0);
+-            ui.separator();
+-            ui.add_space(6.0);
+-            ui.label(crate::rtl::widget(
+-                ui,
+-                egui::RichText::new(crate::i18n::tr(&app.ui.language, "More ArtCraft apps")).font(semibold(12.0)).color(t.text_strong),
+-            ));
+-            ui.add_space(4.0);
+-            ui.horizontal(|ui| {
+-                let pad = ui.spacing().button_padding.x * 2.0 + ui.spacing().item_spacing.x;
+-                let w: f32 = SIBLINGS
+-                    .iter()
+-                    .map(|(_, n, _)| ui.painter().layout_no_wrap(n.to_string(), egui::FontId::proportional(12.0), Color32::WHITE).size().x + pad)
+-                    .sum::<f32>()
+-                    - ui.spacing().item_spacing.x;
+-                ui.add_space(((ui.available_width() - w) / 2.0).max(0.0));
+-                for (slug, name, what) in SIBLINGS {
+-                    let url = format!("{}/apps/{slug}", links::WEBSITE);
+-                    let b = ui
+-                        .add(egui::Button::new(egui::RichText::new(*name).size(12.0)).corner_radius(10.0))
+-                        .on_hover_text(format!("{} — {url}", crate::i18n::tr(&app.ui.language, what)));
+-                    if b.clicked() {
+-                        app.ui.pending_urls.push(url);
+-                    }
+-                }
+-            });
+-            ui.add_space(12.0);
+             ui.label(crate::rtl::widget(
+                 ui,
+                 egui::RichText::new(crate::i18n::tr(&app.ui.language, "Open source. No telemetry.")).size(11.0).color(t.text_dim),
+diff --git a/crates/ui-egui/src/chrome.rs b/crates/ui-egui/src/chrome.rs
+index 0df5361..64cc56e 100644
+--- a/crates/ui-egui/src/chrome.rs
++++ b/crates/ui-egui/src/chrome.rs
+@@ -325,11 +325,6 @@ pub fn app_bar(app: &mut DesignApp, ui: &mut egui::Ui) {
+                             if icons::button(ui, "share", 22.0, false, crate::i18n::tr(&app.ui.language, "Share")).clicked() {
+                                 app.status(crate::i18n::tr(&app.ui.language, "Export a PDF, IDML or package to share — no cloud account needed."));
+                             }
+-                            ui.add_space(8.0);
+-                            // Always one click away: the ArtCraft community Discord.
+-                            if crate::about::discord_button(ui, "Discord", vec2(78.0, 22.0)) {
+-                                let _ = app.run("help.discord", json!({}));
+-                            }
+                             tools_start = ui.min_rect().min.x;
+                             ui.data_mut(|d| d.insert_temp(egui::Id::new("app_bar_tools_start"), tools_start));
+                             ui.min_rect().width()
+@@ -903,7 +898,6 @@ pub fn start_screen(app: &mut DesignApp, ui: &mut egui::Ui) {
+                 }
+             });
+             ui.add_space(20.0);
+-            community_card(app, ui);
+             recent_files(app, ui);
+             ui.add_space(24.0);
+             ui.label(crate::rtl::widget(
+@@ -1049,6 +1043,7 @@ fn recent_preview_texture(ctx: &egui::Context, path: &str, modified: Option<std:
+ }
+ 
+ /// Start screen: the ArtCraft community (Discord first) and project links.
++#[allow(dead_code)] // MiniNode: the card is not shown.
+ fn community_card(app: &mut DesignApp, ui: &mut egui::Ui) {
+     let t = Tokens::get(ui.ctx());
+     egui::Frame::NONE.fill(t.panel).corner_radius(10.0).inner_margin(egui::Margin::same(14)).show(ui, |ui| {
+diff --git a/crates/ui-egui/src/menus.rs b/crates/ui-egui/src/menus.rs
+index acb8e3e..aac9b45 100644
+--- a/crates/ui-egui/src/menus.rs
++++ b/crates/ui-egui/src/menus.rs
+@@ -907,12 +907,8 @@ pub const MENUS: &[(&str, &[&str])] = &[
+     (
+         "Help",
+         &[
+-            "ui:help.discord",
+-            "-",
+-            "ui:help.appPage",
+             "ui:help.github",
+             "ui:help.issues",
+-            "ui:help.website",
+             "-",
+             "cmd:file.newSample",
+             "-",
+@@ -2294,7 +2290,6 @@ pub enum AppMenuItem {
+ /// The macOS application menu. Settings… is `app.preferences`, which `native_menu_tree` leaves out of Edit.
+ pub const MAC_APP_MENU: &[AppMenuItem] = &[
+     AppMenuItem::Cmd { id: "dc-about", label: "About DesignCraft", command: "help.about" },
+-    AppMenuItem::Cmd { id: "dc-discord", label: "Join the ArtCraft Discord…", command: "help.discord" },
+     AppMenuItem::Sep,
+     AppMenuItem::Cmd { id: "dc-settings", label: "Settings…", command: "app.preferences" },
+     AppMenuItem::Sep,

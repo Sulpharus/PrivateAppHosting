@@ -16,6 +16,7 @@ Jede App bekommt von der Plattform zwei Dinge, die der **Gate** unter `/_mininod
 | `/_mininode/ui.js` | Datum/Uhrzeit-Felder als Tag · Monat · Jahr bzw. Stunde : Minute, Dialoge, Kleinigkeiten |
 | `/_mininode/i18n.js` | Sprachpakete (`window.mnI18n`), siehe [Sprache und Formate](wiki:sprachen-formate) |
 | `/_mininode/game.js` | Hilfen für Spiele (Spielername, Zeit, Bestenliste), siehe [Gaming Hub](wiki:gaming-hub) |
+| `/_mininode/files.js` | Für Apps, die Dateien „wie im Browser“ öffnen und speichern (Dateifeld, Speichern-Dialog, Download): bietet beim Öffnen die eigenen MiniNode-Dateien an und speichert auf Wunsch nach MiniNode (`mn.files`) statt aufs Gerät. Genutzt von den Craft-Apps |
 | `/_mininode/sdk.js` | Das SDK als einzelne Skriptdatei für reines HTML |
 | `/_mininode/pwa.js`, `sw.js`, `manifest.webmanifest` | Macht jede App installierbar und offlinefähig (automatisch, nicht selbst bauen) |
 

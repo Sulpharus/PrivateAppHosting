@@ -1,0 +1,57 @@
+diff --git a/crates/ui-egui/src/menubar.rs b/crates/ui-egui/src/menubar.rs
+index c5e4e45..a727412 100644
+--- a/crates/ui-egui/src/menubar.rs
++++ b/crates/ui-egui/src/menubar.rs
+@@ -244,12 +244,9 @@ const LAYOUT: &[(&str, &[&str])] = &[
+     (
+         "Help",
+         &[
+-            "app.discord",
+             "app.feedback",
+             "---",
+-            "app.website",
+             "app.github",
+-            "app.artcraft",
+             "---",
+             "app.whatsNew",
+             "app.shortcuts",
+diff --git a/crates/ui-egui/src/panels/dialogs.rs b/crates/ui-egui/src/panels/dialogs.rs
+index 5562e94..37fac5e 100644
+--- a/crates/ui-egui/src/panels/dialogs.rs
++++ b/crates/ui-egui/src/panels/dialogs.rs
+@@ -1290,22 +1290,7 @@ pub fn show(app: &mut LightcraftApp, ctx: &egui::Context) {
+                                 crate::theme::font_credits(app.chinese_font.is_some())
+                             ));
+                             ui.add_space(10.0);
+-                            let r = crate::button::Button::new("Join the ArtCraft Discord")
+-                                .primary()
+-                                .large()
+-                                .min_width(260.0)
+-                                .widget("button:aboutDiscord")
+-                                .tooltip(crate::links::DISCORD)
+-                                .show(ui);
+-                            if r.clicked() {
+-                                let _ = crate::links::open(app, crate::links::DISCORD);
+-                            }
+-                            ui.add_space(6.0);
+-                            for (label, url) in [
+-                                ("LightCraft website", crate::links::APP_PAGE),
+-                                ("Source code on GitHub", crate::links::GITHUB),
+-                                ("ArtCraft — more creative apps", crate::links::WEBSITE),
+-                            ] {
++                            for (label, url) in [("Source code on GitHub", crate::links::GITHUB)] {
+                                 let r = ui.link(crate::i18n::tr(label)).on_hover_text(url);
+                                 if r.clicked() {
+                                     let _ = crate::links::open(app, url);
+diff --git a/crates/ui-egui/src/panels/topbar.rs b/crates/ui-egui/src/panels/topbar.rs
+index 7e40af7..ba44079 100644
+--- a/crates/ui-egui/src/panels/topbar.rs
++++ b/crates/ui-egui/src/panels/topbar.rs
+@@ -180,7 +180,6 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui) {
+                 None => crate::i18n::tr("Import Photos…").to_string(),
+             };
+             for (id, icon, tip, cmd) in [
+-                ("discord", Icon::Chat, "Join the ArtCraft community on Discord", "app.discord"),
+                 ("cloud", Icon::Cloud, cloud_tip, ""),
+                 ("help", Icon::Help, "Keyboard shortcuts", "app.shortcuts"),
+                 ("share", Icon::Share, "Export", "dialog.export"),

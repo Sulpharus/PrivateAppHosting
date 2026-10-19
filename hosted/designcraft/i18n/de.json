@@ -1,4 +1,18 @@
 {
   "app.title": "DesignCraft",
-  "app.loading": "DesignCraft wird geladen …"
+  "app.loading": "DesignCraft wird geladen …",
+  "files.open.title": "Datei öffnen",
+  "files.open.device": "Von diesem Gerät …",
+  "files.open.empty": "In MiniNode liegen noch keine passenden Dateien.",
+  "files.open.loading": "Dateien werden geladen …",
+  "files.open.selected": "{n} öffnen",
+  "files.save.title": "Speichern",
+  "files.save.name": "Dateiname",
+  "files.save.mininode": "In MiniNode speichern",
+  "files.save.device": "Auf diesem Gerät speichern",
+  "files.save.replace": "„{name}“ gibt es schon in MiniNode. Ersetzen?",
+  "files.save.done": "„{name}“ in MiniNode gespeichert",
+  "files.cancel": "Abbrechen",
+  "files.error": "Das hat nicht geklappt: {message}",
+  "files.source": "MiniNode"
 }

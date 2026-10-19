@@ -25,7 +25,7 @@ import { appWranglerConfig } from './wrangler-config.ts';
 
 const REPO_ROOT = resolve(import.meta.dirname, '../../../..');
 const SDK_BUNDLE = join(REPO_ROOT, 'packages/sdk/dist/mininode.iife.js');
-/** The app kit (design system), served next to the SDK as /_mininode/ui.css, ui.js and game.js. */
+/** The app kit (design system), served next to the SDK as /_mininode/ui.css, ui.js, game.js, i18n.js and files.js. */
 const KIT = join(REPO_ROOT, 'packages/ui/kit');
 /** Service worker and its registration script, same for every app (ADR 0005). */
 const PWA = join(REPO_ROOT, 'packages/gate/assets');
@@ -102,6 +102,7 @@ export function stageAssets(appDir: string, manifest: Manifest): string {
   cpSync(join(KIT, 'ui.js'), join(platform, 'ui.js'));
   cpSync(join(KIT, 'game.js'), join(platform, 'game.js'));
   cpSync(join(KIT, 'i18n.js'), join(platform, 'i18n.js'));
+  cpSync(join(KIT, 'files.js'), join(platform, 'files.js'));
   // A new version per deploy: browsers reinstall the worker and drop the old caches.
   const version = `${manifest.slug}-${Date.now().toString(36)}`;
   writeFileSync(

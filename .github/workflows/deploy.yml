@@ -180,9 +180,12 @@ jobs:
             GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET GOOGLE_TOKEN_KEY VAPID_PUBLIC_KEY VAPID_PRIVATE_KEY VAULT_KEY GITHUB_DISPATCH_TOKEN
           upload apps/ai-proxy SUPABASE_SECRET_KEY ANTHROPIC_API_KEY GEMINI_API_KEY AI_GATEWAY_TOKEN
 
+  crafts:
+    uses: ./.github/workflows/crafts.yml
+
   apps:
     name: Hosted apps
-    needs: platform
+    needs: [platform, crafts]
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment || 'production' }}
     outputs:
@@ -206,8 +209,14 @@ jobs:
       - run: pnpm --filter @mininode/sdk build
       - name: Check the Cloudflare API token
         run: scripts/ci-clean-secret.sh CLOUDFLARE_API_TOKEN
+      - name: Patched Craft builds
+        uses: actions/download-artifact@v4
+        with:
+          pattern: craft-*
+          path: craft-builds
       - name: Deploy changed apps
         run: |
+          scripts/craft-builds.sh craft-builds
           # Each app is compared with the commit it was last deployed from (its registered version in
           # this environment), not with the previous push: an earlier failed run must not make its
           # changes get skipped by the next green one. Changes to the SDK, kit, gate, manifest or CLI

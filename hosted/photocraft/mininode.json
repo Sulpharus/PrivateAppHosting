@@ -10,7 +10,7 @@
     "default": true
   },
   "data": {
-    "mode": "none"
+    "mode": "private"
   },
   "wasm": true,
   "build": {
