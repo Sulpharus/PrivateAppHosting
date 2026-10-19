@@ -170,6 +170,55 @@ describe('helpers', () => {
     expect(csp).toContain('wss://proj.supabase.co');
     expect(csp).toContain('https://ai.mininode.app');
     expect(csp).toContain("frame-ancestors 'none'");
+    expect(csp).not.toContain('wasm-unsafe-eval');
+  });
+
+  it('allows WebAssembly only for apps that declare it', () => {
+    const csp = contentSecurityPolicy({ supabaseUrl: SUPABASE_URL, wasm: true });
+    expect(csp).toContain("script-src 'self' 'wasm-unsafe-eval'");
+    expect(csp).not.toMatch(/script-src[^;]*unsafe-inline/);
+  });
+});
+
+describe('precompressed WebAssembly', () => {
+  const env = (files: Record<string, string>) => ({
+    APP_SLUG: 'wordcraft',
+    APP_NAME: 'WordCraft',
+    SUPABASE_URL,
+    SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_test',
+    PORTAL_URL: PORTAL,
+    WASM: '1',
+    ASSETS: {
+      fetch: async (input: Request) => {
+        const body = files[new URL(input.url).pathname];
+        return body === undefined
+          ? new Response('not found', { status: 404 })
+          : new Response(body, { headers: { 'Content-Type': 'application/octet-stream' } });
+      },
+    } as unknown as Fetcher,
+  });
+
+  it('serves app.wasm from app.wasm.br, still Brotli encoded', async () => {
+    const { handleAppRequest } = await import('./worker.ts');
+    const response = await handleAppRequest(
+      new Request('https://wordcraft.mininode.app/app.wasm'),
+      env({ '/app.wasm.br': 'BROTLI' }),
+    );
+    expect(response.status).toBe(200);
+    expect(response.headers.get('Content-Type')).toBe('application/wasm');
+    expect(response.headers.get('Content-Encoding')).toBe('br');
+    expect(response.headers.get('Content-Security-Policy')).toContain("'wasm-unsafe-eval'");
+    expect(await response.text()).toBe('BROTLI');
+  });
+
+  it('serves a plain .wasm file as it is', async () => {
+    const { handleAppRequest } = await import('./worker.ts');
+    const response = await handleAppRequest(
+      new Request('https://wordcraft.mininode.app/small.wasm'),
+      env({ '/small.wasm': 'RAW' }),
+    );
+    expect(response.headers.get('Content-Encoding')).toBeNull();
+    expect(await response.text()).toBe('RAW');
   });
 });
 

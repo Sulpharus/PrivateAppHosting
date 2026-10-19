@@ -445,6 +445,9 @@
       ],
       "additionalProperties": false
     },
+    "wasm": {
+      "type": "boolean"
+    },
     "container": {
       "type": "object",
       "properties": {

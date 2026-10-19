@@ -16,6 +16,8 @@ export interface AppEnv {
   PORTAL_URL: string;
   /** Comma-separated extra connect-src origins from the manifest. */
   CONNECT_SRC?: string;
+  /** "1" when the manifest sets `wasm` (CSP allows WebAssembly). */
+  WASM?: string;
 }
 
 let cached: { url: string; verifier: Verifier } | undefined;
@@ -84,12 +86,41 @@ export function connectSources(env: Pick<AppEnv, 'PORTAL_URL' | 'CONNECT_SRC'>):
   ];
 }
 
+/**
+ * A `.wasm` file above the 25 MiB asset limit ships as `<name>.wasm.br` (Brotli). It is served
+ * under its own name, still encoded, so the browser unpacks it and checks its integrity hash.
+ */
+async function precompressedWasm(
+  request: Request,
+  env: AppEnv,
+  headers: Record<string, string>,
+): Promise<Response | undefined> {
+  const url = new URL(request.url);
+  if (!url.pathname.endsWith('.wasm') || !['GET', 'HEAD'].includes(request.method)) return;
+  const found = await env.ASSETS.fetch(
+    new Request(new URL(`${url.pathname}.br`, url), { method: request.method }),
+  );
+  if (!found.ok) return;
+  return new Response(found.body, {
+    // Set here: copying the response (withHeaders) would drop encodeBody.
+    headers: {
+      ...headers,
+      'Content-Type': 'application/wasm',
+      'Content-Encoding': 'br',
+      'Cache-Control': 'public, max-age=31536000, immutable',
+    },
+    // The body is already Brotli; the runtime must not compress it again.
+    encodeBody: 'manual',
+  });
+}
+
 export async function handleAppRequest(request: Request, env: AppEnv): Promise<Response> {
   const url = new URL(request.url);
   const headers = securityHeaders({
     supabaseUrl: env.SUPABASE_URL,
     platformDomain: new URL(env.PORTAL_URL).hostname,
     connectSrc: connectSources(env),
+    wasm: env.WASM === '1',
   });
 
   if (url.pathname === '/_mininode/config.json') {
@@ -128,6 +159,8 @@ export async function handleAppRequest(request: Request, env: AppEnv): Promise<R
   }
 
   if (!isNavigation(request)) {
+    const precompressed = await precompressedWasm(request, env, headers);
+    if (precompressed) return precompressed;
     // HTML fetched by the service worker (its offline copy of "/") gets the PWA tags too.
     return withHeaders(
       withPwaTags(

@@ -182,7 +182,8 @@ create index on app_<slug_with_underscores>.recipes (cooked_on);
     "docs": "https://home.openweathermap.org/api_keys",
     "reason": "Wetter für den Wohnort"
   }],
-  "build": { "command": "pnpm build", "output": "dist" }   // omit for static apps
+  "build": { "command": "pnpm build", "output": "dist" },  // omit for static apps
+  "wasm": true                              // only if the app runs WebAssembly (CSP 'wasm-unsafe-eval')
 }
 ```
 

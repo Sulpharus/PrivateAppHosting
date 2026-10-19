@@ -3,7 +3,7 @@
 Where things stand, what the owner still has to do, and what a new session should know.
 Update it at the end of every working session; history belongs in git, not here.
 
-Last updated: 2026-10-02 (third session; language switch added).
+Last updated: 2026-10-19 (WordCraft integrated; Reiseplaner brief).
 
 ## Start here
 
@@ -68,6 +68,8 @@ Where things are documented:
 | Wissen | Verwaltung → Wissen: Wiki (34 German articles, search, generated reference pages for apps, workflows, commands, ADRs, runbooks) and a Startup-Guide checklist; the rule and a CI test keep it current | ADR 0021, `docs/wiki/`, `apps/portal/src/admin/{Wiki,Guide}.tsx`, `apps/portal/src/lib/wiki*.ts`, `e2e/wiki.spec.ts` |
 | Backups | Verwaltung → Sicherung: one password-protected archive (accounts with passwords, platform and app data, files, settings) made by `backup.yml`, downloaded from the page; `mininode backup create|verify|restore`; restore tested by a round trip on the local stack | ADR 0019, `docs/runbooks/backups.md`, `packages/cli/src/backup`, `apps/api/src/routes/backups.ts`, `e2e/backups.spec.ts` |
 | Uninstall | Verwaltung → Apps → Löschen: typed address, optional deletion of all data; `uninstall-app.yml` deletes the Worker (and schema, files, registry entry) and opens a pull request that removes `hosted/<slug>`; `mininode uninstall` | ADR 0020, `docs/runbooks/uninstall.md`, `packages/cli/src/deploy/uninstall.ts`, `e2e/uninstall.spec.ts` |
+| WordCraft | Upstream Rust/WASM word processor (storytold/wordcraft v0.8.0 web release) behind the gate; manifest `wasm` adds `'wasm-unsafe-eval'` to the CSP; the gate serves `<name>.wasm` from a Brotli `<name>.wasm.br` (assets above 25 MiB); start screen counts a body-level canvas | `hosted/wordcraft`, `packages/gate/src/worker.ts` |
+| Reiseplaner brief | Feature spec for a trip planner (reuses Kalender, Bill the Splitter, the Kalender map) | `docs/ai/briefs/reiseplaner.brief.md` |
 | German formats | Date, month and time inputs as German parts in every browser; full dates as "01. Okt. 2026"; German numbers | `packages/ui/kit/ui.js`, `docs/ai/DESIGN-SYSTEM.md` §8 |
 
 The Sportplaner map (tab "Karte") and course mode (editor step "Zeiten" → "Kurs") are live

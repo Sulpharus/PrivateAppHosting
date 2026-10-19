@@ -1,0 +1,24 @@
+{
+  "$schema": "../../packages/manifest/schema.json",
+  "specVersion": 1,
+  "slug": "wordcraft",
+  "name": "WordCraft",
+  "description": "Textverarbeitung im Browser: Word-Dokumente (.docx) öffnen, gestalten und speichern",
+  "kind": "static",
+  "target": "cloudflare",
+  "access": {
+    "default": true
+  },
+  "data": {
+    "mode": "none"
+  },
+  "wasm": true,
+  "build": {
+    "command": "node build.mjs",
+    "output": "dist"
+  },
+  "i18n": {
+    "languages": ["de", "en"],
+    "default": "de"
+  }
+}

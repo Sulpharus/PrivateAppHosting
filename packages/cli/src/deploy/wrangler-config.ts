@@ -37,6 +37,7 @@ export function appWranglerConfig(input: {
       PORTAL_URL: env.portalUrl,
       // Apps with a `google` block call the Google APIs directly with tokens from the API.
       CONNECT_SRC: [...(input.connectSrc ?? []), ...googleConnectSrc(manifest.google)].join(','),
+      WASM: manifest.wasm ? '1' : '',
     },
   };
 }
