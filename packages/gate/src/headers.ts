@@ -5,6 +5,8 @@ export interface CspOptions {
   /** Extra origins the app may fetch from (declared in the manifest, reviewed by doctor). */
   connectSrc?: readonly string[];
   platformDomain?: string;
+  /** The app runs WebAssembly (manifest `wasm`): allows compiling it, not JavaScript eval. */
+  wasm?: boolean;
 }
 
 export function contentSecurityPolicy(options: CspOptions): string {
@@ -21,7 +23,7 @@ export function contentSecurityPolicy(options: CspOptions): string {
   ];
   return [
     "default-src 'self'",
-    "script-src 'self'",
+    options.wasm ? "script-src 'self' 'wasm-unsafe-eval'" : "script-src 'self'",
     // Inline styles are common in AI-generated UIs and low risk without inline scripts.
     "style-src 'self' 'unsafe-inline'",
     // https: covers the hosted Supabase; the origin itself covers a local stack over http.

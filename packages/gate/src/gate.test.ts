@@ -170,6 +170,77 @@ describe('helpers', () => {
     expect(csp).toContain('wss://proj.supabase.co');
     expect(csp).toContain('https://ai.mininode.app');
     expect(csp).toContain("frame-ancestors 'none'");
+    expect(csp).not.toContain('wasm-unsafe-eval');
+  });
+
+  it('allows WebAssembly only for apps that declare it', () => {
+    const csp = contentSecurityPolicy({ supabaseUrl: SUPABASE_URL, wasm: true });
+    expect(csp).toContain("script-src 'self' 'wasm-unsafe-eval'");
+    expect(csp).not.toMatch(/script-src[^;]*unsafe-inline/);
+  });
+});
+
+describe('precompressed WebAssembly', () => {
+  const env = (files: Record<string, string>, wasm = '1', fallback?: string) => ({
+    APP_SLUG: 'wordcraft',
+    APP_NAME: 'WordCraft',
+    SUPABASE_URL,
+    SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_test',
+    PORTAL_URL: PORTAL,
+    WASM: wasm,
+    ASSETS: {
+      fetch: async (input: Request) => {
+        const body = files[new URL(input.url).pathname];
+        if (body === undefined && fallback !== undefined)
+          return new Response(fallback, { headers: { 'Content-Type': 'text/html' } });
+        return body === undefined
+          ? new Response('not found', { status: 404 })
+          : new Response(body, { headers: { 'Content-Type': 'application/octet-stream' } });
+      },
+    } as unknown as Fetcher,
+  });
+
+  it('serves app.wasm from app.wasm.br, still Brotli encoded', async () => {
+    const { handleAppRequest } = await import('./worker.ts');
+    const response = await handleAppRequest(
+      new Request('https://wordcraft.mininode.app/app.wasm'),
+      env({ '/app.wasm.br': 'BROTLI' }),
+    );
+    expect(response.status).toBe(200);
+    expect(response.headers.get('Content-Type')).toBe('application/wasm');
+    expect(response.headers.get('Content-Encoding')).toBe('br');
+    expect(response.headers.get('Content-Security-Policy')).toContain("'wasm-unsafe-eval'");
+    expect(await response.text()).toBe('BROTLI');
+  });
+
+  it('ignores .wasm.br files of apps without wasm', async () => {
+    const { handleAppRequest } = await import('./worker.ts');
+    const response = await handleAppRequest(
+      new Request('https://other.mininode.app/app.wasm'),
+      env({ '/app.wasm.br': 'BROTLI' }, ''),
+    );
+    expect(response.headers.get('Content-Encoding')).toBeNull();
+    expect(response.status).toBe(404);
+  });
+
+  it('never sends a single-page app’s index.html as WebAssembly', async () => {
+    const { handleAppRequest } = await import('./worker.ts');
+    const response = await handleAppRequest(
+      new Request('https://spa.mininode.app/missing.wasm'),
+      env({}, '1', '<!doctype html><title>SPA</title>'),
+    );
+    expect(response.headers.get('Content-Encoding')).toBeNull();
+    expect(response.headers.get('Content-Type')).toContain('text/html');
+  });
+
+  it('serves a plain .wasm file as it is', async () => {
+    const { handleAppRequest } = await import('./worker.ts');
+    const response = await handleAppRequest(
+      new Request('https://wordcraft.mininode.app/small.wasm'),
+      env({ '/small.wasm': 'RAW' }),
+    );
+    expect(response.headers.get('Content-Encoding')).toBeNull();
+    expect(await response.text()).toBe('RAW');
   });
 });
 

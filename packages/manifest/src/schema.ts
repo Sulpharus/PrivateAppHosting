@@ -376,6 +376,8 @@ export const manifestSchema = z
     suite: suiteSchema.optional(),
     i18n: i18nSchema.optional(),
     build: buildSchema.optional(),
+    /** The app runs WebAssembly: the CSP allows compiling it (`'wasm-unsafe-eval'`). */
+    wasm: z.boolean().optional(),
     container: containerSchema.optional(),
     remote: remoteSchema.optional(),
     /** Set by the App-Bibliothek for installed library apps (ADR 0011); hosted apps leave it out. */
