@@ -46,6 +46,8 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version-file: .nvmrc
+          # build.mjs needs plain Node only; no pnpm here for the automatic cache to find.
+          package-manager-cache: false
       - id: key
         run: echo "key=$(node hosted/${{ matrix.app }}/build.mjs --key)" >> "$GITHUB_OUTPUT"
       - id: cache
