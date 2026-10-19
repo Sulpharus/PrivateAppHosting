@@ -1,7 +1,8 @@
 # DesignCraft
 
 A desktop publishing and page layout studio. Written in Rust and compiled to WebAssembly by the ArtCraft team.
-MiniNode serves the upstream browser build unchanged behind the gate at `designcraft.mininode.app`.
+MiniNode serves the upstream browser build behind the gate at `designcraft.mininode.app`, with the
+changes listed in `hosted/wordcraft/README.md`.
 
 ## Origin
 

@@ -87,16 +87,21 @@ export function connectSources(env: Pick<AppEnv, 'PORTAL_URL' | 'CONNECT_SRC'>):
 }
 
 /**
- * A `.wasm` file above the 25 MiB asset limit ships as `<name>.wasm.br` (Brotli). It is served
- * under its own name, still encoded, so the browser unpacks it and checks its integrity hash.
- * Only for apps with `wasm: true`, outside `/assets/` (those skip the Worker). A name with a
- * content hash is cached for a year; any other name is checked again on every load.
+ * `app-6020ded28f149c6b_bg.wasm` has a content hash, `app_bg.wasm` has none. Any run of 12 or more
+ * hex digits counts (a long numeric build stamp too); a `?v=` query does not, which errs towards
+ * checking again.
  */
-/** `app-6020ded28f149c6b_bg.wasm` has a content hash, `app_bg.wasm` has none. */
 export function hasContentHash(path: string): boolean {
   return /[-_.][0-9a-f]{12,}(?=[-_.])/i.test(path.slice(path.lastIndexOf('/') + 1));
 }
 
+/**
+ * A `.wasm` file above the 25 MiB asset limit ships as `<name>.wasm.br` (Brotli). It is served
+ * under its own name, still encoded, so the browser unpacks it and checks its integrity hash.
+ * Only for apps with `wasm: true`, outside `/assets/` (those skip the Worker). A name with a
+ * content hash is cached for a year; any other name is checked again on every load against the
+ * asset's ETag and answered with 304 while it is unchanged.
+ */
 async function precompressedWasm(
   request: Request,
   env: AppEnv,
@@ -105,22 +110,31 @@ async function precompressedWasm(
   const url = new URL(request.url);
   if (env.WASM !== '1' || !url.pathname.endsWith('.wasm')) return;
   if (!['GET', 'HEAD'].includes(request.method)) return;
+  const ifNoneMatch = request.headers.get('If-None-Match');
   const found = await env.ASSETS.fetch(
-    new Request(new URL(`${url.pathname}.br`, url), { method: request.method }),
+    new Request(new URL(`${url.pathname}.br`, url), {
+      method: request.method,
+      headers: ifNoneMatch ? { 'If-None-Match': ifNoneMatch } : {},
+    }),
   );
+  const etag = found.headers.get('ETag');
+  const caching = {
+    ...headers,
+    'Cache-Control': hasContentHash(url.pathname)
+      ? 'public, max-age=31536000, immutable'
+      : 'no-cache',
+    ...(etag ? { ETag: etag } : {}),
+  };
+  const unchanged = found.status === 304 || (found.ok && etag !== null && etag === ifNoneMatch);
+  if (unchanged) {
+    await found.body?.cancel();
+    return new Response(null, { status: 304, headers: caching });
+  }
   // A single-page app answers a missing file with its index.html (status 200): not a module.
   if (!found.ok || found.headers.get('Content-Type')?.startsWith('text/html')) return;
   return new Response(found.body, {
     // Set here: copying the response (withHeaders) would drop encodeBody.
-    headers: {
-      ...headers,
-      'Content-Type': 'application/wasm',
-      'Content-Encoding': 'br',
-      'Cache-Control': hasContentHash(url.pathname)
-        ? 'public, max-age=31536000, immutable'
-        : 'no-cache',
-      ...(found.headers.get('ETag') ? { ETag: found.headers.get('ETag') ?? '' } : {}),
-    },
+    headers: { ...caching, 'Content-Type': 'application/wasm', 'Content-Encoding': 'br' },
     // The body is already Brotli; the runtime must not compress it again.
     encodeBody: 'manual',
   });

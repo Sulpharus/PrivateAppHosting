@@ -1,7 +1,8 @@
 # PhotoCraft
 
 An image editor, a clean-room reimplementation of Adobe Photoshop. Written in Rust and compiled to WebAssembly by the ArtCraft team.
-MiniNode serves the upstream browser build unchanged behind the gate at `photocraft.mininode.app`.
+MiniNode serves the upstream browser build behind the gate at `photocraft.mininode.app`, with the
+changes listed in `hosted/wordcraft/README.md`.
 
 ## Origin
 

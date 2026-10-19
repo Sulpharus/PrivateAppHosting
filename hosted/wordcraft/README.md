@@ -2,8 +2,8 @@
 
 A word processor in the browser: an open-source, clean-room reimplementation of Microsoft Word in
 Rust, compiled to WebAssembly. It has the ribbon, styles, tables, track changes, references and
-mail merge, and it opens and saves `.docx`. MiniNode serves the upstream browser build unchanged
-behind the gate at `wordcraft.mininode.app`.
+mail merge, and it opens and saves `.docx`. MiniNode serves the upstream browser build behind the
+gate at `wordcraft.mininode.app`, with the changes listed below.
 
 ## Origin
 
@@ -20,12 +20,14 @@ own. `release.json` names the release (`name`, `version`, `sha256`) and the app'
 
 - **Inline scripts:** the gate's CSP allows none, so every inline `<script>` moves into
   `boot-1.js`, `boot-2.js`, … in the same place and with the same type. The build stops when an
-  inline script or an `on…=` handler is left.
+  inline script, an `on…=` handler or a `javascript:` link is left.
 - **Start screen:** `mn-ready.js` sends `mn:ready`. The gate checked the login before serving the
   page, so the platform's start screen goes as soon as the canvas is there, and the app's own
-  loading text takes over.
+  loading text takes over. An app without loading text sets `readyEvent` in `release.json`; the
+  signal then waits for that event (PdfCraft: `TrunkApplicationStarted`).
 - **Size:** one Cloudflare asset may be at most 25 MiB. A larger `.wasm` (WordCraft's is 42 MB) is
-  stored Brotli-compressed as `<name>.wasm.br`; an upstream `.wasm.br` is kept instead. The gate
+  stored Brotli-compressed as `<name>.wasm.br`. When the release ships its own `.wasm.br`, only that
+  copy is kept, whatever the size, because the gate always prefers it. The gate
   serves it under its own name with `Content-Encoding: br`, so the browser unpacks it and checks
   the integrity hash in `index.html`. Compression (Brotli quality 9) takes under a minute, and
   `.cache/` keeps the result between local builds. Other `.br`/`.gz` copies are dropped.

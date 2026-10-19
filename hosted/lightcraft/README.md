@@ -1,7 +1,8 @@
 # LightCraft
 
 A non-destructive photo library and raw developer. Written in Rust and compiled to WebAssembly by the ArtCraft team.
-MiniNode serves the upstream browser build unchanged behind the gate at `lightcraft.mininode.app`.
+MiniNode serves the upstream browser build behind the gate at `lightcraft.mininode.app`, with the
+changes listed in `hosted/wordcraft/README.md`.
 
 ## Origin
 
@@ -16,6 +17,9 @@ from the project's GitHub release and checks its SHA-256.
 `hosted/wordcraft/README.md` explains each step: inline scripts move into `boot-*.js` for the CSP,
 the language packages, and the Brotli `.wasm.br` for modules above the 25 MiB asset limit.
 `"wasm": true` in `mininode.json` allows WebAssembly in the app's CSP.
+
+The release ships its module also Brotli-compressed (`lightcraft_web_bg.wasm.br`, 5.5 MB). The
+build keeps only that copy, and the gate serves it as `lightcraft_web_bg.wasm`.
 
 ## Data
 

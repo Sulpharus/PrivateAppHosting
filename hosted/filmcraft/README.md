@@ -1,7 +1,8 @@
 # FilmCraft
 
 A video editor (editing, colour and sound), a clean-room take on the Adobe Premiere Pro workflow. Written in Rust and compiled to WebAssembly by the ArtCraft team.
-MiniNode serves the upstream browser build unchanged behind the gate at `filmcraft.mininode.app`.
+MiniNode serves the upstream browser build behind the gate at `filmcraft.mininode.app`, with the
+changes listed in `hosted/wordcraft/README.md`.
 
 ## Origin
 

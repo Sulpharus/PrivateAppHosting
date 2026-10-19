@@ -29,7 +29,7 @@ import { brotliCompressSync, constants } from 'node:zlib';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const release = JSON.parse(readFileSync(join(here, 'release.json'), 'utf8'));
-const { name, version, sha256: SHA256, loadingText } = release;
+const { name, version, sha256: SHA256, loadingText, readyEvent } = release;
 const URL = `https://github.com/storytold/${name}/releases/download/v${version}/${name}-web-${version}.zip`;
 const MAX_ASSET = 25 * 1024 * 1024;
 // Hosting notes for other servers, not part of the app.
@@ -77,19 +77,23 @@ for (const file of files(dist)) {
 // Inline scripts become boot-1.js, boot-2.js, … in the same place and with the same type.
 let count = 0;
 let page = readFileSync(join(dist, 'index.html'), 'utf8').replace(
-  /<script(\s[^>]*)?>([\s\S]*?)<\/script>/g,
+  /<script(\s[^>]*)?>([\s\S]*?)<\/script>/gi,
   (tag, attributes = '', body) => {
-    if (/\ssrc=/.test(attributes)) return tag;
+    if (/\ssrc\s*=/i.test(attributes)) return tag;
     count += 1;
     writeFileSync(join(dist, `boot-${count}.js`), `${body.trim()}\n`);
     return `<script${attributes} src="./boot-${count}.js"></script>`;
   },
 );
-// The gate checked the login before serving the page, so the start screen may go once the
-// page shows something; the app's own loading text takes over.
+// The gate checked the login before serving the page, so the start screen may go once the app
+// shows something: right away when the page has its own loading text, otherwise when the app
+// reports that it runs (release.json `readyEvent`, e.g. Trunk's "TrunkApplicationStarted").
+const signal = "window.__mnReady = true;\ndispatchEvent(new Event('mn:ready'));";
 writeFileSync(
   join(dist, 'mn-ready.js'),
-  "window.__mnReady = true;\ndispatchEvent(new Event('mn:ready'));\n",
+  readyEvent
+    ? `addEventListener(${JSON.stringify(readyEvent)}, () => {\n${signal}\n}, { once: true });\n`
+    : `${signal}\n`,
 );
 page = page
   .replace(/<html lang="en"/, '<html lang="de"')
@@ -107,30 +111,39 @@ if (loadingText) markers.push('data-i18n="app.loading"');
 for (const marker of markers) {
   if (!page.includes(marker)) throw new Error(`index.html: the release markup changed (${marker})`);
 }
-if (/<script(?![^>]*\ssrc=)[^>]*>/.test(page) || /\son[a-z]+="/.test(page))
+if (
+  /<script\b(?![^>]*\ssrc\s*=)[^>]*>/i.test(page) ||
+  /<[^>]+\son[a-z]+\s*=/i.test(page) ||
+  /\shref\s*=\s*["']?\s*javascript:/i.test(page)
+)
   throw new Error('index.html: an inline script or handler is left; the CSP would block it');
 writeFileSync(join(dist, 'index.html'), page);
 
 for (const file of files(dist)) {
-  if (!file.endsWith('.wasm') || statSync(file).size <= MAX_ASSET) continue;
-  if (!existsSync(`${file}.br`)) {
-    // The name carries a content hash or the version, so a cached copy is the same file.
-    const cached = join(cache, `${version}-${file.slice(dist.length + 1).replaceAll('/', '_')}.br`);
-    if (!existsSync(cached)) {
-      const packed = brotliCompressSync(readFileSync(file), {
-        params: {
-          // 9 takes under a minute (11 takes three for 1.5 MiB less); CI and deploy build it fresh.
-          [constants.BROTLI_PARAM_QUALITY]: 9,
-          [constants.BROTLI_PARAM_LGWIN]: 24,
-          [constants.BROTLI_PARAM_SIZE_HINT]: statSync(file).size,
-        },
-      });
-      // Written under a temporary name first: a cut-off run must not leave a broken cache.
-      writeFileSync(`${cached}.part`, packed);
-      renameSync(`${cached}.part`, cached);
-    }
-    cpSync(cached, `${file}.br`);
+  if (!file.endsWith('.wasm')) continue;
+  // The gate always prefers <name>.wasm.br, so the plain file would never be served.
+  if (existsSync(`${file}.br`)) {
+    rmSync(file);
+    console.log(`${file.slice(dist.length + 1)}: served from the release's own .br`);
+    continue;
   }
+  if (statSync(file).size <= MAX_ASSET) continue;
+  // The name carries a content hash or the version, so a cached copy is the same file.
+  const cached = join(cache, `${version}-${file.slice(dist.length + 1).replaceAll('/', '_')}.br`);
+  if (!existsSync(cached)) {
+    const packed = brotliCompressSync(readFileSync(file), {
+      params: {
+        // 9 takes under a minute (11 takes three for 1.5 MiB less); CI and deploy build it fresh.
+        [constants.BROTLI_PARAM_QUALITY]: 9,
+        [constants.BROTLI_PARAM_LGWIN]: 24,
+        [constants.BROTLI_PARAM_SIZE_HINT]: statSync(file).size,
+      },
+    });
+    // Written under a temporary name first: a cut-off run must not leave a broken cache.
+    writeFileSync(`${cached}.part`, packed);
+    renameSync(`${cached}.part`, cached);
+  }
+  cpSync(cached, `${file}.br`);
   rmSync(file);
   console.log(`${file.slice(dist.length + 1)}: served from .br`);
 }

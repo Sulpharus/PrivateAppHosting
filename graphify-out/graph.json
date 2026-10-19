@@ -26628,7 +26628,7 @@
       "file_type": "code",
       "norm_label": "handleapprequest()",
       "source_file": "packages/gate/src/worker.ts",
-      "source_location": "L129"
+      "source_location": "L143"
     },
     {
       "id": "packages_gate_src_worker_hascontenthash",
@@ -26640,7 +26640,7 @@
       "file_type": "code",
       "norm_label": "hascontenthash()",
       "source_file": "packages/gate/src/worker.ts",
-      "source_location": "L96"
+      "source_location": "L94"
     },
     {
       "id": "packages_gate_src_worker_precompressedwasm",
@@ -26652,7 +26652,7 @@
       "file_type": "code",
       "norm_label": "precompressedwasm()",
       "source_file": "packages/gate/src/worker.ts",
-      "source_location": "L100"
+      "source_location": "L105"
     },
     {
       "id": "packages_gate_src_worker_publicconfig",
@@ -35501,7 +35501,7 @@
       "file_type": "code",
       "norm_label": "markers",
       "source_file": "hosted/designcraft/build.mjs",
-      "source_location": "L105"
+      "source_location": "L109"
     },
     {
       "id": "hosted_designcraft_build_page",
@@ -35633,7 +35633,7 @@
       "file_type": "code",
       "norm_label": "markers",
       "source_file": "hosted/filmcraft/build.mjs",
-      "source_location": "L105"
+      "source_location": "L109"
     },
     {
       "id": "hosted_filmcraft_build_page",
@@ -35765,7 +35765,7 @@
       "file_type": "code",
       "norm_label": "markers",
       "source_file": "hosted/lightcraft/build.mjs",
-      "source_location": "L105"
+      "source_location": "L109"
     },
     {
       "id": "hosted_lightcraft_build_page",
@@ -35897,7 +35897,7 @@
       "file_type": "code",
       "norm_label": "markers",
       "source_file": "hosted/photocraft/build.mjs",
-      "source_location": "L105"
+      "source_location": "L109"
     },
     {
       "id": "hosted_photocraft_build_page",
@@ -50745,7 +50745,7 @@
       "file_type": "code",
       "norm_label": "markers",
       "source_file": "hosted/wordcraft/build.mjs",
-      "source_location": "L105"
+      "source_location": "L109"
     },
     {
       "id": "hosted_wordcraft_build_page",
@@ -51315,7 +51315,7 @@
       "node_kind": "heading",
       "norm_label": "data",
       "source_file": "hosted/lightcraft/README.md",
-      "source_location": "L20"
+      "source_location": "L24"
     },
     {
       "id": "hosted_lightcraft_readme_how_it_is_built",
@@ -51327,7 +51327,7 @@
       "node_kind": "heading",
       "norm_label": "how it is built",
       "source_file": "hosted/lightcraft/README.md",
-      "source_location": "L12"
+      "source_location": "L13"
     },
     {
       "id": "hosted_lightcraft_readme_lightcraft",
@@ -51351,7 +51351,7 @@
       "node_kind": "heading",
       "norm_label": "open points",
       "source_file": "hosted/lightcraft/README.md",
-      "source_location": "L29"
+      "source_location": "L33"
     },
     {
       "id": "hosted_lightcraft_readme_origin",
@@ -51363,7 +51363,7 @@
       "node_kind": "heading",
       "norm_label": "origin",
       "source_file": "hosted/lightcraft/README.md",
-      "source_location": "L6"
+      "source_location": "L7"
     },
     {
       "id": "hosted_lightcraft_readme_updating",
@@ -51375,7 +51375,7 @@
       "node_kind": "heading",
       "norm_label": "updating",
       "source_file": "hosted/lightcraft/README.md",
-      "source_location": "L24"
+      "source_location": "L28"
     },
     {
       "id": "apps_portal_src_admin_nucbox",
@@ -52271,7 +52271,7 @@
       "node_kind": "heading",
       "norm_label": "data",
       "source_file": "hosted/designcraft/README.md",
-      "source_location": "L20"
+      "source_location": "L21"
     },
     {
       "id": "hosted_designcraft_readme_designcraft",
@@ -52295,7 +52295,7 @@
       "node_kind": "heading",
       "norm_label": "how it is built",
       "source_file": "hosted/designcraft/README.md",
-      "source_location": "L12"
+      "source_location": "L13"
     },
     {
       "id": "hosted_designcraft_readme_origin",
@@ -52307,7 +52307,7 @@
       "node_kind": "heading",
       "norm_label": "origin",
       "source_file": "hosted/designcraft/README.md",
-      "source_location": "L6"
+      "source_location": "L7"
     },
     {
       "id": "hosted_designcraft_readme_updating",
@@ -52319,7 +52319,7 @@
       "node_kind": "heading",
       "norm_label": "updating",
       "source_file": "hosted/designcraft/README.md",
-      "source_location": "L24"
+      "source_location": "L25"
     },
     {
       "id": "scripts_kb",
@@ -52805,7 +52805,7 @@
       "node_kind": "heading",
       "norm_label": "data",
       "source_file": "hosted/filmcraft/README.md",
-      "source_location": "L20"
+      "source_location": "L21"
     },
     {
       "id": "hosted_filmcraft_readme_filmcraft",
@@ -52829,7 +52829,7 @@
       "node_kind": "heading",
       "norm_label": "how it is built",
       "source_file": "hosted/filmcraft/README.md",
-      "source_location": "L12"
+      "source_location": "L13"
     },
     {
       "id": "hosted_filmcraft_readme_origin",
@@ -52841,7 +52841,7 @@
       "node_kind": "heading",
       "norm_label": "origin",
       "source_file": "hosted/filmcraft/README.md",
-      "source_location": "L6"
+      "source_location": "L7"
     },
     {
       "id": "hosted_filmcraft_readme_updating",
@@ -52853,7 +52853,7 @@
       "node_kind": "heading",
       "norm_label": "updating",
       "source_file": "hosted/filmcraft/README.md",
-      "source_location": "L24"
+      "source_location": "L25"
     },
     {
       "id": "docs_wiki_app_bibliothek_programme",
@@ -53153,7 +53153,7 @@
       "node_kind": "heading",
       "norm_label": "data",
       "source_file": "hosted/pdfcraft/README.md",
-      "source_location": "L20"
+      "source_location": "L24"
     },
     {
       "id": "hosted_pdfcraft_readme_how_it_is_built",
@@ -53165,7 +53165,7 @@
       "node_kind": "heading",
       "norm_label": "how it is built",
       "source_file": "hosted/pdfcraft/README.md",
-      "source_location": "L12"
+      "source_location": "L13"
     },
     {
       "id": "hosted_pdfcraft_readme_origin",
@@ -53177,7 +53177,7 @@
       "node_kind": "heading",
       "norm_label": "origin",
       "source_file": "hosted/pdfcraft/README.md",
-      "source_location": "L6"
+      "source_location": "L7"
     },
     {
       "id": "hosted_pdfcraft_readme_pdfcraft",
@@ -53201,7 +53201,7 @@
       "node_kind": "heading",
       "norm_label": "updating",
       "source_file": "hosted/pdfcraft/README.md",
-      "source_location": "L24"
+      "source_location": "L28"
     },
     {
       "id": "docs_wiki_tests_ci",
@@ -53550,7 +53550,7 @@
       "file_type": "code",
       "norm_label": "markers",
       "source_file": "hosted/pdfcraft/build.mjs",
-      "source_location": "L105"
+      "source_location": "L109"
     },
     {
       "id": "hosted_pdfcraft_build_page",
@@ -54054,7 +54054,7 @@
       "node_kind": "heading",
       "norm_label": "data",
       "source_file": "hosted/photocraft/README.md",
-      "source_location": "L20"
+      "source_location": "L21"
     },
     {
       "id": "hosted_photocraft_readme_how_it_is_built",
@@ -54066,7 +54066,7 @@
       "node_kind": "heading",
       "norm_label": "how it is built",
       "source_file": "hosted/photocraft/README.md",
-      "source_location": "L12"
+      "source_location": "L13"
     },
     {
       "id": "hosted_photocraft_readme_open_points",
@@ -54078,7 +54078,7 @@
       "node_kind": "heading",
       "norm_label": "open points",
       "source_file": "hosted/photocraft/README.md",
-      "source_location": "L29"
+      "source_location": "L30"
     },
     {
       "id": "hosted_photocraft_readme_origin",
@@ -54090,7 +54090,7 @@
       "node_kind": "heading",
       "norm_label": "origin",
       "source_file": "hosted/photocraft/README.md",
-      "source_location": "L6"
+      "source_location": "L7"
     },
     {
       "id": "hosted_photocraft_readme_photocraft",
@@ -54114,7 +54114,7 @@
       "node_kind": "heading",
       "norm_label": "updating",
       "source_file": "hosted/photocraft/README.md",
-      "source_location": "L24"
+      "source_location": "L25"
     },
     {
       "id": "hosted_wordcraft_readme",
@@ -54138,7 +54138,7 @@
       "node_kind": "heading",
       "norm_label": "data",
       "source_file": "hosted/wordcraft/README.md",
-      "source_location": "L38"
+      "source_location": "L40"
     },
     {
       "id": "hosted_wordcraft_readme_open_points",
@@ -54150,7 +54150,7 @@
       "node_kind": "heading",
       "norm_label": "open points",
       "source_file": "hosted/wordcraft/README.md",
-      "source_location": "L61"
+      "source_location": "L63"
     },
     {
       "id": "hosted_wordcraft_readme_origin",
@@ -54174,7 +54174,7 @@
       "node_kind": "heading",
       "norm_label": "requirements",
       "source_file": "hosted/wordcraft/README.md",
-      "source_location": "L49"
+      "source_location": "L51"
     },
     {
       "id": "hosted_wordcraft_readme_updating",
@@ -54186,7 +54186,7 @@
       "node_kind": "heading",
       "norm_label": "updating",
       "source_file": "hosted/wordcraft/README.md",
-      "source_location": "L55"
+      "source_location": "L57"
     },
     {
       "id": "hosted_wordcraft_readme_what_the_build_changes",
@@ -60769,7 +60769,7 @@
       "file_type": "concept",
       "norm_label": "adr-0005",
       "source_file": "packages/gate/src/worker.ts",
-      "source_location": "L144"
+      "source_location": "L158"
     },
     {
       "id": "docs_adr_0005_push_and_offline_apps_update_one_start_screen_for_every_app_october_2026",
@@ -99084,7 +99084,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "packages/gate/src/gate.test.ts",
-      "source_location": "L205",
+      "source_location": "L209",
       "weight": 1.0
     },
     {
@@ -99096,7 +99096,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "packages/gate/src/gate.test.ts",
-      "source_location": "L218",
+      "source_location": "L222",
       "weight": 1.0
     },
     {
@@ -99108,7 +99108,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "packages/gate/src/gate.test.ts",
-      "source_location": "L263",
+      "source_location": "L294",
       "weight": 1.0
     },
     {
@@ -99240,7 +99240,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "packages/gate/src/worker.ts",
-      "source_location": "L131",
+      "source_location": "L145",
       "weight": 1.0
     },
     {
@@ -99252,7 +99252,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "packages/gate/src/worker.ts",
-      "source_location": "L134",
+      "source_location": "L148",
       "weight": 1.0
     },
     {
@@ -99264,7 +99264,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "packages/gate/src/worker.ts",
-      "source_location": "L139",
+      "source_location": "L153",
       "weight": 1.0
     },
     {
@@ -99276,7 +99276,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "packages/gate/src/worker.ts",
-      "source_location": "L147",
+      "source_location": "L161",
       "weight": 1.0
     },
     {
@@ -99288,7 +99288,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "packages/gate/src/worker.ts",
-      "source_location": "L147",
+      "source_location": "L161",
       "weight": 1.0
     },
     {
@@ -99300,7 +99300,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "packages/gate/src/worker.ts",
-      "source_location": "L156",
+      "source_location": "L170",
       "weight": 1.0
     },
     {
@@ -99312,7 +99312,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "packages/gate/src/worker.ts",
-      "source_location": "L166",
+      "source_location": "L180",
       "weight": 1.0
     },
     {
@@ -99324,7 +99324,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "packages/gate/src/worker.ts",
-      "source_location": "L173",
+      "source_location": "L187",
       "weight": 1.0
     },
     {
@@ -99336,7 +99336,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "packages/gate/src/worker.ts",
-      "source_location": "L174",
+      "source_location": "L188",
       "weight": 1.0
     },
     {
@@ -99348,7 +99348,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "packages/gate/src/worker.ts",
-      "source_location": "L178",
+      "source_location": "L192",
       "weight": 1.0
     },
     {
@@ -99360,7 +99360,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "packages/gate/src/worker.ts",
-      "source_location": "L180",
+      "source_location": "L194",
       "weight": 1.0
     },
     {
@@ -99372,7 +99372,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "packages/gate/src/worker.ts",
-      "source_location": "L186",
+      "source_location": "L200",
       "weight": 1.0
     },
     {
@@ -99384,7 +99384,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "packages/gate/src/worker.ts",
-      "source_location": "L191",
+      "source_location": "L205",
       "weight": 1.0
     },
     {
@@ -99396,7 +99396,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "packages/gate/src/worker.ts",
-      "source_location": "L192",
+      "source_location": "L206",
       "weight": 1.0
     },
     {
@@ -99408,7 +99408,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "packages/gate/src/worker.ts",
-      "source_location": "L200",
+      "source_location": "L214",
       "weight": 1.0
     },
     {
@@ -99420,7 +99420,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "packages/gate/src/worker.ts",
-      "source_location": "L210",
+      "source_location": "L224",
       "weight": 1.0
     },
     {
@@ -99432,7 +99432,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "packages/gate/src/worker.ts",
-      "source_location": "L119",
+      "source_location": "L123",
       "weight": 1.0
     },
     {
@@ -105503,7 +105503,7 @@
       "context": "import",
       "deferred": true,
       "source_file": "packages/gate/src/gate.test.ts",
-      "source_location": "L204",
+      "source_location": "L208",
       "weight": 1.0
     },
     {
@@ -147581,7 +147581,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "packages/gate/src/worker.ts",
-      "source_location": "L144",
+      "source_location": "L158",
       "weight": 1.0
     },
     {
@@ -165918,7 +165918,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "hosted/designcraft/build.mjs",
-      "source_location": "L105",
+      "source_location": "L109",
       "weight": 1.0
     },
     {
@@ -166281,7 +166281,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "hosted/designcraft/README.md",
-      "source_location": "L12",
+      "source_location": "L13",
       "weight": 1.0
     },
     {
@@ -166292,7 +166292,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "hosted/designcraft/README.md",
-      "source_location": "L20",
+      "source_location": "L21",
       "weight": 1.0
     },
     {
@@ -166303,7 +166303,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "hosted/designcraft/README.md",
-      "source_location": "L24",
+      "source_location": "L25",
       "weight": 1.0
     },
     {
@@ -166314,7 +166314,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "hosted/designcraft/README.md",
-      "source_location": "L6",
+      "source_location": "L7",
       "weight": 1.0
     },
     {
@@ -166325,7 +166325,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "hosted/filmcraft/build.mjs",
-      "source_location": "L105",
+      "source_location": "L109",
       "weight": 1.0
     },
     {
@@ -166688,7 +166688,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "hosted/filmcraft/README.md",
-      "source_location": "L12",
+      "source_location": "L13",
       "weight": 1.0
     },
     {
@@ -166699,7 +166699,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "hosted/filmcraft/README.md",
-      "source_location": "L20",
+      "source_location": "L21",
       "weight": 1.0
     },
     {
@@ -166710,7 +166710,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "hosted/filmcraft/README.md",
-      "source_location": "L24",
+      "source_location": "L25",
       "weight": 1.0
     },
     {
@@ -166721,7 +166721,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "hosted/filmcraft/README.md",
-      "source_location": "L6",
+      "source_location": "L7",
       "weight": 1.0
     },
     {
@@ -171902,7 +171902,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "hosted/lightcraft/build.mjs",
-      "source_location": "L105",
+      "source_location": "L109",
       "weight": 1.0
     },
     {
@@ -172265,7 +172265,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "hosted/lightcraft/README.md",
-      "source_location": "L12",
+      "source_location": "L13",
       "weight": 1.0
     },
     {
@@ -172276,7 +172276,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "hosted/lightcraft/README.md",
-      "source_location": "L20",
+      "source_location": "L24",
       "weight": 1.0
     },
     {
@@ -172287,7 +172287,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "hosted/lightcraft/README.md",
-      "source_location": "L24",
+      "source_location": "L28",
       "weight": 1.0
     },
     {
@@ -172298,7 +172298,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "hosted/lightcraft/README.md",
-      "source_location": "L29",
+      "source_location": "L33",
       "weight": 1.0
     },
     {
@@ -172309,7 +172309,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "hosted/lightcraft/README.md",
-      "source_location": "L6",
+      "source_location": "L7",
       "weight": 1.0
     },
     {
@@ -175444,7 +175444,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "hosted/pdfcraft/build.mjs",
-      "source_location": "L105",
+      "source_location": "L109",
       "weight": 1.0
     },
     {
@@ -175807,7 +175807,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "hosted/pdfcraft/README.md",
-      "source_location": "L12",
+      "source_location": "L13",
       "weight": 1.0
     },
     {
@@ -175818,7 +175818,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "hosted/pdfcraft/README.md",
-      "source_location": "L20",
+      "source_location": "L24",
       "weight": 1.0
     },
     {
@@ -175829,7 +175829,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "hosted/pdfcraft/README.md",
-      "source_location": "L24",
+      "source_location": "L28",
       "weight": 1.0
     },
     {
@@ -175840,7 +175840,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "hosted/pdfcraft/README.md",
-      "source_location": "L6",
+      "source_location": "L7",
       "weight": 1.0
     },
     {
@@ -175851,7 +175851,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "hosted/photocraft/build.mjs",
-      "source_location": "L105",
+      "source_location": "L109",
       "weight": 1.0
     },
     {
@@ -176214,7 +176214,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "hosted/photocraft/README.md",
-      "source_location": "L12",
+      "source_location": "L13",
       "weight": 1.0
     },
     {
@@ -176225,7 +176225,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "hosted/photocraft/README.md",
-      "source_location": "L20",
+      "source_location": "L21",
       "weight": 1.0
     },
     {
@@ -176236,7 +176236,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "hosted/photocraft/README.md",
-      "source_location": "L24",
+      "source_location": "L25",
       "weight": 1.0
     },
     {
@@ -176247,7 +176247,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "hosted/photocraft/README.md",
-      "source_location": "L29",
+      "source_location": "L30",
       "weight": 1.0
     },
     {
@@ -176258,7 +176258,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "hosted/photocraft/README.md",
-      "source_location": "L6",
+      "source_location": "L7",
       "weight": 1.0
     },
     {
@@ -180350,7 +180350,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "hosted/wordcraft/build.mjs",
-      "source_location": "L105",
+      "source_location": "L109",
       "weight": 1.0
     },
     {
@@ -180724,7 +180724,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "hosted/wordcraft/README.md",
-      "source_location": "L38",
+      "source_location": "L40",
       "weight": 1.0
     },
     {
@@ -180735,7 +180735,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "hosted/wordcraft/README.md",
-      "source_location": "L49",
+      "source_location": "L51",
       "weight": 1.0
     },
     {
@@ -180746,7 +180746,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "hosted/wordcraft/README.md",
-      "source_location": "L55",
+      "source_location": "L57",
       "weight": 1.0
     },
     {
@@ -180757,7 +180757,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "hosted/wordcraft/README.md",
-      "source_location": "L61",
+      "source_location": "L63",
       "weight": 1.0
     },
     {
@@ -185575,7 +185575,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "packages/gate/src/worker.ts",
-      "source_location": "L100",
+      "source_location": "L105",
       "weight": 1.0
     },
     {
@@ -185586,7 +185586,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "packages/gate/src/worker.ts",
-      "source_location": "L129",
+      "source_location": "L143",
       "weight": 1.0
     },
     {
@@ -185663,7 +185663,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "packages/gate/src/worker.ts",
-      "source_location": "L96",
+      "source_location": "L94",
       "weight": 1.0
     },
     {
@@ -201120,7 +201120,7 @@
       "confidence_score": 0.95,
       "context": "version",
       "source_file": "hosted/designcraft/README.md",
-      "source_location": "L26",
+      "source_location": "L27",
       "weight": 1.0
     },
     {
@@ -201132,7 +201132,7 @@
       "confidence_score": 0.95,
       "context": "version",
       "source_file": "hosted/filmcraft/README.md",
-      "source_location": "L26",
+      "source_location": "L27",
       "weight": 1.0
     },
     {
@@ -201144,7 +201144,7 @@
       "confidence_score": 0.95,
       "context": "version",
       "source_file": "hosted/lightcraft/README.md",
-      "source_location": "L26",
+      "source_location": "L30",
       "weight": 1.0
     },
     {
@@ -201156,7 +201156,7 @@
       "confidence_score": 0.95,
       "context": "version",
       "source_file": "hosted/pdfcraft/README.md",
-      "source_location": "L26",
+      "source_location": "L30",
       "weight": 1.0
     },
     {
@@ -201168,7 +201168,7 @@
       "confidence_score": 0.95,
       "context": "version",
       "source_file": "hosted/photocraft/README.md",
-      "source_location": "L26",
+      "source_location": "L27",
       "weight": 1.0
     },
     {
@@ -201180,7 +201180,7 @@
       "confidence_score": 0.95,
       "context": "version",
       "source_file": "hosted/wordcraft/README.md",
-      "source_location": "L57",
+      "source_location": "L59",
       "weight": 1.0
     },
     {
@@ -201257,5 +201257,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "6bc24a339b209d6c87b7adb93b25d21063ff8f8e"
+  "built_at_commit": "b0a2250914c7fc531bf93be45daec461cf26be3f"
 }
