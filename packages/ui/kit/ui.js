@@ -6,7 +6,7 @@
 //     the backdrop (unless modal), restores focus. Opening another sheet closes this one and
 //     calls its onClose.
 //   mnui.sheet.close()
-//   mnui.toast('Gespeichert')
+//   mnui.toast('Gespeichert'), mnui.toast('Gespeichert', { action: { label: 'Rückgängig', onClick } })
 //   mnui.theme.set('light' | 'dark' | 'system'), mnui.theme.get()
 //   mnui.select(button) marks one button of a group as aria-pressed / aria-current
 //   mnui.date.format('2026-10-01') → '01. Okt. 2026'; mnui.date.format('2026-10') → 'Okt. 2026'
@@ -154,8 +154,9 @@
       toastEl = document.createElement('div');
       toastEl.className = 'mn-toast';
       toastEl.setAttribute('role', 'status');
-      document.body.append(toastEl);
     }
+    // A page that redraws its whole body removes the region with it.
+    if (!toastEl.isConnected) document.body.append(toastEl);
     return toastEl;
   }
   // Apps with their own toast set data-mn-toast="off" on <html> and get no second live region.
@@ -164,17 +165,39 @@
     else document.addEventListener('DOMContentLoaded', toastRegion, { once: true });
   }
 
-  function toast(message) {
+  /**
+   * A short message. With `{ action: { label, onClick } }` it carries one button, stays longer and
+   * waits while the pointer or the focus is on it.
+   */
+  function toast(message, { action } = {}) {
     const el = toastRegion();
     el.textContent = '';
-    el.classList.remove('show');
+    el.classList.remove('show', 'mn-toast--action');
+    const hide = () => el.classList.remove('show');
+    const later = () => {
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(hide, action ? 8000 : 2400);
+    };
     // Next frame: the cleared region makes a repeated message count as new, and the transition runs.
     requestAnimationFrame(() => {
       el.textContent = message;
+      if (action) {
+        const run = document.createElement('button');
+        run.type = 'button';
+        run.className = 'mn-toast-action';
+        run.textContent = action.label;
+        run.onclick = () => {
+          hide();
+          action.onClick();
+        };
+        el.append(' ', run);
+        el.classList.add('mn-toast--action');
+      }
       el.classList.add('show');
     });
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => el.classList.remove('show'), 2400);
+    el.onpointerenter = el.onfocusin = () => action && clearTimeout(toastTimer);
+    el.onpointerleave = el.onfocusout = () => action && later();
+    later();
   }
 
   function select(button) {

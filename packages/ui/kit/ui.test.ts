@@ -11,7 +11,7 @@ interface Mnui {
     ): HTMLElement;
     close(): void;
   };
-  toast(message: string): void;
+  toast(message: string, options?: { action?: { label: string; onClick(): void } }): void;
   theme: { get(): string; set(value: string): void };
   select(button: HTMLElement): void;
   date: { format(value: string | Date): string; months: string[] };
@@ -137,6 +137,22 @@ describe('mnui.sheet', () => {
     mnui.sheet.open(html);
     (document.querySelector('.mn-overlay') as HTMLElement).click();
     expect(document.querySelector('.mn-overlay')).toBeNull();
+  });
+});
+
+describe('mnui.toast', () => {
+  it('carries one action that runs once and hides the toast', async () => {
+    const onClick = vi.fn();
+    mnui.toast('Gespeichert', { action: { label: 'Speichern unter …', onClick } });
+    const action = await vi.waitFor(() => {
+      const button = document.querySelector<HTMLButtonElement>('.mn-toast-action');
+      if (!button) throw new Error('not drawn yet');
+      return button;
+    });
+    expect(action.closest('.mn-toast')?.textContent).toBe('Gespeichert Speichern unter …');
+    action.click();
+    expect(onClick).toHaveBeenCalledOnce();
+    expect(document.querySelector('.mn-toast')?.classList.contains('show')).toBe(false);
   });
 });
 

@@ -21,7 +21,7 @@ patched source build and the MiniNode files dialog (`files: true`).
 
 ## Data
 
-`data.mode: private`. Media and projects are opened from MiniNode or the device, and exports are saved to MiniNode (`mn.files`, the person's own folder, at most 50 MB per file) or the device. Unsaved changes are kept every few seconds in the browser's private file storage (OPFS), so a reload brings them back; that copy lives on that device only. Preferences stay in the browser's `localStorage`.
+`data.mode: private`. Media and projects are opened from MiniNode or the device, and exports are saved to MiniNode (`mn.files`, the person's own folder, at most 50 MB per file) or the device. Unsaved changes are kept every few seconds in the browser's private file storage (OPFS), so a reload brings them back; that copy lives on that device only. Settings follow the account: the patch keeps them, with the workspaces and the person's effect and export presets, in `localStorage` under `filmcraft.preferences`, which MiniNode syncs (keyboard shortcut sets, label presets and graphics templates stay on the device). The patch also lets the interface follow the MiniNode language (German is partial upstream; missing texts are English), starts in the system's light or dark appearance and asks before leaving the page with unsaved changes.
 
 ## Updating
 

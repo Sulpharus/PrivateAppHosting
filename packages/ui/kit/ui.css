@@ -1968,6 +1968,25 @@ details.mn-more > div {
   opacity: 1;
   transform: translate(-50%, 0);
 }
+.mn-toast--action.show {
+  pointer-events: auto;
+}
+.mn-toast-action {
+  min-height: 44px;
+  margin: calc(-1 * var(--mn-s2)) calc(-1 * var(--mn-s2)) calc(-1 * var(--mn-s2)) var(--mn-s2);
+  padding: 0 var(--mn-s3);
+  border: 0;
+  border-radius: var(--mn-r-sm);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.mn-toast-action:focus-visible {
+  outline: 2px solid var(--mn-bg);
+  outline-offset: 2px;
+}
 @media (min-width: 960px) {
   body:has(> .mn-nav) .mn-toast {
     left: calc(50% + var(--mn-nav-w) / 2);

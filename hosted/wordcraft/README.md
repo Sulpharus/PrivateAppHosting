@@ -36,7 +36,14 @@ own. `release.json` names the release (`name`, `version`, `sha256`), the app's l
     `git -C .cache/src-<version> apply --3way` and save the diff again.
 - **MiniNode files (`files: true`):** the page loads the kit's `/_mininode/files.js`
   (`packages/ui/README.md`). Opening a file and saving one offer the person's MiniNode files
-  (`mn.files`, data mode `private`) next to the device; the texts are `files.*` in `i18n/`.
+  (`mn.files`, data mode `private`) next to the device; the texts are `files.*` in `i18n/`. A
+  file opened from or saved to MiniNode is saved back without asking the next time the app
+  downloads it under the same name (the app's Save); the toast offers "Speichern unter …".
+- **Start after the account (`mn-boot.js`):** the app's own start scripts run once the person is
+  signed in, the SDK's `installLocalStorageSync` has put the settings the app keeps in
+  `localStorage` back from their account, and `<html lang>` carries their MiniNode language. The
+  name from the account is set as `data-mn-user` on `<html>`. Offline or on an error the app
+  starts with what the device has.
 
 - **Inline scripts:** the gate's CSP allows none, so every inline `<script>` moves into
   `boot-1.js`, `boot-2.js`, … in the same place and with the same type. The build stops when an

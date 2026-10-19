@@ -6,6 +6,8 @@
 //      tag v<version> with the patches applied, by the app's own packaging/web/package.sh (needs
 //      Rust, see README); otherwise the official release zip, its SHA-256 checked.
 //   2. Move every inline script into its own file: the gate's CSP allows no inline scripts.
+//      mn-boot.js starts them once the person is signed in, the app's settings are back in
+//      localStorage from their account and the page language is set (the patches read it).
 //   3. German page language, language packages for the title and the loading text; with
 //      release.json `files`, the kit's MiniNode files dialog for opening and saving.
 //   4. A .wasm above the 25 MiB Cloudflare asset limit is stored as <name>.wasm.br (Brotli); the
@@ -157,16 +159,52 @@ for (const file of files(dist)) {
   if (file.endsWith('.gz') || (file.endsWith('.br') && !file.endsWith('.wasm.br'))) rmSync(file);
 }
 
-// Inline scripts become boot-1.js, boot-2.js, … in the same place and with the same type.
-let count = 0;
+// Inline scripts become boot-1.js, boot-2.js, … with the same type. mn-boot.js starts them in
+// their order once the account is ready (below).
+const boot = [];
 let page = readFileSync(join(dist, 'index.html'), 'utf8').replace(
   /<script(\s[^>]*)?>([\s\S]*?)<\/script>/gi,
   (tag, attributes = '', body) => {
     if (/\ssrc\s*=/i.test(attributes)) return tag;
-    count += 1;
-    writeFileSync(join(dist, `boot-${count}.js`), `${body.trim()}\n`);
-    return `<script${attributes} src="./boot-${count}.js"></script>`;
+    const src = `./boot-${boot.length + 1}.js`;
+    writeFileSync(join(dist, src), `${body.trim()}\n`);
+    boot.push({ src, type: /\stype\s*=\s*["']?([^"'\s>]+)/i.exec(attributes)?.[1] ?? null });
+    return '';
   },
+);
+if (!boot.length) throw new Error('index.html: the release markup changed (no start script)');
+// The app starts once the person is signed in, the settings they keep in the app are back in
+// localStorage from their account (the SDK's localStorage sync: they follow the person to every
+// device) and the page language is known. The patched apps read <html lang> for their own
+// language and data-mn-user as the default author name.
+writeFileSync(
+  join(dist, 'mn-boot.js'),
+  `// Written by build.mjs: the account first, then the app's own start scripts, in order.
+(async () => {
+  try {
+    const mn = await window.mininode.mininode();
+    const user = await mn.auth.requireLogin();
+    await window.mininode.installLocalStorageSync(mn);
+    const meta = user.user_metadata ?? {};
+    const name = [meta.display_name, meta.name].find((v) => typeof v === 'string' && v.trim());
+    if (name) document.documentElement.dataset.mnUser = name.trim();
+  } catch (error) {
+    // Offline or a failed request: the app still starts, with what this device has stored.
+    console.warn('mininode: the app starts without the account settings', error);
+  }
+  await window.mnI18n?.ready;
+  for (const { src, type } of ${JSON.stringify(boot)}) {
+    await new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      if (type) script.type = type;
+      script.src = src;
+      script.onload = resolve;
+      script.onerror = () => reject(new Error(\`\${src} did not load\`));
+      document.body.append(script);
+    });
+  }
+})();
+`,
 );
 // The gate checked the login before serving the page, so the start screen may go once the app
 // shows something: right away when the page has its own loading text, otherwise when the app
@@ -183,10 +221,16 @@ page = page
   .replace(/<title>([^<]*)<\/title>/, '<title data-i18n="app.title">$1</title>')
   .replace(
     '</title>',
-    useFiles
-      ? // MiniNode files next to the device when the app opens or saves (kit/files.js).
-        '</title>\n  <link rel="stylesheet" href="/_mininode/ui.css">\n  <script src="/_mininode/i18n.js"></script>\n  <script src="/_mininode/ui.js"></script>\n  <script src="/_mininode/sdk.js" defer></script>\n  <script src="/_mininode/files.js" defer></script>'
-      : '</title>\n  <script src="/_mininode/i18n.js"></script>',
+    [
+      '</title>',
+      ...(useFiles ? ['<link rel="stylesheet" href="/_mininode/ui.css">'] : []),
+      '<script src="/_mininode/i18n.js"></script>',
+      // MiniNode files next to the device when the app opens or saves (kit/files.js).
+      ...(useFiles ? ['<script src="/_mininode/ui.js"></script>'] : []),
+      '<script src="/_mininode/sdk.js" defer></script>',
+      ...(useFiles ? ['<script src="/_mininode/files.js" defer></script>'] : []),
+      '<script src="./mn-boot.js" defer></script>',
+    ].join('\n  '),
   )
   .replace('</body>', '  <script src="./mn-ready.js"></script>\n</body>');
 if (loadingText) {
@@ -195,7 +239,13 @@ if (loadingText) {
     `><span data-i18n="app.loading">${german['app.loading']}</span><`,
   );
 }
-const markers = ['<html lang="de"', 'data-i18n="app.title"', '/_mininode/i18n.js', 'mn-ready.js'];
+const markers = [
+  '<html lang="de"',
+  'data-i18n="app.title"',
+  '/_mininode/i18n.js',
+  'mn-boot.js',
+  'mn-ready.js',
+];
 if (useFiles) markers.push('/_mininode/files.js');
 if (loadingText) markers.push('data-i18n="app.loading"');
 for (const marker of markers) {

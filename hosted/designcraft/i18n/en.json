@@ -12,6 +12,7 @@
   "files.save.device": "Save on this device",
   "files.save.replace": "“{name}” already exists in MiniNode. Replace it?",
   "files.save.done": "“{name}” saved to MiniNode",
+  "files.save.as": "Save as …",
   "files.cancel": "Cancel",
   "files.error": "That did not work: {message}",
   "files.source": "MiniNode"

@@ -140,6 +140,36 @@ describe('saving', () => {
     expect(nativeAnchorClick).not.toHaveBeenCalled();
   });
 
+  it('saves a file opened from MiniNode straight back, with "save as" in the toast', async () => {
+    const input = Object.assign(document.createElement('input'), { type: 'file' });
+    document.body.append(input);
+    input.click();
+    await until(() => buttonNamed(/Brief\.docx/));
+    buttonNamed(/Brief\.docx/)?.click();
+    await until(() => input.files?.length);
+    const link = Object.assign(document.createElement('a'), {
+      href: 'blob:https://app.test/2',
+      download: 'Brief.docx',
+    });
+    link.click();
+    await until(() => upload.mock.calls.length);
+    expect(sheet()).toBeNull();
+    expect(upload.mock.calls[0]?.[0]).toBe('Brief.docx');
+    // The app's type is loose; the stored file is labelled by its name.
+    expect(upload.mock.calls[0]?.[2]).toEqual({
+      contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    });
+    const saveAs = await vi.waitFor(() => {
+      const button = document.querySelector<HTMLButtonElement>('.mn-toast-action');
+      if (!button) throw new Error('no toast action yet');
+      return button;
+    });
+    expect(saveAs.textContent).toBe('Speichern unter …');
+    saveAs.click();
+    await until(() => buttonNamed('In MiniNode speichern'));
+    expect(sheet()?.querySelector('input')?.value).toBe('Brief.docx');
+  });
+
   it('lets ordinary links through', () => {
     const link = Object.assign(document.createElement('a'), { href: 'https://example.com/' });
     link.click();

@@ -1,3 +1,261 @@
+diff --git a/apps/filmcraft-web/Cargo.toml b/apps/filmcraft-web/Cargo.toml
+index 6b1cb9e..d089534 100644
+--- a/apps/filmcraft-web/Cargo.toml
++++ b/apps/filmcraft-web/Cargo.toml
+@@ -73,6 +73,7 @@ web-sys = { version = "0.3", features = [
+     "OffscreenCanvasRenderingContext2d",
+     "Performance",
+     "Response",
++    "Storage",
+     "StorageManager",
+     "Url",
+     "UrlSearchParams",
+diff --git a/apps/filmcraft-web/src/lib.rs b/apps/filmcraft-web/src/lib.rs
+index 21512cc..ec5f371 100644
+--- a/apps/filmcraft-web/src/lib.rs
++++ b/apps/filmcraft-web/src/lib.rs
+@@ -24,6 +24,7 @@ pub mod download_pacing;
+ pub mod fs;
+ pub mod import;
+ pub mod opfs;
++pub mod prefs;
+ pub mod recovery;
+ pub mod recovery_policy;
+ pub mod webcodecs;
+@@ -87,6 +88,8 @@ pub struct WebApp {
+     pub app: FilmcraftApp,
+     pub audio: Option<audio::Handle>,
+     pub autosave: recovery::Autosave,
++    /// MiniNode: settings kept in `localStorage` ([`prefs`]).
++    pub prefs: prefs::Saver,
+ }
+ 
+ impl eframe::App for WebApp {
+@@ -109,6 +112,12 @@ impl eframe::App for WebApp {
+             a.pump();
+         }
+         self.autosave.tick(&self.app.session, ctx);
++        self.prefs.tick(&self.app, ctx);
++    }
++
++    // MiniNode: lets the page listeners in [`start`] reach the app (`WebRunner::app_mut`).
++    fn as_any_mut(&mut self) -> Option<&mut dyn std::any::Any> {
++        Some(&mut *self)
+     }
+ 
+     fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame) {
+@@ -120,6 +129,41 @@ fn query_flag(name: &str) -> bool {
+     web_sys::window().and_then(|w| w.location().search().ok()).and_then(|s| web_sys::UrlSearchParams::new_with_str(&s).ok()).is_some_and(|p| p.has(name))
+ }
+ 
++/// MiniNode: save changed settings when the page is hidden or left (no frame may follow), and ask
++/// before leaving with unsaved project changes.
++fn install_page_listeners(runner: &eframe::WebRunner) -> Result<(), JsValue> {
++    let window = web_sys::window().ok_or("no window")?;
++    let doc = window.document().ok_or("no document")?;
++    let flush = |r: &eframe::WebRunner| {
++        if let Some(mut w) = r.app_mut::<WebApp>() {
++            let w = &mut *w;
++            w.prefs.flush(&w.app);
++        }
++    };
++    let r = runner.clone();
++    let d = doc.clone();
++    let on_visibility = Closure::<dyn FnMut()>::new(move || {
++        if d.hidden() {
++            flush(&r);
++        }
++    });
++    doc.add_event_listener_with_callback("visibilitychange", on_visibility.as_ref().unchecked_ref())?;
++    on_visibility.forget();
++    let r = runner.clone();
++    let on_pagehide = Closure::<dyn FnMut()>::new(move || flush(&r));
++    window.add_event_listener_with_callback("pagehide", on_pagehide.as_ref().unchecked_ref())?;
++    on_pagehide.forget();
++    let r = runner.clone();
++    let on_beforeunload = Closure::<dyn FnMut(web_sys::Event)>::new(move |e: web_sys::Event| {
++        if r.app_mut::<WebApp>().is_some_and(|w| w.app.session.is_dirty()) {
++            e.prevent_default();
++        }
++    });
++    window.add_event_listener_with_callback("beforeunload", on_beforeunload.as_ref().unchecked_ref())?;
++    on_beforeunload.forget();
++    Ok(())
++}
++
+ /// Entry point (called by the page's bootstrap script once the wasm module is instantiated).
+ #[wasm_bindgen]
+ pub async fn start(canvas_id: String) -> Result<(), JsValue> {
+@@ -169,6 +213,9 @@ pub async fn start(canvas_id: String) -> Result<(), JsValue> {
+                 });
+                 webcodecs::install();
+                 let mut session = Session::new(Arc::new(fs::WebServices));
++                // MiniNode: settings from `localStorage`, before the UI reads them.
++                let stored = prefs::read();
++                prefs::restore_session(&mut session, stored.as_ref());
+                 let mut toast = None;
+                 if let Some((name, bytes)) = recovered {
+                     let path = format!("/recovered/{name}");
+@@ -185,10 +232,15 @@ pub async fn start(canvas_id: String) -> Result<(), JsValue> {
+                     let _ = session.execute("file.openDemoProject", json!({}));
+                 }
+                 let mut app = FilmcraftApp::new(session);
++                prefs::restore_app(&mut app, stored.as_ref());
+                 import::install_hooks(&mut app);
+                 // Settings ▸ General ▸ Interface Language ▸ System Language (#218): the browser's languages.
+-                app.hooks.system_languages =
+-                    Some(Box::new(|| web_sys::window().map(|w| w.navigator().languages().iter().filter_map(|v| v.as_string()).collect()).unwrap_or_default()));
++                // MiniNode: the MiniNode language (`<html lang>`, set by its boot script) comes first.
++                app.hooks.system_languages = Some(Box::new(|| {
++                    let Some(w) = web_sys::window() else { return Vec::new() };
++                    let page = w.document().and_then(|d| d.document_element()).and_then(|e| e.get_attribute("lang")).filter(|l| !l.trim().is_empty());
++                    page.into_iter().chain(w.navigator().languages().iter().filter_map(|v| v.as_string())).collect()
++                }));
+                 let (tx, rx) = std::sync::mpsc::channel();
+                 api::set_sender(tx);
+                 app = app.with_control(rx);
+@@ -214,11 +266,15 @@ pub async fn start(canvas_id: String) -> Result<(), JsValue> {
+                 }
+                 set_info("audio", json!(audio.is_some()));
+                 set_info("restoredMedia", json!(restored));
+-                Ok(Box::new(WebApp { app, audio, autosave: recovery::Autosave::default() }))
++                let prefs = prefs::Saver::new(&app);
++                Ok(Box::new(WebApp { app, audio, autosave: recovery::Autosave::default(), prefs }))
+             }),
+         )
+         .await?;
+     set_info("startupMs", json!(t0.elapsed().as_secs_f64() * 1000.0));
++    if let Err(e) = install_page_listeners(&runner) {
++        log::warn!("page listeners: {e:?}");
++    }
+     // keep the runner alive for the page's lifetime
+     std::mem::forget(runner);
+     if let Some(el) = doc.get_element_by_id("loading") {
+diff --git a/apps/filmcraft-web/src/prefs.rs b/apps/filmcraft-web/src/prefs.rs
+new file mode 100644
+index 0000000..3193a69
+--- /dev/null
++++ b/apps/filmcraft-web/src/prefs.rs
+@@ -0,0 +1,119 @@
++//! MiniNode: settings in `localStorage` (the desktop keeps them as files in the data directory,
++//! which the browser build has none of). One key, [`KEY`], holds a JSON document:
++//!
++//! - `preferences`: Settings ([`Preferences`], the desktop `preferences.json`);
++//! - `workspaces`: Window ▸ Workspaces (the desktop `workspaces.json`);
++//! - `effectPresets`: user effect presets; `exportPresets`: user export presets and favourites.
++//!
++//! Keyboard shortcut sets, label presets and graphics templates stay as they are (files only).
++//! Loaded before the UI is built; written when the serialised document changes, checked at most
++//! once a second and when the page is hidden.
++
++use filmcraft_engine::Session;
++use filmcraft_engine::autosave::Preferences;
++use filmcraft_ui_egui::FilmcraftApp;
++use serde_json::{Value, json};
++
++pub const KEY: &str = "filmcraft.preferences";
++/// A larger document is not written (it would be an unusual preset library); the log says so.
++const MAX_BYTES: usize = 512 * 1024;
++
++fn storage() -> Option<web_sys::Storage> {
++    web_sys::window().and_then(|w| w.local_storage().ok().flatten())
++}
++
++/// The stored document, if there is a readable one.
++pub fn read() -> Option<Value> {
++    let s = storage()?.get_item(KEY).ok().flatten()?;
++    serde_json::from_str::<Value>(&s).ok().filter(Value::is_object)
++}
++
++/// Apply the stored settings and presets to a new session (before [`FilmcraftApp::new`], which
++/// reads the interface language from them). Without stored settings, Appearance Mode is Auto
++/// (follows `prefers-color-scheme`) instead of the desktop's Dark.
++pub fn restore_session(session: &mut Session, doc: Option<&Value>) {
++    let prefs = match doc.and_then(|d| d.get("preferences")) {
++        Some(v) => Preferences::from_value(v.clone()),
++        None => {
++            let mut p = session.prefs.clone();
++            p.appearance.appearance_mode = "auto".into();
++            p.appearance.sync_color_theme();
++            p
++        }
++    };
++    if let Err(e) = session.set_prefs(prefs) {
++        log::warn!("preferences: {e}");
++    }
++    let Some(doc) = doc else { return };
++    if let Some(v) = doc.get("effectPresets").cloned().and_then(|v| serde_json::from_value(v).ok()) {
++        session.presets.user = v;
++    }
++    if let Some(e) = doc.get("exportPresets") {
++        if let Some(v) = e.get("presets").cloned().and_then(|v| serde_json::from_value(v).ok()) {
++            session.export_presets.user = v;
++        }
++        if let Some(v) = e.get("favorites").cloned().and_then(|v| serde_json::from_value(v).ok()) {
++            session.export_presets.favorites = v;
++        }
++    }
++}
++
++/// Apply the stored workspaces (before the first frame reopens the current one).
++pub fn restore_app(app: &mut FilmcraftApp, doc: Option<&Value>) {
++    if let Some(v) = doc.and_then(|d| d.get("workspaces")).cloned().and_then(|v| serde_json::from_value(v).ok()) {
++        app.workspaces = v;
++    }
++}
++
++fn document(app: &FilmcraftApp) -> String {
++    let s = &app.session;
++    json!({
++        "version": 1,
++        "preferences": s.prefs.to_value(),
++        "workspaces": app.workspaces,
++        "effectPresets": s.presets.user,
++        "exportPresets": { "presets": s.export_presets.user, "favorites": s.export_presets.favorites },
++    })
++    .to_string()
++}
++
++/// Writes the document when it changed.
++#[derive(Default)]
++pub struct Saver {
++    last: Option<String>,
++    checked: f64,
++}
++
++impl Saver {
++    /// Remember what was restored, so an unchanged start writes nothing.
++    pub fn new(app: &FilmcraftApp) -> Self {
++        Self { last: Some(document(app)), checked: 0.0 }
++    }
++
++    /// Called every frame; compares at most once a second.
++    pub fn tick(&mut self, app: &FilmcraftApp, ctx: &egui::Context) {
++        let now = ctx.input(|i| i.time);
++        let wait = 1.0 - (now - self.checked);
++        if wait > 0.0 {
++            // one follow-up frame, so a change made just after a check is not left waiting
++            ctx.request_repaint_after(std::time::Duration::from_secs_f64(wait));
++            return;
++        }
++        self.checked = now;
++        self.flush(app);
++    }
++
++    /// Write now if the document changed (also on `visibilitychange` → hidden and `pagehide`).
++    pub fn flush(&mut self, app: &FilmcraftApp) {
++        let doc = document(app);
++        if self.last.as_deref() == Some(doc.as_str()) {
++            return;
++        }
++        if doc.len() > MAX_BYTES {
++            log::warn!("preferences: {} KB is too large for localStorage; not saved", doc.len() / 1024);
++        } else if let Some(Err(e)) = storage().map(|s| s.set_item(KEY, &doc)) {
++            log::warn!("preferences: localStorage: {e:?}");
++        }
++        self.last = Some(doc);
++    }
++}
 diff --git a/crates/ui-egui/src/header.rs b/crates/ui-egui/src/header.rs
 index 5b8f23c..660f022 100644
 --- a/crates/ui-egui/src/header.rs

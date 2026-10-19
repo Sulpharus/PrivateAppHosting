@@ -5,7 +5,9 @@
 //   - a file field's picker (<input type="file">.click()) and window.showOpenFilePicker open a
 //     dialog: "Aus MiniNode" lists the stored files, "Von diesem Gerät" opens the browser's picker;
 //   - window.showSaveFilePicker and a download link (<a download href="blob:…">.click()) open a
-//     dialog that saves to MiniNode or, as before, to the device.
+//     dialog that saves to MiniNode or, as before, to the device;
+//   - a download of a file that was opened from or saved to MiniNode in this page (the app's
+//     "Save") goes straight back to MiniNode; the toast offers "Speichern unter …" for the dialog.
 // The app needs a data mode other than "none" (mn.files) and nothing else; texts come from the
 // app's language packages (keys files.*, German fallback below). data-mn-native on a field or a
 // link keeps the browser's own behaviour.
@@ -22,6 +24,7 @@
     'files.save.device': 'Auf diesem Gerät speichern',
     'files.save.replace': '„{name}“ gibt es schon in MiniNode. Ersetzen?',
     'files.save.done': '„{name}“ in MiniNode gespeichert',
+    'files.save.as': 'Speichern unter …',
     'files.cancel': 'Abbrechen',
     'files.error': 'Das hat nicht geklappt: {message}',
     'files.source': 'MiniNode',
@@ -83,6 +86,9 @@
         Object.entries(type.accept ?? {}).flatMap(([mime, exts]) => [mime, ...[exts].flat()]),
       )
       .join(',');
+
+  /** Names opened from or saved to MiniNode in this page: saving them again needs no dialog. */
+  const linked = new Set();
 
   const abort = () => new DOMException('The user aborted a request.', 'AbortError');
 
@@ -153,6 +159,7 @@
               return new File([blob], name, { type: blob.type || mimeOf(name) });
             }),
           );
+          for (const name of names) linked.add(name);
           done(files);
         } catch (error) {
           fail(error);
@@ -223,11 +230,13 @@
     });
   }
 
-  async function store(name, blob) {
+  async function store(name, blob, toast) {
     await (await mn()).files.upload(name, blob, {
-      contentType: blob.type || mimeOf(name) || undefined,
+      // The name first: apps label downloads loosely (one sends every export as application/pdf).
+      contentType: mimeOf(name) || blob.type || undefined,
     });
-    window.mnui.toast(t('files.save.done', { name }));
+    linked.add(name);
+    window.mnui.toast(t('files.save.done', { name }), toast);
   }
 
   /** A file handle that collects what the app writes and stores it in MiniNode on close. */
@@ -332,14 +341,19 @@
     // Read the file now: the app may revoke its address while the dialog is open.
     const name = this.download || 'download';
     const blob = fetch(this.href).then((response) => response.blob());
-    chooseTarget(name).then(async (choice) => {
-      if (!choice) return;
-      try {
-        if (choice.to === 'mininode') await store(choice.name, await blob);
-        else download(await blob, name);
-      } catch (error) {
-        fail(error);
-      }
-    });
+    const ask = () =>
+      chooseTarget(name).then(async (choice) => {
+        if (!choice) return;
+        try {
+          if (choice.to === 'mininode') await store(choice.name, await blob);
+          else download(await blob, name);
+        } catch (error) {
+          fail(error);
+        }
+      });
+    if (!linked.has(name)) return void ask();
+    blob
+      .then((file) => store(name, file, { action: { label: t('files.save.as'), onClick: ask } }))
+      .catch(fail);
   };
 })();
