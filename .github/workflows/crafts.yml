@@ -73,4 +73,6 @@ jobs:
           name: craft-${{ matrix.app }}
           path: hosted/${{ matrix.app }}/.cache/source-*.zip
           if-no-files-found: error
+          # The zip sits in .cache/, which upload-artifact skips unless told otherwise.
+          include-hidden-files: true
           retention-days: 1
