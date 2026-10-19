@@ -99,6 +99,18 @@ describe('doctor language packages', () => {
 });
 
 describe('doctor', () => {
+  it('warns about a logo the deploy would skip', () => {
+    const big = `<svg xmlns="http://www.w3.org/2000/svg">${' '.repeat(130 * 1024)}</svg>`;
+    const warnings = (files: Record<string, string>) =>
+      doctor(app({ ...healthy, ...files }))
+        .findings.filter((f) => f.severity === 'warning')
+        .map((f) => f.rule);
+    expect(warnings({ 'icon.svg': big })).toContain('icon-too-large');
+    expect(warnings({ 'icon.svg': '<svg xmlns="http://www.w3.org/2000/svg"/>' })).not.toContain(
+      'icon-too-large',
+    );
+  });
+
   it('passes a correctly integrated app', () => {
     expect(doctor(app(healthy)).findings).toEqual([]);
   });

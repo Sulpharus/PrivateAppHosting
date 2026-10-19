@@ -69,6 +69,13 @@ for (const entry of readdirSync(site)) {
   if (!SKIP.has(entry)) cpSync(join(site, entry), join(dist, entry), { recursive: true });
 }
 cpSync(join(here, 'i18n'), join(dist, 'i18n'), { recursive: true });
+// The logo also becomes the icon for "add to home screen" (the gate looks for these names).
+for (const [source, target] of [
+  ['icon.png', 'icon-512.png'],
+  ['icon-192.png', 'icon-192.png'],
+]) {
+  if (existsSync(join(here, source))) cpSync(join(here, source), join(dist, target));
+}
 // Pre-compressed copies the gate never asks for (it only serves <name>.wasm.br).
 for (const file of files(dist)) {
   if (file.endsWith('.gz') || (file.endsWith('.br') && !file.endsWith('.wasm.br'))) rmSync(file);

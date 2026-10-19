@@ -35,6 +35,7 @@ Meist eine **zwischengespeicherte** PWA-Version: Seite neu laden oder die App sc
 | Prüf-Issue: E-Mail-Adresse `max@beispiel.de` | Beispielpersonen mit echten Adressen verhindern den Export; das Skript ersetzt sie durch `@example.com` |
 | Deploy: „SUPABASE_DB_URL points at the IPv6-only direct connection“ | Session-pooler-Adresse verwenden |
 | App-Deploy stoppt bei `doctor` | die Fehlerliste nennt `[regel] datei: text`; ausbessern, `pnpm mininode doctor hosted/<name>` |
+| App hat nach dem Deploy kein Logo; im Log steht `logo skipped: … too large` | das Logo ist zu groß (SVG höchstens 128 KB, PNG/WebP 256 KB). Ein kleineres `icon.png` (z. B. 512 px) in den App-Ordner legen; `mininode doctor` warnt jetzt davor (`icon-too-large`) |
 | Ein Deploy-Schritt für eine App scheitert, die anderen gehen weiter | gewollt: eine kaputte App stoppt die anderen nicht; am Ende schlägt der Lauf fehl |
 
 ## Daten und Schlüssel

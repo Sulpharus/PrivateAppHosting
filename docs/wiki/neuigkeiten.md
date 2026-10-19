@@ -11,6 +11,7 @@ Jede Änderung am System bekommt hier eine Zeile (siehe [Wissen aktuell halten](
 
 | Datum | Neu | Wo |
 | --- | --- | --- |
+| 19.10. | **Logos der Craft-Apps**: PdfCraft, DesignCraft, FilmCraft, PhotoCraft und LightCraft zeigen ihr Logo, auch auf dem Home-Bildschirm; `mininode doctor` warnt vor zu großen Logos | Startseite; Wissen → Fehlerbehebung |
 | 19.10. | **Fünf weitere Craft-Apps** im Browser: PdfCraft (PDFs lesen und bearbeiten), DesignCraft (Layout und Satz), FilmCraft (Videoschnitt), PhotoCraft (Bildbearbeitung), LightCraft (Fotobibliothek und RAW-Entwicklung). Dateien öffnest und speicherst du auf deinem Gerät; die Fotobibliothek von LightCraft und die ungespeicherten Änderungen von FilmCraft liegen nur im Browser des jeweiligen Geräts | Startseite → PdfCraft, DesignCraft, FilmCraft, PhotoCraft, LightCraft |
 | 19.10. | **WordCraft**: Textverarbeitung im Browser (Open-Source-Nachbau von Word, liest und schreibt .docx), als App unter `wordcraft.mininode.app`; Dokumente öffnest und speicherst du als Dateien auf deinem Gerät. Neu im Manifest: `wasm` für Apps mit WebAssembly | Startseite → WordCraft; Wissen → Apps verstehen |
 | 06.10. | **Bill the Splitter übersichtlicher**: Rechnung mit wählbarem Zahler und Teilnehmern, Aufteilung gleich/Prozent/Beträge/Anteile mit Vorschau, Rechnungen bearbeiten und Löschen mit „Rückgängig“, Vorschläge „So gleicht ihr aus“ mit einem Tipp als bezahlt buchen, Zahlen und Daten im Format der Sprache | Bill the Splitter → Gruppe |

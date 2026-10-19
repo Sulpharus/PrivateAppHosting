@@ -3914,7 +3914,7 @@
       "file_type": "code",
       "norm_label": "doctorreport",
       "source_file": "packages/cli/src/doctor.ts",
-      "source_location": "L28"
+      "source_location": "L29"
     },
     {
       "id": "packages_cli_src_doctor_finding",
@@ -3927,7 +3927,7 @@
       "file_type": "code",
       "norm_label": "finding",
       "source_file": "packages/cli/src/doctor.ts",
-      "source_location": "L21"
+      "source_location": "L22"
     },
     {
       "id": "packages_cli_src_doctor_severity",
@@ -3940,7 +3940,7 @@
       "file_type": "code",
       "norm_label": "severity",
       "source_file": "packages/cli/src/doctor.ts",
-      "source_location": "L19"
+      "source_location": "L20"
     },
     {
       "id": "packages_manifest_src_i18n_i18nissue",
@@ -14559,6 +14559,18 @@
       "source_location": "L36"
     },
     {
+      "id": "packages_cli_src_deploy_icon_syncicon",
+      "label": "syncIcon()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 182,
+      "community_name": "deploy/index.ts",
+      "file_type": "code",
+      "norm_label": "syncicon()",
+      "source_file": "packages/cli/src/deploy/icon.ts",
+      "source_location": "L41"
+    },
+    {
       "id": "packages_cli_src_deploy_index_checkdatabasesettings",
       "label": "checkDatabaseSettings()",
       "_callable": true,
@@ -21075,18 +21087,6 @@
       "source_location": "L22"
     },
     {
-      "id": "packages_cli_src_deploy_icon_findicon",
-      "label": "findIcon()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 272,
-      "community_name": "ref_node_fs",
-      "file_type": "code",
-      "norm_label": "findicon()",
-      "source_file": "packages/cli/src/deploy/icon.ts",
-      "source_location": "L22"
-    },
-    {
       "id": "packages_cli_src_deploy_icon_isdeployicon",
       "label": "isDeployIcon()",
       "_callable": true,
@@ -21097,18 +21097,6 @@
       "norm_label": "isdeployicon()",
       "source_file": "packages/cli/src/deploy/icon.ts",
       "source_location": "L38"
-    },
-    {
-      "id": "packages_cli_src_deploy_icon_syncicon",
-      "label": "syncIcon()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 272,
-      "community_name": "ref_node_fs",
-      "file_type": "code",
-      "norm_label": "syncicon()",
-      "source_file": "packages/cli/src/deploy/icon.ts",
-      "source_location": "L41"
     },
     {
       "id": "packages_cli_src_deploy_icon_test_dir",
@@ -24099,6 +24087,18 @@
       "source_location": "L100"
     },
     {
+      "id": "packages_cli_src_deploy_icon_findicon",
+      "label": "findIcon()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 40,
+      "community_name": "doctor.ts",
+      "file_type": "code",
+      "norm_label": "findicon()",
+      "source_file": "packages/cli/src/deploy/icon.ts",
+      "source_location": "L22"
+    },
+    {
       "id": "packages_cli_src_doctor_checkexportable",
       "label": "checkExportable()",
       "_callable": true,
@@ -24108,7 +24108,7 @@
       "file_type": "code",
       "norm_label": "checkexportable()",
       "source_file": "packages/cli/src/doctor.ts",
-      "source_location": "L238"
+      "source_location": "L239"
     },
     {
       "id": "packages_cli_src_doctor_checki18n",
@@ -24120,7 +24120,7 @@
       "file_type": "code",
       "norm_label": "checki18n()",
       "source_file": "packages/cli/src/doctor.ts",
-      "source_location": "L349"
+      "source_location": "L350"
     },
     {
       "id": "packages_cli_src_doctor_checklayout",
@@ -24132,7 +24132,7 @@
       "file_type": "code",
       "norm_label": "checklayout()",
       "source_file": "packages/cli/src/doctor.ts",
-      "source_location": "L405"
+      "source_location": "L406"
     },
     {
       "id": "packages_cli_src_doctor_checkmigrations",
@@ -24144,7 +24144,7 @@
       "file_type": "code",
       "norm_label": "checkmigrations()",
       "source_file": "packages/cli/src/doctor.ts",
-      "source_location": "L276"
+      "source_location": "L277"
     },
     {
       "id": "packages_cli_src_doctor_checkreservedpaths",
@@ -24156,7 +24156,7 @@
       "file_type": "code",
       "norm_label": "checkreservedpaths()",
       "source_file": "packages/cli/src/doctor.ts",
-      "source_location": "L262"
+      "source_location": "L263"
     },
     {
       "id": "packages_cli_src_doctor_checksources",
@@ -24168,7 +24168,7 @@
       "file_type": "code",
       "norm_label": "checksources()",
       "source_file": "packages/cli/src/doctor.ts",
-      "source_location": "L85"
+      "source_location": "L86"
     },
     {
       "id": "packages_cli_src_doctor_doctor",
@@ -24180,7 +24180,7 @@
       "file_type": "code",
       "norm_label": "doctor()",
       "source_file": "packages/cli/src/doctor.ts",
-      "source_location": "L437"
+      "source_location": "L438"
     },
     {
       "id": "packages_cli_src_doctor_hostedapps",
@@ -24192,7 +24192,7 @@
       "file_type": "code",
       "norm_label": "hostedapps()",
       "source_file": "packages/cli/src/doctor.ts",
-      "source_location": "L494"
+      "source_location": "L505"
     },
     {
       "id": "packages_cli_src_doctor_stripcomments",
@@ -24204,7 +24204,7 @@
       "file_type": "code",
       "norm_label": "stripcomments()",
       "source_file": "packages/cli/src/doctor.ts",
-      "source_location": "L55"
+      "source_location": "L56"
     },
     {
       "id": "packages_cli_src_doctor_test_rules",
@@ -24228,7 +24228,7 @@
       "file_type": "code",
       "norm_label": "walk()",
       "source_file": "packages/cli/src/doctor.ts",
-      "source_location": "L59"
+      "source_location": "L60"
     },
     {
       "id": "packages_manifest_src_i18n_checkpackage",
@@ -35501,7 +35501,7 @@
       "file_type": "code",
       "norm_label": "markers",
       "source_file": "hosted/designcraft/build.mjs",
-      "source_location": "L109"
+      "source_location": "L116"
     },
     {
       "id": "hosted_designcraft_build_page",
@@ -35512,7 +35512,7 @@
       "file_type": "code",
       "norm_label": "page",
       "source_file": "hosted/designcraft/build.mjs",
-      "source_location": "L79"
+      "source_location": "L86"
     },
     {
       "id": "hosted_designcraft_build_release",
@@ -35633,7 +35633,7 @@
       "file_type": "code",
       "norm_label": "markers",
       "source_file": "hosted/filmcraft/build.mjs",
-      "source_location": "L109"
+      "source_location": "L116"
     },
     {
       "id": "hosted_filmcraft_build_page",
@@ -35644,7 +35644,7 @@
       "file_type": "code",
       "norm_label": "page",
       "source_file": "hosted/filmcraft/build.mjs",
-      "source_location": "L79"
+      "source_location": "L86"
     },
     {
       "id": "hosted_filmcraft_build_release",
@@ -35765,7 +35765,7 @@
       "file_type": "code",
       "norm_label": "markers",
       "source_file": "hosted/lightcraft/build.mjs",
-      "source_location": "L109"
+      "source_location": "L116"
     },
     {
       "id": "hosted_lightcraft_build_page",
@@ -35776,7 +35776,7 @@
       "file_type": "code",
       "norm_label": "page",
       "source_file": "hosted/lightcraft/build.mjs",
-      "source_location": "L79"
+      "source_location": "L86"
     },
     {
       "id": "hosted_lightcraft_build_release",
@@ -35897,7 +35897,7 @@
       "file_type": "code",
       "norm_label": "markers",
       "source_file": "hosted/photocraft/build.mjs",
-      "source_location": "L109"
+      "source_location": "L116"
     },
     {
       "id": "hosted_photocraft_build_page",
@@ -35908,7 +35908,7 @@
       "file_type": "code",
       "norm_label": "page",
       "source_file": "hosted/photocraft/build.mjs",
-      "source_location": "L79"
+      "source_location": "L86"
     },
     {
       "id": "hosted_photocraft_build_release",
@@ -42482,6 +42482,17 @@
       "norm_label": "result",
       "source_file": "packages/cli/src/submissions.test.ts",
       "source_location": "L5"
+    },
+    {
+      "id": "packages_manifest_src_index_manifest_filename",
+      "label": "MANIFEST_FILENAME",
+      "_origin": "ast",
+      "community": 214,
+      "community_name": "integrate/index.ts",
+      "file_type": "code",
+      "norm_label": "manifest_filename",
+      "source_file": "packages/manifest/src/index.ts",
+      "source_location": "L7"
     },
     {
       "id": "hosted_sportplaner_js_detail",
@@ -50745,7 +50756,7 @@
       "file_type": "code",
       "norm_label": "markers",
       "source_file": "hosted/wordcraft/build.mjs",
-      "source_location": "L109"
+      "source_location": "L116"
     },
     {
       "id": "hosted_wordcraft_build_page",
@@ -50756,7 +50767,7 @@
       "file_type": "code",
       "norm_label": "page",
       "source_file": "hosted/wordcraft/build.mjs",
-      "source_location": "L79"
+      "source_location": "L86"
     },
     {
       "id": "hosted_wordcraft_build_release",
@@ -52379,7 +52390,7 @@
       "node_kind": "heading",
       "norm_label": "ende september 2026",
       "source_file": "docs/wiki/neuigkeiten.md",
-      "source_location": "L58"
+      "source_location": "L59"
     },
     {
       "id": "docs_wiki_neuigkeiten_oktober_2026",
@@ -53550,7 +53561,7 @@
       "file_type": "code",
       "norm_label": "markers",
       "source_file": "hosted/pdfcraft/build.mjs",
-      "source_location": "L109"
+      "source_location": "L116"
     },
     {
       "id": "hosted_pdfcraft_build_page",
@@ -53561,7 +53572,7 @@
       "file_type": "code",
       "norm_label": "page",
       "source_file": "hosted/pdfcraft/build.mjs",
-      "source_location": "L79"
+      "source_location": "L86"
     },
     {
       "id": "hosted_pdfcraft_build_release",
@@ -55494,7 +55505,7 @@
       "file_type": "code",
       "norm_label": "ignored_dirs",
       "source_file": "packages/cli/src/doctor.ts",
-      "source_location": "L35"
+      "source_location": "L36"
     },
     {
       "id": "packages_cli_src_doctor_kv_collection",
@@ -55505,7 +55516,7 @@
       "file_type": "code",
       "norm_label": "kv_collection",
       "source_file": "packages/cli/src/doctor.ts",
-      "source_location": "L74"
+      "source_location": "L75"
     },
     {
       "id": "packages_cli_src_doctor_secret_patterns",
@@ -55516,7 +55527,7 @@
       "file_type": "code",
       "norm_label": "secret_patterns",
       "source_file": "packages/cli/src/doctor.ts",
-      "source_location": "L46"
+      "source_location": "L47"
     },
     {
       "id": "packages_cli_src_doctor_test",
@@ -55640,17 +55651,6 @@
       "source_location": "L1"
     },
     {
-      "id": "packages_manifest_src_index_manifest_filename",
-      "label": "MANIFEST_FILENAME",
-      "_origin": "ast",
-      "community": 40,
-      "community_name": "doctor.ts",
-      "file_type": "code",
-      "norm_label": "manifest_filename",
-      "source_file": "packages/manifest/src/index.ts",
-      "source_location": "L7"
-    },
-    {
       "id": "packages_cli_src_doctor_ts_docref_adr_0017",
       "label": "ADR-0017",
       "_origin": "ast",
@@ -55659,7 +55659,7 @@
       "file_type": "concept",
       "norm_label": "adr-0017",
       "source_file": "packages/cli/src/doctor.ts",
-      "source_location": "L348"
+      "source_location": "L349"
     },
     {
       "id": "packages_cli_src_doctor_ts_docref_adr_0022",
@@ -55670,7 +55670,7 @@
       "file_type": "concept",
       "norm_label": "adr-0022",
       "source_file": "packages/cli/src/doctor.ts",
-      "source_location": "L71"
+      "source_location": "L72"
     },
     {
       "id": "packages_manifest_src_i18n_ts_docref_adr_0017",
@@ -55837,7 +55837,7 @@
       "node_kind": "heading",
       "norm_label": "daten und schlussel",
       "source_file": "docs/wiki/fehlerbehebung.md",
-      "source_location": "L40"
+      "source_location": "L41"
     },
     {
       "id": "docs_wiki_fehlerbehebung_entwicklung",
@@ -55849,7 +55849,7 @@
       "node_kind": "heading",
       "norm_label": "entwicklung",
       "source_file": "docs/wiki/fehlerbehebung.md",
-      "source_location": "L51"
+      "source_location": "L52"
     },
     {
       "id": "docs_wiki_fehlerbehebung_hochladen_einbau_deploy",
@@ -97920,7 +97920,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "packages/cli/src/doctor.ts",
-      "source_location": "L239",
+      "source_location": "L240",
       "weight": 1.0
     },
     {
@@ -97932,7 +97932,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "packages/cli/src/doctor.ts",
-      "source_location": "L247",
+      "source_location": "L248",
       "weight": 1.0
     },
     {
@@ -97944,7 +97944,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "packages/cli/src/doctor.ts",
-      "source_location": "L386",
+      "source_location": "L387",
       "weight": 1.0
     },
     {
@@ -97956,7 +97956,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "packages/cli/src/doctor.ts",
-      "source_location": "L392",
+      "source_location": "L393",
       "weight": 1.0
     },
     {
@@ -97968,7 +97968,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "packages/cli/src/doctor.ts",
-      "source_location": "L279",
+      "source_location": "L280",
       "weight": 1.0
     },
     {
@@ -97980,7 +97980,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "packages/cli/src/doctor.ts",
-      "source_location": "L115",
+      "source_location": "L116",
       "weight": 1.0
     },
     {
@@ -97992,7 +97992,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "packages/cli/src/doctor.ts",
-      "source_location": "L142",
+      "source_location": "L143",
       "weight": 1.0
     },
     {
@@ -98004,7 +98004,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "packages/cli/src/doctor.ts",
-      "source_location": "L98",
+      "source_location": "L99",
       "weight": 1.0
     },
     {
@@ -98016,7 +98016,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "packages/cli/src/doctor.ts",
-      "source_location": "L462",
+      "source_location": "L463",
       "weight": 1.0
     },
     {
@@ -98028,7 +98028,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "packages/cli/src/doctor.ts",
-      "source_location": "L484",
+      "source_location": "L485",
       "weight": 1.0
     },
     {
@@ -98040,7 +98040,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "packages/cli/src/doctor.ts",
-      "source_location": "L485",
+      "source_location": "L486",
       "weight": 1.0
     },
     {
@@ -98052,7 +98052,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "packages/cli/src/doctor.ts",
-      "source_location": "L486",
+      "source_location": "L487",
       "weight": 1.0
     },
     {
@@ -98064,7 +98064,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "packages/cli/src/doctor.ts",
-      "source_location": "L488",
+      "source_location": "L489",
       "weight": 1.0
     },
     {
@@ -98076,7 +98076,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "packages/cli/src/doctor.ts",
-      "source_location": "L489",
+      "source_location": "L490",
       "weight": 1.0
     },
     {
@@ -98088,7 +98088,19 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "packages/cli/src/doctor.ts",
-      "source_location": "L490",
+      "source_location": "L491",
+      "weight": 1.0
+    },
+    {
+      "source": "packages_cli_src_doctor_doctor",
+      "target": "packages_cli_src_deploy_icon_findicon",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "packages/cli/src/doctor.ts",
+      "source_location": "L493",
       "weight": 1.0
     },
     {
@@ -98100,7 +98112,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "packages/cli/src/doctor.test.ts",
-      "source_location": "L230",
+      "source_location": "L242",
       "weight": 1.0
     },
     {
@@ -98124,7 +98136,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "packages/cli/src/doctor.ts",
-      "source_location": "L64",
+      "source_location": "L65",
       "weight": 1.0
     },
     {
@@ -104815,7 +104827,7 @@
       "confidence_score": 1.0,
       "context": "field",
       "source_file": "packages/cli/src/doctor.ts",
-      "source_location": "L30",
+      "source_location": "L31",
       "weight": 1.0
     },
     {
@@ -105490,7 +105502,7 @@
       "context": "import",
       "deferred": true,
       "source_file": "packages/cli/src/doctor.test.ts",
-      "source_location": "L229",
+      "source_location": "L241",
       "weight": 1.0
     },
     {
@@ -126772,7 +126784,7 @@
     },
     {
       "source": "packages_cli_src_doctor",
-      "target": "packages_cli_src_export_non_text",
+      "target": "packages_cli_src_deploy_icon_findicon",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -126784,6 +126796,18 @@
     },
     {
       "source": "packages_cli_src_doctor",
+      "target": "packages_cli_src_export_non_text",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "packages/cli/src/doctor.ts",
+      "source_location": "L18",
+      "weight": 1.0
+    },
+    {
+      "source": "packages_cli_src_doctor",
       "target": "packages_cli_src_export_scantext",
       "relation": "imports",
       "_origin": "ast",
@@ -126791,7 +126815,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "packages/cli/src/doctor.ts",
-      "source_location": "L17",
+      "source_location": "L18",
       "weight": 1.0
     },
     {
@@ -143588,7 +143612,7 @@
     },
     {
       "source": "packages_cli_src_doctor",
-      "target": "packages_cli_src_export",
+      "target": "packages_cli_src_deploy_icon",
       "relation": "imports_from",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -143596,6 +143620,18 @@
       "context": "import",
       "source_file": "packages/cli/src/doctor.ts",
       "source_location": "L17",
+      "weight": 1.0
+    },
+    {
+      "source": "packages_cli_src_doctor",
+      "target": "packages_cli_src_export",
+      "relation": "imports_from",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "packages/cli/src/doctor.ts",
+      "source_location": "L18",
       "weight": 1.0
     },
     {
@@ -147504,7 +147540,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "packages/cli/src/doctor.ts",
-      "source_location": "L348",
+      "source_location": "L349",
       "weight": 1.0
     },
     {
@@ -147515,7 +147551,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "packages/cli/src/doctor.ts",
-      "source_location": "L71",
+      "source_location": "L72",
       "weight": 1.0
     },
     {
@@ -160737,7 +160773,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/wiki/fehlerbehebung.md",
-      "source_location": "L40",
+      "source_location": "L41",
       "weight": 1.0
     },
     {
@@ -160748,7 +160784,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/wiki/fehlerbehebung.md",
-      "source_location": "L51",
+      "source_location": "L52",
       "weight": 1.0
     },
     {
@@ -161144,7 +161180,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/wiki/neuigkeiten.md",
-      "source_location": "L58",
+      "source_location": "L59",
       "weight": 1.0
     },
     {
@@ -165918,7 +165954,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "hosted/designcraft/build.mjs",
-      "source_location": "L109",
+      "source_location": "L116",
       "weight": 1.0
     },
     {
@@ -166061,7 +166097,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "hosted/designcraft/build.mjs",
-      "source_location": "L79",
+      "source_location": "L86",
       "weight": 1.0
     },
     {
@@ -166325,7 +166361,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "hosted/filmcraft/build.mjs",
-      "source_location": "L109",
+      "source_location": "L116",
       "weight": 1.0
     },
     {
@@ -166468,7 +166504,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "hosted/filmcraft/build.mjs",
-      "source_location": "L79",
+      "source_location": "L86",
       "weight": 1.0
     },
     {
@@ -171902,7 +171938,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "hosted/lightcraft/build.mjs",
-      "source_location": "L109",
+      "source_location": "L116",
       "weight": 1.0
     },
     {
@@ -172045,7 +172081,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "hosted/lightcraft/build.mjs",
-      "source_location": "L79",
+      "source_location": "L86",
       "weight": 1.0
     },
     {
@@ -175444,7 +175480,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "hosted/pdfcraft/build.mjs",
-      "source_location": "L109",
+      "source_location": "L116",
       "weight": 1.0
     },
     {
@@ -175587,7 +175623,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "hosted/pdfcraft/build.mjs",
-      "source_location": "L79",
+      "source_location": "L86",
       "weight": 1.0
     },
     {
@@ -175851,7 +175887,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "hosted/photocraft/build.mjs",
-      "source_location": "L109",
+      "source_location": "L116",
       "weight": 1.0
     },
     {
@@ -175994,7 +176030,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "hosted/photocraft/build.mjs",
-      "source_location": "L79",
+      "source_location": "L86",
       "weight": 1.0
     },
     {
@@ -180350,7 +180386,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "hosted/wordcraft/build.mjs",
-      "source_location": "L109",
+      "source_location": "L116",
       "weight": 1.0
     },
     {
@@ -180493,7 +180529,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "hosted/wordcraft/build.mjs",
-      "source_location": "L79",
+      "source_location": "L86",
       "weight": 1.0
     },
     {
@@ -183859,7 +183895,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "packages/cli/src/doctor.ts",
-      "source_location": "L19",
+      "source_location": "L20",
       "weight": 1.0
     },
     {
@@ -183870,7 +183906,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "packages/cli/src/doctor.ts",
-      "source_location": "L21",
+      "source_location": "L22",
       "weight": 1.0
     },
     {
@@ -183881,7 +183917,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "packages/cli/src/doctor.ts",
-      "source_location": "L238",
+      "source_location": "L239",
       "weight": 1.0
     },
     {
@@ -183892,7 +183928,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "packages/cli/src/doctor.ts",
-      "source_location": "L262",
+      "source_location": "L263",
       "weight": 1.0
     },
     {
@@ -183903,7 +183939,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "packages/cli/src/doctor.ts",
-      "source_location": "L276",
+      "source_location": "L277",
       "weight": 1.0
     },
     {
@@ -183914,7 +183950,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "packages/cli/src/doctor.ts",
-      "source_location": "L28",
+      "source_location": "L29",
       "weight": 1.0
     },
     {
@@ -183925,7 +183961,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "packages/cli/src/doctor.ts",
-      "source_location": "L349",
+      "source_location": "L350",
       "weight": 1.0
     },
     {
@@ -183936,7 +183972,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "packages/cli/src/doctor.ts",
-      "source_location": "L35",
+      "source_location": "L36",
       "weight": 1.0
     },
     {
@@ -183947,7 +183983,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "packages/cli/src/doctor.ts",
-      "source_location": "L405",
+      "source_location": "L406",
       "weight": 1.0
     },
     {
@@ -183958,7 +183994,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "packages/cli/src/doctor.ts",
-      "source_location": "L437",
+      "source_location": "L438",
       "weight": 1.0
     },
     {
@@ -183969,7 +184005,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "packages/cli/src/doctor.ts",
-      "source_location": "L46",
+      "source_location": "L47",
       "weight": 1.0
     },
     {
@@ -183980,7 +184016,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "packages/cli/src/doctor.ts",
-      "source_location": "L494",
+      "source_location": "L505",
       "weight": 1.0
     },
     {
@@ -183991,7 +184027,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "packages/cli/src/doctor.ts",
-      "source_location": "L55",
+      "source_location": "L56",
       "weight": 1.0
     },
     {
@@ -184002,7 +184038,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "packages/cli/src/doctor.ts",
-      "source_location": "L59",
+      "source_location": "L60",
       "weight": 1.0
     },
     {
@@ -184013,7 +184049,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "packages/cli/src/doctor.ts",
-      "source_location": "L74",
+      "source_location": "L75",
       "weight": 1.0
     },
     {
@@ -184024,7 +184060,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "packages/cli/src/doctor.ts",
-      "source_location": "L85",
+      "source_location": "L86",
       "weight": 1.0
     },
     {
@@ -201257,5 +201293,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "b0a2250914c7fc531bf93be45daec461cf26be3f"
+  "built_at_commit": "53a6cea34140c6aec2e7dd0094e9dba8ab4678aa"
 }

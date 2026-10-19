@@ -1,17 +1,17 @@
 # Graph Report - PrivateAppHosting  (2026-10-19)
 
 ## Corpus Check
-- 790 files · ~1,089,582 words
+- 790 files · ~597,475 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 58 file(s) not represented in the graph (top: .css 22, (none) 17, .woff2 4)
 
 ## Summary
-- 5464 nodes · 11738 edges · 377 communities (243 shown, 134 thin omitted)
+- 5464 nodes · 11741 edges · 377 communities (243 shown, 134 thin omitted)
 - Extraction: 97% EXTRACTED · 3% INFERRED · 0% AMBIGUOUS · INFERRED: 336 edges (avg confidence: 0.9)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `b0a22509`
+- Built from commit: `53a6cea3`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -869,7 +869,7 @@ Nodes (43): ReorderGrid(), appUrl(), applyOrder(), moveItem(), scopeOf, apps, AD
 
 ### Community 182 - "deploy/index.ts"
 Cohesion: 0.09
-Nodes (37): parsed, production, checkDatabaseSettings(), deployApp(), DeployOptions, devApp(), ensureSdkBundle(), exposeLocally() (+29 more)
+Nodes (38): parsed, production, syncIcon(), checkDatabaseSettings(), deployApp(), DeployOptions, devApp(), ensureSdkBundle() (+30 more)
 
 ### Community 183 - "supabase"
 Cohesion: 0.07
@@ -937,7 +937,7 @@ Nodes (13): ADR-0002, same(), sameTime(), suiteImageOf(), suiteImages, suiteImag
 
 ### Community 214 - "integrate/index.ts"
 Cohesion: 0.06
-Nodes (68): anonymiseEmails(), anonymiseSampleEmails(), bootSource(), buildManifest(), cleanAssets(), ConvertContext, Converted, convertNative() (+60 more)
+Nodes (69): anonymiseEmails(), anonymiseSampleEmails(), bootSource(), buildManifest(), cleanAssets(), ConvertContext, Converted, convertNative() (+61 more)
 
 ### Community 215 - "groupedWhen"
 Cohesion: 0.21
@@ -1053,7 +1053,7 @@ Nodes (34): currentCommit(), envFlag(), flag(), main(), ROOT, appsSinceDeployed(
 
 ### Community 272 - "ref_node_fs"
 Cohesion: 0.07
-Nodes (20): Pack, source, { splitCoursePrice, parseEuro }, boot(), FILES, read(), translator(), Ext (+12 more)
+Nodes (18): Pack, source, { splitCoursePrice, parseEuro }, boot(), FILES, read(), translator(), Ext (+10 more)
 
 ### Community 273 - "Uploads: web apps and programs from Verwaltung"
 Cohesion: 0.29
