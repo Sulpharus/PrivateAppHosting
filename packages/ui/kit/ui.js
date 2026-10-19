@@ -149,11 +149,19 @@
   // The live region exists before the first message, so screen readers announce it.
   let toastEl = null;
   let toastTimer = 0;
+  let toastAction = null;
   function toastRegion() {
     if (!toastEl) {
       toastEl = document.createElement('div');
       toastEl.className = 'mn-toast';
       toastEl.setAttribute('role', 'status');
+      // A toast with an action waits while the pointer or the focus is on it.
+      const pause = () => toastAction && clearTimeout(toastTimer);
+      const resume = () => toastAction && hideLater();
+      toastEl.addEventListener('pointerenter', pause);
+      toastEl.addEventListener('focusin', pause);
+      toastEl.addEventListener('pointerleave', resume);
+      toastEl.addEventListener('focusout', resume);
     }
     // A page that redraws its whole body removes the region with it.
     if (!toastEl.isConnected) document.body.append(toastEl);
@@ -165,21 +173,31 @@
     else document.addEventListener('DOMContentLoaded', toastRegion, { once: true });
   }
 
+  function hideToast() {
+    const el = toastRegion();
+    el.classList.remove('show', 'mn-toast--action');
+    // A hidden button must not stay in the tab order.
+    el.querySelector('.mn-toast-action')?.remove();
+    toastAction = null;
+  }
+  function hideLater() {
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(hideToast, toastAction ? 8000 : 2400);
+  }
+
   /**
    * A short message. With `{ action: { label, onClick } }` it carries one button, stays longer and
    * waits while the pointer or the focus is on it.
    */
   function toast(message, { action } = {}) {
     const el = toastRegion();
+    hideToast();
     el.textContent = '';
-    el.classList.remove('show', 'mn-toast--action');
-    const hide = () => el.classList.remove('show');
-    const later = () => {
-      clearTimeout(toastTimer);
-      toastTimer = setTimeout(hide, action ? 8000 : 2400);
-    };
+    toastAction = action ?? null;
     // Next frame: the cleared region makes a repeated message count as new, and the transition runs.
     requestAnimationFrame(() => {
+      // A newer toast in the same frame replaces this one.
+      if (toastAction !== (action ?? null)) return;
       el.textContent = message;
       if (action) {
         const run = document.createElement('button');
@@ -187,7 +205,7 @@
         run.className = 'mn-toast-action';
         run.textContent = action.label;
         run.onclick = () => {
-          hide();
+          hideToast();
           action.onClick();
         };
         el.append(' ', run);
@@ -195,9 +213,7 @@
       }
       el.classList.add('show');
     });
-    el.onpointerenter = el.onfocusin = () => action && clearTimeout(toastTimer);
-    el.onpointerleave = el.onfocusout = () => action && later();
-    later();
+    hideLater();
   }
 
   function select(button) {

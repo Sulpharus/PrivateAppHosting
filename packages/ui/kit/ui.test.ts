@@ -153,6 +153,32 @@ describe('mnui.toast', () => {
     action.click();
     expect(onClick).toHaveBeenCalledOnce();
     expect(document.querySelector('.mn-toast')?.classList.contains('show')).toBe(false);
+    expect(document.querySelector('.mn-toast-action')).toBeNull();
+  });
+
+  it('waits while the action has the focus and leaves no hidden button behind', async () => {
+    vi.useFakeTimers();
+    try {
+      mnui.toast('Gespeichert', { action: { label: 'Speichern unter …', onClick: () => {} } });
+      await vi.advanceTimersToNextFrame();
+      const action = document.querySelector<HTMLButtonElement>('.mn-toast-action');
+      const region = document.querySelector('.mn-toast');
+      action?.focus();
+      vi.advanceTimersByTime(20_000);
+      expect(region?.classList.contains('show')).toBe(true);
+      action?.blur();
+      vi.advanceTimersByTime(8_000);
+      expect(region?.classList.contains('show')).toBe(false);
+      expect(document.querySelector('.mn-toast-action')).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('comes back after the page replaced its body', async () => {
+    document.body.innerHTML = '<main></main>';
+    mnui.toast('Hallo');
+    await vi.waitFor(() => expect(document.querySelector('.mn-toast')?.textContent).toBe('Hallo'));
   });
 });
 

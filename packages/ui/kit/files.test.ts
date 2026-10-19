@@ -170,6 +170,49 @@ describe('saving', () => {
     expect(sheet()?.querySelector('input')?.value).toBe('Brief.docx');
   });
 
+  const downloadOf = (name: string) =>
+    Object.assign(document.createElement('a'), { href: 'blob:https://app.test/3', download: name });
+
+  it('saves again without a dialog after saving to MiniNode, and asks on a quick second save', async () => {
+    downloadOf('Plan.pdf').click();
+    await until(() => buttonNamed('In MiniNode speichern'));
+    buttonNamed('In MiniNode speichern')?.click();
+    await until(() => upload.mock.calls.length === 1);
+    vi.useFakeTimers({ toFake: ['Date'] });
+    try {
+      vi.setSystemTime(Date.now() + 60_000);
+      downloadOf('Plan.pdf').click();
+      await until(() => upload.mock.calls.length === 2);
+      expect(sheet()).toBeNull();
+      // Ctrl+S twice: the second one is the way to the dialog without the pointer.
+      downloadOf('Plan.pdf').click();
+      await until(() => buttonNamed('In MiniNode speichern'));
+      expect(upload).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('asks again once a file of that name came from the device', async () => {
+    downloadOf('Notiz.txt').click();
+    await until(() => buttonNamed('In MiniNode speichern'));
+    buttonNamed('In MiniNode speichern')?.click();
+    await until(() => upload.mock.calls.length === 1);
+    const input = Object.assign(document.createElement('input'), { type: 'file' });
+    document.body.append(input);
+    input.click();
+    await until(() => buttonNamed('Von diesem Gerät …'));
+    buttonNamed('Von diesem Gerät …')?.click();
+    await until(() => nativeInputClick.mock.calls.length);
+    const transfer = new DataTransfer();
+    transfer.items.add(new File(['x'], 'Notiz.txt'));
+    input.files = transfer.files;
+    input.dispatchEvent(new Event('change'));
+    downloadOf('Notiz.txt').click();
+    await until(() => buttonNamed('In MiniNode speichern'));
+    expect(upload).toHaveBeenCalledOnce();
+  });
+
   it('lets ordinary links through', () => {
     const link = Object.assign(document.createElement('a'), { href: 'https://example.com/' });
     link.click();

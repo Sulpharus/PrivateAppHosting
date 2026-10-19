@@ -165,10 +165,16 @@ const boot = [];
 let page = readFileSync(join(dist, 'index.html'), 'utf8').replace(
   /<script(\s[^>]*)?>([\s\S]*?)<\/script>/gi,
   (tag, attributes = '', body) => {
-    if (/\ssrc\s*=/i.test(attributes)) return tag;
+    // An app script with its own file would run before the start scripts that wait for mn-boot.js.
+    if (/\ssrc\s*=/i.test(attributes))
+      throw new Error(`index.html: the release markup changed (a script file: ${tag})`);
+    const type = /\stype\s*=\s*["']?([^"'\s>]+)/i.exec(attributes)?.[1] ?? null;
+    // Only scripts that load as files: a data block (JSON, an import map) would never fire load.
+    if (type && !/^(module|text\/javascript)$/i.test(type))
+      throw new Error(`index.html: the release markup changed (a script of type ${type})`);
     const src = `./boot-${boot.length + 1}.js`;
     writeFileSync(join(dist, src), `${body.trim()}\n`);
-    boot.push({ src, type: /\stype\s*=\s*["']?([^"'\s>]+)/i.exec(attributes)?.[1] ?? null });
+    boot.push({ src, type });
     return '';
   },
 );
@@ -181,27 +187,44 @@ writeFileSync(
   join(dist, 'mn-boot.js'),
   `// Written by build.mjs: the account first, then the app's own start scripts, in order.
 (async () => {
-  try {
+  const account = (async () => {
     const mn = await window.mininode.mininode();
     const user = await mn.auth.requireLogin();
-    await window.mininode.installLocalStorageSync(mn);
     const meta = user.user_metadata ?? {};
     const name = [meta.display_name, meta.name].find((v) => typeof v === 'string' && v.trim());
     if (name) document.documentElement.dataset.mnUser = name.trim();
+    await window.mininode.installLocalStorageSync(mn);
+  })();
+  try {
+    // A slow connection must not hold the app back for long. The sync still finishes later; the
+    // app's next save of its settings then wins over what came from the account.
+    await Promise.race([
+      account,
+      new Promise((_, reject) => setTimeout(() => reject(new Error('timed out')), 10000)),
+    ]);
   } catch (error) {
-    // Offline or a failed request: the app still starts, with what this device has stored.
+    // Offline, slow or a failed request: the app starts with what this device has stored.
     console.warn('mininode: the app starts without the account settings', error);
   }
   await window.mnI18n?.ready;
   for (const { src, type } of ${JSON.stringify(boot)}) {
-    await new Promise((resolve, reject) => {
+    const loaded = await new Promise((resolve) => {
       const script = document.createElement('script');
       if (type) script.type = type;
       script.src = src;
-      script.onload = resolve;
-      script.onerror = () => reject(new Error(\`\${src} did not load\`));
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
       document.body.append(script);
     });
+    if (!loaded) {
+      document.body.append(
+        Object.assign(document.createElement('p'), {
+          role: 'alert',
+          textContent: 'Die App ließ sich nicht laden. Bitte lade die Seite neu.',
+        }),
+      );
+      return;
+    }
   }
 })();
 `,

@@ -7,7 +7,9 @@
 //   - window.showSaveFilePicker and a download link (<a download href="blob:…">.click()) open a
 //     dialog that saves to MiniNode or, as before, to the device;
 //   - a download of a file that was opened from or saved to MiniNode in this page (the app's
-//     "Save") goes straight back to MiniNode; the toast offers "Speichern unter …" for the dialog.
+//     "Save") goes straight back to MiniNode; the toast offers "Speichern unter …" for the dialog,
+//     and saving again while it shows (e.g. Ctrl+S twice) opens the dialog too. A file of that name
+//     opened from or saved to the device ends this.
 // The app needs a data mode other than "none" (mn.files) and nothing else; texts come from the
 // app's language packages (keys files.*, German fallback below). data-mn-native on a field or a
 // link keeps the browser's own behaviour.
@@ -89,6 +91,9 @@
 
   /** Names opened from or saved to MiniNode in this page: saving them again needs no dialog. */
   const linked = new Set();
+  /** The last save that went straight back; a second one of the same name soon after asks. */
+  let lastDirect = { name: '', at: 0 };
+  const ASK_AGAIN_MS = 8000;
 
   const abort = () => new DOMException('The user aborted a request.', 'AbortError');
 
@@ -131,8 +136,8 @@
       root.querySelector('button, input')?.focus();
     });
 
-  const fail = (error) =>
-    window.mnui.toast(t('files.error', { message: error?.message ?? String(error) }));
+  const fail = (error, toast) =>
+    window.mnui.toast(t('files.error', { message: error?.message ?? String(error) }), toast);
 
   /** Lets the person pick stored files; resolves with File objects, 'device' or null. */
   function chooseStored(accept, multiple) {
@@ -267,7 +272,16 @@
   const nativeShowPicker = HTMLInputElement.prototype.showPicker;
   const openField = async (input) => {
     const choice = await chooseStored(input.accept, input.multiple);
-    if (choice === 'device') return nativeInputClick.call(input);
+    if (choice === 'device') {
+      input.addEventListener(
+        'change',
+        () => {
+          for (const file of input.files ?? []) linked.delete(file.name);
+        },
+        { once: true },
+      );
+      return nativeInputClick.call(input);
+    }
     if (!choice) return input.dispatchEvent(new Event('cancel'));
     const transfer = new DataTransfer();
     for (const file of choice) transfer.items.add(file);
@@ -291,7 +305,11 @@
   if (nativeOpenPicker) {
     window.showOpenFilePicker = async (options = {}) => {
       const choice = await chooseStored(acceptOfTypes(options.types), Boolean(options.multiple));
-      if (choice === 'device') return nativeOpenPicker(options);
+      if (choice === 'device') {
+        const handles = await nativeOpenPicker(options);
+        for (const handle of handles) linked.delete(handle.name);
+        return handles;
+      }
       if (!choice) throw abort();
       return choice.map((file) => ({ kind: 'file', name: file.name, getFile: async () => file }));
     };
@@ -306,6 +324,7 @@
       const types = Object.keys(options.types?.[0]?.accept ?? {});
       return storedHandle(choice.name, types[0] ?? '');
     }
+    if (options.suggestedName) linked.delete(options.suggestedName);
     if (nativeSavePicker) return nativeSavePicker(options);
     // No native picker (Firefox, Safari): what the app writes becomes a download.
     const name = options.suggestedName ?? 'download';
@@ -346,14 +365,21 @@
         if (!choice) return;
         try {
           if (choice.to === 'mininode') await store(choice.name, await blob);
-          else download(await blob, name);
+          else {
+            linked.delete(name);
+            download(await blob, name);
+          }
         } catch (error) {
           fail(error);
         }
       });
-    if (!linked.has(name)) return void ask();
-    blob
-      .then((file) => store(name, file, { action: { label: t('files.save.as'), onClick: ask } }))
-      .catch(fail);
+    const again = lastDirect.name === name && Date.now() - lastDirect.at < ASK_AGAIN_MS;
+    if (!linked.has(name) || again) {
+      lastDirect = { name: '', at: 0 };
+      return void ask();
+    }
+    lastDirect = { name, at: Date.now() };
+    const saveAs = { action: { label: t('files.save.as'), onClick: ask } };
+    blob.then((file) => store(name, file, saveAs)).catch((error) => fail(error, saveAs));
   };
 })();

@@ -183,13 +183,15 @@ export async function installLocalStorageSync(mn: Mininode): Promise<void> {
   }) as StorageMethods;
   patched.set(proto, original);
 
-  // Another person used this browser before: their data must not show up here.
-  if (storage.getItem(OWNER_KEY) !== user.id) {
+  // Another person used this browser before: their data must not show up here. Without an owner
+  // the app ran before the sync was installed; what it kept here is this person's, and is adopted.
+  const owner = storage.getItem(OWNER_KEY);
+  if (owner !== null && owner !== user.id) {
     for (const key of Object.keys(storage)) {
       if (!isPlatformKey(key)) original.removeItem.call(storage, key);
     }
-    original.setItem.call(storage, OWNER_KEY, user.id);
   }
+  original.setItem.call(storage, OWNER_KEY, user.id);
 
   const remote = await mn.kv.list(KEY_PREFIX);
   const remoteKeys = new Set<string>();
@@ -219,6 +221,20 @@ export async function installLocalStorageSync(mn: Mininode): Promise<void> {
     if (value === null) original.removeItem.call(storage, `mn-ls-seen:${key}`);
     else original.setItem.call(storage, `mn-ls-seen:${key}`, '1');
   };
+
+  // Adopted values the account does not have yet go up once (the account's own values won above).
+  if (owner === null) {
+    for (const key of Object.keys(storage)) {
+      const value = storage.getItem(key);
+      if (
+        !isPlatformKey(key) &&
+        !key.startsWith('mn-ls-seen:') &&
+        !remoteKeys.has(key) &&
+        value !== null
+      )
+        write(key, value);
+    }
+  }
 
   proto.setItem = function (this: Storage, key: string, value: string) {
     original.setItem.call(this, key, value);
