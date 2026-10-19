@@ -33,7 +33,9 @@ own. `release.json` names the release (`name`, `version`, `sha256`), the app's l
     the zip under its key and hands it to CI and the deploy (`scripts/craft-builds.sh`). Rust only
     runs when a version or a patch changes.
   - A patch that no longer applies to a new upstream version stops the build: rebase it with
-    `git -C .cache/src-<version> apply --3way` and save the diff again.
+    `git -C .cache/src-<version> apply --3way` and save the diff again (`git diff >
+    patches/mininode.patch`; run `git add -N <file>` first for a file the patch adds, or it is
+    left out).
 - **MiniNode files (`files: true`):** the page loads the kit's `/_mininode/files.js`
   (`packages/ui/README.md`). Opening a file and saving one offer the person's MiniNode files
   (`mn.files`, data mode `private`) next to the device; the texts are `files.*` in `i18n/`. A

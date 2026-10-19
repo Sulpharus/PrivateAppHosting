@@ -21,7 +21,7 @@ patched source build and the MiniNode files dialog (`files: true`).
 
 ## Data
 
-`data.mode: private`. Documents are opened from MiniNode or the device and saved to MiniNode (`mn.files`, the person's own folder) or the device. Preferences stay in the browser's `localStorage`.
+`data.mode: private`. Documents are opened from MiniNode or the device and saved to MiniNode (`mn.files`, the person's own folder) or the device. Settings follow the account: the patch keeps the desktop's `ui.json` and `prefs.json` (theme, language, units, workspaces, shortcuts, presets, recent files) in `localStorage` under `designcraft.preferences`, which MiniNode syncs. Until the person picks them in the app, the language follows MiniNode and the brightness the system (MediumLight or MediumDark). The patch also gives date variables the real time (upstream's web build reported 1970) and asks before leaving the page with unsaved documents.
 
 ## Updating
 

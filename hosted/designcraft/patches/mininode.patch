@@ -1,3 +1,256 @@
+diff --git a/apps/designcraft-web/Cargo.toml b/apps/designcraft-web/Cargo.toml
+index 1667e69..e43aec9 100644
+--- a/apps/designcraft-web/Cargo.toml
++++ b/apps/designcraft-web/Cargo.toml
+@@ -30,4 +30,4 @@ rfd = { workspace = true }
+ wasm-bindgen = "0.2"
+ wasm-bindgen-futures = "0.4"
+ js-sys = "0.3"
+-web-sys = { version = "0.3", features = ["Event", "EventTarget", "Window", "Document", "Element", "HtmlElement", "HtmlCanvasElement", "HtmlAnchorElement", "Blob", "BlobPropertyBag", "Url", "Location", "CssStyleDeclaration"] }
++web-sys = { version = "0.3", features = ["Event", "EventTarget", "Window", "Document", "Element", "HtmlElement", "HtmlCanvasElement", "HtmlAnchorElement", "Blob", "BlobPropertyBag", "Url", "Location", "CssStyleDeclaration", "Storage", "MediaQueryList", "VisibilityState"] }
+diff --git a/apps/designcraft-web/src/main.rs b/apps/designcraft-web/src/main.rs
+index 1b28064..ff6619e 100644
+--- a/apps/designcraft-web/src/main.rs
++++ b/apps/designcraft-web/src/main.rs
+@@ -19,6 +19,9 @@
+ #[cfg(any(target_arch = "wasm32", test))]
+ mod browser_policy;
+ 
++#[cfg(target_arch = "wasm32")]
++mod prefs;
++
+ #[cfg(target_arch = "wasm32")]
+ mod web;
+ 
+diff --git a/apps/designcraft-web/src/prefs.rs b/apps/designcraft-web/src/prefs.rs
+new file mode 100644
+index 0000000..1b693bf
+--- /dev/null
++++ b/apps/designcraft-web/src/prefs.rs
+@@ -0,0 +1,119 @@
++//! MiniNode: the desktop's `ui.json` and `prefs.json`, kept in `localStorage` as one entry
++//! (`{"ui": …, "prefs": …}`). MiniNode syncs `localStorage` to the person's account, so the
++//! settings follow them across devices.
++//!
++//! Without a saved choice, the interface language follows the page (`<html lang>`, set by
++//! MiniNode) and the brightness follows `prefers-color-scheme`. Those picks are left out of the
++//! saved entry until the person changes them in the app, so they keep following the page.
++
++use designcraft_ui_egui::theme::Brightness;
++use designcraft_ui_egui::{DesignApp, UiState};
++
++const KEY: &str = "designcraft.preferences";
++
++pub struct Persisted {
++    /// The entry as last written (or loaded), to write only when something changed.
++    last: String,
++    checked: f64,
++    auto_language: Option<String>,
++    auto_brightness: Option<Brightness>,
++}
++
++fn storage() -> Option<web_sys::Storage> {
++    web_sys::window()?.local_storage().ok()?
++}
++
++/// Apply the saved settings (and the page's defaults) before the first frame.
++pub fn load(app: &mut DesignApp) -> Persisted {
++    let saved: serde_json::Value = storage()
++        .and_then(|s| s.get_item(KEY).ok().flatten())
++        .and_then(|text| serde_json::from_str(&text).ok())
++        .unwrap_or_default();
++    if let Ok(bytes) = serde_json::to_vec(&saved["ui"])
++        && let Ok(ui) = UiState::from_preferences_json(&bytes)
++    {
++        app.ui = ui;
++    }
++    if let Ok(prefs) = serde_json::from_value::<designcraft_engine::Prefs>(saved["prefs"].clone()) {
++        app.session.prefs = prefs;
++    }
++    let mut auto_language = None;
++    if saved["ui"].get("language").is_none() {
++        app.ui.language = page_language();
++        auto_language = Some(app.ui.language.clone());
++    }
++    let mut auto_brightness = None;
++    if saved["ui"].get("brightness").is_none() {
++        app.ui.brightness = system_brightness();
++        auto_brightness = Some(app.ui.brightness);
++    }
++    let mut persisted = Persisted { last: String::new(), checked: 0.0, auto_language, auto_brightness };
++    persisted.last = persisted.serialize(app).unwrap_or_default();
++    persisted
++}
++
++impl Persisted {
++    /// Write the settings when they changed: at most once a second, or now with `force`.
++    pub fn save(&mut self, app: &DesignApp, now: f64, force: bool) {
++        if !force && now - self.checked < 1.0 {
++            return;
++        }
++        self.checked = now;
++        let Some(text) = self.serialize(app) else { return };
++        if text == self.last {
++            return;
++        }
++        if let Some(storage) = storage()
++            && let Err(e) = storage.set_item(KEY, &text)
++        {
++            log::warn!("couldn't save preferences: {e:?}");
++        }
++        // Also after a failed write: retry on the next change, not every second.
++        self.last = text;
++    }
++
++    fn serialize(&mut self, app: &DesignApp) -> Option<String> {
++        // Changed in the app: an explicit choice from now on, saved like any other setting.
++        if self.auto_language.as_ref().is_some_and(|l| *l != app.ui.language) {
++            self.auto_language = None;
++        }
++        if self.auto_brightness.is_some_and(|b| b != app.ui.brightness) {
++            self.auto_brightness = None;
++        }
++        let mut ui = serde_json::to_value(&app.ui).ok()?;
++        if let Some(fields) = ui.as_object_mut() {
++            if self.auto_language.is_some() {
++                fields.remove("language");
++            }
++            if self.auto_brightness.is_some() {
++                fields.remove("brightness");
++            }
++        }
++        serde_json::to_string(&serde_json::json!({"ui": ui, "prefs": app.session.prefs})).ok()
++    }
++}
++
++/// The interface language for `<html lang>` (`de` → German, `en` or unknown → English, `""`).
++fn page_language() -> String {
++    let lang = web_sys::window()
++        .and_then(|w| w.document())
++        .and_then(|d| d.document_element())
++        .and_then(|e| e.get_attribute("lang"))
++        .unwrap_or_default()
++        .to_ascii_lowercase();
++    let primary = lang.split('-').next().unwrap_or_default();
++    designcraft_ui_egui::i18n::LANGUAGES
++        .iter()
++        .map(|(code, _)| *code)
++        .find(|code| !code.is_empty() && (*code == lang || *code == primary))
++        .unwrap_or_default()
++        .to_string()
++}
++
++/// Medium Light for a light system appearance, else the app's default Medium Dark.
++fn system_brightness() -> Brightness {
++    let light = web_sys::window()
++        .and_then(|w| w.match_media("(prefers-color-scheme: light)").ok().flatten())
++        .is_some_and(|m| m.matches());
++    if light { Brightness::MediumLight } else { Brightness::MediumDark }
++}
+diff --git a/apps/designcraft-web/src/web.rs b/apps/designcraft-web/src/web.rs
+index fe0f4a7..b829bf9 100644
+--- a/apps/designcraft-web/src/web.rs
++++ b/apps/designcraft-web/src/web.rs
+@@ -71,17 +71,23 @@ pub fn start() {
+                             graphics_failed(&device_graphics, GRAPHICS_TITLE, GRAPHICS_MESSAGE, &format!("Device loss ({reason:?}): {message}"));
+                         });
+                     }
++                    // MiniNode: date text variables and new documents' creation date need a wall clock.
++                    designcraft_engine::doc::vars::set_clock(|| (js_sys::Date::now() / 1000.0) as i64);
+                     let inbox: Inbox = Inbox::default();
+                     let mut app = DesignApp::new(Session::new(), services(inbox.clone(), cc.egui_ctx.clone()));
++                    let persisted = crate::prefs::load(&mut app);
+                     if has_query_flag(&query(), "sample") {
+                         let _ = app.run("file.newSample", serde_json::json!({}));
+                     }
+-                    Ok(Box::new(WebShell { app, inbox, graphics: creator_graphics }))
++                    Ok(Box::new(WebShell { app, inbox, graphics: creator_graphics, persisted }))
+                 }),
+             )
+             .await;
+         match result {
+             Ok(()) => {
++                if let Err(e) = install_page_listeners(&runner) {
++                    log::error!("couldn't install page listeners: {e:?}");
++                }
+                 if let Err(e) = install_recovery_controls(&runner, &canvas, &graphics) {
+                     graphics_failed(&graphics, GRAPHICS_TITLE, GRAPHICS_MESSAGE, &format!("Couldn't install graphics recovery controls: {e:?}"));
+                     if let Some(shell) = runner.app_mut::<WebShell>()
+@@ -251,6 +257,32 @@ fn add_reload_control(document: &web_sys::Document, actions: &web_sys::HtmlEleme
+     Ok(())
+ }
+ 
++/// MiniNode: save the settings when the page is hidden or left, and warn before leaving with
++/// unsaved documents.
++fn install_page_listeners(runner: &eframe::WebRunner) -> Result<(), wasm_bindgen::JsValue> {
++    let window = web_sys::window().ok_or_else(|| wasm_bindgen::JsValue::from_str("no window"))?;
++    let document = window.document().ok_or_else(|| wasm_bindgen::JsValue::from_str("no document"))?;
++    runner.add_event_listener(&document, "visibilitychange", |_: web_sys::Event, app_runner| {
++        let hidden = web_sys::window()
++            .and_then(|w| w.document())
++            .is_some_and(|d| d.visibility_state() == web_sys::VisibilityState::Hidden);
++        if hidden {
++            let shell = app_runner.app_mut::<WebShell>();
++            shell.persisted.save(&shell.app, 0.0, true);
++        }
++    })?;
++    runner.add_event_listener(&window, "pagehide", |_: web_sys::Event, app_runner| {
++        let shell = app_runner.app_mut::<WebShell>();
++        shell.persisted.save(&shell.app, 0.0, true);
++    })?;
++    runner.add_event_listener(&window, "beforeunload", |event: web_sys::Event, app_runner| {
++        if app_runner.app_mut::<WebShell>().app.session.documents().iter().any(|d| d.is_dirty()) {
++            event.prevent_default();
++        }
++    })?;
++    Ok(())
++}
++
+ fn install_recovery_controls(
+     runner: &eframe::WebRunner,
+     canvas: &web_sys::HtmlCanvasElement,
+@@ -345,6 +377,7 @@ struct WebShell {
+     app: DesignApp,
+     inbox: Inbox,
+     graphics: GraphicsState,
++    persisted: crate::prefs::Persisted,
+ }
+ 
+ impl eframe::App for WebShell {
+@@ -368,6 +401,7 @@ impl eframe::App for WebShell {
+                 });
+             }
+             self.app.logic(ctx);
++            self.persisted.save(&self.app, ctx.input(|i| i.time), false);
+         });
+     }
+ 
+diff --git a/crates/doc/src/vars.rs b/crates/doc/src/vars.rs
+index 1ea4f8c..36085b0 100644
+--- a/crates/doc/src/vars.rs
++++ b/crates/doc/src/vars.rs
+@@ -122,10 +122,20 @@ pub fn now() -> i64 {
+     }
+     #[cfg(target_arch = "wasm32")]
+     {
+-        0
++        // MiniNode: the browser shell installs the wall clock (`set_clock`); std has none on wasm.
++        CLOCK.get().map_or(0, |clock| clock())
+     }
+ }
+ 
++#[cfg(target_arch = "wasm32")]
++static CLOCK: std::sync::OnceLock<fn() -> i64> = std::sync::OnceLock::new();
++
++/// MiniNode: the wall clock for [`now`] on wasm (seconds since the Unix epoch), set once at start.
++#[cfg(target_arch = "wasm32")]
++pub fn set_clock(clock: fn() -> i64) {
++    let _ = CLOCK.set(clock);
++}
++
+ /// (year, month 1–12, day 1–31) from days since 1970-01-01 (H. Hinnant's public-domain algorithm).
+ fn civil(days: i64) -> (i64, u32, u32) {
+     let z = days + 719_468;
 diff --git a/crates/ui-egui/src/about.rs b/crates/ui-egui/src/about.rs
 index 1474560..c3ac5f6 100644
 --- a/crates/ui-egui/src/about.rs
@@ -102,10 +355,24 @@ index 0df5361..64cc56e 100644
      let t = Tokens::get(ui.ctx());
      egui::Frame::NONE.fill(t.panel).corner_radius(10.0).inner_margin(egui::Margin::same(14)).show(ui, |ui| {
 diff --git a/crates/ui-egui/src/menus.rs b/crates/ui-egui/src/menus.rs
-index acb8e3e..aac9b45 100644
+index acb8e3e..ce1eee6 100644
 --- a/crates/ui-egui/src/menus.rs
 +++ b/crates/ui-egui/src/menus.rs
-@@ -907,12 +907,8 @@ pub const MENUS: &[(&str, &[&str])] = &[
+@@ -278,12 +278,9 @@ pub const UI_COMMANDS: &[(&str, &str, Option<&str>, &str)] = &[
+         "{on?: bool, at?: [x, y] (points from the canvas's top-left)} — the Contextual Task Bar stays where it is (or at `at`) instead of following the selection; with neither, toggles",
+     ),
+     ("window.taskBarReset", "Reset Bar Position", None, "{} — the Contextual Task Bar follows the selection again, under it"),
+-    ("help.discord", "Join the ArtCraft Discord…", None, "{} — opens https://discord.gg/artcraft in the browser"),
+-    ("help.appPage", "DesignCraft Website…", None, "{} — opens https://getartcraft.com/apps/designcraft"),
++    // MiniNode: the ArtCraft/Discord promotion commands are not offered (command palette, shortcuts).
+     ("help.github", "DesignCraft on GitHub…", None, "{} — opens https://github.com/storytold/designcraft"),
+     ("help.issues", "Report an Issue…", None, "{} — opens the GitHub issue tracker"),
+-    ("help.website", "ArtCraft Website…", None, "{} — opens https://getartcraft.com"),
+-    ("help.app", "ArtCraft App Page…", None, "{app} — opens https://getartcraft.com/apps/{app} (e.g. photocraft)"),
+     (
+         "help.about",
+         "About DesignCraft",
+@@ -907,12 +904,8 @@ pub const MENUS: &[(&str, &[&str])] = &[
      (
          "Help",
          &[
@@ -118,7 +385,7 @@ index acb8e3e..aac9b45 100644
              "-",
              "cmd:file.newSample",
              "-",
-@@ -2294,7 +2290,6 @@ pub enum AppMenuItem {
+@@ -2294,7 +2287,6 @@ pub enum AppMenuItem {
  /// The macOS application menu. Settings… is `app.preferences`, which `native_menu_tree` leaves out of Edit.
  pub const MAC_APP_MENU: &[AppMenuItem] = &[
      AppMenuItem::Cmd { id: "dc-about", label: "About DesignCraft", command: "help.about" },
