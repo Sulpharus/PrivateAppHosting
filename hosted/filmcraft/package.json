@@ -1,0 +1,8 @@
+{
+  "name": "@mininode-hosted/filmcraft",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "bundle": "node build.mjs"
+  }
+}

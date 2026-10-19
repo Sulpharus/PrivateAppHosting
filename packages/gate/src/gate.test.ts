@@ -213,6 +213,19 @@ describe('precompressed WebAssembly', () => {
     expect(await response.text()).toBe('BROTLI');
   });
 
+  it('caches only names with a content hash for a year', async () => {
+    const { handleAppRequest, hasContentHash } = await import('./worker.ts');
+    expect(hasContentHash('/wordcraft-web-dac7e7b375acbaf2_bg.wasm')).toBe(true);
+    expect(hasContentHash('/lightcraft_web_bg.wasm')).toBe(false);
+    expect(hasContentHash('/build-2026/app.wasm')).toBe(false);
+    const response = await handleAppRequest(
+      new Request('https://lightcraft.mininode.app/app_bg.wasm'),
+      env({ '/app_bg.wasm.br': 'BROTLI' }),
+    );
+    expect(response.headers.get('Content-Encoding')).toBe('br');
+    expect(response.headers.get('Cache-Control')).toBe('no-cache');
+  });
+
   it('ignores .wasm.br files of apps without wasm', async () => {
     const { handleAppRequest } = await import('./worker.ts');
     const response = await handleAppRequest(

@@ -89,9 +89,14 @@ export function connectSources(env: Pick<AppEnv, 'PORTAL_URL' | 'CONNECT_SRC'>):
 /**
  * A `.wasm` file above the 25 MiB asset limit ships as `<name>.wasm.br` (Brotli). It is served
  * under its own name, still encoded, so the browser unpacks it and checks its integrity hash.
- * Only for apps with `wasm: true`, outside `/assets/` (those skip the Worker), and the name must
- * carry a content hash: the file is cached for a year.
+ * Only for apps with `wasm: true`, outside `/assets/` (those skip the Worker). A name with a
+ * content hash is cached for a year; any other name is checked again on every load.
  */
+/** `app-6020ded28f149c6b_bg.wasm` has a content hash, `app_bg.wasm` has none. */
+export function hasContentHash(path: string): boolean {
+  return /[-_.][0-9a-f]{12,}(?=[-_.])/i.test(path.slice(path.lastIndexOf('/') + 1));
+}
+
 async function precompressedWasm(
   request: Request,
   env: AppEnv,
@@ -111,7 +116,10 @@ async function precompressedWasm(
       ...headers,
       'Content-Type': 'application/wasm',
       'Content-Encoding': 'br',
-      'Cache-Control': 'public, max-age=31536000, immutable',
+      'Cache-Control': hasContentHash(url.pathname)
+        ? 'public, max-age=31536000, immutable'
+        : 'no-cache',
+      ...(found.headers.get('ETag') ? { ETag: found.headers.get('ETag') ?? '' } : {}),
     },
     // The body is already Brotli; the runtime must not compress it again.
     encodeBody: 'manual',
