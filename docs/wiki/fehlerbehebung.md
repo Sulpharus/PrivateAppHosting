@@ -36,6 +36,7 @@ Meist eine **zwischengespeicherte** PWA-Version: Seite neu laden oder die App sc
 | Deploy: „SUPABASE_DB_URL points at the IPv6-only direct connection“ | Session-pooler-Adresse verwenden |
 | App-Deploy stoppt bei `doctor` | die Fehlerliste nennt `[regel] datei: text`; ausbessern, `pnpm mininode doctor hosted/<name>` |
 | App hat nach dem Deploy kein Logo; im Log steht `logo skipped: … too large` | das Logo ist zu groß (SVG höchstens 128 KB, PNG/WebP 256 KB). Ein kleineres `icon.png` (z. B. 512 px) in den App-Ordner legen; `mininode doctor` warnt jetzt davor (`icon-too-large`) |
+| Eine Craft-App lädt ewig oder meldet „FilmCraft failed to start: … failed to grow table“ | Der Bau hatte ein altes `wasm-opt` (binaryen aus Ubuntu) im PATH; Trunk und die FilmCraft-/LightCraft-Bauten nehmen es und zerstören damit die App. Die offiziellen Releases bauen ohne. `crafts.yml` installiert es nicht mehr, und `build.mjs` bricht ab, wenn eines im PATH liegt |
 | Ein Deploy-Schritt für eine App scheitert, die anderen gehen weiter | gewollt: eine kaputte App stoppt die anderen nicht; am Ende schlägt der Lauf fehl |
 
 ## Daten und Schlüssel
