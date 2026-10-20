@@ -6,8 +6,8 @@
 //     dialog: "Aus MiniNode" lists the stored files, "Von diesem Gerät" opens the browser's picker;
 //   - window.showSaveFilePicker and a download link (<a download href="blob:…">.click()) open a
 //     dialog that saves to MiniNode or, as before, to the device;
-//   - a download of a file that was opened from or saved to MiniNode in this page (the app's
-//     "Save") goes straight back to MiniNode; the toast offers "Speichern unter …" for the dialog,
+//   - a download or a save picker for a file that was opened from or saved to MiniNode in this
+//     page (the app's "Save") goes straight back to MiniNode; the toast offers "Speichern unter …" for the dialog,
 //     and saving again while it shows (e.g. Ctrl+S twice) opens the dialog too. A file of that name
 //     opened from or saved to the device ends this.
 // The app needs a data mode other than "none" (mn.files) and nothing else; texts come from the
@@ -244,8 +244,40 @@
     window.mnui.toast(t('files.save.done', { name }), toast);
   }
 
+  /** The dialog for `blob` (a promise) under `name`: MiniNode under a name, or the device. */
+  const askFor = (name, blob) =>
+    chooseTarget(name).then(async (choice) => {
+      if (!choice) return;
+      try {
+        if (choice.to === 'mininode') await store(choice.name, await blob);
+        else {
+          linked.delete(name);
+          download(await blob, name);
+        }
+      } catch (error) {
+        fail(error);
+      }
+    });
+
+  /** Whether saving `name` goes straight back to MiniNode (and counts this save if so). */
+  const direct = (name) => {
+    const again = lastDirect.name === name && Date.now() - lastDirect.at < ASK_AGAIN_MS;
+    if (!linked.has(name) || again) {
+      lastDirect = { name: '', at: 0 };
+      return false;
+    }
+    lastDirect = { name, at: Date.now() };
+    return true;
+  };
+
+  /** Stores `blob` (a promise) under `name` without the dialog; the toast offers it. */
+  const saveDirect = (name, blob) => {
+    const saveAs = { action: { label: t('files.save.as'), onClick: () => askFor(name, blob) } };
+    return blob.then((file) => store(name, file, saveAs)).catch((error) => fail(error, saveAs));
+  };
+
   /** A file handle that collects what the app writes and stores it in MiniNode on close. */
-  const storedHandle = (name, type) => ({
+  const storedHandle = (name, type, straight = false) => ({
     kind: 'file',
     name,
     async getFile() {
@@ -258,7 +290,9 @@
           parts.push(data?.type === 'write' ? data.data : data);
         },
         async close() {
-          await store(name, new Blob(parts, { type: type || mimeOf(name) }));
+          const blob = new Blob(parts, { type: type || mimeOf(name) });
+          if (straight) await saveDirect(name, Promise.resolve(blob));
+          else await store(name, blob);
         },
         async abort() {
           parts.length = 0;
@@ -318,12 +352,12 @@
   // ---- save: showSaveFilePicker and download links ----
   const nativeSavePicker = window.showSaveFilePicker?.bind(window);
   window.showSaveFilePicker = async (options = {}) => {
+    const types = Object.keys(options.types?.[0]?.accept ?? {});
+    if (options.suggestedName && direct(options.suggestedName))
+      return storedHandle(options.suggestedName, types[0] ?? '', true);
     const choice = await chooseTarget(options.suggestedName);
     if (!choice) throw abort();
-    if (choice.to === 'mininode') {
-      const types = Object.keys(options.types?.[0]?.accept ?? {});
-      return storedHandle(choice.name, types[0] ?? '');
-    }
+    if (choice.to === 'mininode') return storedHandle(choice.name, types[0] ?? '');
     if (options.suggestedName) linked.delete(options.suggestedName);
     if (nativeSavePicker) return nativeSavePicker(options);
     // No native picker (Firefox, Safari): what the app writes becomes a download.
@@ -360,26 +394,7 @@
     // Read the file now: the app may revoke its address while the dialog is open.
     const name = this.download || 'download';
     const blob = fetch(this.href).then((response) => response.blob());
-    const ask = () =>
-      chooseTarget(name).then(async (choice) => {
-        if (!choice) return;
-        try {
-          if (choice.to === 'mininode') await store(choice.name, await blob);
-          else {
-            linked.delete(name);
-            download(await blob, name);
-          }
-        } catch (error) {
-          fail(error);
-        }
-      });
-    const again = lastDirect.name === name && Date.now() - lastDirect.at < ASK_AGAIN_MS;
-    if (!linked.has(name) || again) {
-      lastDirect = { name: '', at: 0 };
-      return void ask();
-    }
-    lastDirect = { name, at: Date.now() };
-    const saveAs = { action: { label: t('files.save.as'), onClick: ask } };
-    blob.then((file) => store(name, file, saveAs)).catch((error) => fail(error, saveAs));
+    if (direct(name)) saveDirect(name, blob);
+    else askFor(name, blob);
   };
 })();

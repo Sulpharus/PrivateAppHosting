@@ -106,7 +106,7 @@ describe('opening', () => {
 
 describe('saving', () => {
   it('stores what the app writes to a save-picker handle in MiniNode', async () => {
-    const picked = win.showSaveFilePicker({ suggestedName: 'Brief.docx' });
+    const picked = win.showSaveFilePicker({ suggestedName: 'Entwurf.docx' });
     await until(() => buttonNamed('In MiniNode speichern'));
     const name = sheet()?.querySelector('input');
     if (name) name.value = 'Neu.docx';
@@ -120,8 +120,30 @@ describe('saving', () => {
     expect(await (upload.mock.calls[0] as unknown as [string, Blob])[1].text()).toBe('hi');
   });
 
+  it('hands the save picker a MiniNode handle without the dialog for a saved name', async () => {
+    const first = win.showSaveFilePicker({ suggestedName: 'Bericht.docx' });
+    await until(() => buttonNamed('In MiniNode speichern'));
+    buttonNamed('In MiniNode speichern')?.click();
+    const written = await (await first).createWritable();
+    await written.close();
+    await until(() => upload.mock.calls.length === 1);
+    vi.useFakeTimers({ toFake: ['Date'] });
+    try {
+      vi.setSystemTime(Date.now() + 60_000);
+      const handle = await win.showSaveFilePicker({ suggestedName: 'Bericht.docx' });
+      expect(sheet()).toBeNull();
+      const again = await handle.createWritable();
+      await again.write(new Uint8Array([111, 107]));
+      await again.close();
+      await until(() => upload.mock.calls.length === 2);
+      expect(upload.mock.calls[1]?.[0]).toBe('Bericht.docx');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('rejects with AbortError when the person cancels', async () => {
-    const picked = win.showSaveFilePicker({ suggestedName: 'Brief.docx' });
+    const picked = win.showSaveFilePicker({ suggestedName: 'Entwurf.docx' });
     await until(() => buttonNamed('Abbrechen'));
     buttonNamed('Abbrechen')?.click();
     await expect(picked).rejects.toMatchObject({ name: 'AbortError' });

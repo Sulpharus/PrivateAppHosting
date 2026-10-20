@@ -40,7 +40,9 @@ own. `release.json` names the release (`name`, `version`, `sha256`), the app's l
   (`packages/ui/README.md`). Opening a file and saving one offer the person's MiniNode files
   (`mn.files`, data mode `private`) next to the device; the texts are `files.*` in `i18n/`. A
   file opened from or saved to MiniNode is saved back without asking the next time the app
-  downloads it under the same name (the app's Save); the toast offers "Speichern unter …".
+  saves it under the same name (a download or its save picker: the app's Save); the toast offers
+  "Speichern unter …". WordCraft's patch makes a document take the name chosen in the save
+  dialog (upstream's web build kept "Document1"), so its next Save is recognised.
 - **Start after the account (`mn-boot.js`):** the app's own start scripts run once the person is
   signed in, the SDK's `installLocalStorageSync` has put the settings the app keeps in
   `localStorage` back from their account, and `<html lang>` carries their MiniNode language. The

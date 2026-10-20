@@ -9,7 +9,7 @@ index d9b44aa..9152db3 100644
 -web-sys = { version = "0.3", features = ["Window", "Document", "Element", "HtmlElement", "HtmlCanvasElement", "HtmlAnchorElement", "HtmlIFrameElement", "Blob", "BlobPropertyBag", "Url", "Location", "CssStyleDeclaration", "Event", "EventTarget", "BeforeUnloadEvent", "ClipboardEvent", "DataTransfer", "FileList", "File", "DomStringList", "IdbFactory", "IdbOpenDbRequest", "IdbRequest", "IdbDatabase", "IdbObjectStore", "IdbTransaction", "IdbTransactionMode", "MediaQueryList"] }
 +web-sys = { version = "0.3", features = ["Window", "Document", "Element", "HtmlElement", "HtmlCanvasElement", "HtmlAnchorElement", "HtmlIFrameElement", "Blob", "BlobPropertyBag", "Url", "Location", "CssStyleDeclaration", "Event", "EventTarget", "BeforeUnloadEvent", "ClipboardEvent", "DataTransfer", "FileList", "File", "DomStringList", "IdbFactory", "IdbOpenDbRequest", "IdbRequest", "IdbDatabase", "IdbObjectStore", "IdbTransaction", "IdbTransactionMode", "MediaQueryList", "Storage"] }
 diff --git a/apps/wordcraft-web/src/web.rs b/apps/wordcraft-web/src/web.rs
-index 0e40099..37e6e00 100644
+index 0e40099..d7ad26d 100644
 --- a/apps/wordcraft-web/src/web.rs
 +++ b/apps/wordcraft-web/src/web.rs
 @@ -7,7 +7,7 @@ use std::rc::Rc;
@@ -79,9 +79,9 @@ index 0e40099..37e6e00 100644
      fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
 -        self.app.ui(ui);
 +        self.app.borrow_mut().ui(ui);
-     }
- }
- 
++    }
++}
++
 +/// MiniNode: the `localStorage` key holding the preferences. MiniNode syncs `localStorage` to the
 +/// person's account, so the settings follow them to their other devices.
 +const PREFS_KEY: &str = "wordcraft.preferences";
@@ -158,9 +158,9 @@ index 0e40099..37e6e00 100644
 +            self.next_check.set(now + PREFS_CHECK_SECS);
 +            self.save(app);
 +        }
-+    }
-+}
-+
+     }
+ }
+ 
 +fn local_storage() -> Option<web_sys::Storage> {
 +    web_sys::window()?.local_storage().ok().flatten()
 +}
@@ -188,6 +188,19 @@ index 0e40099..37e6e00 100644
  /// Largest picture pasted from the browser's clipboard (as `insert.picture` allows).
  const MAX_PASTED_BYTES: f64 = (200u32 << 20) as f64;
  /// Most pictures one paste inserts.
+@@ -419,7 +532,11 @@ fn trigger_save_file_picker(
+             Ok(handle_val) => match write_file_handle(&handle_val, &bytes_vec).await {
+                 Ok(()) => {
+                     log::info!("saved {name} through the save picker");
+-                    SaveOutcome::Saved
++                    // MiniNode: the name the person chose, so the document takes it.
++                    match js_sys::Reflect::get(&handle_val, &wasm_bindgen::JsValue::from_str("name")).ok().and_then(|v| v.as_string()) {
++                        Some(chosen) if !chosen.is_empty() && chosen != name => SaveOutcome::SavedAs(chosen),
++                        _ => SaveOutcome::Saved,
++                    }
+                 }
+                 Err(e) => {
+                     log::error!("couldn't write {name}: {e}");
 diff --git a/crates/engine/src/sample.rs b/crates/engine/src/sample.rs
 index fd5ac64..15271e6 100644
 --- a/crates/engine/src/sample.rs
@@ -214,6 +227,19 @@ index c7c555b..a3c5335 100644
      o.push_str("\\documentclass{article}\n");
      o.push_str("\\usepackage[T1]{fontenc}\n");
      if w.uses.ulem {
+diff --git a/crates/ui-egui/src/async_saves.rs b/crates/ui-egui/src/async_saves.rs
+index a3c054e..b431640 100644
+--- a/crates/ui-egui/src/async_saves.rs
++++ b/crates/ui-egui/src/async_saves.rs
+@@ -18,6 +18,8 @@ use std::rc::Rc;
+ pub enum SaveOutcome {
+     /// The file is written and closed.
+     Saved,
++    /// MiniNode: written and closed under another name the person chose in the picker.
++    SavedAs(String),
+     /// The user cancelled the picker; nothing was written.
+     Cancelled,
+     /// The picker, the write or the close failed (the reason).
 diff --git a/crates/ui-egui/src/backstage.rs b/crates/ui-egui/src/backstage.rs
 index b89665a..225e3e8 100644
 --- a/crates/ui-egui/src/backstage.rs
@@ -338,7 +364,7 @@ index 45c8a1c..317e4ed 100644
              vec![m("Shading", "table.shading"), m("Borders", "table.borders"), c("Border Painter", "table.borderPainter")]
          }
 diff --git a/crates/ui-egui/src/lib.rs b/crates/ui-egui/src/lib.rs
-index 662516f..e5d71d3 100644
+index 662516f..3e3f398 100644
 --- a/crates/ui-egui/src/lib.rs
 +++ b/crates/ui-egui/src/lib.rs
 @@ -256,7 +256,6 @@ pub struct UiState {
@@ -357,7 +383,51 @@ index 662516f..e5d71d3 100644
              author: String::new(),
              window: None,
              language: i18n::AUTO.into(),
-@@ -1492,10 +1490,6 @@ impl WordApp {
+@@ -1096,10 +1094,26 @@ impl WordApp {
+         let Some(saves) = self.services.async_saves.clone() else { return };
+         for (ticket, outcome) in saves.take_finished() {
+             let current = self.session.document_id();
++            // MiniNode: a Save of the document under another name in the picker renames it, as on
++            // the desktop, so the next Save suggests that name (an export keeps the document's).
++            let (outcome, chosen) = match outcome {
++                async_saves::SaveOutcome::SavedAs(chosen) => (async_saves::SaveOutcome::Saved, Some(chosen)),
++                outcome => (outcome, None),
++            };
++            if let Some(chosen) = chosen
++                && let Some(save) = self.saves_in_flight.iter().find(|s| s.ticket == ticket)
++                && save.marked_saved
++                && save.document == current
++                && std::path::Path::new(&chosen).extension() == std::path::Path::new(&save.name).extension()
++            {
++                self.session.path = Some(std::path::PathBuf::from(chosen));
++            }
+             if let Some(i) = self.saves_in_flight.iter().position(|s| s.ticket == ticket) {
+                 let save = self.saves_in_flight.swap_remove(i);
+                 match &outcome {
+-                    async_saves::SaveOutcome::Saved => log::info!("saved {} through the save picker", save.name),
++                    async_saves::SaveOutcome::Saved | async_saves::SaveOutcome::SavedAs(_) => {
++                        log::info!("saved {} through the save picker", save.name)
++                    }
+                     async_saves::SaveOutcome::Cancelled | async_saves::SaveOutcome::Failed(_) => {
+                         if save.marked_saved && save.document == current {
+                             self.session.dirty = true;
+@@ -1119,13 +1133,13 @@ impl WordApp {
+             }
+             match outcome {
+                 // Only when nothing changed since and no later save of it is still unconfirmed.
+-                async_saves::SaveOutcome::Saved if !self.session.dirty && self.session.rev() == wait.rev && !self.save_unconfirmed() => {
++                async_saves::SaveOutcome::Saved | async_saves::SaveOutcome::SavedAs(_) if !self.session.dirty && self.session.rev() == wait.rev && !self.save_unconfirmed() => {
+                     if let Err(e) = self.execute_user(&wait.then, wait.params) {
+                         self.status(e);
+                     }
+                 }
+                 // Edited while the picker was open (those edits may not be written yet): ask again.
+-                async_saves::SaveOutcome::Saved => {
++                async_saves::SaveOutcome::Saved | async_saves::SaveOutcome::SavedAs(_) => {
+                     let name = self.prompt_name();
+                     self.dialog = Some(dialogs::Dialog::SaveChanges {
+                         name,
+@@ -1492,10 +1506,6 @@ impl WordApp {
                          .into(),
                  ));
              }
@@ -368,7 +438,7 @@ index 662516f..e5d71d3 100644
              "ui.caretAnimation" => {
                  // File › Options › Advanced › Animation: `value` true or false turns the caret's
                  // glide and fading blink on or off; no value reads it.
-@@ -2390,7 +2384,6 @@ pub(crate) fn works_without_document(id: &str) -> bool {
+@@ -2390,7 +2400,6 @@ pub(crate) fn works_without_document(id: &str) -> bool {
              | "ui.openFileDialog"
              | "ui.fileBrowser"
              | "ui.makeDefaultApp"
@@ -376,7 +446,7 @@ index 662516f..e5d71d3 100644
              | "ui.caretAnimation"
              | "ui.startScreen"
      ) || id.starts_with("help.")
-@@ -2703,7 +2696,7 @@ mod tests {
+@@ -2703,7 +2712,7 @@ mod tests {
          for id in ["format.bold", "text.insert", "file.save", "file.saveAs", "file.print", "edit.paste", "insert.table", "ui.print"] {
              assert!(!widgets::enabled(a, id), "{id} is off with no document");
          }
@@ -385,7 +455,7 @@ index 662516f..e5d71d3 100644
              assert!(widgets::enabled(a, id), "{id} works with no document");
          }
          assert!(!chrome::qat_enabled(a, "file.save"));
-@@ -4540,7 +4533,7 @@ mod tests {
+@@ -4540,7 +4549,7 @@ mod tests {
                  a,
              );
              h.run_steps(4);
