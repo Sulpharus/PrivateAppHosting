@@ -82,6 +82,11 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // WebAssembly modules (tens of MB) go straight to the network and the browser's HTTP cache.
+  // Passing them through here and copying them into the cache made Firefox abort the download
+  // ("AbortError", the Craft apps did not start).
+  if (url.pathname.endsWith('.wasm')) return;
+
   if (url.pathname === '/_mininode/config.json') {
     event.respondWith(
       fromNetwork(request).catch(() =>

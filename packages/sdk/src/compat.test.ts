@@ -100,11 +100,46 @@ describe('localStorage sync', () => {
     const { mn, kv } = fakeMn('u1', { 'ls:claims': '[1]' });
     await installLocalStorageSync(mn);
     expect(localStorage.getItem('claims')).toBe('[1]');
-    lsSet('policies', '[2]');
-    lsRemove('claims');
+    vi.useFakeTimers();
+    try {
+      lsSet('policies', '[2]');
+      lsRemove('claims');
+      await vi.advanceTimersByTimeAsync(2000);
+      expect(kv.get('ls:policies')).toBe('[2]');
+      expect(kv.has('ls:claims')).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('sends the latest value once the app stops saving, and at the latest every 10 s', async () => {
+    const { mn, kv } = fakeMn('u4');
+    const set = vi.spyOn(mn.kv, 'set');
+    await installLocalStorageSync(mn);
+    vi.useFakeTimers();
+    try {
+      // An app that saves its settings every second keeps changing them.
+      for (let second = 1; second <= 9; second++) {
+        lsSet('prefs', `v${second}`);
+        await vi.advanceTimersByTimeAsync(1000);
+      }
+      expect(set).not.toHaveBeenCalled();
+      lsSet('prefs', 'v10');
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(set).toHaveBeenCalledOnce();
+      expect(kv.get('ls:prefs')).toBe('v10');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('sends what is waiting when the page is hidden', async () => {
+    const { mn, kv } = fakeMn('u5');
+    await installLocalStorageSync(mn);
+    lsSet('prefs', 'closing');
+    dispatchEvent(new Event('pagehide'));
     await Promise.resolve();
-    expect(kv.get('ls:policies')).toBe('[2]');
-    expect(kv.has('ls:claims')).toBe(false);
+    expect(kv.get('ls:prefs')).toBe('closing');
   });
 
   it('drops what another account left in this browser', async () => {
@@ -121,6 +156,7 @@ describe('localStorage sync', () => {
     seed('theme', 'dark');
     const { mn, kv } = fakeMn('u3', { 'ls:theme': 'light' });
     await installLocalStorageSync(mn);
+    dispatchEvent(new Event('pagehide'));
     await Promise.resolve();
     expect(localStorage.getItem('prefs')).toBe('local');
     expect(localStorage.getItem('theme')).toBe('light');

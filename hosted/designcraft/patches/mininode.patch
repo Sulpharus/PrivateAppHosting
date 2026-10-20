@@ -24,17 +24,18 @@ index 1b28064..ff6619e 100644
  
 diff --git a/apps/designcraft-web/src/prefs.rs b/apps/designcraft-web/src/prefs.rs
 new file mode 100644
-index 0000000..1b693bf
+index 0000000..4dab198
 --- /dev/null
 +++ b/apps/designcraft-web/src/prefs.rs
-@@ -0,0 +1,119 @@
+@@ -0,0 +1,109 @@
 +//! MiniNode: the desktop's `ui.json` and `prefs.json`, kept in `localStorage` as one entry
 +//! (`{"ui": …, "prefs": …}`). MiniNode syncs `localStorage` to the person's account, so the
 +//! settings follow them across devices.
 +//!
 +//! Without a saved choice, the interface language follows the page (`<html lang>`, set by
-+//! MiniNode) and the brightness follows `prefers-color-scheme`. Those picks are left out of the
-+//! saved entry until the person changes them in the app, so they keep following the page.
++//! MiniNode). That pick is left out of the saved entry until the person changes it in the app, so
++//! it keeps following the page. The brightness keeps the app's own default (its light levels
++//! looked grey to people used to it).
 +
 +use designcraft_ui_egui::theme::Brightness;
 +use designcraft_ui_egui::{DesignApp, UiState};
@@ -72,11 +73,7 @@ index 0000000..1b693bf
 +        app.ui.language = page_language();
 +        auto_language = Some(app.ui.language.clone());
 +    }
-+    let mut auto_brightness = None;
-+    if saved["ui"].get("brightness").is_none() {
-+        app.ui.brightness = system_brightness();
-+        auto_brightness = Some(app.ui.brightness);
-+    }
++    let auto_brightness: Option<Brightness> = None;
 +    let mut persisted = Persisted { last: String::new(), checked: 0.0, auto_language, auto_brightness };
 +    persisted.last = persisted.serialize(app).unwrap_or_default();
 +    persisted
@@ -140,13 +137,6 @@ index 0000000..1b693bf
 +        .to_string()
 +}
 +
-+/// Medium Light for a light system appearance, else the app's default Medium Dark.
-+fn system_brightness() -> Brightness {
-+    let light = web_sys::window()
-+        .and_then(|w| w.match_media("(prefers-color-scheme: light)").ok().flatten())
-+        .is_some_and(|m| m.matches());
-+    if light { Brightness::MediumLight } else { Brightness::MediumDark }
-+}
 diff --git a/apps/designcraft-web/src/web.rs b/apps/designcraft-web/src/web.rs
 index fe0f4a7..b829bf9 100644
 --- a/apps/designcraft-web/src/web.rs

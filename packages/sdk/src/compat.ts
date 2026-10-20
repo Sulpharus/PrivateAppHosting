@@ -160,6 +160,8 @@ interface StorageMethods {
 const patched = new WeakMap<object, StorageMethods>();
 
 const KEY_PREFIX = 'ls:';
+const SYNC_QUIET_MS = 2000;
+const SYNC_MAX_MS = 10000;
 const OWNER_KEY = 'mn-ls-owner';
 /** Keys of the platform itself; never wiped or synced. */
 const isPlatformKey = (key: string) =>
@@ -211,13 +213,41 @@ export async function installLocalStorageSync(mn: Mininode): Promise<void> {
   // Methods live on the shared prototype; sessionStorage must stay untouched.
   const isLocal = (target: Storage) => target !== window.sessionStorage;
 
+  // Apps save their settings often (some every second while one works): the account gets the
+  // latest value per key, 2 s after the last change, at least every 10 s, and when the page hides.
+  const pending = new Map<string, string | null>();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let firstPending = 0;
+  const flush = () => {
+    clearTimeout(timer);
+    timer = undefined;
+    for (const [key, value] of pending) {
+      const done =
+        value === null ? mn.kv.delete(KEY_PREFIX + key) : mn.kv.set(KEY_PREFIX + key, value);
+      void Promise.resolve(done).catch((error: unknown) => {
+        console.warn('mininode: could not save', key, error);
+      });
+    }
+    pending.clear();
+  };
+  const schedule = () => {
+    const now = Date.now();
+    if (!timer) firstPending = now;
+    clearTimeout(timer);
+    timer = setTimeout(
+      flush,
+      Math.max(0, Math.min(SYNC_QUIET_MS, firstPending + SYNC_MAX_MS - now)),
+    );
+  };
+  addEventListener('pagehide', flush);
+  addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') flush();
+  });
+
   const write = (key: string, value: string | null) => {
     if (isPlatformKey(key) || key.startsWith('mn-ls-seen:')) return;
-    const done =
-      value === null ? mn.kv.delete(KEY_PREFIX + key) : mn.kv.set(KEY_PREFIX + key, value);
-    void Promise.resolve(done).catch((error: unknown) => {
-      console.warn('mininode: could not save', key, error);
-    });
+    pending.set(key, value);
+    schedule();
     if (value === null) original.removeItem.call(storage, `mn-ls-seen:${key}`);
     else original.setItem.call(storage, `mn-ls-seen:${key}`, '1');
   };
