@@ -12,7 +12,8 @@
 //     opened from or saved to the device ends this.
 // The app needs a data mode other than "none" (mn.files) and nothing else; texts come from the
 // app's language packages (keys files.*, German fallback below). data-mn-native on a field or a
-// link keeps the browser's own behaviour.
+// link keeps the browser's own behaviour. URL.createObjectURL and revokeObjectURL are wrapped to
+// keep the Blob behind each blob: address, so a download link is saved without fetching it.
 (() => {
   const TEXT = {
     'files.open.title': 'Datei öffnen',
