@@ -1953,6 +1953,8 @@ details.mn-more > div {
   color: var(--mn-bg);
   padding: var(--mn-s3) var(--mn-s4);
   border-radius: var(--mn-r-md);
+  /* Its own font: on a page that styles only its own parts the toast sits in a bare <body>. */
+  font-family: var(--mn-font-text);
   font-size: var(--mn-fs-sm);
   font-weight: 600;
   opacity: 0;
