@@ -1,5 +1,5 @@
 diff --git a/apps/designcraft-web/Cargo.toml b/apps/designcraft-web/Cargo.toml
-index 1667e69..fb2b87b 100644
+index 1667e69..392d295 100644
 --- a/apps/designcraft-web/Cargo.toml
 +++ b/apps/designcraft-web/Cargo.toml
 @@ -30,4 +30,4 @@ rfd = { workspace = true }
@@ -7,7 +7,7 @@ index 1667e69..fb2b87b 100644
  wasm-bindgen-futures = "0.4"
  js-sys = "0.3"
 -web-sys = { version = "0.3", features = ["Event", "EventTarget", "Window", "Document", "Element", "HtmlElement", "HtmlCanvasElement", "HtmlAnchorElement", "Blob", "BlobPropertyBag", "Url", "Location", "CssStyleDeclaration"] }
-+web-sys = { version = "0.3", features = ["Event", "EventTarget", "Window", "Document", "Element", "HtmlElement", "HtmlCanvasElement", "HtmlAnchorElement", "Blob", "BlobPropertyBag", "Url", "Location", "CssStyleDeclaration", "Storage", "VisibilityState"] }
++web-sys = { version = "0.3", features = ["Event", "EventTarget", "Window", "Document", "Element", "HtmlElement", "HtmlCanvasElement", "HtmlAnchorElement", "Blob", "BlobPropertyBag", "Url", "Location", "CssStyleDeclaration", "Storage", "VisibilityState", "MediaQueryList"] }
 diff --git a/apps/designcraft-web/src/main.rs b/apps/designcraft-web/src/main.rs
 index 1b28064..ff6619e 100644
 --- a/apps/designcraft-web/src/main.rs
@@ -24,28 +24,35 @@ index 1b28064..ff6619e 100644
  
 diff --git a/apps/designcraft-web/src/prefs.rs b/apps/designcraft-web/src/prefs.rs
 new file mode 100644
-index 0000000..ec62952
+index 0000000..cdc56a4
 --- /dev/null
 +++ b/apps/designcraft-web/src/prefs.rs
-@@ -0,0 +1,100 @@
+@@ -0,0 +1,158 @@
 +//! MiniNode: the desktop's `ui.json` and `prefs.json`, kept in `localStorage` as one entry
 +//! (`{"ui": …, "prefs": …}`). MiniNode syncs `localStorage` to the person's account, so the
 +//! settings follow them across devices.
 +//!
 +//! Without a saved choice, the interface language follows the page (`<html lang>`, set by
 +//! MiniNode). That pick is left out of the saved entry until the person changes it in the app, so
-+//! it keeps following the page. The brightness keeps the app's own default (its light levels
-+//! looked grey to people used to it).
++//! it keeps following the page. The brightness follows the system the same way: Light (white,
++//! MiniNode's neutrals) or Dark, until the person picks one in the app.
 +
++use designcraft_ui_egui::theme::Brightness;
 +use designcraft_ui_egui::{DesignApp, UiState};
 +
 +const KEY: &str = "designcraft.preferences";
++/// Set once the brightness follows the system. Earlier MiniNode builds saved the app's grey
++/// default (Medium Dark, or Medium Light) with every setting; the first start with this build
++/// drops it once. Dark, Light and High Contrast stay.
++const FOLLOW_KEY: &str = "designcraft.theme-follow";
 +
 +pub struct Persisted {
 +    /// The entry as last written (or loaded), to write only when something changed.
 +    last: String,
 +    checked: f64,
 +    auto_language: Option<String>,
++    auto_brightness: Option<Brightness>,
++    followed: f64,
 +}
 +
 +fn storage() -> Option<web_sys::Storage> {
@@ -71,12 +78,50 @@ index 0000000..ec62952
 +        app.ui.language = page_language();
 +        auto_language = Some(app.ui.language.clone());
 +    }
-+    let mut persisted = Persisted { last: String::new(), checked: 0.0, auto_language };
++    let first_follow = storage().is_some_and(|s| s.get_item(FOLLOW_KEY).ok().flatten().is_none());
++    let stored = saved["ui"].get("brightness").and_then(|b| serde_json::from_value::<Brightness>(b.clone()).ok());
++    let grey = matches!(stored, Some(Brightness::MediumDark | Brightness::MediumLight));
++    let mut auto_brightness = None;
++    if stored.is_none() || (first_follow && grey) {
++        app.ui.brightness = system_brightness();
++        auto_brightness = Some(app.ui.brightness);
++    }
++    let mut persisted = Persisted { last: String::new(), checked: 0.0, auto_language, auto_brightness, followed: 0.0 };
 +    persisted.last = persisted.serialize(app).unwrap_or_default();
++    if first_follow {
++        // Write the entry without the old brightness now, then remember that it was dropped.
++        persisted.last.clear();
++        persisted.save(app, 0.0, true);
++        if let Some(s) = storage() {
++            let _ = s.set_item(FOLLOW_KEY, "1");
++        }
++    }
 +    persisted
 +}
 +
 +impl Persisted {
++    /// While the brightness follows the system, switch with it (looked at once a second).
++    /// Returns true when it switched.
++    pub fn follow_system(&mut self, app: &mut DesignApp, now: f64) -> bool {
++        if now - self.followed < 1.0 {
++            return false;
++        }
++        self.followed = now;
++        let Some(auto) = self.auto_brightness else { return false };
++        if auto != app.ui.brightness {
++            // Picked in the app: kept from now on (serialize saves it).
++            return false;
++        }
++        let system = system_brightness();
++        if system == auto {
++            return false;
++        }
++        app.ui.brightness = system;
++        app.restyle = true;
++        self.auto_brightness = Some(system);
++        true
++    }
++
 +    /// Write the settings when they changed: at most once a second, or now with `force`.
 +    pub fn save(&mut self, app: &DesignApp, now: f64, force: bool) {
 +        if !force && now - self.checked < 1.0 {
@@ -101,10 +146,16 @@ index 0000000..ec62952
 +        if self.auto_language.as_ref().is_some_and(|l| *l != app.ui.language) {
 +            self.auto_language = None;
 +        }
++        if self.auto_brightness.is_some_and(|b| b != app.ui.brightness) {
++            self.auto_brightness = None;
++        }
 +        let mut ui = serde_json::to_value(&app.ui).ok()?;
 +        if let Some(fields) = ui.as_object_mut() {
 +            if self.auto_language.is_some() {
 +                fields.remove("language");
++            }
++            if self.auto_brightness.is_some() {
++                fields.remove("brightness");
 +            }
 +        }
 +        serde_json::to_string(&serde_json::json!({"ui": ui, "prefs": app.session.prefs})).ok()
@@ -128,8 +179,15 @@ index 0000000..ec62952
 +        .to_string()
 +}
 +
++/// Light for a light system appearance (`prefers-color-scheme`), else Dark.
++fn system_brightness() -> Brightness {
++    let dark = web_sys::window()
++        .and_then(|w| w.match_media("(prefers-color-scheme: dark)").ok().flatten())
++        .is_some_and(|m| m.matches());
++    if dark { Brightness::Dark } else { Brightness::Light }
++}
 diff --git a/apps/designcraft-web/src/web.rs b/apps/designcraft-web/src/web.rs
-index fe0f4a7..b829bf9 100644
+index fe0f4a7..0650e09 100644
 --- a/apps/designcraft-web/src/web.rs
 +++ b/apps/designcraft-web/src/web.rs
 @@ -71,17 +71,23 @@ pub fn start() {
@@ -198,11 +256,17 @@ index fe0f4a7..b829bf9 100644
  }
  
  impl eframe::App for WebShell {
-@@ -368,6 +401,7 @@ impl eframe::App for WebShell {
+@@ -367,7 +400,13 @@ impl eframe::App for WebShell {
+                     }
                  });
              }
++            let now = ctx.input(|i| i.time);
++            // Before logic(), which restyles on this frame.
++            if self.persisted.follow_system(&mut self.app, now) {
++                ctx.request_repaint();
++            }
              self.app.logic(ctx);
-+            self.persisted.save(&self.app, ctx.input(|i| i.time), false);
++            self.persisted.save(&self.app, now, false);
          });
      }
  
@@ -374,3 +438,96 @@ index acb8e3e..ce1eee6 100644
      AppMenuItem::Sep,
      AppMenuItem::Cmd { id: "dc-settings", label: "Settings…", command: "app.preferences" },
      AppMenuItem::Sep,
+diff --git a/crates/ui-egui/src/theme.rs b/crates/ui-egui/src/theme.rs
+index 7b2364f..3a0ad56 100644
+--- a/crates/ui-egui/src/theme.rs
++++ b/crates/ui-egui/src/theme.rs
+@@ -196,34 +196,39 @@ impl Tokens {
+                 tab_strip: hex(0xa6a6a6),
+                 ..dark
+             },
++            // MiniNode: white surfaces and the platform's neutrals (packages/ui), like its other apps.
+             Brightness::Light => Tokens {
+                 dark: false,
+-                app_bar: hex(0xe4e4e4),
+-                panel: hex(0xf0f0f0),
+-                panel_darker: hex(0xe2e2e2),
++                app_bar: hex(0xffffff),
++                panel: hex(0xffffff),
++                panel_darker: hex(0xf3f4f1),
+                 input: hex(0xffffff),
+-                input_border: hex(0xb4b4b4),
+-                divider: hex(0xd0d0d0),
+-                text: hex(0x1e1e1e),
+-                text_strong: hex(0x000000),
+-                text_dim: hex(0x555555),
+-                text_disabled: hex(0x9a9a9a),
+-                icon: hex(0x2c2c2c),
+-                hover: hex(0xdddddd),
+-                tool_active: hex(0xcfcfcf),
+-                row_selected: hex(0xc4dbf7),
+-                pasteboard: hex(0xd4d4d4),
+-                ruler: hex(0xf2f2f2),
+-                ruler_tick: hex(0x4a4a4a),
+-                tab_inactive: hex(0xdcdcdc),
+-                button: hex(0xf0f0f0),
+-                border: hex(0xc4c4c4),
+-                field_border: hex(0xa8a8a8),
+-                well: hex(0xcfcfcf),
+-                well_rim: hex(0xbdbdbd),
+-                ruler_text: hex(0x1e1e1e),
+-                section_divider: hex(0xd0d0d0),
+-                tab_strip: hex(0xe2e2e2),
++                input_border: hex(0xc4cac2),
++                divider: hex(0xdde1db),
++                text: hex(0x15191c),
++                text_strong: hex(0x0b0e10),
++                text_dim: hex(0x5b646c),
++                text_disabled: hex(0x9aa19c),
++                icon: hex(0x2a3035),
++                hover: hex(0xeceee9),
++                tool_active: hex(0xdfe3dd),
++                row_selected: hex(0xd6e6fa),
++                pasteboard: hex(0xe6e9e4),
++                ruler: hex(0xf8f9f7),
++                ruler_tick: hex(0x5b646c),
++                tab_inactive: hex(0xf3f4f1),
++                button: hex(0xffffff),
++                border: hex(0xdde1db),
++                field_border: hex(0xc4cac2),
++                well: hex(0xe3e7e1),
++                well_rim: hex(0xccd2ca),
++                ruler_text: hex(0x15191c),
++                section_divider: hex(0xe6e9e4),
++                tab_strip: hex(0xf3f4f1),
++                measure_bg: Color32::from_rgba_unmultiplied(21, 25, 28, 220),
++                // AA on white: links and labels 5.7:1, white text on buttons 6.9:1.
++                accent: hex(0x0a62d0),
++                accent_strong: hex(0x0a55b8),
+                 ..dark
+             },
+             Brightness::HighContrast => Tokens {
+@@ -520,6 +525,11 @@ pub fn apply(ctx: &egui::Context, t: &Tokens) {
+     v.menu_corner_radius = CornerRadius::same(4);
+     v.selection.bg_fill = t.accent_strong;
+     v.selection.stroke = Stroke::new(1.0, t.text_strong);
++    if !t.dark {
++        // MiniNode: on light surfaces a pale selection with dark text (AA), not text on blue.
++        v.selection.bg_fill = t.row_selected;
++        v.selection.stroke = Stroke::new(1.0, t.text);
++    }
+     v.hyperlink_color = t.accent;
+     v.override_text_color = Some(t.text);
+     craft_ui::theme::WidgetPalette { noninteractive: t.panel, inactive: t.button, hovered: t.hover, active: t.tool_active, open: t.hover }.apply_to(
+@@ -534,7 +544,10 @@ pub fn apply(ctx: &egui::Context, t: &Tokens) {
+     // InDesign buttons are outline-only.
+     v.widgets.inactive.weak_bg_fill = Color32::TRANSPARENT;
+     v.widgets.inactive.bg_fill = t.input;
+-    v.popup_shadow = egui::epaint::Shadow { offset: [0, 4], blur: 12, spread: 0, color: Color32::from_black_alpha(90) };
++    v.popup_shadow = egui::epaint::Shadow { offset: [0, 4], blur: 12, spread: 0, color: Color32::from_black_alpha(if t.dark { 90 } else { 40 }) };
++    // MiniNode: pin egui to this theme. It follows the system by default and would switch to
++    // its own unstyled light or dark style when the device's appearance changes.
++    ctx.set_theme(if t.dark { egui::Theme::Dark } else { egui::Theme::Light });
+     ctx.set_visuals(v);
+     ctx.global_style_mut(|s| {
+         s.text_styles = text_styles.clone();

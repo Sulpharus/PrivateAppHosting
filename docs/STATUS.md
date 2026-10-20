@@ -3,7 +3,7 @@
 Where things stand, what the owner still has to do, and what a new session should know.
 Update it at the end of every working session; history belongs in git, not here.
 
-Last updated: 2026-10-20 (Craft apps follow the account: settings, language, name, save back).
+Last updated: 2026-10-20 (Craft apps: white light themes, system light and dark).
 
 ## Start here
 
@@ -72,6 +72,7 @@ Where things are documented:
 | Craft apps | PdfCraft, DesignCraft, FilmCraft, PhotoCraft, LightCraft beside WordCraft, all from storytold's web releases with one shared `build.mjs` (per-app `release.json`); the gate caches `.wasm.br` for a year only when the name has a content hash | `hosted/{pdfcraft,designcraft,filmcraft,photocraft,lightcraft}` |
 | Craft apps: no ads, MiniNode files | Built from upstream source with `hosted/<app>/patches/mininode.patch` (ArtCraft/Discord promotion removed) via workflow `crafts.yml` (per-app runner, cached by key, artifacts to CI and deploy); kit `files.js` lets apps that use file fields, save pickers and download links open from and save to `mn.files` (data mode `private`) | `hosted/*craft`, `.github/workflows/crafts.yml`, `packages/ui/kit/files.js` |
 | Craft apps: part of the account | `mn-boot.js` (written by `build.mjs`) starts the app after login, `installLocalStorageSync` (now adopts values kept before the sync instead of wiping them) and `mnI18n.ready`, and sets `<html lang>` and `data-mn-user`. The patches keep each app's settings in synced `localStorage` (`<app>.preferences`, PdfCraft `pdfcraft`), follow the MiniNode language and the system appearance, use the account name as author (WordCraft, PdfCraft, PhotoCraft notes), fix web clocks (PdfCraft, DesignCraft). A file opened from or saved to MiniNode is saved back without the dialog (toast with "Speichern unter …"); WordCraft adopts the name chosen when saving. Checked in a browser for WordCraft only (temporary spec, not committed) | `hosted/*craft/patches`, `hosted/wordcraft/build.mjs`, `packages/ui/kit/files.js`, `packages/sdk/src/compat.ts` |
+| Craft apps: light and dark | Every Craft app follows the system appearance. The patches give each app's lightest theme MiniNode's white surfaces and neutrals (DesignCraft Light, PhotoCraft Pro (Light), FilmCraft Light, LightCraft Paper); DesignCraft and LightCraft replace the grey defaults earlier builds stored once per account (`designcraft.theme-follow`, `lightcraft.theme-follow`). Checked in Chromium in light and dark for DesignCraft, PhotoCraft, FilmCraft and LightCraft (temporary spec); idle main-thread time 3–4 % each | `hosted/{designcraft,photocraft,filmcraft,lightcraft}/patches` |
 | Reiseplaner brief | Feature spec for a trip planner (reuses Kalender, Bill the Splitter, the Kalender map) | `docs/ai/briefs/reiseplaner.brief.md` |
 | German formats | Date, month and time inputs as German parts in every browser; full dates as "01. Okt. 2026"; German numbers | `packages/ui/kit/ui.js`, `docs/ai/DESIGN-SYSTEM.md` §8 |
 
