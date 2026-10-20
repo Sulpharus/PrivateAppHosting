@@ -1,5 +1,6 @@
 {
   "app.title": "DesignCraft",
+  "nav.allAppsBack": "← All apps",
   "app.loading": "Loading DesignCraft …",
   "files.open.title": "Open file",
   "files.open.device": "From this device …",

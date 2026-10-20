@@ -1,5 +1,6 @@
 {
   "app.title": "WordCraft",
+  "nav.allAppsBack": "← All apps",
   "app.loading": "Loading WordCraft …",
   "files.open.title": "Open file",
   "files.open.device": "From this device …",

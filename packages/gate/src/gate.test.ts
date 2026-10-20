@@ -169,6 +169,8 @@ describe('helpers', () => {
     expect(csp).not.toContain("script-src 'self' 'unsafe-inline'");
     expect(csp).toContain('wss://proj.supabase.co');
     expect(csp).toContain('https://ai.mininode.app');
+    // An app reads its own in-memory files (files.js saves a download link's blob to MiniNode).
+    expect(csp).toMatch(/connect-src 'self' blob: /);
     expect(csp).toContain("frame-ancestors 'none'");
     expect(csp).not.toContain('wasm-unsafe-eval');
   });

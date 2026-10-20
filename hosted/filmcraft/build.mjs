@@ -76,6 +76,12 @@ const sourceKey = () =>
     .digest('hex')
     .slice(0, 16);
 
+const escapeHtml = (text) =>
+  String(text).replace(
+    /[&<>"]/g,
+    (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c],
+  );
+
 const has = (command) => spawnSync(command, ['--version'], { stdio: 'ignore' }).status === 0;
 
 /** The official release zip, downloaded once and checked against release.json. */
@@ -240,6 +246,36 @@ writeFileSync(
 // The gate checked the login before serving the page, so the start screen may go once the app
 // shows something: right away when the page has its own loading text, otherwise when the app
 // reports that it runs (release.json `readyEvent`, e.g. Trunk's "TrunkApplicationStarted").
+// A slim MiniNode strip above the app ("← Alle Apps", like the other apps' headers); the app's
+// full-window canvas starts below it. The kit's tokens give it the platform's look in light and dark.
+writeFileSync(
+  join(dist, 'mn-bar.css'),
+  `/* Written by build.mjs: the MiniNode strip above the app. */
+:root { --mn-bar-height: 44px; }
+.mn-bar {
+  position: fixed;
+  inset: 0 0 auto 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: var(--mn-s3, 12px);
+  height: var(--mn-bar-height);
+  padding: 0 var(--mn-s3, 12px);
+  box-sizing: border-box;
+  background: var(--mn-surface, #fff);
+  border-bottom: 1px solid var(--mn-line, #dde1db);
+  font-family: var(--mn-font-text, system-ui, sans-serif);
+}
+.mn-bar .mn-home { padding: 0 var(--mn-s2, 8px); border-radius: var(--mn-r-sm, 8px); }
+.mn-bar-name { color: var(--mn-ink, #15191c); font-size: var(--mn-fs-sm, 14px); font-weight: 600; }
+body > canvas {
+  position: fixed !important;
+  inset: var(--mn-bar-height) 0 0 0 !important;
+  width: 100% !important;
+  height: calc(100% - var(--mn-bar-height)) !important;
+}
+`,
+);
 const signal = "window.__mnReady = true;\ndispatchEvent(new Event('mn:ready'));";
 writeFileSync(
   join(dist, 'mn-ready.js'),
@@ -263,6 +299,11 @@ page = page
       '<script src="./mn-boot.js" defer></script>',
     ].join('\n  '),
   )
+  .replace('</head>', '  <link rel="stylesheet" href="./mn-bar.css">\n</head>')
+  .replace(
+    /<body([^>]*)>/i,
+    `<body$1>\n  <nav class="mn-bar" aria-label="MiniNode"><a class="mn-home" href="https://mininode.app" data-i18n="nav.allAppsBack">← Alle Apps</a><span class="mn-bar-name" data-i18n="app.title">${escapeHtml(german['app.title'])}</span></nav>`,
+  )
   .replace('</body>', '  <script src="./mn-ready.js"></script>\n</body>');
 if (loadingText) {
   page = page.replace(
@@ -272,6 +313,8 @@ if (loadingText) {
 }
 const markers = [
   '<html lang="de"',
+  'class="mn-bar"',
+  'mn-bar.css',
   'data-i18n="app.title"',
   '/_mininode/i18n.js',
   'mn-boot.js',
@@ -289,6 +332,26 @@ if (
 )
   throw new Error('index.html: an inline script or handler is left; the CSP would block it');
 writeFileSync(join(dist, 'index.html'), page);
+
+// Trunk names a module after a hash taken before wasm-opt, so two builds that differ only there
+// share a name, and the gate lets browsers keep a hashed module for a year: a broken build stayed
+// in their cache after the fix. Each hashed module is named after its final content instead.
+const texts = files(dist).filter((file) => /\.(html|js|json|txt|css)$/i.test(file));
+for (const file of files(dist)) {
+  const base = file.slice(file.lastIndexOf('/') + 1);
+  const named = /^(.*?[-_.])([0-9a-f]{12,})([-_.].*\.wasm)$/i.exec(base);
+  if (!named) continue;
+  const [, before, hash, after] = named;
+  const content = sha256(file).slice(0, hash.length);
+  if (content === hash) continue;
+  const renamed = `${before}${content}${after}`;
+  renameSync(file, join(dirname(file), renamed));
+  for (const text of texts) {
+    const source = readFileSync(text, 'utf8');
+    if (source.includes(base)) writeFileSync(text, source.replaceAll(base, renamed));
+  }
+  console.log(`${base}: named ${renamed}`);
+}
 
 for (const file of files(dist)) {
   if (!file.endsWith('.wasm')) continue;

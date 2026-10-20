@@ -52,6 +52,11 @@ own. `release.json` names the release (`name`, `version`, `sha256`), the app's l
   name from the account is set as `data-mn-user` on `<html>`. Offline or on an error the app
   starts with what the device has.
 
+- **MiniNode strip:** a 44 px bar with "← Alle Apps" (the kit's `.mn-home`, key `nav.allAppsBack`)
+  and the app name sits above the app; `mn-bar.css` moves the full-window canvas below it.
+- **Module names by content:** trunk names a module after a hash taken before `wasm-opt`, and the
+  gate lets browsers keep a hashed `.wasm` for a year. `build.mjs` renames every hashed `.wasm` after
+  its final content (and the references to it), so a changed module always has a new name.
 - **Inline scripts:** the gate's CSP allows none, so every inline `<script>` moves into
   `boot-1.js`, `boot-2.js`, … in the same place and with the same type. The build stops when an
   inline script, an `on…=` handler or a `javascript:` link is left.

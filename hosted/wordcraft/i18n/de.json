@@ -1,5 +1,6 @@
 {
   "app.title": "WordCraft",
+  "nav.allAppsBack": "← Alle Apps",
   "app.loading": "WordCraft wird geladen …",
   "files.open.title": "Datei öffnen",
   "files.open.device": "Von diesem Gerät …",

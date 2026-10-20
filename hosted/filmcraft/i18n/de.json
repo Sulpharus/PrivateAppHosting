@@ -1,5 +1,6 @@
 {
   "app.title": "FilmCraft",
+  "nav.allAppsBack": "← Alle Apps",
   "app.loading": "FilmCraft wird geladen …",
   "files.open.title": "Datei öffnen",
   "files.open.device": "Von diesem Gerät …",

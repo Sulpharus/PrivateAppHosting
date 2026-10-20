@@ -376,6 +376,25 @@
     };
   };
 
+  // The files behind the app's blob: addresses. Reading one with fetch() needs blob: in the page's
+  // connect-src, so the Blob itself is kept from URL.createObjectURL until the app revokes it.
+  const blobs = new Map();
+  const nativeCreateUrl = URL.createObjectURL;
+  const nativeRevokeUrl = URL.revokeObjectURL;
+  URL.createObjectURL = function createObjectURL(object) {
+    const url = nativeCreateUrl.call(URL, object);
+    if (object instanceof Blob) blobs.set(url, object);
+    return url;
+  };
+  URL.revokeObjectURL = function revokeObjectURL(url) {
+    blobs.delete(url);
+    return nativeRevokeUrl.call(URL, url);
+  };
+  const blobOf = (url) => {
+    const known = blobs.get(url);
+    return known ? Promise.resolve(known) : fetch(url).then((response) => response.blob());
+  };
+
   const nativeAnchorClick = HTMLAnchorElement.prototype.click;
   const download = (blob, name) => {
     const link = el('a', { href: URL.createObjectURL(blob), download: name, hidden: true });
@@ -393,7 +412,7 @@
       return nativeAnchorClick.call(this);
     // Read the file now: the app may revoke its address while the dialog is open.
     const name = this.download || 'download';
-    const blob = fetch(this.href).then((response) => response.blob());
+    const blob = blobOf(this.href);
     if (direct(name)) saveDirect(name, blob);
     else askFor(name, blob);
   };

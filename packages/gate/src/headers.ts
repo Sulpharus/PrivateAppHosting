@@ -15,6 +15,8 @@ export function contentSecurityPolicy(options: CspOptions): string {
   const realtime = `${supabase.protocol === 'https:' ? 'wss:' : 'ws:'}//${supabase.host}`;
   const connect = [
     "'self'",
+    // The page's own in-memory files (URL.createObjectURL); blob: addresses never leave the origin.
+    'blob:',
     supabase.origin,
     realtime,
     `https://api.${domain}`,
