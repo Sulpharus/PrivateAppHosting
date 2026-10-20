@@ -1,3 +1,57 @@
+diff --git a/apps/pdfcraft-web/src/main.rs b/apps/pdfcraft-web/src/main.rs
+index a46a467..b4f9dc6 100644
+--- a/apps/pdfcraft-web/src/main.rs
++++ b/apps/pdfcraft-web/src/main.rs
+@@ -23,6 +23,9 @@ fn main() {
+                 options,
+                 Box::new(|cc| {
+                     let mut app = PdfCraftApp::new();
++                    // MiniNode: wasm32 has no clock or time zone of its own; without one Fill & Sign
++                    // dates read 1 Jan 1970 and saves get no /ModDate.
++                    app.session = std::mem::take(&mut app.session).with_wall_clock(wall_clock, utc_offset);
+                     // "printcraft": settings saved under the app's former name, PrintCraft.
+                     if let Some(json) = cc.storage.and_then(|s| s.get_string("pdfcraft").or_else(|| s.get_string("printcraft"))) {
+                         app.restore(&json);
+@@ -71,6 +74,13 @@ fn main() {
+                         app.host_dirty = Some(bridge.dirty_fn());
+                         bridge.post_ready();
+                     }
++                    // MiniNode: its name for the signed-in person (`data-mn-user`) signs their comments
++                    // the same way, after `?author=` and unless they chose a name in PdfCraft.
++                    if let Some(author) = mininode_user()
++                        && app.comment_prefs.author == "Guest"
++                    {
++                        app.comment_prefs.author = author.chars().take(200).collect();
++                    }
+                     Ok(Box::new(app))
+                 }),
+             )
+@@ -100,6 +110,25 @@ fn warn_before_unload(unsaved: std::sync::Arc<std::sync::atomic::AtomicBool>) {
+     }
+ }
+ 
++/// UTC seconds since the epoch, from the browser.
++#[cfg(target_arch = "wasm32")]
++fn wall_clock() -> i64 {
++    (js_sys::Date::now() / 1000.0).floor() as i64
++}
++
++/// The browser's local zone in seconds east of UTC, now (`getTimezoneOffset` is minutes west).
++#[cfg(target_arch = "wasm32")]
++fn utc_offset() -> i64 {
++    -(js_sys::Date::new_0().get_timezone_offset() as i64) * 60
++}
++
++/// The person's display name that MiniNode puts on `<html data-mn-user>`, when it has one.
++#[cfg(target_arch = "wasm32")]
++fn mininode_user() -> Option<String> {
++    let root = web_sys::window()?.document()?.document_element()?;
++    root.get_attribute("data-mn-user").map(|a| a.trim().to_string()).filter(|a| !a.is_empty())
++}
++
+ #[cfg(target_arch = "wasm32")]
+ fn query_param(key: &str) -> Option<String> {
+     let search = web_sys::window()?.location().search().ok()?;
 diff --git a/crates/engine/src/commands.rs b/crates/engine/src/commands.rs
 index b28758e..38dfcb9 100644
 --- a/crates/engine/src/commands.rs
@@ -110,3 +164,173 @@ index 3e70f34..07439d1 100644
  
              egui::Frame::NONE
                  .fill(t.card)
+diff --git a/crates/ui-egui/src/i18n/mod.rs b/crates/ui-egui/src/i18n/mod.rs
+index 5bb2889..9376a4a 100644
+--- a/crates/ui-egui/src/i18n/mod.rs
++++ b/crates/ui-egui/src/i18n/mod.rs
+@@ -390,9 +390,16 @@ fn first_supported(list: &str) -> Option<Lang> {
+     list.split(['(', ')', ',', '"', '\n']).map(str::trim).filter(|s| !s.is_empty()).find_map(lang_from_tag)
+ }
+ 
++/// MiniNode: the page's `<html lang>`, which MiniNode sets to the person's language (`de` or `en`)
++/// before the app starts. English when it names no supported language.
+ #[cfg(target_arch = "wasm32")]
+ fn detect_system_lang() -> Lang {
+-    Lang::EN
++    web_sys::window()
++        .and_then(|w| w.document())
++        .and_then(|d| d.document_element())
++        .and_then(|e| e.get_attribute("lang"))
++        .and_then(|tag| lang_from_tag(&tag))
++        .unwrap_or(Lang::EN)
+ }
+ 
+ thread_local! {
+diff --git a/crates/ui-egui/src/lib.rs b/crates/ui-egui/src/lib.rs
+index e7df5d6..395f0a4 100644
+--- a/crates/ui-egui/src/lib.rs
++++ b/crates/ui-egui/src/lib.rs
+@@ -781,6 +781,9 @@ pub struct PdfCraftApp {
+     pub(crate) sign_graphic_preview: Option<(fill_sign::SavedSig, egui::TextureHandle)>,
+     #[cfg(target_arch = "wasm32")]
+     pub(crate) signature_images: fill_sign::ImageInbox,
++    /// MiniNode: the web's settings writes (see `save`).
++    #[cfg(target_arch = "wasm32")]
++    web_store: WebStore,
+     /// The Comment Properties dialog's state.
+     pub comment_props: Option<comment_props::PropsDraft>,
+     pub field_props: Option<prepare::FieldDraft>,
+@@ -906,7 +909,8 @@ impl PdfCraftApp {
+             space_hand: None,
+             comment_prefs: Default::default(),
+             theme: ThemeKind::Light,
+-            theme_preference: ThemePreference::Light,
++            // MiniNode: the web follows the browser's light or dark appearance until one is chosen.
++            theme_preference: if cfg!(target_arch = "wasm32") { ThemePreference::System } else { ThemePreference::Light },
+             reading_colors: Default::default(),
+             #[cfg(target_os = "linux")]
+             desktop_theme: None,
+@@ -1057,6 +1061,8 @@ impl PdfCraftApp {
+             sign_graphic_preview: None,
+             #[cfg(target_arch = "wasm32")]
+             signature_images: Default::default(),
++            #[cfg(target_arch = "wasm32")]
++            web_store: Default::default(),
+             comment_props: None,
+             field_props: None,
+             bulk_field_props: None,
+@@ -2280,6 +2286,8 @@ impl PdfCraftApp {
+         v["redact_prefs"] = self.redact_defaults.to_json();
+         // Set outside json! above, which is at serde_json's macro recursion limit.
+         v["hide_empty_highlight_hover"] = serde_json::Value::Bool(self.comment_prefs.hide_empty_highlight_hover);
++        #[cfg(target_arch = "wasm32")]
++        web_image_budget(&mut v);
+         v.to_string()
+     }
+ 
+@@ -2894,6 +2902,49 @@ impl PdfCraftApp {
+     }
+ }
+ 
++/// MiniNode: how the browser build writes its settings to `localStorage` (`PdfCraftApp::save`).
++#[cfg(target_arch = "wasm32")]
++#[derive(Default)]
++struct WebStore {
++    /// A frame ran since the last check, so the settings may have changed.
++    frames_since_save: bool,
++    /// The settings JSON last written (at first, what `localStorage` holds).
++    written: Option<String>,
++    /// When `egui_memory_ron` was last written (`Date.now()`), and whether the page was hidden at the last check.
++    memory_saved_at: std::cell::Cell<f64>,
++    hidden: std::cell::Cell<bool>,
++}
++
++/// MiniNode: the encoded images (custom stamps up to 4 MB each, image signatures, initials and
++/// signing graphics) kept in the web's settings. `localStorage` holds about 5 MB per site and is
++/// synced to the person's account on every write, so images are kept, in this order, only while
++/// they fit; the rest last until the page is closed.
++#[cfg(target_arch = "wasm32")]
++const WEB_IMAGE_BUDGET: usize = 512 << 10;
++
++#[cfg(target_arch = "wasm32")]
++fn web_image_budget(v: &mut serde_json::Value) {
++    let mut left = WEB_IMAGE_BUDGET;
++    let mut fits = |value: &serde_json::Value| {
++        let len = value.to_string().len();
++        let fit = len <= left;
++        if fit {
++            left -= len;
++        }
++        fit
++    };
++    // Typed and drawn signatures and the Name graphic are small strings and points; only images count.
++    for key in ["signature_image", "initials", "sign_graphic"] {
++        let image = v[key].as_object().is_some_and(|o| o.contains_key("Image"));
++        if image && !fits(&v[key]) {
++            v[key] = serde_json::Value::Null;
++        }
++    }
++    if let Some(stamps) = v["custom_stamps"].as_array_mut() {
++        stamps.retain(|s| fits(s));
++    }
++}
++
+ impl eframe::App for PdfCraftApp {
+     /// While files are dragged over the window the system sends no pointer moves, so egui
+     /// would keep the place the pointer entered at: tell it where the pointer really is, so the
+@@ -2911,11 +2962,55 @@ impl eframe::App for PdfCraftApp {
+     }
+ 
+     fn save(&mut self, storage: &mut dyn eframe::Storage) {
++        // MiniNode: in the browser `localStorage` is synced to the person's account on every write,
++        // so only settings that changed are written, checked about once a second after a frame ran
++        // (and when the page is hidden or closed, where eframe saves too).
++        #[cfg(target_arch = "wasm32")]
++        {
++            if !std::mem::take(&mut self.web_store.frames_since_save) {
++                return;
++            }
++            let json = self.persist();
++            let written = self.web_store.written.get_or_insert_with(|| storage.get_string("pdfcraft").unwrap_or_default());
++            if *written != json {
++                storage.set_string("pdfcraft", json.clone());
++                *written = json;
++            }
++        }
++        #[cfg(not(target_arch = "wasm32"))]
+         storage.set_string("pdfcraft", self.persist());
+     }
+ 
++    /// MiniNode: `save` is cheap when nothing changed, so the browser checks every second.
++    #[cfg(target_arch = "wasm32")]
++    fn auto_save_interval(&self) -> std::time::Duration {
++        std::time::Duration::from_secs(1)
++    }
++
++    /// MiniNode: egui's own memory (`egui_memory_ron`) keeps eframe's 30-second cadence, and is
++    /// written once when the page is hidden, not on every 1-second settings check.
++    #[cfg(target_arch = "wasm32")]
++    fn persist_egui_memory(&self) -> bool {
++        let now = js_sys::Date::now();
++        if self.web_store.memory_saved_at.get() == 0.0 {
++            // The first check starts the 30 seconds, as eframe's first save would.
++            self.web_store.memory_saved_at.set(now);
++        }
++        let hidden = web_sys::window().and_then(|w| w.document()).is_some_and(|d| d.hidden());
++        let due = now - self.web_store.memory_saved_at.get() >= 30_000.0 || (hidden && !self.web_store.hidden.get());
++        self.web_store.hidden.set(hidden);
++        if due {
++            self.web_store.memory_saved_at.set(now);
++        }
++        due
++    }
++
+     fn logic(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+         self.ctx = Some(ctx.clone());
++        #[cfg(target_arch = "wasm32")]
++        {
++            self.web_store.frames_since_save = true;
++        }
+         self.dialog_epoch();
+         // Notices raised outside `ui` (opened files, OS events, the control channel) translate too.
+         let lang = i18n::Lang::from_pref(&self.language);

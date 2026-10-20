@@ -24,7 +24,7 @@ screen stays until the app reports `TrunkApplicationStarted`.
 
 ## Data
 
-`data.mode: private`. PDFs are opened from MiniNode or the device and saved to MiniNode (`mn.files`, the person's own folder) or the device. Preferences stay in the browser's `localStorage`.
+`data.mode: private`. PDFs are opened from MiniNode or the device and saved to MiniNode (`mn.files`, the person's own folder) or the device. Settings follow the account: PdfCraft keeps them (layout, theme, language, comment author and styles, signatures, stamps, digital-ID details) in `localStorage` under `pdfcraft`, which MiniNode syncs; the patch writes only when they changed, at most once a second, and keeps images (custom stamps, image signatures) in them only up to 512 KB in all, the rest last until the page closes. On "Auto" the interface follows the MiniNode language, the theme follows the system, and comments are signed with the name from the account until the person sets one. The patch also gives the web build a clock: upstream dated Fill & Sign entries 1 January 1970 and wrote no modification date.
 
 ## Updating
 
