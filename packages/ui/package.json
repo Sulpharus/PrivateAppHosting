@@ -9,7 +9,8 @@
     "./kit/ui.css": "./kit/ui.css",
     "./kit/ui.js": "./kit/ui.js",
     "./kit/game.js": "./kit/game.js",
-    "./kit/i18n.js": "./kit/i18n.js"
+    "./kit/i18n.js": "./kit/i18n.js",
+    "./kit/files.js": "./kit/files.js"
   },
   "dependencies": {
     "@fontsource-variable/bricolage-grotesque": "5.3.0",

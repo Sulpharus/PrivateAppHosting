@@ -115,4 +115,17 @@ describe('localStorage sync', () => {
     expect(localStorage.getItem('secret')).toBeNull();
     expect(localStorage.getItem('mininode:user:demo')).toBe('{}');
   });
+
+  it('adopts what the app kept before the sync, and the account wins', async () => {
+    seed('prefs', 'local');
+    seed('theme', 'dark');
+    const { mn, kv } = fakeMn('u3', { 'ls:theme': 'light' });
+    await installLocalStorageSync(mn);
+    await Promise.resolve();
+    expect(localStorage.getItem('prefs')).toBe('local');
+    expect(localStorage.getItem('theme')).toBe('light');
+    expect(kv.get('ls:prefs')).toBe('local');
+    expect(kv.get('ls:theme')).toBe('light');
+    expect(localStorage.getItem('mn-ls-owner')).toBe('u3');
+  });
 });

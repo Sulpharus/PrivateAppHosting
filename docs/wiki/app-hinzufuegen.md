@@ -25,7 +25,7 @@ Es gibt mehrere Wege. Wähle nach dem, was du hast:
 4. **Gemeinsame Daten genehmigen**, falls die App welche anfragt: Verwaltung → Gemeinsame Daten
    ([Gemeinsame Daten](wiki:gemeinsame-daten)).
 5. **API-Schlüssel eintragen**, falls sie externe APIs nutzt: Verwaltung → API-Schlüssel ([API-Schlüssel](wiki:api-schluessel)).
-6. **Logo** (optional): Verwaltung → Apps → *Logo hochladen*; oder eine `icon.svg` im App-Ordner, die der Deploy aufnimmt
+6. **Logo** (optional): Verwaltung → Apps → *Logo hochladen*; oder eine `icon.svg` (höchstens 128 KB) bzw. `icon.png`/`icon.webp` (256 KB) im App-Ordner, die der Deploy aufnimmt
    (ADR 0018). Jede App bringt eines mit; ohne Logo zeigt die Kachel ein Monogramm. Ein von Hand gesetztes Logo wird nie überschrieben.
 7. **Kategorie** prüfen: stimmt die automatische Zuordnung? Sonst von Hand setzen.
 

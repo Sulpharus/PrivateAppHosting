@@ -14,6 +14,7 @@ import {
   parseManifest,
   usedKeys,
 } from '@mininode/manifest';
+import { findIcon } from './deploy/icon.ts';
 import { NON_TEXT, scanText } from './export.ts';
 
 export type Severity = 'error' | 'warning';
@@ -488,6 +489,16 @@ export function doctor(dir: string): DoctorReport {
   checkSources(dir, manifest, findings, keysUsed);
   checkI18n(dir, manifest, keysUsed, findings);
   checkMigrations(dir, manifest, findings);
+  try {
+    findIcon(dir, manifest.slug);
+  } catch (error) {
+    // The deploy skips a logo it cannot take, so the app would show no logo.
+    findings.push({
+      severity: 'warning',
+      rule: 'icon-too-large',
+      message: `${error instanceof Error ? error.message : String(error)}; use a smaller file (e.g. a 512 px PNG)`,
+    });
+  }
   return { app: manifest.slug, manifest, findings };
 }
 

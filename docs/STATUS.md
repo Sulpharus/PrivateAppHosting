@@ -3,7 +3,7 @@
 Where things stand, what the owner still has to do, and what a new session should know.
 Update it at the end of every working session; history belongs in git, not here.
 
-Last updated: 2026-10-19 (Craft apps integrated; Reiseplaner brief).
+Last updated: 2026-10-20 (Craft apps follow the account: settings, language, name, save back).
 
 ## Start here
 
@@ -70,6 +70,8 @@ Where things are documented:
 | Uninstall | Verwaltung → Apps → Löschen: typed address, optional deletion of all data; `uninstall-app.yml` deletes the Worker (and schema, files, registry entry) and opens a pull request that removes `hosted/<slug>`; `mininode uninstall` | ADR 0020, `docs/runbooks/uninstall.md`, `packages/cli/src/deploy/uninstall.ts`, `e2e/uninstall.spec.ts` |
 | WordCraft | Upstream Rust/WASM word processor (storytold/wordcraft v0.8.0 web release) behind the gate; manifest `wasm` adds `'wasm-unsafe-eval'` to the CSP; the gate serves `<name>.wasm` from a Brotli `<name>.wasm.br` (assets above 25 MiB); start screen counts a body-level canvas | `hosted/wordcraft`, `packages/gate/src/worker.ts` |
 | Craft apps | PdfCraft, DesignCraft, FilmCraft, PhotoCraft, LightCraft beside WordCraft, all from storytold's web releases with one shared `build.mjs` (per-app `release.json`); the gate caches `.wasm.br` for a year only when the name has a content hash | `hosted/{pdfcraft,designcraft,filmcraft,photocraft,lightcraft}` |
+| Craft apps: no ads, MiniNode files | Built from upstream source with `hosted/<app>/patches/mininode.patch` (ArtCraft/Discord promotion removed) via workflow `crafts.yml` (per-app runner, cached by key, artifacts to CI and deploy); kit `files.js` lets apps that use file fields, save pickers and download links open from and save to `mn.files` (data mode `private`) | `hosted/*craft`, `.github/workflows/crafts.yml`, `packages/ui/kit/files.js` |
+| Craft apps: part of the account | `mn-boot.js` (written by `build.mjs`) starts the app after login, `installLocalStorageSync` (now adopts values kept before the sync instead of wiping them) and `mnI18n.ready`, and sets `<html lang>` and `data-mn-user`. The patches keep each app's settings in synced `localStorage` (`<app>.preferences`, PdfCraft `pdfcraft`), follow the MiniNode language and the system appearance, use the account name as author (WordCraft, PdfCraft, PhotoCraft notes), fix web clocks (PdfCraft, DesignCraft). A file opened from or saved to MiniNode is saved back without the dialog (toast with "Speichern unter …"); WordCraft adopts the name chosen when saving. Checked in a browser for WordCraft only (temporary spec, not committed) | `hosted/*craft/patches`, `hosted/wordcraft/build.mjs`, `packages/ui/kit/files.js`, `packages/sdk/src/compat.ts` |
 | Reiseplaner brief | Feature spec for a trip planner (reuses Kalender, Bill the Splitter, the Kalender map) | `docs/ai/briefs/reiseplaner.brief.md` |
 | German formats | Date, month and time inputs as German parts in every browser; full dates as "01. Okt. 2026"; German numbers | `packages/ui/kit/ui.js`, `docs/ai/DESIGN-SYSTEM.md` §8 |
 

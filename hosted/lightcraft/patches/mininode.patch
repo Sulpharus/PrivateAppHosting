@@ -1,0 +1,532 @@
+diff --git a/apps/lightcraft-web/Cargo.toml b/apps/lightcraft-web/Cargo.toml
+index aaa14a6..4e7c5a1 100644
+--- a/apps/lightcraft-web/Cargo.toml
++++ b/apps/lightcraft-web/Cargo.toml
+@@ -63,8 +63,10 @@ web-sys = { workspace = true, features = [
+     "MessageEvent",
+     "Navigator",
+     "Performance",
++    "Storage",
+     "StorageManager",
+     "Url",
++    "VisibilityState",
+     "Window",
+     "Worker",
+     "WorkerOptions",
+diff --git a/apps/lightcraft-web/index.html b/apps/lightcraft-web/index.html
+index b088ad1..7044a68 100644
+--- a/apps/lightcraft-web/index.html
++++ b/apps/lightcraft-web/index.html
+@@ -7,7 +7,7 @@
+   <link rel="icon" href="data:,">
+   <meta name="description" content="LightCraft: open-source photo library and raw developer, running in your browser (WASM).">
+   <style>
+-    :root { color-scheme: dark; }
++    :root { color-scheme: light dark; }
+     html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #1c1c1c; }
+     canvas#lightcraft_canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+     #lightcraft_loading {
+@@ -15,6 +15,8 @@
+       color: #b8b8b8; font: 15px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; pointer-events: none;
+     }
+     #lightcraft_status { position: absolute; left: 0; bottom: 0; width: 1px; height: 1px; overflow: hidden; }
++    /* MiniNode: the loading screen follows the system theme, like the app's default */
++    @media (prefers-color-scheme: light) { html, body { background: #e6e6e6; } #lightcraft_loading { color: #3a3a3a; } }
+   </style>
+ </head>
+ <body>
+diff --git a/apps/lightcraft-web/src/account.rs b/apps/lightcraft-web/src/account.rs
+new file mode 100644
+index 0000000..f724a6b
+--- /dev/null
++++ b/apps/lightcraft-web/src/account.rs
+@@ -0,0 +1,144 @@
++//! MiniNode: settings that follow the account. MiniNode syncs `localStorage` to the signed-in
++//! person's account, so the library's settings files (UI state, library preferences, develop
++//! presets) are also kept there, under [`KEY`], as one JSON object of file name → file text. At
++//! start-up a stored file replaces the copy in browser storage (OPFS/IndexedDB), which stays the
++//! fallback for existing libraries and the copy backups are made from. The catalog, view state,
++//! originals and thumbnails stay on the device.
++
++use std::cell::{Cell, RefCell};
++use std::rc::Rc;
++
++use wasm_bindgen::JsCast;
++use wasm_bindgen::prelude::*;
++
++use crate::files::Files;
++
++/// The `localStorage` key.
++pub const KEY: &str = "lightcraft.preferences";
++
++/// The library files that are settings, not data.
++const FILES: [&str; 3] = ["ui.json", "prefs.json", "presets.json"];
++
++/// At most this much goes to `localStorage`: a large preset collection (presets.json can reach
++/// tens of MB) stays on the device instead, and is never replaced by the account's copy.
++const MAX_BYTES: usize = 512 * 1024;
++
++fn storage() -> Option<web_sys::Storage> {
++    web_sys::window()?.local_storage().ok().flatten()
++}
++
++/// The page's language as MiniNode set it (`<html lang>`), if LightCraft has it.
++pub fn page_language() -> Option<lightcraft_ui_egui::i18n::Locale> {
++    let lang = web_sys::window()?.document()?.document_element()?.get_attribute("lang")?;
++    lightcraft_ui_egui::i18n::Locale::parse_tag(lang.trim())
++}
++
++/// Put the account's settings files into `files` (dirty where they differ, so browser storage
++/// follows). Returns the stored text, to compare later saves against.
++pub fn load(files: &Files) -> String {
++    let Some(text) = storage().and_then(|s| s.get_item(KEY).ok().flatten()) else { return String::new() };
++    let Ok(serde_json::Value::Object(map)) = serde_json::from_str::<serde_json::Value>(&text) else {
++        log::warn!("lightcraft: ignoring unreadable {KEY}");
++        return String::new();
++    };
++    for name in FILES {
++        let Some(data) = map.get(name).and_then(|v| v.as_str()) else { continue };
++        if files.len_of(name).is_some_and(|n| n > MAX_BYTES) {
++            continue;
++        }
++        if files.get(name).as_deref() != Some(data.as_bytes()) {
++            files.write(name, data.as_bytes());
++        }
++    }
++    text
++}
++
++/// Saves the settings files to `localStorage` when they change.
++#[derive(Clone)]
++pub struct Sync {
++    files: Files,
++    /// The text last stored under [`KEY`].
++    written: Rc<RefCell<String>>,
++    /// The files' revisions that text was built from (`None` before the first save).
++    seen: Rc<Cell<Option<[u64; 3]>>>,
++    /// Saving stopped (a restored backup replaces the library; the page reloads).
++    frozen: Rc<Cell<bool>>,
++}
++
++impl Sync {
++    pub fn new(files: Files, written: String, frozen: Rc<Cell<bool>>) -> Sync {
++        Sync { files, written: Rc::new(RefCell::new(written)), seen: Rc::new(Cell::new(None)), frozen }
++    }
++
++    /// Store the settings if they changed since the last save (cheap when they didn't).
++    pub fn save(&self) {
++        if self.frozen.get() {
++            return;
++        }
++        let revs = FILES.map(|n| self.files.revision(n));
++        if self.seen.get() == Some(revs) {
++            return;
++        }
++        self.seen.set(Some(revs));
++        let mut map = serde_json::Map::new();
++        let mut total = 0;
++        for name in FILES {
++            match self.files.len_of(name) {
++                Some(n) if total + n <= MAX_BYTES => {}
++                Some(n) => {
++                    log::info!("lightcraft: {name} ({n} bytes) is too large for account settings; it stays in this browser");
++                    continue;
++                }
++                None => continue,
++            }
++            let Some(text) = self.files.get(name).and_then(|d| String::from_utf8(d).ok()) else { continue };
++            total += text.len();
++            map.insert(name.to_string(), text.into());
++        }
++        let text = serde_json::Value::Object(map).to_string();
++        if *self.written.borrow() == text {
++            return;
++        }
++        let Some(s) = storage() else { return };
++        if let Err(e) = s.set_item(KEY, &text) {
++            // a stale copy would win over this browser's newer files at the next start
++            log::warn!("lightcraft: saving account settings failed ({e:?}); this browser's copy is used");
++            let _ = s.remove_item(KEY);
++            *self.written.borrow_mut() = String::new();
++            return;
++        }
++        *self.written.borrow_mut() = text;
++    }
++
++    /// Drop the account's copy, so a restored backup's own settings are used after the reload
++    /// (and then stored again).
++    pub fn forget(&self) {
++        if let Some(s) = storage() {
++            let _ = s.remove_item(KEY);
++        }
++    }
++
++    /// Also save when the page is hidden or unloaded (a tab can be closed without notice).
++    pub fn save_on_hide(&self) {
++        let Some(w) = web_sys::window() else { return };
++        let on_hidden = {
++            let sync = self.clone();
++            Closure::<dyn FnMut()>::new(move || {
++                let hidden = web_sys::window().and_then(|w| w.document()).is_some_and(|d| d.visibility_state() == web_sys::VisibilityState::Hidden);
++                if hidden {
++                    sync.save();
++                }
++            })
++        };
++        let on_pagehide = {
++            let sync = self.clone();
++            Closure::<dyn FnMut()>::new(move || sync.save())
++        };
++        if let Some(d) = w.document() {
++            let _ = d.add_event_listener_with_callback("visibilitychange", on_hidden.as_ref().unchecked_ref());
++        }
++        let _ = w.add_event_listener_with_callback("pagehide", on_pagehide.as_ref().unchecked_ref());
++        on_hidden.forget();
++        on_pagehide.forget();
++    }
++}
+diff --git a/apps/lightcraft-web/src/files.rs b/apps/lightcraft-web/src/files.rs
+index d0c9f34..6d3418a 100644
+--- a/apps/lightcraft-web/src/files.rs
++++ b/apps/lightcraft-web/src/files.rs
+@@ -51,10 +51,13 @@ struct Mirror {
+     dirty: Vec<(String, Dirty)>,
+     /// Why the last flush to browser storage failed (quota, eviction…), until one succeeds.
+     error: Option<String>,
++    /// MiniNode: how often each file was modified (see [`Files::revision`]).
++    revisions: BTreeMap<String, u64>,
+ }
+ 
+ impl Mirror {
+     fn mark(&mut self, name: &str, d: Dirty) {
++        *self.revisions.entry(name.to_string()).or_default() += 1;
+         let prev = self.dirty.iter().position(|(n, _)| n == name).map(|i| self.dirty.remove(i).1);
+         let d = match (prev, d) {
+             // appends after appends keep the original offset; anything else needs a rewrite
+@@ -84,6 +87,17 @@ impl Files {
+         self.lock().files.get(name).cloned()
+     }
+ 
++    /// MiniNode: a file's size, without copying it.
++    pub fn len_of(&self, name: &str) -> Option<usize> {
++        self.lock().files.get(name).map(Vec::len)
++    }
++
++    /// MiniNode: changes whenever the file is modified (0 until then), to tell cheaply whether it
++    /// changed since it was last looked at.
++    pub fn revision(&self, name: &str) -> u64 {
++        self.lock().revisions.get(name).copied().unwrap_or(0)
++    }
++
+     /// Replace a file.
+     pub fn write(&self, name: &str, data: &[u8]) {
+         let mut m = self.lock();
+diff --git a/apps/lightcraft-web/src/lib.rs b/apps/lightcraft-web/src/lib.rs
+index 58966e6..bccd1b0 100644
+--- a/apps/lightcraft-web/src/lib.rs
++++ b/apps/lightcraft-web/src/lib.rs
+@@ -22,6 +22,8 @@ pub mod files;
+ pub mod store;
+ pub mod wire;
+ 
++#[cfg(target_arch = "wasm32")]
++mod account;
+ #[cfg(target_arch = "wasm32")]
+ mod backend;
+ #[cfg(target_arch = "wasm32")]
+diff --git a/apps/lightcraft-web/src/web.rs b/apps/lightcraft-web/src/web.rs
+index 6a4487d..2e9028d 100644
+--- a/apps/lightcraft-web/src/web.rs
++++ b/apps/lightcraft-web/src/web.rs
+@@ -14,6 +14,7 @@ use serde_json::json;
+ use wasm_bindgen::JsCast;
+ use wasm_bindgen::prelude::*;
+ 
++use crate::account;
+ use crate::backend::Backend;
+ use crate::backup::{ACTIVE_LIBRARY, DEFAULT_LIBRARY_DIR, valid_library_dir};
+ use crate::bench::Bench;
+@@ -164,7 +165,14 @@ fn download(path: &str, bytes: &[u8]) -> Result<(), String> {
+     Ok(())
+ }
+ 
+-fn services(originals: Originals, backend: Option<Backend>, files: Files, frozen: Rc<Cell<bool>>, ctx: egui::Context) -> Services {
++fn services(
++    originals: Originals,
++    backend: Option<Backend>,
++    files: Files,
++    frozen: Rc<Cell<bool>>,
++    account: Option<account::Sync>,
++    ctx: egui::Context,
++) -> Services {
+     let (backup_backend, backup_files) = (backend.clone(), files);
+     let restore_backend = backend.clone();
+     Services {
+@@ -198,9 +206,15 @@ fn services(originals: Originals, backend: Option<Backend>, files: Files, frozen
+         })),
+         restore_library: Some(Box::new(move |_session: &mut Session| {
+             let Some(b) = restore_backend.clone() else { return Err("nothing is stored in this browser session (?store=memory)".into()) };
+-            let frozen = frozen.clone();
++            let (frozen, account) = (frozen.clone(), account.clone());
+             // once the backup is in place, stop saving the old library (the page reloads)
+-            safety::pick_and_restore(b, move || frozen.set(true));
++            safety::pick_and_restore(b, move || {
++                frozen.set(true);
++                // MiniNode: the backup's settings, not the account's, come with it
++                if let Some(a) = &account {
++                    a.forget();
++                }
++            });
+             Ok(json!({"started": true}))
+         })),
+         pick_files: Some(Box::new(move || {
+@@ -280,6 +294,8 @@ struct Boot {
+     index: ThumbIndex,
+     /// The library folder in storage (`library`, or a restored backup's).
+     lib_dir: String,
++    /// MiniNode: the account's settings as stored in `localStorage` (`None` with `?store=memory`).
++    account: Option<String>,
+ }
+ 
+ async fn boot(opts: Options) -> Boot {
+@@ -359,6 +375,8 @@ async fn boot(opts: Options) -> Boot {
+             });
+         }
+     }
++    // MiniNode: the account's settings win over this browser's copy
++    let account = (opts.store != "memory").then(|| account::load(&files));
+     log::info!(
+         "lightcraft: storage {} opened in {:.0} ms ({} thumbnails indexed, {:.1} MB)",
+         backend.as_ref().map_or("memory", |b| b.kind()),
+@@ -366,7 +384,7 @@ async fn boot(opts: Options) -> Boot {
+         index.len(),
+         index.total() as f64 / 1e6
+     );
+-    Boot { opts, backend, files, index, lib_dir }
++    Boot { opts, backend, files, index, lib_dir, account }
+ }
+ 
+ struct WebApp {
+@@ -385,11 +403,16 @@ struct WebApp {
+     first_frame_logged: bool,
+     last_save: f64,
+     ui_written: Vec<u8>,
++    /// MiniNode: saves the settings files to the account (`localStorage`).
++    account: Option<account::Sync>,
++    /// MiniNode: the page's language while the person hasn't picked one in LightCraft; ui.json
++    /// then leaves `language` out, so the app keeps following MiniNode's language.
++    follow_language: Option<lightcraft_ui_egui::i18n::Locale>,
+ }
+ 
+ impl WebApp {
+     fn new(cc: &eframe::CreationContext<'_>, boot: Boot, chinese_font: Vec<u8>) -> Self {
+-        let Boot { opts, backend, files, index, lib_dir } = boot;
++        let Boot { opts, backend, files, index, lib_dir, account } = boot;
+         let originals = Originals::default();
+         let t = perf_now();
+         let mut session = Session::new();
+@@ -433,12 +456,29 @@ impl WebApp {
+         // previews are large (≤ 2560 px, f32): keep few in a 32-bit address space
+         session.media.preview_capacity = 3;
+         let frozen = Rc::new(Cell::new(false));
+-        let mut app = LightcraftApp::new(session, services(originals.clone(), backend.clone(), files.clone(), frozen.clone(), cc.egui_ctx.clone()))
+-            .with_chinese_font(chinese_font);
++        let account = account.map(|written| account::Sync::new(files.clone(), written, frozen.clone()));
++        if let Some(a) = &account {
++            a.save_on_hide();
++        }
++        let mut app = LightcraftApp::new(
++            session,
++            services(originals.clone(), backend.clone(), files.clone(), frozen.clone(), account.clone(), cc.egui_ctx.clone()),
++        )
++        .with_chinese_font(chinese_font);
+         let ui_written = files.get("ui.json").unwrap_or_default();
+         if let Ok(ui) = serde_json::from_slice::<UiState>(&ui_written) {
+             app.ui = ui;
+         }
++        // MiniNode: without a saved choice, the language follows the page's (MiniNode's) and the
++        // appearance follows the system (prefers-color-scheme) instead of always dark
++        let saved = serde_json::from_slice::<serde_json::Value>(&ui_written).unwrap_or_default();
++        let follow_language = account::page_language().filter(|_| saved.get("language").is_none());
++        if let Some(l) = follow_language {
++            app.ui.language = l;
++        }
++        if saved.pointer("/settings/appearanceMode").is_none() {
++            app.ui.settings.appearance_mode = lightcraft_ui_egui::state::AppearanceMode::Auto;
++        }
+         app.ui = app.ui.sanitized();
+         app.library_problem = problem;
+         let n = opts.workers.unwrap_or_else(|| {
+@@ -477,6 +517,8 @@ impl WebApp {
+             first_frame_logged: false,
+             last_save: 0.0,
+             ui_written,
++            account,
++            follow_language,
+         }
+     }
+ 
+@@ -532,6 +574,22 @@ impl WebApp {
+         }
+     }
+ 
++    /// ui.json's content. MiniNode: `language` is left out while it is the page's language and
++    /// the person hasn't picked another one (then it is saved, and wins from then on).
++    fn ui_json(&mut self) -> Option<Vec<u8>> {
++        let mut v = serde_json::to_value(&self.app.ui).ok()?;
++        if let Some(l) = self.follow_language {
++            if self.app.ui.language == l {
++                if let Some(o) = v.as_object_mut() {
++                    o.remove("language");
++                }
++            } else {
++                self.follow_language = None;
++            }
++        }
++        serde_json::to_vec_pretty(&v).ok()
++    }
++
+     /// Save view state, UI prefs and the thumbnail index now and then; flush dirty files.
+     fn save(&mut self) {
+         if self.frozen.get() {
+@@ -541,12 +599,15 @@ impl WebApp {
+         if now - self.last_save >= SAVE_EVERY_MS {
+             self.last_save = now;
+             self.app.session.save_view();
+-            if let Ok(ui) = serde_json::to_vec_pretty(&self.app.ui)
++            if let Some(ui) = self.ui_json()
+                 && ui != self.ui_written
+             {
+                 self.files.write("ui.json", &ui);
+                 self.ui_written = ui;
+             }
++            if let Some(a) = &self.account {
++                a.save();
++            }
+             if let (Some(w), Some(b)) = (&self.workers, &self.backend)
+                 && let Some(index) = w.take_index_if_dirty()
+             {
+diff --git a/crates/ui-egui/src/links.rs b/crates/ui-egui/src/links.rs
+index 151fac9..a51fa97 100644
+--- a/crates/ui-egui/src/links.rs
++++ b/crates/ui-egui/src/links.rs
+@@ -1,13 +1,8 @@
+-//! Community and project links (Help menu, About dialog, top-bar Discord button).
++//! Project links (Help menu, About dialog). MiniNode: the ArtCraft Discord and website links
++//! are removed.
+ 
+-/// The app's id in ArtCraft URLs.
++/// The app's id in its repository URL.
+ pub const APP: &str = "lightcraft";
+-/// The ArtCraft community Discord.
+-pub const DISCORD: &str = "https://discord.gg/artcraft";
+-/// The ArtCraft website.
+-pub const WEBSITE: &str = "https://getartcraft.com";
+-/// This app's page on the ArtCraft website.
+-pub const APP_PAGE: &str = "https://getartcraft.com/apps/lightcraft";
+ /// This app's source repository.
+ pub const GITHUB: &str = "https://github.com/storytold/lightcraft";
+ 
+@@ -17,10 +12,7 @@ pub const HELP: &str = "https://github.com/storytold/lightcraft/tree/main/docs";
+ 
+ pub const LINKS: &[(&str, &str, &str)] = &[
+     ("app.help", "LightCraft Help", HELP),
+-    ("app.discord", "Join the ArtCraft Discord…", DISCORD),
+-    ("app.website", "LightCraft Website", APP_PAGE),
+     ("app.github", "LightCraft on GitHub", GITHUB),
+-    ("app.artcraft", "ArtCraft Website", WEBSITE),
+     ("app.feedback", "Send Feedback…", FEEDBACK),
+ ];
+ 
+@@ -50,7 +42,6 @@ mod tests {
+             assert!(!label.is_empty());
+             assert_eq!(url_of(id), Some(*url));
+         }
+-        assert!(APP_PAGE.ends_with(&format!("/apps/{APP}")));
+         assert!(GITHUB.ends_with(&format!("/storytold/{APP}")));
+     }
+ }
+diff --git a/crates/ui-egui/src/menubar.rs b/crates/ui-egui/src/menubar.rs
+index c5e4e45..a727412 100644
+--- a/crates/ui-egui/src/menubar.rs
++++ b/crates/ui-egui/src/menubar.rs
+@@ -244,12 +244,9 @@ const LAYOUT: &[(&str, &[&str])] = &[
+     (
+         "Help",
+         &[
+-            "app.discord",
+             "app.feedback",
+             "---",
+-            "app.website",
+             "app.github",
+-            "app.artcraft",
+             "---",
+             "app.whatsNew",
+             "app.shortcuts",
+diff --git a/crates/ui-egui/src/menus.rs b/crates/ui-egui/src/menus.rs
+index d575d74..b3566bb 100644
+--- a/crates/ui-egui/src/menus.rs
++++ b/crates/ui-egui/src/menus.rs
+@@ -247,11 +247,8 @@ pub const UI_COMMANDS: &[UiCommand] = &[
+     ("app.whatsNew", "What's New", None, "Help"),
+     ("dialog.cull", "Assisted Culling…", None, "Photo"),
+     ("app.help", "LightCraft Help", Some("F1"), "Help"),
+-    ("app.discord", "Join the ArtCraft Discord…", None, "Help"),
+     ("app.feedback", "Send Feedback…", None, "Help"),
+-    ("app.website", "LightCraft Website", None, "Help"),
+     ("app.github", "LightCraft on GitHub", None, "Help"),
+-    ("app.artcraft", "ArtCraft Website", None, "Help"),
+     ("app.shortcuts", "Keyboard Shortcuts", Some("Cmd+/"), "Help"),
+     ("app.setShortcut", "Set Keyboard Shortcut", None, ""),
+     ("app.resetShortcuts", "Reset All Keyboard Shortcuts", None, ""),
+@@ -2107,8 +2104,8 @@ pub fn run_ui_command(app: &mut LightcraftApp, id: &str, p: &Value) -> Option<Re
+         "app.export" => crate::control::export_active(app, p),
+         "app.showInFinder" => show_in_finder(app),
+         "app.openLogFolder" => open_log_folder(app),
+-        "app.discord" | "app.website" | "app.github" | "app.artcraft" | "app.help" | "app.feedback" => {
+-            let url = crate::links::url_of(id).unwrap_or(crate::links::WEBSITE);
++        "app.github" | "app.help" | "app.feedback" => {
++            let url = crate::links::url_of(id).unwrap_or(crate::links::GITHUB);
+             crate::links::open(app, url)
+         }
+         "app.exportPrevious" => match app.session.last_export.clone() {
+diff --git a/crates/ui-egui/src/panels/dialogs.rs b/crates/ui-egui/src/panels/dialogs.rs
+index 5562e94..37fac5e 100644
+--- a/crates/ui-egui/src/panels/dialogs.rs
++++ b/crates/ui-egui/src/panels/dialogs.rs
+@@ -1290,22 +1290,7 @@ pub fn show(app: &mut LightcraftApp, ctx: &egui::Context) {
+                                 crate::theme::font_credits(app.chinese_font.is_some())
+                             ));
+                             ui.add_space(10.0);
+-                            let r = crate::button::Button::new("Join the ArtCraft Discord")
+-                                .primary()
+-                                .large()
+-                                .min_width(260.0)
+-                                .widget("button:aboutDiscord")
+-                                .tooltip(crate::links::DISCORD)
+-                                .show(ui);
+-                            if r.clicked() {
+-                                let _ = crate::links::open(app, crate::links::DISCORD);
+-                            }
+-                            ui.add_space(6.0);
+-                            for (label, url) in [
+-                                ("LightCraft website", crate::links::APP_PAGE),
+-                                ("Source code on GitHub", crate::links::GITHUB),
+-                                ("ArtCraft — more creative apps", crate::links::WEBSITE),
+-                            ] {
++                            for (label, url) in [("Source code on GitHub", crate::links::GITHUB)] {
+                                 let r = ui.link(crate::i18n::tr(label)).on_hover_text(url);
+                                 if r.clicked() {
+                                     let _ = crate::links::open(app, url);
+diff --git a/crates/ui-egui/src/panels/topbar.rs b/crates/ui-egui/src/panels/topbar.rs
+index 7e40af7..ba44079 100644
+--- a/crates/ui-egui/src/panels/topbar.rs
++++ b/crates/ui-egui/src/panels/topbar.rs
+@@ -180,7 +180,6 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui) {
+                 None => crate::i18n::tr("Import Photos…").to_string(),
+             };
+             for (id, icon, tip, cmd) in [
+-                ("discord", Icon::Chat, "Join the ArtCraft community on Discord", "app.discord"),
+                 ("cloud", Icon::Cloud, cloud_tip, ""),
+                 ("help", Icon::Help, "Keyboard shortcuts", "app.shortcuts"),
+                 ("share", Icon::Share, "Export", "dialog.export"),

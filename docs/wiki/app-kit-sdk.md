@@ -13,9 +13,10 @@ Jede App bekommt von der Plattform zwei Dinge, die der **Gate** unter `/_mininod
 | Datei | Aufgabe |
 | --- | --- |
 | `/_mininode/ui.css` | Farben (hell/dunkel), Schriften, Hülle (`mn-app`) und Komponenten (`mn-*`), Akzent über `data-accent` |
-| `/_mininode/ui.js` | Datum/Uhrzeit-Felder als Tag · Monat · Jahr bzw. Stunde : Minute, Dialoge, Kleinigkeiten |
+| `/_mininode/ui.js` | Datum/Uhrzeit-Felder als Tag · Monat · Jahr bzw. Stunde : Minute, Dialoge, Hinweise (`mnui.toast`, auf Wunsch mit einer Schaltfläche), Kleinigkeiten |
 | `/_mininode/i18n.js` | Sprachpakete (`window.mnI18n`), siehe [Sprache und Formate](wiki:sprachen-formate) |
 | `/_mininode/game.js` | Hilfen für Spiele (Spielername, Zeit, Bestenliste), siehe [Gaming Hub](wiki:gaming-hub) |
+| `/_mininode/files.js` | Für Apps, die Dateien „wie im Browser“ öffnen und speichern (Dateifeld, Speichern-Dialog, Download): bietet beim Öffnen die eigenen MiniNode-Dateien an und speichert auf Wunsch nach MiniNode (`mn.files`) statt aufs Gerät. Eine Datei, die aus MiniNode geöffnet oder dorthin gespeichert wurde, landet beim nächsten Speichern unter demselben Namen (Download oder Speichern-Dialog der App) ohne Rückfrage wieder dort; der Hinweis bietet „Speichern unter …“, ein zweites Speichern gleich danach fragt ebenfalls. Genutzt von den Craft-Apps |
 | `/_mininode/sdk.js` | Das SDK als einzelne Skriptdatei für reines HTML |
 | `/_mininode/pwa.js`, `sw.js`, `manifest.webmanifest` | Macht jede App installierbar und offlinefähig (automatisch, nicht selbst bauen) |
 

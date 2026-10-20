@@ -6,7 +6,7 @@
 //     the backdrop (unless modal), restores focus. Opening another sheet closes this one and
 //     calls its onClose.
 //   mnui.sheet.close()
-//   mnui.toast('Gespeichert')
+//   mnui.toast('Gespeichert'), mnui.toast('Gespeichert', { action: { label: 'Rückgängig', onClick } })
 //   mnui.theme.set('light' | 'dark' | 'system'), mnui.theme.get()
 //   mnui.select(button) marks one button of a group as aria-pressed / aria-current
 //   mnui.date.format('2026-10-01') → '01. Okt. 2026'; mnui.date.format('2026-10') → 'Okt. 2026'
@@ -149,13 +149,22 @@
   // The live region exists before the first message, so screen readers announce it.
   let toastEl = null;
   let toastTimer = 0;
+  let toastAction = null;
   function toastRegion() {
     if (!toastEl) {
       toastEl = document.createElement('div');
       toastEl.className = 'mn-toast';
       toastEl.setAttribute('role', 'status');
-      document.body.append(toastEl);
+      // A toast with an action waits while the pointer or the focus is on it.
+      const pause = () => toastAction && clearTimeout(toastTimer);
+      const resume = () => toastAction && hideLater();
+      toastEl.addEventListener('pointerenter', pause);
+      toastEl.addEventListener('focusin', pause);
+      toastEl.addEventListener('pointerleave', resume);
+      toastEl.addEventListener('focusout', resume);
     }
+    // A page that redraws its whole body removes the region with it.
+    if (!toastEl.isConnected) document.body.append(toastEl);
     return toastEl;
   }
   // Apps with their own toast set data-mn-toast="off" on <html> and get no second live region.
@@ -164,17 +173,47 @@
     else document.addEventListener('DOMContentLoaded', toastRegion, { once: true });
   }
 
-  function toast(message) {
+  function hideToast() {
     const el = toastRegion();
+    el.classList.remove('show', 'mn-toast--action');
+    // A hidden button must not stay in the tab order.
+    el.querySelector('.mn-toast-action')?.remove();
+    toastAction = null;
+  }
+  function hideLater() {
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(hideToast, toastAction ? 8000 : 2400);
+  }
+
+  /**
+   * A short message. With `{ action: { label, onClick } }` it carries one button, stays longer and
+   * waits while the pointer or the focus is on it.
+   */
+  function toast(message, { action } = {}) {
+    const el = toastRegion();
+    hideToast();
     el.textContent = '';
-    el.classList.remove('show');
+    toastAction = action ?? null;
     // Next frame: the cleared region makes a repeated message count as new, and the transition runs.
     requestAnimationFrame(() => {
+      // A newer toast in the same frame replaces this one.
+      if (toastAction !== (action ?? null)) return;
       el.textContent = message;
+      if (action) {
+        const run = document.createElement('button');
+        run.type = 'button';
+        run.className = 'mn-toast-action';
+        run.textContent = action.label;
+        run.onclick = () => {
+          hideToast();
+          action.onClick();
+        };
+        el.append(' ', run);
+        el.classList.add('mn-toast--action');
+      }
       el.classList.add('show');
     });
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => el.classList.remove('show'), 2400);
+    hideLater();
   }
 
   function select(button) {

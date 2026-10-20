@@ -1,0 +1,400 @@
+diff --git a/apps/photocraft-web/src/web.rs b/apps/photocraft-web/src/web.rs
+index 6fd3620..405fee5 100644
+--- a/apps/photocraft-web/src/web.rs
++++ b/apps/photocraft-web/src/web.rs
+@@ -1,6 +1,6 @@
+ //! The browser shell: web `Services`, drag-and-drop, and the eframe web runner.
+ 
+-use std::cell::Cell;
++use std::cell::{Cell, RefCell};
+ use std::collections::{HashMap, HashSet};
+ use std::rc::Rc;
+ use std::sync::atomic::{AtomicBool, Ordering};
+@@ -8,6 +8,7 @@ use std::sync::{Arc, Mutex};
+ 
+ use photocraft_codecs::{ChannelLayout, EncodeOptions, Image};
+ use photocraft_doc::Document;
++use photocraft_engine::prefs::{AppearanceMode, DarkTheme};
+ use photocraft_ui_egui::i18n;
+ use photocraft_ui_egui::served_fonts;
+ use photocraft_ui_egui::theme::ThemeKind;
+@@ -45,6 +46,11 @@ type Served = Arc<Mutex<ServedFonts>>;
+ 
+ pub fn start() {
+     eframe::WebLogger::init(log::LevelFilter::Info).ok();
++    // MiniNode: the "Auto" language follows the page's language (MiniNode sets `<html lang>`),
++    // then the browser's. Set before anything resolves the UI language.
++    i18n::set_browser_tags(page_language().into_iter().chain(browser_languages()).collect());
++    let prefs = PrefsQueue::default();
++    flush_prefs_on_hide(prefs.clone());
+     wasm_bindgen_futures::spawn_local(async {
+         let Some(document) = web_sys::window().and_then(|w| w.document()) else {
+             log::error!("no document");
+@@ -74,6 +80,8 @@ pub fn start() {
+             }
+         };
+         let pen_target = canvas.clone();
++        // MiniNode: read before the app's first save, so a fresh profile gets the web defaults.
++        let first_start = read_prefs().is_none();
+         let result = eframe::WebRunner::new()
+             .start(
+                 canvas,
+@@ -87,12 +95,27 @@ pub fn start() {
+                     let (session, warnings) = crate::preset_bridge::session(presets.clone());
+                     preset_warnings.extend(warnings);
+                     let drag = listen_drag(&pen_target);
+-                    let mut app = PhotocraftApp::new(session, services(inbox.clone(), place_inbox.clone(), drag_pos_service(pen_target.clone(), drag)));
++                    let mut app =
++                        PhotocraftApp::new(session, services(inbox.clone(), place_inbox.clone(), drag_pos_service(pen_target.clone(), drag), prefs.clone()));
+                     if !preset_warnings.is_empty() {
+                         photocraft_ui_egui::notices::post(&mut app, i18n::t("Some brush presets could not be loaded"), preset_warnings, true, None);
+                     }
+                     listen_pen(&pen_target, app.stylus.feed.clone());
+-                    app.set_theme(&cc.egui_ctx, ThemeKind::Pro);
++                    // MiniNode: no theme is forced on every start (that overwrote the saved choice).
++                    // With no saved preferences the appearance follows `prefers-color-scheme`, with
++                    // Pro, the web's look until now, as the dark theme.
++                    if first_start {
++                        app.session.edit_prefs(|p| {
++                            p.interface.appearance_mode = AppearanceMode::Auto;
++                            p.interface.dark_theme = DarkTheme::Pro;
++                        });
++                    }
++                    // MiniNode: new notes are signed with the person's MiniNode name.
++                    if app.ui.analysis.note_author.is_empty()
++                        && let Some(name) = mininode_user()
++                    {
++                        app.ui.analysis.note_author = name;
++                    }
+                     if let Some(rs) = cc.wgpu_render_state.clone()
+                         && !force_cpu
+                     {
+@@ -381,7 +404,8 @@ impl eframe::App for WebShell {
+     }
+ }
+ 
+-fn services(inbox: Inbox, place_inbox: Inbox, cursor_pos: photocraft_ui_egui::CursorPosFn) -> Services {
++fn services(inbox: Inbox, place_inbox: Inbox, cursor_pos: photocraft_ui_egui::CursorPosFn, prefs: PrefsQueue) -> Services {
++    let save = prefs.clone();
+     Services {
+         screen_pick: screen_color_service(),
+         import: Some(Box::new(|name: &str, bytes: &[u8], max_svg_group_depth: usize| {
+@@ -434,9 +458,9 @@ fn services(inbox: Inbox, place_inbox: Inbox, cursor_pos: photocraft_ui_egui::Cu
+         inbox: Some(inbox),
+         place_inbox: Some(place_inbox),
+         cursor_pos: Some(cursor_pos),
+-        // Preferences live in the browser's localStorage.
+-        load_prefs: Some(Box::new(|| local_storage()?.get_item(PREFS_KEY).ok().flatten())),
+-        save_prefs: Some(Box::new(|text: &str| local_storage().ok_or("no localStorage")?.set_item(PREFS_KEY, text).map_err(|e| format!("{e:?}")))),
++        // Preferences live in the browser's localStorage; a save waiting in the queue is the newest.
++        load_prefs: Some(Box::new(move || prefs.borrow().pending.clone().or_else(read_prefs))),
++        save_prefs: Some(Box::new(move |text: &str| queue_prefs(&save, text))),
+         ..Default::default()
+     }
+ }
+@@ -447,6 +471,101 @@ fn local_storage() -> Option<web_sys::Storage> {
+     web_sys::window()?.local_storage().ok().flatten()
+ }
+ 
++fn read_prefs() -> Option<String> {
++    local_storage()?.get_item(PREFS_KEY).ok().flatten()
++}
++
++fn write_prefs(text: &str) -> Result<(), String> {
++    local_storage().ok_or("no localStorage")?.set_item(PREFS_KEY, text).map_err(|e| format!("{e:?}"))
++}
++
++/// MiniNode syncs localStorage to the person's account, so every write reaches the server.
++/// Preference saves are written at most once per [`PREFS_WRITE_INTERVAL_MS`]: a save inside it
++/// waits (only the newest text is kept) for a timer, or for the page being hidden or closed.
++const PREFS_WRITE_INTERVAL_MS: f64 = 1000.0;
++
++#[derive(Default)]
++struct PrefsWriter {
++    /// The newest preferences not yet written.
++    pending: Option<String>,
++    /// When the last write happened (`Date.now()`, ms).
++    written_at: f64,
++    /// A flush timer is set.
++    timer: bool,
++    /// A delayed write failed; the next save reports it so the app retries and says so.
++    error: Option<String>,
++}
++
++type PrefsQueue = Rc<RefCell<PrefsWriter>>;
++
++fn queue_prefs(queue: &PrefsQueue, text: &str) -> Result<(), String> {
++    let now = js_sys::Date::now();
++    let mut q = queue.borrow_mut();
++    if !q.timer && now - q.written_at >= PREFS_WRITE_INTERVAL_MS {
++        q.pending = None;
++        q.error = None;
++        q.written_at = now;
++        return write_prefs(text);
++    }
++    q.pending = Some(text.to_owned());
++    if !q.timer {
++        q.timer = true;
++        let wait = (PREFS_WRITE_INTERVAL_MS - (now - q.written_at)).max(0.0);
++        let flush = queue.clone();
++        let cb = wasm_bindgen::closure::Closure::once_into_js(move || {
++            flush.borrow_mut().timer = false;
++            flush_prefs(&flush);
++        });
++        let set = web_sys::window().map(|w| w.set_timeout_with_callback_and_timeout_and_arguments_0(cb.unchecked_ref(), wait.ceil() as i32));
++        if !matches!(set, Some(Ok(_))) {
++            q.timer = false;
++            drop(q);
++            flush_prefs(queue);
++            return queue.borrow_mut().error.take().map_or(Ok(()), Err);
++        }
++    }
++    q.error.take().map_or(Ok(()), Err)
++}
++
++/// Write the waiting preferences now. A failure keeps them waiting for the next save or flush.
++fn flush_prefs(queue: &PrefsQueue) {
++    let mut q = queue.borrow_mut();
++    let Some(text) = q.pending.take() else { return };
++    q.written_at = js_sys::Date::now();
++    if let Err(e) = write_prefs(&text) {
++        log::error!("Could not save preferences: {e}");
++        q.pending = Some(text);
++        q.error = Some(e);
++    }
++}
++
++/// Write waiting preferences when the page is hidden or closed: the frame loop and timers may not
++/// run again.
++fn flush_prefs_on_hide(queue: PrefsQueue) {
++    use wasm_bindgen::closure::Closure;
++    let Some(window) = web_sys::window() else { return };
++    // Flushing early when the page comes back is harmless, so neither event is filtered.
++    let cb = Closure::<dyn FnMut()>::new(move || flush_prefs(&queue));
++    let ok = window.add_event_listener_with_callback("pagehide", cb.as_ref().unchecked_ref()).is_ok();
++    let ok = window.document().is_some_and(|d| d.add_event_listener_with_callback("visibilitychange", cb.as_ref().unchecked_ref()).is_ok()) || ok;
++    if ok {
++        cb.forget();
++    }
++}
++
++/// `<html lang>`, which MiniNode sets to the person's language (`de` or `en`).
++fn page_language() -> Option<String> {
++    let lang = web_sys::window()?.document()?.document_element()?.get_attribute("lang")?;
++    (!lang.trim().is_empty()).then_some(lang)
++}
++
++/// The person's display name, which MiniNode puts in `<html data-mn-user>` (missing without one).
++fn mininode_user() -> Option<String> {
++    let name = web_sys::window()?.document()?.document_element()?.get_attribute("data-mn-user")?;
++    let name = name.trim();
++    (!name.is_empty()).then(|| name.to_owned())
++}
++
+ /// Trigger a browser download of `bytes` named after the last component of `path`.
+ fn download(path: &str, bytes: &[u8]) -> Result<(), String> {
+     let js = |e: wasm_bindgen::JsValue| format!("{e:?}");
+diff --git a/crates/engine/src/shell_commands.rs b/crates/engine/src/shell_commands.rs
+index 2bd7656..990b18e 100644
+--- a/crates/engine/src/shell_commands.rs
++++ b/crates/engine/src/shell_commands.rs
+@@ -83,9 +83,6 @@ pub const SHELL_COMMANDS: &[(&str, &str, &[&str], Option<&str>)] = &[
+     ("window.theme.softDark", "Soft Dark Theme", &["Window", "Theme"], None),
+     ("window.theme.system", "Sync with system", &["Window", "Theme"], None),
+     ("edit.search", "Search…", &["Edit"], Some("Cmd+F")),
+-    ("help.discord", "Join the ArtCraft Discord…", &["Help"], None),
+-    ("help.website", "PhotoCraft Website", &["Help"], None),
+-    ("help.artcraftWebsite", "ArtCraft Website", &["Help"], None),
+     ("help.github", "PhotoCraft on GitHub", &["Help"], None),
+     ("help.reportIssue", "Report an Issue…", &["Help"], None),
+     ("help.systemInfo", "System Info…", &["Help"], None),
+diff --git a/crates/ui-egui/src/canvas.rs b/crates/ui-egui/src/canvas.rs
+index 914d395..2d370e3 100644
+--- a/crates/ui-egui/src/canvas.rs
++++ b/crates/ui-egui/src/canvas.rs
+@@ -2796,10 +2796,6 @@ fn start_screen(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+                 ui.add_space(22.0);
+                 home_recent(app, ui, &recent);
+             }
+-            ui.add_space(26.0);
+-            crate::links::discord_button(app, ui, 190.0);
+-            ui.add_space(10.0);
+-            crate::links::link_row(app, ui);
+         });
+     });
+ }
+diff --git a/crates/ui-egui/src/dialogs.rs b/crates/ui-egui/src/dialogs.rs
+index 43b4f3d..b804370 100644
+--- a/crates/ui-egui/src/dialogs.rs
++++ b/crates/ui-egui/src/dialogs.rs
+@@ -551,8 +551,6 @@ fn about_tab_body(app: &mut PhotocraftApp, ui: &mut egui::Ui, tab: &str) {
+             ui.label(crate::i18n::fmt(tl!("Version {version}"), &[("version", &photocraft_engine::build_info::long_version())]));
+             ui.add_space(12.0);
+             ui.vertical_centered(|ui| {
+-                crate::links::discord_button(app, ui, 220.0);
+-                ui.add_space(8.0);
+                 crate::links::link_row(app, ui);
+             });
+             ui.add_space(10.0);
+diff --git a/crates/ui-egui/src/i18n/mod.rs b/crates/ui-egui/src/i18n/mod.rs
+index b976e39..ddf2c4d 100644
+--- a/crates/ui-egui/src/i18n/mod.rs
++++ b/crates/ui-egui/src/i18n/mod.rs
+@@ -24,6 +24,8 @@ mod catalog;
+ mod system;
+ 
+ pub use system::system_lang;
++#[cfg(target_arch = "wasm32")]
++pub use system::set_browser_tags;
+ 
+ use std::cell::Cell;
+ use std::sync::OnceLock;
+diff --git a/crates/ui-egui/src/i18n/system.rs b/crates/ui-egui/src/i18n/system.rs
+index 49bc3bc..a6cf890 100644
+--- a/crates/ui-egui/src/i18n/system.rs
++++ b/crates/ui-egui/src/i18n/system.rs
+@@ -54,7 +54,19 @@ fn detect_system_tags() -> Vec<String> {
+ 
+ #[cfg(all(not(test), target_arch = "wasm32"))]
+ fn detect_system_tags() -> Vec<String> {
+-    Vec::new()
++    BROWSER_TAGS.get().cloned().unwrap_or_default()
++}
++
++/// MiniNode: the browser has no OS locale to query, so the web shell hands over the page's
++/// languages (`<html lang>`, then `navigator.languages`) before the first frame resolves Auto.
++#[cfg(target_arch = "wasm32")]
++static BROWSER_TAGS: std::sync::OnceLock<Vec<String>> = std::sync::OnceLock::new();
++
++/// Set the languages Auto resolves against on the web. Only the first call counts, and it must
++/// come before the UI first asks for [`system_lang`].
++#[cfg(target_arch = "wasm32")]
++pub fn set_browser_tags(tags: Vec<String>) {
++    let _ = BROWSER_TAGS.set(tags.into_iter().map(|t| t.trim().to_owned()).filter(|t| !t.is_empty()).collect());
+ }
+ 
+ #[cfg(test)]
+diff --git a/crates/ui-egui/src/links.rs b/crates/ui-egui/src/links.rs
+index e01a19d..a945471 100644
+--- a/crates/ui-egui/src/links.rs
++++ b/crates/ui-egui/src/links.rs
+@@ -1,20 +1,15 @@
+-//! Community and project links: the Help menu, the About dialog, the start screen and the title
+-//! bar all open these. URLs follow the crafting-app pattern (`getartcraft.com/apps/<app>`,
+-//! `github.com/storytold/<app>`).
++//! Project links: the Help menu and the About dialog open these (`github.com/storytold/<app>`).
++//! MiniNode: the Discord, ArtCraft and app-website links are removed.
+ 
+ use serde_json::{Value, json};
+ 
+ use crate::PhotocraftApp;
+ 
+-pub const DISCORD: &str = "https://discord.gg/artcraft";
+-pub const ARTCRAFT_WEBSITE: &str = "https://getartcraft.com";
+-pub const APP_PAGE: &str = "https://getartcraft.com/apps/photocraft";
+ pub const GITHUB: &str = "https://github.com/storytold/photocraft";
+ pub const ISSUES: &str = "https://github.com/storytold/photocraft/issues";
+ 
+ /// Help-menu link commands: (id, url). Labels live in `menus::UI_COMMANDS`.
+-pub const COMMANDS: &[(&str, &str)] =
+-    &[("help.discord", DISCORD), ("help.website", APP_PAGE), ("help.artcraftWebsite", ARTCRAFT_WEBSITE), ("help.github", GITHUB), ("help.reportIssue", ISSUES)];
++pub const COMMANDS: &[(&str, &str)] = &[("help.github", GITHUB), ("help.reportIssue", ISSUES)];
+ 
+ pub fn url_for(id: &str) -> Option<&'static str> {
+     COMMANDS.iter().find(|c| c.0 == id).map(|c| c.1)
+@@ -32,24 +27,15 @@ pub fn open(app: &mut PhotocraftApp, ctx: &egui::Context, url: &str) -> Value {
+     json!({"url": url})
+ }
+ 
+-/// The prominent "Join us on Discord" button.
+-pub fn discord_button(app: &mut PhotocraftApp, ui: &mut egui::Ui, min_width: f32) -> egui::Response {
+-    let r = crate::widgets::primary_button(ui, tl!("Join us on Discord"), min_width).on_hover_text(DISCORD);
+-    if r.clicked() {
+-        open(app, ui.ctx(), DISCORD);
+-    }
+-    r
+-}
+-
+-/// "PhotoCraft website · GitHub · ArtCraft" as links, centred. Clicks route through [`open`] (the
++/// "GitHub · Report an Issue…" as links, centred. Clicks route through [`open`] (the
+ /// platform browser service) rather than `ui.hyperlink_to`, which uses the unreliable `ctx.open_url`.
+ pub fn link_row(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+     let t = crate::theme::Tokens::get(ui.ctx());
+-    let links = [(tl!("PhotoCraft website"), APP_PAGE), (tl!("GitHub"), GITHUB), (tl!("ArtCraft"), ARTCRAFT_WEBSITE)];
++    let links = [(tl!("GitHub"), GITHUB), (tl!("Report an Issue…"), ISSUES)];
+     let font = egui::FontId::proportional(12.5);
+     let sep = "  ·  ";
+     let width: f32 = links.iter().map(|(l, _)| ui.painter().layout_no_wrap((*l).into(), font.clone(), t.text).size().x).sum::<f32>()
+-        + 2.0 * ui.painter().layout_no_wrap(sep.into(), font.clone(), t.text).size().x;
++        + ui.painter().layout_no_wrap(sep.into(), font.clone(), t.text).size().x;
+     let mut clicked: Option<&str> = None;
+     ui.horizontal(|ui| {
+         ui.spacing_mut().item_spacing.x = 0.0;
+@@ -74,7 +60,7 @@ mod tests {
+ 
+     #[test]
+     fn links_open_through_the_platform_service() {
+-        // Issue #14: links (Help menu, Discord button, start-page links) must open in the browser.
++        // Issue #14: links (Help menu, About links) must open in the browser.
+         // They route through the `open_url` service rather than the unreliable `ctx.open_url`.
+         use std::sync::{Arc, Mutex};
+         let opened: Arc<Mutex<Vec<String>>> = Arc::new(Mutex::new(Vec::new()));
+@@ -93,16 +79,16 @@ mod tests {
+             crate::menus::invoke(&mut app, &ctx, id, json!({})).unwrap();
+             assert_eq!(opened.lock().unwrap().last().map(String::as_str), Some(*url), "{id}");
+         }
+-        // The direct open() helper (Discord button / start-page links) also uses it.
+-        open(&mut app, &ctx, DISCORD);
+-        assert_eq!(opened.lock().unwrap().last().map(String::as_str), Some(DISCORD));
++        // The direct open() helper (About links) also uses it.
++        open(&mut app, &ctx, ISSUES);
++        assert_eq!(opened.lock().unwrap().last().map(String::as_str), Some(ISSUES));
+     }
+ 
+     #[test]
+     fn help_menu_lists_links_then_separator_then_system_info_and_about() {
+         let app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+         let help: Vec<String> = crate::menus::menu_items(&app).into_iter().filter(|i| i.path == ["Help"]).map(|i| i.id).collect();
+-        assert_eq!(help, ["help.discord", "help.website", "help.artcraftWebsite", "help.github", "help.reportIssue", "---", "help.systemInfo", "help.about"]);
++        assert_eq!(help, ["help.github", "help.reportIssue", "---", "help.systemInfo", "help.about"]);
+         for (id, _) in COMMANDS {
+             assert!(crate::menus::is_live(id) && crate::menus::is_enabled(&app, id), "{id}");
+         }
+@@ -113,9 +99,8 @@ mod tests {
+         let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+         let ctx = egui::Context::default();
+         for (id, url) in [
+-            ("help.discord", "https://discord.gg/artcraft"),
+-            ("help.website", "https://getartcraft.com/apps/photocraft"),
+             ("help.github", "https://github.com/storytold/photocraft"),
++            ("help.reportIssue", "https://github.com/storytold/photocraft/issues"),
+         ] {
+             let r = crate::menus::invoke(&mut app, &ctx, id, serde_json::json!({})).unwrap();
+             assert_eq!(r["url"], url);
+diff --git a/crates/ui-egui/src/menus.rs b/crates/ui-egui/src/menus.rs
+index 074d87a..8db3993 100644
+--- a/crates/ui-egui/src/menus.rs
++++ b/crates/ui-egui/src/menus.rs
+@@ -112,7 +112,7 @@ pub(crate) fn invoke_unguarded(app: &mut PhotocraftApp, ctx: &egui::Context, id:
+     if let Some(result) = crate::panel_docking::command(app, id, &params) {
+         return result;
+     }
+-    // Help › Discord, website, GitHub, Report an Issue.
++    // Help › GitHub, Report an Issue.
+     if let Some(url) = crate::links::url_for(id) {
+         return Ok(crate::links::open(app, ctx, url));
+     }
+diff --git a/crates/ui-egui/src/titlebar.rs b/crates/ui-egui/src/titlebar.rs
+index 25b23ee..7a860e6 100644
+--- a/crates/ui-egui/src/titlebar.rs
++++ b/crates/ui-egui/src/titlebar.rs
+@@ -679,8 +679,7 @@ mod tests {
+ 
+     #[test]
+     fn the_title_bar_promotes_no_community_chat() {
+-        // Issue #1726: only the always-visible title-bar button is removed. The start-screen
+-        // and About buttons and Help › Discord remain available.
++        // Issue #1726: no Discord button in the title bar (MiniNode removed it everywhere).
+         for width in [760.0, 1100.0, 1440.0] {
+             let mut w = Win::new(width);
+             w.frame(vec![]);

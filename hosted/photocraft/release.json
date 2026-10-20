@@ -2,5 +2,7 @@
   "name": "photocraft",
   "version": "0.10.0",
   "sha256": "b121472d1cdc2f24530b8239c4f32843afdbc1da994244e98a2ce4835b410590",
-  "loadingText": "Loading PhotoCraft&hellip;"
+  "loadingText": "Loading PhotoCraft&hellip;",
+  "files": true,
+  "patches": ["patches/mininode.patch"]
 }

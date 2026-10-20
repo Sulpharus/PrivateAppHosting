@@ -1,4 +1,19 @@
 {
   "app.title": "LightCraft",
-  "app.loading": "Loading LightCraft …"
+  "app.loading": "Loading LightCraft …",
+  "files.open.title": "Open file",
+  "files.open.device": "From this device …",
+  "files.open.empty": "There are no matching files in MiniNode yet.",
+  "files.open.loading": "Loading files …",
+  "files.open.selected": "Open {n}",
+  "files.save.title": "Save",
+  "files.save.name": "File name",
+  "files.save.mininode": "Save to MiniNode",
+  "files.save.device": "Save on this device",
+  "files.save.replace": "“{name}” already exists in MiniNode. Replace it?",
+  "files.save.done": "“{name}” saved to MiniNode",
+  "files.save.as": "Save as …",
+  "files.cancel": "Cancel",
+  "files.error": "That did not work: {message}",
+  "files.source": "MiniNode"
 }

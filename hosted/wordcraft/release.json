@@ -2,5 +2,7 @@
   "name": "wordcraft",
   "version": "0.8.0",
   "sha256": "37a5369cd66606e0c4e019e0f273f905a9b2e9101f68a191a6f40b8724225ecd",
-  "loadingText": "Loading WordCraft&hellip;"
+  "loadingText": "Loading WordCraft&hellip;",
+  "files": true,
+  "patches": ["patches/mininode.patch"]
 }

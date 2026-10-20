@@ -13,8 +13,12 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  crafts:
+    uses: ./.github/workflows/crafts.yml
+
   check:
     name: Lint, typecheck, test
+    needs: crafts
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -31,12 +35,19 @@ jobs:
       - run: pnpm test
       - name: Doctor all hosted apps
         run: pnpm mininode doctor --all
+      - name: Patched Craft builds
+        if: github.event_name == 'pull_request'
+        uses: actions/download-artifact@v4
+        with:
+          pattern: craft-*
+          path: craft-builds
       - name: Dry-run deploy of changed apps (build + gate config)
         if: github.event_name == 'pull_request'
         env:
           SUPABASE_URL: https://example.supabase.co
           SUPABASE_PUBLISHABLE_KEY: dry-run
         run: |
+          scripts/craft-builds.sh craft-builds
           pnpm --filter @mininode/sdk build
           pnpm mininode deploy --changed "origin/${{ github.base_ref }}" --dry-run
       - name: Short app spec is up to date
