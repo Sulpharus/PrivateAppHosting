@@ -1,5 +1,6 @@
 {
   "app.title": "PhotoCraft",
+  "nav.allAppsBack": "← Alle Apps",
   "app.loading": "PhotoCraft wird geladen …",
   "files.open.title": "Datei öffnen",
   "files.open.device": "Von diesem Gerät …",

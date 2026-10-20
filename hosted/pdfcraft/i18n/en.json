@@ -1,5 +1,6 @@
 {
   "app.title": "PdfCraft",
+  "nav.allAppsBack": "← All apps",
   "app.loading": "Loading PdfCraft …",
   "files.open.title": "Open file",
   "files.open.device": "From this device …",

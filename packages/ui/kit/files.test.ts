@@ -235,6 +235,20 @@ describe('saving', () => {
     expect(upload).toHaveBeenCalledOnce();
   });
 
+  it('takes the file behind a blob: address from the app, even when it revoked it at once', async () => {
+    const href = URL.createObjectURL(new Blob(['%PDF-1.7 Inhalt'], { type: 'application/pdf' }));
+    const link = Object.assign(document.createElement('a'), { href, download: 'Vertrag.pdf' });
+    link.click();
+    URL.revokeObjectURL(href);
+    await until(() => buttonNamed('In MiniNode speichern'));
+    buttonNamed('In MiniNode speichern')?.click();
+    await until(() => upload.mock.calls.length);
+    // No fetch of the blob: address (the page's CSP may not allow it).
+    expect(await (upload.mock.calls[0] as unknown as [string, Blob])[1].text()).toBe(
+      '%PDF-1.7 Inhalt',
+    );
+  });
+
   it('lets ordinary links through', () => {
     const link = Object.assign(document.createElement('a'), { href: 'https://example.com/' });
     link.click();

@@ -12,7 +12,8 @@
 //     opened from or saved to the device ends this.
 // The app needs a data mode other than "none" (mn.files) and nothing else; texts come from the
 // app's language packages (keys files.*, German fallback below). data-mn-native on a field or a
-// link keeps the browser's own behaviour.
+// link keeps the browser's own behaviour. URL.createObjectURL and revokeObjectURL are wrapped to
+// keep the Blob behind each blob: address, so a download link is saved without fetching it.
 (() => {
   const TEXT = {
     'files.open.title': 'Datei öffnen',
@@ -376,6 +377,25 @@
     };
   };
 
+  // The files behind the app's blob: addresses. Reading one with fetch() needs blob: in the page's
+  // connect-src, so the Blob itself is kept from URL.createObjectURL until the app revokes it.
+  const blobs = new Map();
+  const nativeCreateUrl = URL.createObjectURL;
+  const nativeRevokeUrl = URL.revokeObjectURL;
+  URL.createObjectURL = function createObjectURL(object) {
+    const url = nativeCreateUrl.call(URL, object);
+    if (object instanceof Blob) blobs.set(url, object);
+    return url;
+  };
+  URL.revokeObjectURL = function revokeObjectURL(url) {
+    blobs.delete(url);
+    return nativeRevokeUrl.call(URL, url);
+  };
+  const blobOf = (url) => {
+    const known = blobs.get(url);
+    return known ? Promise.resolve(known) : fetch(url).then((response) => response.blob());
+  };
+
   const nativeAnchorClick = HTMLAnchorElement.prototype.click;
   const download = (blob, name) => {
     const link = el('a', { href: URL.createObjectURL(blob), download: name, hidden: true });
@@ -393,7 +413,7 @@
       return nativeAnchorClick.call(this);
     // Read the file now: the app may revoke its address while the dialog is open.
     const name = this.download || 'download';
-    const blob = fetch(this.href).then((response) => response.blob());
+    const blob = blobOf(this.href);
     if (direct(name)) saveDirect(name, blob);
     else askFor(name, blob);
   };
