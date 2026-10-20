@@ -384,6 +384,69 @@ index 074d87a..8db3993 100644
      if let Some(url) = crate::links::url_for(id) {
          return Ok(crate::links::open(app, ctx, url));
      }
+diff --git a/crates/ui-egui/src/theme.rs b/crates/ui-egui/src/theme.rs
+index 0b2cc7c..d5fd553 100644
+--- a/crates/ui-egui/src/theme.rs
++++ b/crates/ui-egui/src/theme.rs
+@@ -250,29 +250,30 @@ impl Tokens {
+                 row_selected: Color32::from_rgb(212, 212, 212),
+                 ..Tokens::for_kind(ThemeKind::Pro)
+             },
+-            // Photoshop's lightest brightness: #F0F0F0 panels, dark text, a light-grey canvas.
++            // MiniNode: the lightest brightness in the platform's white surfaces and neutrals
++            // (packages/ui), like its other apps; a neutral light-grey canvas around the image.
+             ThemeKind::ProLight => Tokens {
+                 kind,
+-                chrome: Color32::from_rgb(240, 240, 240),
+-                canvas: Color32::from_rgb(214, 214, 214),
+-                canvas_dot: Color32::from_rgb(214, 214, 214),
+-                dock: Color32::from_rgb(226, 226, 226),
+-                card: Color32::from_rgb(240, 240, 240),
+-                card_border: Color32::from_rgb(214, 214, 214),
++                chrome: Color32::WHITE,
++                canvas: Color32::from_rgb(232, 232, 232),
++                canvas_dot: Color32::from_rgb(232, 232, 232),
++                dock: Color32::from_rgb(243, 244, 241),
++                card: Color32::WHITE,
++                card_border: Color32::from_rgb(221, 225, 219),
+                 field: Color32::WHITE,
+-                field_border: Color32::from_rgb(186, 186, 186),
+-                hover: Color32::from_rgb(226, 226, 226),
+-                pressed: Color32::from_rgb(206, 206, 206),
+-                text: Color32::from_rgb(20, 20, 20),
+-                text_dim: Color32::from_rgb(64, 64, 64),
+-                text_faint: Color32::from_rgb(120, 120, 120),
+-                icon: Color32::from_rgb(46, 46, 46),
+-                accent_soft: Color32::from_rgb(214, 214, 214),
++                field_border: Color32::from_rgb(196, 202, 194),
++                hover: Color32::from_rgb(236, 238, 233),
++                pressed: Color32::from_rgb(223, 227, 221),
++                text: Color32::from_rgb(21, 25, 28),
++                text_dim: Color32::from_rgb(61, 69, 76),
++                text_faint: Color32::from_rgb(91, 100, 108),
++                icon: Color32::from_rgb(42, 48, 53),
++                accent_soft: Color32::from_rgb(226, 230, 224),
+                 accent_text: Color32::from_rgb(16, 98, 196),
+-                separator: Color32::from_rgb(214, 214, 214),
+-                shadow: Color32::from_black_alpha(50),
+-                tab_strip: Color32::from_rgb(226, 226, 226),
+-                row_selected: Color32::from_rgb(204, 204, 204),
++                separator: Color32::from_rgb(221, 225, 219),
++                shadow: Color32::from_black_alpha(36),
++                tab_strip: Color32::from_rgb(243, 244, 241),
++                row_selected: Color32::from_rgb(214, 230, 250),
+                 ..Tokens::for_kind(ThemeKind::Pro)
+             },
+             ThemeKind::Pro => Tokens {
+@@ -1161,7 +1162,7 @@ mod tests {
+     fn pro_light_gray_and_light_themes() {
+         // #2661: Photoshop's third and fourth brightness levels, with the Pro layout.
+         for (kind, panel, id, label) in
+-            [(ThemeKind::ProLightGray, 184, "proLightGray", "Pro (Light Gray)"), (ThemeKind::ProLight, 240, "proLight", "Pro (Light)")]
++            [(ThemeKind::ProLightGray, 184, "proLightGray", "Pro (Light Gray)"), (ThemeKind::ProLight, 255, "proLight", "Pro (Light)")]
+         {
+             let t = Tokens::for_kind(kind);
+             assert!(t.pro && !t.dark() && !t.bevel && kind.is_pro(), "{kind:?}");
 diff --git a/crates/ui-egui/src/titlebar.rs b/crates/ui-egui/src/titlebar.rs
 index 25b23ee..7a860e6 100644
 --- a/crates/ui-egui/src/titlebar.rs

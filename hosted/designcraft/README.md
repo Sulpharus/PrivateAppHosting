@@ -21,7 +21,7 @@ patched source build and the MiniNode files dialog (`files: true`).
 
 ## Data
 
-`data.mode: private`. Documents are opened from MiniNode or the device and saved to MiniNode (`mn.files`, the person's own folder) or the device. Settings follow the account: the patch keeps the desktop's `ui.json` and `prefs.json` (theme, language, units, workspaces, shortcuts, presets, recent files) in `localStorage` under `designcraft.preferences`, which MiniNode syncs. Until the person picks it in the app, the language follows MiniNode; the brightness keeps the app's own default (Medium Dark). The patch also gives date variables the real time (upstream's web build reported 1970) and asks before leaving the page with unsaved documents.
+`data.mode: private`. Documents are opened from MiniNode or the device and saved to MiniNode (`mn.files`, the person's own folder) or the device. Settings follow the account: the patch keeps the desktop's `ui.json` and `prefs.json` (theme, language, units, workspaces, shortcuts, presets, recent files) in `localStorage` under `designcraft.preferences`, which MiniNode syncs. Until the person picks it in the app, the language follows MiniNode; the brightness follows the system, Light or Dark, and switches with it until the person picks another one (the patch gives Light MiniNode's white surfaces and neutrals and pins egui to the chosen theme; a grey Medium Dark or Medium Light that earlier builds saved is dropped once per account, marker `designcraft.theme-follow`, while Dark, Light and High Contrast stay). The patch also gives date variables the real time (upstream's web build reported 1970) and asks before leaving the page with unsaved documents.
 
 ## Updating
 

@@ -37,7 +37,7 @@ index b088ad1..7044a68 100644
  <body>
 diff --git a/apps/lightcraft-web/src/account.rs b/apps/lightcraft-web/src/account.rs
 new file mode 100644
-index 0000000..661627e
+index 0000000..f9f8cae
 --- /dev/null
 +++ b/apps/lightcraft-web/src/account.rs
 @@ -0,0 +1,155 @@
@@ -71,8 +71,8 @@ index 0000000..661627e
 +}
 +
 +/// True the first time it is asked on this account (the marker is synced like the settings).
-+pub fn first_theme_reset() -> bool {
-+    const MARK: &str = "lightcraft.theme-reset";
++pub fn first_theme_follow() -> bool {
++    const MARK: &str = "lightcraft.theme-follow";
 +    let Some(s) = storage() else { return false };
 +    if s.get_item(MARK).ok().flatten().is_some() {
 +        return false;
@@ -246,7 +246,7 @@ index 58966e6..bccd1b0 100644
  mod backend;
  #[cfg(target_arch = "wasm32")]
 diff --git a/apps/lightcraft-web/src/web.rs b/apps/lightcraft-web/src/web.rs
-index 6a4487d..efec9c8 100644
+index 6a4487d..3cb1e1d 100644
 --- a/apps/lightcraft-web/src/web.rs
 +++ b/apps/lightcraft-web/src/web.rs
 @@ -14,6 +14,7 @@ use serde_json::json;
@@ -336,7 +336,7 @@ index 6a4487d..efec9c8 100644
          let originals = Originals::default();
          let t = perf_now();
          let mut session = Session::new();
-@@ -433,12 +456,33 @@ impl WebApp {
+@@ -433,12 +456,39 @@ impl WebApp {
          // previews are large (≤ 2560 px, f32): keep few in a 32-bit address space
          session.media.preview_capacity = 3;
          let frozen = Rc::new(Cell::new(false));
@@ -355,24 +355,30 @@ index 6a4487d..efec9c8 100644
          if let Ok(ui) = serde_json::from_slice::<UiState>(&ui_written) {
              app.ui = ui;
          }
-+        // MiniNode: without a saved choice, the language follows the page's (MiniNode's); the
-+        // appearance keeps the app's own default (dark)
++        // MiniNode: without a saved choice, the language follows the page's (MiniNode's)
 +        let saved = serde_json::from_slice::<serde_json::Value>(&ui_written).unwrap_or_default();
 +        let follow_language = account::page_language().filter(|_| saved.get("language").is_none());
 +        if let Some(l) = follow_language {
 +            app.ui.language = l;
 +        }
-+        // An earlier MiniNode build started LightCraft in "auto" (its light theme looked grey):
-+        // that stored choice goes back to the app's default once.
-+        // The marker is set on every first start, so an "auto" picked later stays.
-+        let first_start = account::first_theme_reset();
-+        if first_start && app.ui.settings.appearance_mode == lightcraft_ui_egui::state::AppearanceMode::Auto {
-+            app.ui.settings.appearance_mode = lightcraft_ui_egui::state::AppearanceMode::Dark;
++        // MiniNode: the appearance follows the system, with the white Paper as the light theme,
++        // like MiniNode's other apps. Earlier builds stored their defaults (Dark, the grey
++        // Silver); on the first start with this one (once per account, the marker is synced)
++        // those are replaced. Light mode and the dark theme stay, and a choice made later stays.
++        if account::first_theme_follow() {
++            use lightcraft_ui_egui::state::{AppearanceMode, LightTheme};
++            let settings = &mut app.ui.settings;
++            if settings.appearance_mode == AppearanceMode::Dark {
++                settings.appearance_mode = AppearanceMode::Auto;
++            }
++            if settings.light_theme == LightTheme::Silver {
++                settings.light_theme = LightTheme::Paper;
++            }
 +        }
          app.ui = app.ui.sanitized();
          app.library_problem = problem;
          let n = opts.workers.unwrap_or_else(|| {
-@@ -477,6 +521,8 @@ impl WebApp {
+@@ -477,6 +527,8 @@ impl WebApp {
              first_frame_logged: false,
              last_save: 0.0,
              ui_written,
@@ -381,7 +387,7 @@ index 6a4487d..efec9c8 100644
          }
      }
  
-@@ -532,6 +578,22 @@ impl WebApp {
+@@ -532,6 +584,22 @@ impl WebApp {
          }
      }
  
@@ -404,7 +410,7 @@ index 6a4487d..efec9c8 100644
      /// Save view state, UI prefs and the thumbnail index now and then; flush dirty files.
      fn save(&mut self) {
          if self.frozen.get() {
-@@ -541,12 +603,15 @@ impl WebApp {
+@@ -541,12 +609,15 @@ impl WebApp {
          if now - self.last_save >= SAVE_EVERY_MS {
              self.last_save = now;
              self.app.session.save_view();
@@ -545,3 +551,64 @@ index 7e40af7..ba44079 100644
                  ("cloud", Icon::Cloud, cloud_tip, ""),
                  ("help", Icon::Help, "Keyboard shortcuts", "app.shortcuts"),
                  ("share", Icon::Share, "Export", "dialog.export"),
+diff --git a/crates/ui-egui/src/theme.rs b/crates/ui-egui/src/theme.rs
+index 57ee987..90b37dc 100644
+--- a/crates/ui-egui/src/theme.rs
++++ b/crates/ui-egui/src/theme.rs
+@@ -213,32 +213,34 @@ impl Tokens {
+                 caution: rgb(0xb0761a),
+                 ..base
+             },
++            // MiniNode: white chrome and the platform's neutrals (packages/ui), like its other
++            // apps; neutral greys where photos are judged.
+             ThemeKind::Paper => Tokens {
+-                chrome: rgb(0xfafafa),
+-                canvas: rgb(0xececec),
+-                grid_bg: rgb(0xf2f2f2),
+-                cell: rgb(0xe8e8e8),
+-                cell_selected: rgb(0xd2d2d2),
+-                divider: rgb(0xe0e0e0),
+-                inset: rgb(0xf0f0f0),
++                chrome: rgb(0xffffff),
++                canvas: rgb(0xebebeb),
++                grid_bg: rgb(0xf3f4f1),
++                cell: rgb(0xe6e7e4),
++                cell_selected: rgb(0xdde1db),
++                divider: rgb(0xdde1db),
++                inset: rgb(0xf6f7f5),
+                 field: rgb(0xffffff),
+-                field_border: rgb(0xcccccc),
++                field_border: rgb(0xc4cac2),
+                 button: rgb(0xffffff),
+-                button_border: rgb(0xc6c6c6),
+-                hover: rgb(0xebebeb),
+-                pressed: rgb(0xdedede),
+-                tool_active: rgb(0xe2e2e2),
+-                text: rgb(0x161616),
+-                text_label: rgb(0x343434),
+-                text_dim: rgb(0x707070),
+-                text_disabled: rgb(0xababab),
+-                icon: rgb(0x585858),
+-                track: rgb(0xbdbdbd),
+-                thumb: rgb(0x606060),
+-                thumb_hover: rgb(0x202020),
++                button_border: rgb(0xc4cac2),
++                hover: rgb(0xeceee9),
++                pressed: rgb(0xdfe3dd),
++                tool_active: rgb(0xe3e7e1),
++                text: rgb(0x15191c),
++                text_label: rgb(0x2f363b),
++                text_dim: rgb(0x5b646c),
++                text_disabled: rgb(0x9aa19c),
++                icon: rgb(0x4a5258),
++                track: rgb(0xc4cac2),
++                thumb: rgb(0x5b646c),
++                thumb_hover: rgb(0x15191c),
+                 accent: rgb(0x0a62d0),
+-                star: rgb(0x3a3a3a),
+-                pick: rgb(0x2a2a2a),
++                star: rgb(0x2f363b),
++                pick: rgb(0x15191c),
+                 reject: rgb(0xc83434),
+                 caution: rgb(0xb0761a),
+                 ..base

@@ -21,7 +21,7 @@ patched source build and the MiniNode files dialog (`files: true`).
 
 ## Data
 
-`data.mode: private`. Images are opened from MiniNode or the device and saved to MiniNode (`mn.files`, the person's own folder) or the device. Settings follow the account: the app keeps its preferences and its small presets (gradients, styles, shapes, swatches, document and export presets) in `localStorage` under `photocraft.preferences`, which MiniNode syncs; the patch limits the writes to one a second. Brush presets stay in IndexedDB on that device. On "Auto" the interface follows the MiniNode language; a new profile starts in the system's light or dark appearance (upstream forced its dark theme on every start), and the note author is the name from the account.
+`data.mode: private`. Images are opened from MiniNode or the device and saved to MiniNode (`mn.files`, the person's own folder) or the device. Settings follow the account: the app keeps its preferences and its small presets (gradients, styles, shapes, swatches, document and export presets) in `localStorage` under `photocraft.preferences`, which MiniNode syncs; the patch limits the writes to one a second. Brush presets stay in IndexedDB on that device. On "Auto" the interface follows the MiniNode language; a new profile starts in the system's light or dark appearance (upstream forced its dark theme on every start); the patch gives the light theme Pro (Light) MiniNode's white surfaces and neutrals, and the note author is the name from the account.
 
 ## Updating
 
