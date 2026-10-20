@@ -59,12 +59,13 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-unknown-unknown
-      - name: Trunk and binaryen
+      # No binaryen: trunk downloads its own wasm-opt, FilmCraft and LightCraft skip theirs, as in
+      # the official release builds. Ubuntu's old wasm-opt broke the apps (build.mjs refuses one).
+      - name: Trunk
         if: steps.cache.outputs.cache-hit != 'true'
         run: |
           curl -fsSL https://github.com/trunk-rs/trunk/releases/download/v0.21.14/trunk-x86_64-unknown-linux-gnu.tar.gz \
             | tar xz -C "$HOME/.cargo/bin"
-          sudo apt-get install -y --no-install-recommends binaryen
       - name: Build from the patched source
         if: steps.cache.outputs.cache-hit != 'true'
         run: node hosted/${{ matrix.app }}/build.mjs --source

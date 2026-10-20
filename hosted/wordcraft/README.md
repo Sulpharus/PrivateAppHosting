@@ -28,7 +28,10 @@ own. `release.json` names the release (`name`, `version`, `sha256`), the app's l
   The result is kept as `.cache/source-<key>.zip`; the key covers the version and the patches.
   - Needs Rust with the `wasm32-unknown-unknown` target, `trunk`, and for FilmCraft and LightCraft
     `wasm-bindgen-cli` (their package script installs it when `CI` is set). A first build takes
-    about 20 minutes per app (WordCraft: 8.5 min compiling, 10 min `wasm-opt`).
+    about 20 minutes per app (WordCraft: 8.5 min compiling, 10 min `wasm-opt`). No `wasm-opt`
+    (binaryen) may be on PATH: trunk would use it instead of downloading the current one, and
+    FilmCraft's and LightCraft's builds run any they find. Ubuntu's old one broke all six apps
+    (FilmCraft: "failed to grow table"), so `build.mjs` stops when it finds one.
   - In GitHub Actions the workflow `crafts.yml` builds every patched app on its own runner, caches
     the zip under its key and hands it to CI and the deploy (`scripts/craft-builds.sh`). Rust only
     runs when a version or a patch changes.

@@ -67,7 +67,8 @@ const files = (dir) =>
     .filter((file) => statSync(file).isFile());
 
 // Bump when the way the patched zip is made changes, so caches built the old way are not reused.
-const SOURCE_BUILDER = 1;
+// 2: built without a wasm-opt on PATH (1 used Ubuntu's, which broke the apps).
+const SOURCE_BUILDER = 2;
 const sourceKey = () =>
   createHash('sha256')
     .update(`${name}@${version}#${SOURCE_BUILDER}`)
@@ -96,6 +97,13 @@ function patchedZip() {
     console.warn(`${name}: Rust is not installed; using the unpatched official release instead`);
     return officialZip();
   }
+  // Trunk takes a wasm-opt from PATH instead of downloading the current one, and FilmCraft's and
+  // LightCraft's builds run any they find; an old one breaks the app (FilmCraft: "failed to grow
+  // table"). The official releases are built without one.
+  if (has('wasm-opt'))
+    throw new Error(
+      `${name}: a wasm-opt is on PATH (binaryen); the official releases build without one, take it off PATH`,
+    );
   const src = join(cache, `src-${version}`);
   if (!existsSync(join(src, '.git'))) {
     rmSync(src, { recursive: true, force: true });
