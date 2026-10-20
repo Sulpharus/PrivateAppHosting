@@ -19,7 +19,7 @@ Einrichten: `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` (`node scripts/vapid-keys.t
 ## Jede App ist eine installierbare App (PWA)
 
 Das Gate liefert für jede App Manifest, Symbol und `pwa.js`/`sw.js` aus. Seiten und ungehashte Dateien werden **Netz zuerst** geladen (die
-Zugriffsprüfung läuft online), gehashte Dateien aus dem Zwischenspeicher: eine App öffnet **offline**, sobald sie einmal online geöffnet wurde.
+Zugriffsprüfung läuft online), gehashte Dateien aus dem Zwischenspeicher: eine App öffnet **offline**, sobald sie einmal online geöffnet wurde. Ausnahme: WebAssembly-Apps (die Craft-Apps) laden ihr großes Modul am Service Worker vorbei; offline starten sie nur, solange der Browser das Modul noch selbst zwischenspeichert.
 Jedes Deploy stempelt eine neue Version, damit alte Zwischenspeicher verschwinden. **Du siehst eine Änderung nicht?** Meist ist es eine
 zwischengespeicherte App-Version: neu laden oder die App neu öffnen.
 

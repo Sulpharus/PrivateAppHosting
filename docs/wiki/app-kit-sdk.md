@@ -57,7 +57,7 @@ const user = await mn.auth.requireLogin();  // schickt zum zentralen Login, fall
 beliebigen Dev-Server aus sieht man keine Daten.
 
 Für Apps, die für andere Umgebungen gebaut wurden, gibt es zwei **Kompatibilitätsschichten**, die `mininode integrate` einbaut:
-`installMiniNodeCompat(mn)` (definiert `window.MiniNode`) und `installLocalStorageSync(mn)` (hält `localStorage` im Konto).
+`installMiniNodeCompat(mn)` (definiert `window.MiniNode`) und `installLocalStorageSync(mn)` (hält `localStorage` im Konto; Änderungen gehen gesammelt etwa 2 Sekunden nach der letzten ins Konto, spätestens alle 10 Sekunden und beim Verlassen der Seite, und was noch nicht angekommen ist, wird beim nächsten Start nachgeschickt).
 
 ## Lokal entwickeln
 

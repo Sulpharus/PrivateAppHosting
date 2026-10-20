@@ -160,15 +160,24 @@ interface StorageMethods {
 const patched = new WeakMap<object, StorageMethods>();
 
 const KEY_PREFIX = 'ls:';
+const SYNC_QUIET_MS = 2000;
+const SYNC_MAX_MS = 10000;
 const OWNER_KEY = 'mn-ls-owner';
+/** Keys changed here but not yet confirmed by the account (a platform key: never synced). */
+const PENDING_KEY = 'mininode:ls-pending';
+/** The page-hide handler of the last install, so a second install replaces it. */
+let flushOnHide: ((event: Event) => void) | undefined;
 /** Keys of the platform itself; never wiped or synced. */
 const isPlatformKey = (key: string) =>
   key === OWNER_KEY || key.startsWith('mininode:') || key.startsWith('sb-') || key === 'mn-auth';
 
 /**
  * Keeps `localStorage` working for apps that store their data there, and makes it follow the
- * account: values are loaded from `mn.kv` before the app starts and every change is written
- * back. Access stays synchronous because the app reads from the browser's own storage.
+ * account: values are loaded from `mn.kv` before the app starts, and changes go back as the latest
+ * value per key, 2 s after the last change (at least every 10 s, and when the page hides). Keys
+ * not yet confirmed by the account are journaled here, win at the next start and are sent again,
+ * so closing the page right after a change loses nothing. Access stays synchronous because the
+ * app reads from the browser's own storage.
  */
 export async function installLocalStorageSync(mn: Mininode): Promise<void> {
   const user = await mn.auth.user();
@@ -190,19 +199,39 @@ export async function installLocalStorageSync(mn: Mininode): Promise<void> {
     for (const key of Object.keys(storage)) {
       if (!isPlatformKey(key)) original.removeItem.call(storage, key);
     }
+    original.removeItem.call(storage, PENDING_KEY);
   }
   original.setItem.call(storage, OWNER_KEY, user.id);
+
+  const journal = new Set<string>();
+  try {
+    const keys: unknown = JSON.parse(storage.getItem(PENDING_KEY) ?? '[]');
+    if (Array.isArray(keys)) for (const key of keys) if (typeof key === 'string') journal.add(key);
+  } catch {
+    // An unreadable journal: nothing to send again.
+  }
+  const saveJournal = () => {
+    if (journal.size) original.setItem.call(storage, PENDING_KEY, JSON.stringify([...journal]));
+    else original.removeItem.call(storage, PENDING_KEY);
+  };
 
   const remote = await mn.kv.list(KEY_PREFIX);
   const remoteKeys = new Set<string>();
   for (const row of remote) {
     const key = row.key.slice(KEY_PREFIX.length);
     remoteKeys.add(key);
-    if (typeof row.value === 'string') original.setItem.call(storage, key, row.value);
+    // A change this device has not delivered yet is newer than the account's value.
+    if (typeof row.value === 'string' && !journal.has(key))
+      original.setItem.call(storage, key, row.value);
   }
   // Seen locally but gone from the account (removed on another device).
   for (const key of Object.keys(storage)) {
-    if (!isPlatformKey(key) && !remoteKeys.has(key) && storage.getItem(`mn-ls-seen:${key}`)) {
+    if (
+      !isPlatformKey(key) &&
+      !journal.has(key) &&
+      !remoteKeys.has(key) &&
+      storage.getItem(`mn-ls-seen:${key}`)
+    ) {
       original.removeItem.call(storage, key);
       original.removeItem.call(storage, `mn-ls-seen:${key}`);
     }
@@ -211,16 +240,64 @@ export async function installLocalStorageSync(mn: Mininode): Promise<void> {
   // Methods live on the shared prototype; sessionStorage must stay untouched.
   const isLocal = (target: Storage) => target !== window.sessionStorage;
 
+  // Apps save their settings often (some every second while one works): the account gets the
+  // latest value per key, 2 s after the last change, at least every 10 s, and when the page hides.
+  const pending = new Map<string, string | null>();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let firstPending = 0;
+  const flush = () => {
+    clearTimeout(timer);
+    timer = undefined;
+    for (const [key, value] of pending) {
+      const done =
+        value === null ? mn.kv.delete(KEY_PREFIX + key) : mn.kv.set(KEY_PREFIX + key, value);
+      void Promise.resolve(done)
+        .then(() => {
+          // A newer change of the key is still waiting: it stays in the journal.
+          if (pending.has(key)) return;
+          journal.delete(key);
+          saveJournal();
+          if (value === null) original.removeItem.call(storage, `mn-ls-seen:${key}`);
+          else original.setItem.call(storage, `mn-ls-seen:${key}`, '1');
+        })
+        .catch((error: unknown) => {
+          console.warn('mininode: could not save', key, error);
+        });
+    }
+    pending.clear();
+  };
+  const schedule = () => {
+    const now = Date.now();
+    if (!timer) firstPending = now;
+    clearTimeout(timer);
+    timer = setTimeout(
+      flush,
+      Math.max(0, Math.min(SYNC_QUIET_MS, firstPending + SYNC_MAX_MS - now)),
+    );
+  };
+  if (flushOnHide) {
+    removeEventListener('pagehide', flushOnHide);
+    removeEventListener('visibilitychange', flushOnHide);
+  }
+  flushOnHide = (event: Event) => {
+    if (event.type === 'pagehide' || document.visibilityState === 'hidden') flush();
+  };
+  addEventListener('pagehide', flushOnHide);
+  addEventListener('visibilitychange', flushOnHide);
+
   const write = (key: string, value: string | null) => {
     if (isPlatformKey(key) || key.startsWith('mn-ls-seen:')) return;
-    const done =
-      value === null ? mn.kv.delete(KEY_PREFIX + key) : mn.kv.set(KEY_PREFIX + key, value);
-    void Promise.resolve(done).catch((error: unknown) => {
-      console.warn('mininode: could not save', key, error);
-    });
-    if (value === null) original.removeItem.call(storage, `mn-ls-seen:${key}`);
-    else original.setItem.call(storage, `mn-ls-seen:${key}`, '1');
+    pending.set(key, value);
+    journal.add(key);
+    saveJournal();
+    schedule();
   };
+
+  // What an earlier page changed but could not deliver goes again.
+  for (const key of journal) {
+    pending.set(key, storage.getItem(key));
+    schedule();
+  }
 
   // Adopted values the account does not have yet go up once (the account's own values won above).
   if (owner === null) {

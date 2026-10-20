@@ -50,7 +50,7 @@ own key; the error then has `needsPersonalKey === true` (ADR 0014).
 
 Apps built for other shims keep working through two compatibility layers that `mininode integrate`
 wires in: `installMiniNodeCompat(mn)` defines `window.MiniNode` (auth, `db` → `mn.kv`, `ai` →
-`mn.ai`) and `installLocalStorageSync(mn)` keeps `localStorage` in the account (ADR 0013).
+`mn.ai`) and `installLocalStorageSync(mn)` keeps `localStorage` in the account (ADR 0013): it loads the account's values before the app starts, adopts what the app kept on the device before, and sends changes as the latest value per key, 2 s after the last change (at least every 10 s, and when the page hides).
 
 ## Development
 
