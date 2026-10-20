@@ -50,7 +50,10 @@ and `/_mininode/pwa.js` to every HTML page it serves. `pwa.js` registers `/_mini
 (served with `Service-Worker-Allowed: /`), stamped with a new version on every deploy so old
 caches are dropped. The worker serves pages and unhashed files network-first (the gate still
 checks access online; redirects are never cached) and hashed `/assets/*` cache-first, so an app
-opens offline once it has been opened online and never mixes new pages with old scripts. The
+opens offline once it has been opened online and never mixes new pages with old scripts
+(amended 2026-10-20: `.wasm` modules bypass the worker, because Firefox aborted the large modules
+it passed through and cached; a WebAssembly app therefore needs the network to start unless the
+browser's own HTTP cache still holds its module). The
 portal has its own worker with the same shell caching plus push, and keeps the last app list per
 user for the start page.
 

@@ -133,6 +133,39 @@ describe('localStorage sync', () => {
     }
   });
 
+  it('keeps a change the closing page could not deliver, and sends it at the next start', async () => {
+    const first = fakeMn('u6', { 'ls:theme': 'old' });
+    // The page closes before mn.kv answers (the request is cut off).
+    vi.spyOn(first.mn.kv, 'set').mockImplementation(() => new Promise(() => {}));
+    await installLocalStorageSync(first.mn);
+    lsSet('theme', 'new');
+    lsSet('fresh', '1');
+    dispatchEvent(new Event('pagehide'));
+    await Promise.resolve();
+    Object.assign(proto, browser);
+
+    const next = fakeMn('u6', { 'ls:theme': 'old' });
+    await installLocalStorageSync(next.mn);
+    expect(localStorage.getItem('theme')).toBe('new');
+    expect(localStorage.getItem('fresh')).toBe('1');
+    dispatchEvent(new Event('pagehide'));
+    await vi.waitFor(() => expect(localStorage.getItem('mininode:ls-pending')).toBeNull());
+    expect(next.kv.get('ls:theme')).toBe('new');
+    expect(next.kv.get('ls:fresh')).toBe('1');
+  });
+
+  it('sends only the last of a set and a remove of the same key', async () => {
+    const { mn, kv } = fakeMn('u7', { 'ls:k': 'old' });
+    const set = vi.spyOn(mn.kv, 'set');
+    await installLocalStorageSync(mn);
+    lsSet('k', '1');
+    lsRemove('k');
+    dispatchEvent(new Event('pagehide'));
+    await Promise.resolve();
+    expect(set).not.toHaveBeenCalled();
+    expect(kv.has('ls:k')).toBe(false);
+  });
+
   it('sends what is waiting when the page is hidden', async () => {
     const { mn, kv } = fakeMn('u5');
     await installLocalStorageSync(mn);

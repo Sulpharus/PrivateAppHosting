@@ -246,7 +246,7 @@ index 58966e6..bccd1b0 100644
  mod backend;
  #[cfg(target_arch = "wasm32")]
 diff --git a/apps/lightcraft-web/src/web.rs b/apps/lightcraft-web/src/web.rs
-index 6a4487d..908aee7 100644
+index 6a4487d..efec9c8 100644
 --- a/apps/lightcraft-web/src/web.rs
 +++ b/apps/lightcraft-web/src/web.rs
 @@ -14,6 +14,7 @@ use serde_json::json;
@@ -336,7 +336,7 @@ index 6a4487d..908aee7 100644
          let originals = Originals::default();
          let t = perf_now();
          let mut session = Session::new();
-@@ -433,12 +456,31 @@ impl WebApp {
+@@ -433,12 +456,33 @@ impl WebApp {
          // previews are large (≤ 2560 px, f32): keep few in a 32-bit address space
          session.media.preview_capacity = 3;
          let frozen = Rc::new(Cell::new(false));
@@ -364,13 +364,15 @@ index 6a4487d..908aee7 100644
 +        }
 +        // An earlier MiniNode build started LightCraft in "auto" (its light theme looked grey):
 +        // that stored choice goes back to the app's default once.
-+        if app.ui.settings.appearance_mode == lightcraft_ui_egui::state::AppearanceMode::Auto && account::first_theme_reset() {
++        // The marker is set on every first start, so an "auto" picked later stays.
++        let first_start = account::first_theme_reset();
++        if first_start && app.ui.settings.appearance_mode == lightcraft_ui_egui::state::AppearanceMode::Auto {
 +            app.ui.settings.appearance_mode = lightcraft_ui_egui::state::AppearanceMode::Dark;
 +        }
          app.ui = app.ui.sanitized();
          app.library_problem = problem;
          let n = opts.workers.unwrap_or_else(|| {
-@@ -477,6 +519,8 @@ impl WebApp {
+@@ -477,6 +521,8 @@ impl WebApp {
              first_frame_logged: false,
              last_save: 0.0,
              ui_written,
@@ -379,7 +381,7 @@ index 6a4487d..908aee7 100644
          }
      }
  
-@@ -532,6 +576,22 @@ impl WebApp {
+@@ -532,6 +578,22 @@ impl WebApp {
          }
      }
  
@@ -402,7 +404,7 @@ index 6a4487d..908aee7 100644
      /// Save view state, UI prefs and the thumbnail index now and then; flush dirty files.
      fn save(&mut self) {
          if self.frozen.get() {
-@@ -541,12 +601,15 @@ impl WebApp {
+@@ -541,12 +603,15 @@ impl WebApp {
          if now - self.last_save >= SAVE_EVERY_MS {
              self.last_save = now;
              self.app.session.save_view();
