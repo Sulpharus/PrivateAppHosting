@@ -299,8 +299,9 @@ for (const file of files(dist)) {
     continue;
   }
   if (statSync(file).size <= MAX_ASSET) continue;
-  // The name carries a content hash or the version, so a cached copy is the same file.
-  const cached = join(cache, `${version}-${file.slice(dist.length + 1).replaceAll('/', '_')}.br`);
+  // Keyed by the content: some names carry no hash (FilmCraft's filmcraft_web_bg.wasm), and a
+  // stale copy beside new glue code fails at start ("… is not a function").
+  const cached = join(cache, `${sha256(file).slice(0, 16)}.wasm.br`);
   if (!existsSync(cached)) {
     const packed = brotliCompressSync(readFileSync(file), {
       params: {
