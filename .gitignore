@@ -32,3 +32,4 @@ graphify-out/graph.html
 graphify-out/manifest.json
 graphify-out/memory/
 graphify-out/20*/
+graphify-out/.rebuild.lock

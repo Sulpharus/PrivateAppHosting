@@ -1,14 +1,13 @@
 #!/usr/bin/env node
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename, join, resolve } from 'node:path';
-import { appSchemaName } from '@mininode/manifest';
 import { createBackup, currentCommit, restoreBackup, verifyBackup } from './backup/index.ts';
 import { appsToDeploy, changedApps } from './changed.ts';
 import { appsSinceDeployed, readDeployedVersions } from './deploy/deployed.ts';
 import type { DeployEnv } from './deploy/environment.ts';
 import { deployApp, devApp, readVersion } from './deploy/index.ts';
 import { checkLibraryInstall, installLibraryApp, removeLibraryApp } from './deploy/library.ts';
-import { existingAppSchemas, exposeSchemas } from './deploy/migrate.ts';
+import { appSchemasWithTables, existingAppSchemas, exposeSchemas } from './deploy/migrate.ts';
 import { hostedTargets, pruneApps } from './deploy/prune.ts';
 import { dropExemptions, uninstallApp } from './deploy/uninstall.ts';
 import { type DoctorReport, doctor, hostedApps } from './doctor.ts';
@@ -175,15 +174,15 @@ async function main(args: string[]): Promise<number> {
         throw new Error(
           'SUPABASE_DB_URL, SUPABASE_PROJECT_REF and SUPABASE_ACCESS_TOKEN are required',
         );
-      const wanted = hostedApps(ROOT)
-        .filter((dir) => existsSync(join(dir, 'db')))
-        .map((dir) => appSchemaName(basename(dir)));
+      const wanted = appSchemasWithTables(hostedApps(ROOT));
       const schemas = await existingAppSchemas(databaseUrl, wanted);
       const added = await exposeSchemas({ projectRef, accessToken, schemas });
       console.log(
-        added.length > 0
-          ? `exposed again: ${added.join(', ')}`
-          : `all exposed: ${schemas.join(', ')}`,
+        schemas.length === 0
+          ? 'no app schemas'
+          : added.length > 0
+            ? `exposed again: ${added.join(', ')}`
+            : `all exposed: ${schemas.join(', ')}`,
       );
       return 0;
     }

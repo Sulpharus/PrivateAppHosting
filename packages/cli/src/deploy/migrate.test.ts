@@ -1,8 +1,31 @@
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { exposeSchemas } from './migrate.ts';
+import { appSchemasWithTables, exposeSchemas } from './migrate.ts';
+
+describe('appSchemasWithTables', () => {
+  it('names the schema of every app with SQL migrations, hyphens as underscores', () => {
+    const root = mkdtempSync(join(tmpdir(), 'mn-expose-'));
+    const app = (slug: string, files: Record<string, string>) => {
+      mkdirSync(join(root, slug, 'db'), { recursive: true });
+      for (const [name, sql] of Object.entries(files))
+        writeFileSync(join(root, slug, 'db', name), sql);
+      return join(root, slug);
+    };
+    const dirs = [
+      app('sportplaner', { '001_init.sql': 'select 1;' }),
+      app('haushalts-inventar', { '001_init.sql': 'select 1;' }),
+      app('empty-db', { 'notes.txt': '' }),
+    ];
+    mkdirSync(join(root, 'static-app'));
+    dirs.push(join(root, 'static-app'));
+    expect(appSchemasWithTables(dirs)).toEqual(['app_sportplaner', 'app_haushalts_inventar']);
+  });
+});
 
 describe('exposeSchemas', () => {
-  const options = { projectRef: 'ref', accessToken: 'tok', schemas: ['app_a'] };
+  const options = { projectRef: 'ref', accessToken: 'tok', schemas: ['app_a'], retryMs: 0 };
 
   function fake(answer: () => Response) {
     let patched: string | undefined;
@@ -26,6 +49,17 @@ describe('exposeSchemas', () => {
     const f = fake(() => Response.json({ db_schema: 'public,platform,app_a' }));
     expect(await exposeSchemas({ ...options, fetcher: f.fetcher })).toEqual([]);
     expect(f.patched()).toBeUndefined();
+  });
+
+  it('tries a failed read again before it gives up', async () => {
+    let calls = 0;
+    const f = fake(() =>
+      ++calls < 3
+        ? new Response('busy', { status: 500 })
+        : Response.json({ db_schema: 'public,platform,app_b' }),
+    );
+    expect(await exposeSchemas({ ...options, fetcher: f.fetcher })).toEqual(['app_a']);
+    expect(f.patched()).toBe('public,platform,app_b,app_a');
   });
 
   it('never replaces the list when it could not be read', async () => {

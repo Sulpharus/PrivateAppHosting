@@ -8,9 +8,11 @@ import {
   connectGoogle,
   disconnectGoogle,
   GOOGLE_CONNECTED,
+  type GoogleProvider,
   type GoogleServices,
-  googleEnabled,
   googleIdentity,
+  googleProvider,
+  googleSection,
   googleServices,
   grantedForOtherUser,
   grantGoogleServices,
@@ -210,8 +212,8 @@ function GoogleSetupCard() {
           Kalender-Zugriff anlegen.
         </li>
         <li>
-          In GitHub (Umgebung <code>production</code>) die Secrets <code>GOOGLE_CLIENT_ID</code>,{' '}
-          <code>GOOGLE_CLIENT_SECRET</code> und <code>GOOGLE_TOKEN_KEY</code> anlegen.
+          In GitHub (Umgebung <code>production</code>) die Geheimnisse <code>GOOGLE_CLIENT_ID</code>
+          , <code>GOOGLE_CLIENT_SECRET</code> und <code>GOOGLE_TOKEN_KEY</code> anlegen.
         </li>
         <li>Einen Deploy starten. Danach erscheint hier „Verbinden“.</li>
       </ol>
@@ -234,7 +236,7 @@ export function GoogleCard({
 }) {
   const { run: stepUp } = useStepUp();
   const { profile } = useAuth();
-  const [available, setAvailable] = useState(false);
+  const [provider, setProvider] = useState<GoogleProvider | null>(null);
   const [identity, setIdentity] = useState<UserIdentity | null>(null);
   const [services, setServices] = useState<GoogleServices | null>(null);
 
@@ -244,7 +246,7 @@ export function GoogleCard({
   }, []);
 
   useEffect(() => {
-    void googleEnabled().then(setAvailable);
+    void googleProvider().then(setProvider);
     void reload();
     const refresh = () => void reload();
     window.addEventListener(GOOGLE_CONNECTED, refresh);
@@ -263,7 +265,9 @@ export function GoogleCard({
 
   // Hidden while Google is switched off, unless an old connection is still there to remove. The
   // admin sees what is missing instead: otherwise Google looks like it was never built.
-  if (!available && !identity) return profile?.role === 'admin' ? <GoogleSetupCard /> : null;
+  const section = googleSection(provider, identity !== null, profile?.role === 'admin');
+  if (section === 'setup') return <GoogleSetupCard />;
+  if (section === 'none') return null;
   const googleEmail =
     typeof identity?.identity_data?.email === 'string' ? identity.identity_data.email : null;
 

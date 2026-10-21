@@ -7,9 +7,9 @@ summary: Mit Google anmelden, Gmail und Kalender in Apps, und der Sync des Kalen
 
 ## Mit Google anmelden (optional)
 
-**Stand:** Der Code ist fertig (Anmelden, Gmail und Kalender in Apps, Kalender-Sync). Auf mininode.app fehlen noch die Zugangsdaten: die
+**Stand 21.10.2026:** Der Code ist fertig (Anmelden, Gmail und Kalender in Apps, Kalender-Sync). Auf mininode.app fehlen noch die Zugangsdaten: die
 GitHub-Umgebung `production` hat weder `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` noch `GOOGLE_TOKEN_KEY`, darum überspringt der Deploy Google.
-Solange das so ist, zeigt *Dein Konto* dem Admin eine Karte mit den Schritten; alle anderen sehen keinen Google-Bereich.
+Solange Google aus ist, zeigt *Dein Konto* dem Admin eine Karte mit den Schritten; alle anderen sehen keinen Google-Bereich.
 
 Einrichten in der Google-Cloud-Konsole (OAuth-Zustimmungsbildschirm, Veröffentlichungsstatus *In production*, Gmail- und Calendar-API
 aktivieren, OAuth-Client mit Rückleitung `https://<supabase>/auth/v1/callback`), danach `GOOGLE_CLIENT_ID` und `GOOGLE_CLIENT_SECRET` als

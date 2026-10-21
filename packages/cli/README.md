@@ -8,6 +8,7 @@ mininode deploy --changed <base-ref>       Deploy every app changed since <base-
 mininode deploy --since-deployed [--env]   Deploy every app changed since its own registered deployed_version (the deploy workflow; unreadable registry = all apps)
 mininode changed <base-ref>                List hosted apps changed since <base-ref>
 mininode prune [--env staging] [--dry-run] Delete Workers of apps gone from hosted/ (--force if empty)
+mininode expose [--env staging]            Expose the schema of every app with tables in the Data API
 mininode export <app-dir> --out <dir>      One app as a shareable folder; stops on keys and private data (ADR 0012)
 mininode integrate <zip|dir> [--slug x] [--build] [--tidy] [--json f] [--report f]  Export → hosted/<slug> by script; exit 2 = needs review (ADR 0013)
 mininode uninstall <slug> [--purge] [--env]  Take an app offline, with --purge delete its data, files and registry entry (ADR 0020)
@@ -44,6 +45,12 @@ are registered only; their rollout happens in the deploy workflow (NucBox) or th
 
 Deploys also register the app's origin (`https://<slug>.<domain>`, or `http://localhost:<port>`
 for `dev`) in `platform.app_origins`. RLS uses it to tell apps apart (ADR 0002).
+
+**expose** runs after every deploy. It adds `app_<slug>` of every app with `db/` migrations to the
+Data API's exposed schemas, also for apps not deployed in that run, and lists only schemas that
+exist (one missing schema makes PostgREST fail for every request). It never writes the list
+without having read it. Together with `scripts/keep-app-schemas.sh` before `supabase config push`
+it keeps a config push from hiding the apps' tables.
 
 **prune** runs after every deploy. It deletes `mn-app-*` Workers whose app is no longer a
 Cloudflare app in `hosted/`. Apps missing from `hosted/` altogether are first set to

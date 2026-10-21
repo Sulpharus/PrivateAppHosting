@@ -8,7 +8,8 @@
 # Needs SUPABASE_PROJECT_REF and SUPABASE_ACCESS_TOKEN; uses curl and jq.
 set -euo pipefail
 config="${1:-supabase/config.toml}"
-remote=$(curl -fsS -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+# The Management API now and then answers 5xx for a valid token and works seconds later.
+remote=$(curl -fsS --retry 4 --retry-all-errors --retry-delay 3 -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
   "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_REF/postgrest" | jq -er '.db_schema | strings')
 # The local list first, then every app schema the project has now, each once, in order.
 local_list=$(sed -n 's/^schemas = \(\[.*\]\)$/\1/p' "$config")

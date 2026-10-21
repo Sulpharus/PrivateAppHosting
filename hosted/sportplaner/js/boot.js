@@ -22,7 +22,8 @@ function load() {
       plansChanged();
     } catch {
       S.loadFailed = true;
-      toast(tr('error.load'));
+      // Nothing shown yet: the page itself says so and offers a retry.
+      if (S.acts.length) toast(tr('error.load'));
     } finally {
       loading = null;
       if (retry) setTimeout(load, 300);
