@@ -78,6 +78,8 @@ jobs:
       - name: Push auth settings (production only; staging has no domain yet)
         if: env.DEPLOY_ENV == 'production'
         run: |
+          # config.toml lists only the platform's schemas; keep the app schemas the deploys exposed.
+          scripts/keep-app-schemas.sh supabase/config.toml
           supabase config diff --project-ref "$SUPABASE_PROJECT_REF"
           supabase config push --project-ref "$SUPABASE_PROJECT_REF" --yes
       - name: Passkeys (production only; config push does not manage them)
@@ -232,6 +234,10 @@ jobs:
           else
             pnpm mininode deploy --since-deployed --env "$DEPLOY_ENV"
           fi
+      - name: Expose the schemas of every app with tables
+        # Also apps not deployed in this run: a schema hidden by mistake comes back with the next deploy.
+        if: ${{ !cancelled() }}
+        run: pnpm mininode expose --env "$DEPLOY_ENV"
       - name: Remove Workers of deleted apps
         run: pnpm mininode prune --env "$DEPLOY_ENV"
       - name: List container apps to roll out

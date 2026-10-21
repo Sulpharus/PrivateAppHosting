@@ -3,7 +3,7 @@
 Where things stand, what the owner still has to do, and what a new session should know.
 Update it at the end of every working session; history belongs in git, not here.
 
-Last updated: 2026-10-20 (Craft apps: white light themes, system light and dark).
+Last updated: 2026-10-21 (app schemas kept in the Data API on every deploy; Google setup card).
 
 ## Start here
 
@@ -74,6 +74,7 @@ Where things are documented:
 | Craft apps: part of the account | `mn-boot.js` (written by `build.mjs`) starts the app after login, `installLocalStorageSync` (now adopts values kept before the sync instead of wiping them) and `mnI18n.ready`, and sets `<html lang>` and `data-mn-user`. The patches keep each app's settings in synced `localStorage` (`<app>.preferences`, PdfCraft `pdfcraft`), follow the MiniNode language and the system appearance, use the account name as author (WordCraft, PdfCraft, PhotoCraft notes), fix web clocks (PdfCraft, DesignCraft). A file opened from or saved to MiniNode is saved back without the dialog (toast with "Speichern unter …"); WordCraft adopts the name chosen when saving. Checked in a browser for WordCraft only (temporary spec, not committed) | `hosted/*craft/patches`, `hosted/wordcraft/build.mjs`, `packages/ui/kit/files.js`, `packages/sdk/src/compat.ts` |
 | Craft apps: light and dark | Every Craft app follows the system appearance. The patches give each app's lightest theme MiniNode's white surfaces and neutrals (DesignCraft Light, PhotoCraft Pro (Light), FilmCraft Light, LightCraft Paper); DesignCraft and LightCraft replace the grey defaults earlier builds stored once per account (`designcraft.theme-follow`, `lightcraft.theme-follow`). Checked in Chromium in light and dark for DesignCraft, PhotoCraft, FilmCraft and LightCraft (temporary spec); idle main-thread time 3–4 % each | `hosted/{designcraft,photocraft,filmcraft,lightcraft}/patches` |
 | Reiseplaner brief | Feature spec for a trip planner (reuses Kalender, Bill the Splitter, the Kalender map) | `docs/ai/briefs/reiseplaner.brief.md` |
+| Data API schemas | Every deploy's `supabase config push` reset the exposed schemas to `public, graphql_public, platform`, hiding `app_sportplaner`, `app_haushalt`, `app_medialog` and `app_wunschliste` until each app's next deploy (2026-10-20: Sportplaner empty while the Kalender still showed its sessions). `scripts/keep-app-schemas.sh` now writes the live app schemas into the pushed config, `mininode expose` re-exposes every app with tables on each deploy, and `exposeSchemas` refuses to write a list it could not read. Sportplaner shows "could not be loaded" instead of an empty library | `.github/workflows/deploy.yml`, `packages/cli/src/deploy/migrate.ts`, `hosted/sportplaner/js/boot.js` |
 | German formats | Date, month and time inputs as German parts in every browser; full dates as "01. Okt. 2026"; German numbers | `packages/ui/kit/ui.js`, `docs/ai/DESIGN-SYSTEM.md` §8 |
 
 The Sportplaner map (tab "Karte") and course mode (editor step "Zeiten" → "Kurs") are live
@@ -112,8 +113,7 @@ since the PR #12 deploy. Earlier deploys stopped at medialog and never shipped t
 0. **Check in Verwaltung → Hochladen and Apps (nothing the code can do for you):** the page still
    says "Der automatische Einbau ist noch nicht eingerichtet" until `LIBRARY_DISPATCH_TOKEN`
    (fine-grained token, Actions: read and write, secret of the GitHub environment `production`)
-   exists and a deploy ran; add `INTEGRATE_TOKEN` too. Google sign-in needs one Google OAuth client
-   entered under Supabase → Auth → Google (`first-setup.md` §3.1). New migrations
+   exists and a deploy ran; add `INTEGRATE_TOKEN` too. New migrations
    (`…_profile_language`, `…_app_icons`) are applied by the deploy.
 0. **For the new upload features** (all optional until used, each page says what is missing):
    - **A ruleset on `main` that requires the CI checks** (Settings → Rules → Rulesets: *Lint,
@@ -138,7 +138,13 @@ since the PR #12 deploy. Earlier deploys stopped at medialog and never shipped t
    - Aether Notes: event delete (its meetups appear in the Kalender with their place).
 2. Enter the Geoapify key under Verwaltung → API-Schlüssel (free account at myprojects.geoapify.com; Kalender and
    Aether Notes share it). Until then the maps use the free OpenStreetMap services as a fallback.
-3. Connect Google with calendar access under "Dein Konto" (Google Calendar sync).
+3. **Google (sign-in, Gmail and Calendar in apps, Kalender sync):** the code is complete, but the
+   deploy skips it because the GitHub environment `production` has no `GOOGLE_CLIENT_ID`,
+   `GOOGLE_CLIENT_SECRET` or `GOOGLE_TOKEN_KEY` (checked in the 2026-10-20 deploy logs). Create the
+   OAuth client (`first-setup.md` §3.1), add the three secrets (`GOOGLE_TOKEN_KEY`: `openssl rand
+   -base64 32`, keep a copy), run a deploy, then connect Google under "Dein Konto" and switch on
+   "Google Kalender" in the Kalender. Until then *Dein Konto* shows the admin a card with these
+   steps.
 3. NucBox setup (`nucbox-install.md`): `vars.NUCBOX_TUNNEL_ID`, deploy SSH key, Access
    secrets. Container apps and the App-Bibliothek need it.
 4. GitHub tokens:

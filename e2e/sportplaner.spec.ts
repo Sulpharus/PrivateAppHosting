@@ -456,3 +456,26 @@ test('entries of the old kv storage are copied into the tables once and kept as 
   expect(count).toBe(1);
   expect(errors).toEqual([]);
 });
+
+test('a refused read says the entries could not be loaded, never "empty"', async ({ page }) => {
+  // 2026-10-20: a deploy hid app_sportplaner from the Data API and the app looked empty.
+  const email = `${run}-hidden@example.com`;
+  await createUser(email, 'user', 'Hidden');
+  const activities = /\/rest\/v1\/activities/;
+  await page.route(activities, (route) =>
+    route.fulfill({
+      status: 406,
+      contentType: 'application/json',
+      body: JSON.stringify({ code: 'PGRST106', message: 'Invalid schema: app_sportplaner' }),
+    }),
+  );
+  await page.goto(APP);
+  await page.getByLabel('E-Mail').fill(email);
+  await page.getByLabel('Passwort', { exact: true }).fill(PASSWORD);
+  await page.getByRole('button', { name: 'Anmelden', exact: true }).click();
+  await expect(page.getByText('Deine Einträge konnten nicht geladen werden')).toBeVisible();
+  await expect(page.getByText('Deine Bibliothek ist leer')).toHaveCount(0);
+  await page.unroute(activities);
+  await page.getByRole('button', { name: 'Erneut versuchen' }).click();
+  await expect(page.getByText('Deine Bibliothek ist leer')).toBeVisible();
+});

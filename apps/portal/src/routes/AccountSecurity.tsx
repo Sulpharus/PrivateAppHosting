@@ -2,6 +2,7 @@
 
 import type { UserIdentity } from '@supabase/supabase-js';
 import { useCallback, useEffect, useState } from 'react';
+import { Link } from 'react-router';
 import { useAuth } from '../auth/AuthProvider.tsx';
 import {
   connectGoogle,
@@ -192,6 +193,35 @@ export function AuthenticatorCard({ feedback }: { feedback: Feedback }) {
   );
 }
 
+/** Admin only, while the Google provider is off: the three steps that switch it on. */
+function GoogleSetupCard() {
+  return (
+    <section className="card" id="google" aria-labelledby="google-title">
+      <h2 id="google-title" className="section-title">
+        Google
+      </h2>
+      <p className="muted">
+        Google ist auf MiniNode noch nicht eingerichtet. Der Code für „Mit Google anmelden“, Gmail
+        und Kalender in Apps und den Kalender-Sync ist da; es fehlen nur die Zugangsdaten:
+      </p>
+      <ol className="muted">
+        <li>
+          In der Google Cloud Console einen OAuth-Client (Webanwendung) mit Gmail- und
+          Kalender-Zugriff anlegen.
+        </li>
+        <li>
+          In GitHub (Umgebung <code>production</code>) die Secrets <code>GOOGLE_CLIENT_ID</code>,{' '}
+          <code>GOOGLE_CLIENT_SECRET</code> und <code>GOOGLE_TOKEN_KEY</code> anlegen.
+        </li>
+        <li>Einen Deploy starten. Danach erscheint hier „Verbinden“.</li>
+      </ol>
+      <p>
+        <Link to="/admin/wiki/google">Anleitung im Wiki</Link>
+      </p>
+    </section>
+  );
+}
+
 export function GoogleCard({
   feedback,
   linked,
@@ -231,8 +261,9 @@ export function GoogleCard({
     onLinkedShown();
   }, [linked, identity, feedback, onLinkedShown, profile]);
 
-  // Hidden while Google is switched off, unless an old connection is still there to remove.
-  if (!available && !identity) return null;
+  // Hidden while Google is switched off, unless an old connection is still there to remove. The
+  // admin sees what is missing instead: otherwise Google looks like it was never built.
+  if (!available && !identity) return profile?.role === 'admin' ? <GoogleSetupCard /> : null;
   const googleEmail =
     typeof identity?.identity_data?.email === 'string' ? identity.identity_data.email : null;
 

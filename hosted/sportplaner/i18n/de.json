@@ -553,5 +553,8 @@
   "quota.overCredits": "Credits von {plan} überschritten: {used} von {max} im {month}.",
   "quota.overVisits": "Kontingent von {plan} überschritten: {used} von {max} Besuchen im {month}.",
   "quota.overDay": "{plan}: höchstens {max} Besuche pro Tag.",
-  "quota.overActivity": "{name} ist bei {plan} auf {max} Besuche im Monat begrenzt ({month})."
+  "quota.overActivity": "{name} ist bei {plan} auf {max} Besuche im Monat begrenzt ({month}).",
+  "error.loadTitle": "Deine Einträge konnten nicht geladen werden",
+  "error.loadText": "Sie sind nicht verloren: Die Verbindung zur Datenbank klappt gerade nicht. Versuche es gleich noch einmal.",
+  "action.retry": "Erneut versuchen"
 }

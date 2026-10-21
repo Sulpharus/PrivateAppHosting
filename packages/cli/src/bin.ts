@@ -1,12 +1,14 @@
 #!/usr/bin/env node
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename, join, resolve } from 'node:path';
+import { appSchemaName } from '@mininode/manifest';
 import { createBackup, currentCommit, restoreBackup, verifyBackup } from './backup/index.ts';
 import { appsToDeploy, changedApps } from './changed.ts';
 import { appsSinceDeployed, readDeployedVersions } from './deploy/deployed.ts';
 import type { DeployEnv } from './deploy/environment.ts';
 import { deployApp, devApp, readVersion } from './deploy/index.ts';
 import { checkLibraryInstall, installLibraryApp, removeLibraryApp } from './deploy/library.ts';
+import { existingAppSchemas, exposeSchemas } from './deploy/migrate.ts';
 import { hostedTargets, pruneApps } from './deploy/prune.ts';
 import { dropExemptions, uninstallApp } from './deploy/uninstall.ts';
 import { type DoctorReport, doctor, hostedApps } from './doctor.ts';
@@ -25,6 +27,7 @@ const USAGE = `mininode <command>
   deploy <app-dir> [--env staging]  Build, migrate, deploy and register one app
   deploy --changed <base-ref>       Deploy every app changed since <base-ref>
   deploy --since-deployed           Deploy every app changed since the commit it was last deployed from
+  expose [--env staging]            Expose the schema of every app with tables in the Data API (deploy)
   changed <base-ref>                List hosted apps changed since <base-ref>
   prune [--env staging] [--dry-run]  Delete Workers of apps removed from hosted/, disable them
   export <app-dir> --out <dir>      Copy one app as a shareable project (no data, no keys)
@@ -156,6 +159,32 @@ async function main(args: string[]): Promise<number> {
         dryRun: args.includes('--dry-run'),
         force: args.includes('--force'),
       });
+      return 0;
+    }
+    case 'expose': {
+      // Every app with tables, deployed in this run or not: a schema the Data API lost (a config
+      // push, a manual change) comes back with the next deploy instead of the app's next change.
+      const env = envFlag(args);
+      if (env === 'local') {
+        console.log('local apps expose their schema when they start (mininode dev)');
+        return 0;
+      }
+      const { SUPABASE_DB_URL: databaseUrl, SUPABASE_PROJECT_REF: projectRef } = process.env;
+      const accessToken = process.env.SUPABASE_ACCESS_TOKEN;
+      if (!databaseUrl || !projectRef || !accessToken)
+        throw new Error(
+          'SUPABASE_DB_URL, SUPABASE_PROJECT_REF and SUPABASE_ACCESS_TOKEN are required',
+        );
+      const wanted = hostedApps(ROOT)
+        .filter((dir) => existsSync(join(dir, 'db')))
+        .map((dir) => appSchemaName(basename(dir)));
+      const schemas = await existingAppSchemas(databaseUrl, wanted);
+      const added = await exposeSchemas({ projectRef, accessToken, schemas });
+      console.log(
+        added.length > 0
+          ? `exposed again: ${added.join(', ')}`
+          : `all exposed: ${schemas.join(', ')}`,
+      );
       return 0;
     }
     case 'changed': {

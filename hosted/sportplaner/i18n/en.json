@@ -553,5 +553,8 @@
   "quota.overCredits": "Credits of {plan} exceeded: {used} of {max} in {month}.",
   "quota.overVisits": "Allowance of {plan} exceeded: {used} of {max} visits in {month}.",
   "quota.overDay": "{plan}: at most {max} visits per day.",
-  "quota.overActivity": "{name} is limited to {max} visits a month at {plan} ({month})."
+  "quota.overActivity": "{name} is limited to {max} visits a month at {plan} ({month}).",
+  "error.loadTitle": "Your entries could not be loaded",
+  "error.loadText": "They are not lost: the connection to the database is not working right now. Try again in a moment.",
+  "action.retry": "Try again"
 }

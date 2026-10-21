@@ -14,12 +14,14 @@ function load() {
         retry = true;
         return;
       }
+      S.loadFailed = false;
       S.acts = acts;
       S.plans = plans;
       S.lastBackup = typeof last === 'number' ? last : null;
       dataChanged();
       plansChanged();
     } catch {
+      S.loadFailed = true;
       toast(tr('error.load'));
     } finally {
       loading = null;

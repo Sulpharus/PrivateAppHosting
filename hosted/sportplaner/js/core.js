@@ -213,6 +213,8 @@ const S = {
   prov: '',
   q: '',
   loading: true,
+  // The last load failed (no connection to the tables): say so instead of "empty".
+  loadFailed: false,
   sheet: null,
 };
 S.month = (() => {
