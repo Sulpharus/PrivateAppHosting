@@ -14,13 +14,16 @@ function load() {
         retry = true;
         return;
       }
+      S.loadFailed = false;
       S.acts = acts;
       S.plans = plans;
       S.lastBackup = typeof last === 'number' ? last : null;
       dataChanged();
       plansChanged();
     } catch {
-      toast(tr('error.load'));
+      S.loadFailed = true;
+      // Nothing shown yet: the page itself says so and offers a retry.
+      if (S.acts.length) toast(tr('error.load'));
     } finally {
       loading = null;
       if (retry) setTimeout(load, 300);

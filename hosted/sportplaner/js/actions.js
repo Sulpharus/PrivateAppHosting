@@ -73,6 +73,11 @@ const H = {
     window.scrollTo(0, 0);
   },
   open: (t) => openDetail(t.dataset.id, t.dataset.date),
+  reload: () => {
+    S.loading = true;
+    render();
+    load();
+  },
   new: () => (S.view === 'stats' ? openPlanEditor(null) : openEditor(null)),
   edit: () => {
     const a = S.acts.find((x) => x.id === S.sheet.id);

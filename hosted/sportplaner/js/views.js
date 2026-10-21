@@ -17,6 +17,14 @@ const baseSkeleton = () => ({
   lib: `<div class="lib-layout"><div><div class="lib-tools"><div class="search">${ICON.search}<input id="q" type="search" placeholder="${esc(tr('lib.searchPlaceholder'))}" aria-label="${esc(tr('lib.searchLabel'))}" autocomplete="off"></div><div id="provfilter"></div><div id="chips"></div></div><div id="liblist"></div></div><aside class="backup lib-side" id="backup" aria-label="${esc(tr('backup.region'))}"></aside></div>`,
 });
 const SKELETON = () => Object.assign(baseSkeleton(), ...SKELETON_EXTRA.map((f) => f()));
+/* The tables could not be read: the entries are not gone, so never show the empty library. */
+const loadFailedHTML = () =>
+  emptyHTML(
+    'lib',
+    esc(tr('error.loadTitle')),
+    esc(tr('error.loadText')),
+    `<button class="btn primary" data-action="reload">${esc(tr('action.retry'))}</button>`,
+  );
 const emptyHTML = (icon, title, text, action) =>
   `<div class="empty"><div class="empty-icon">${EMPTY_ICON[icon]}</div><h3>${title}</h3><p>${text}</p>${action || ''}</div>`;
 const skeletonTiles = () =>
@@ -99,6 +107,7 @@ function updDay() {
   section('d-more', esc(tr(mine.length ? 'day.sectionMore' : 'day.sectionOffers')), rest);
   let empty = '';
   if (S.loading && !S.acts.length) empty = skeletonTiles();
+  else if (S.loadFailed && !S.acts.length) empty = loadFailedHTML();
   else if (!S.acts.length)
     empty = emptyHTML(
       'lib',
@@ -398,12 +407,14 @@ function updLib() {
       ? emptyHTML('search', esc(tr('lib.nothingFound')), esc(tr('lib.nothingFoundText')))
       : S.loading
         ? '<div class="sk sk-list"></div>'
-        : emptyHTML(
-            'lib',
-            esc(tr('lib.noneYet')),
-            esc(tr('lib.noneYetText')),
-            `<button class="btn primary" data-action="new">${esc(tr('action.addActivity'))}</button>`,
-          ),
+        : S.loadFailed
+          ? loadFailedHTML()
+          : emptyHTML(
+              'lib',
+              esc(tr('lib.noneYet')),
+              esc(tr('lib.noneYetText')),
+              `<button class="btn primary" data-action="new">${esc(tr('action.addActivity'))}</button>`,
+            ),
   );
   updBackup();
 }

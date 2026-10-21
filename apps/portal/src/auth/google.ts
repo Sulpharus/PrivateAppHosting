@@ -18,25 +18,49 @@ const oauthParams = (prompt: 'select_account' | 'consent') => ({
   prompt,
 });
 
-let enabled: Promise<boolean> | undefined;
+/** `unknown`: the settings could not be read (offline, Supabase down), so nothing is certain. */
+export type GoogleProvider = 'on' | 'off' | 'unknown';
+
+let provider: Promise<GoogleProvider> | undefined;
 
 /** Whether the Google provider is switched on (public Auth settings, cached per page load). */
-export function googleEnabled(): Promise<boolean> {
-  enabled ??= (async () => {
+export function googleProvider(): Promise<GoogleProvider> {
+  provider ??= (async (): Promise<GoogleProvider> => {
     const config = runtimeConfig();
-    if (!config) return false;
+    if (!config) return 'unknown';
     try {
       const response = await fetch(`${config.supabaseUrl}/auth/v1/settings`, {
         headers: { apikey: config.supabasePublishableKey },
       });
-      if (!response.ok) return false;
+      if (!response.ok) return 'unknown';
       const settings = (await response.json()) as { external?: { google?: boolean } };
-      return settings.external?.google === true;
+      return settings.external?.google === true ? 'on' : 'off';
     } catch {
-      return false;
+      return 'unknown';
     }
   })();
-  return enabled;
+  // A failed read is asked again next time instead of being remembered for the whole page.
+  void provider.then((state) => {
+    if (state === 'unknown') provider = undefined;
+  });
+  return provider;
+}
+
+export async function googleEnabled(): Promise<boolean> {
+  return (await googleProvider()) === 'on';
+}
+
+/**
+ * What the Google section of "Dein Konto" shows: the card while Google is on or a connection is
+ * still there to remove; the setup steps only for the admin and only when Google is certainly off.
+ */
+export function googleSection(
+  state: GoogleProvider | null,
+  linked: boolean,
+  admin: boolean,
+): 'card' | 'setup' | 'none' {
+  if (state === 'on' || linked) return 'card';
+  return state === 'off' && admin ? 'setup' : 'none';
 }
 
 /** Back to the login page, which finishes the sign-in (second factor, then `next`). */

@@ -11,9 +11,9 @@ summary: Wie eine Änderung live geht und welche automatischen Abläufe es gibt
 2. **CI** läuft (Prüfungen, siehe [Tests und CI](wiki:tests-ci)). Alle vier Prüfungen müssen grün sein, bevor du mergst.
 3. **Merge in `main`** (nach deinem ausdrücklichen „mergen“; Claude mergt nie von sich aus).
 4. Der **Deploy** (`deploy.yml`) startet automatisch, **parallel zur CI und auch bei roter CI** (er wartet nicht darauf): darum nur bei grünen Prüfungen mergen. Ein Push auf `main` geht **direkt nach Produktion**:
-   - **database:** Datenbank-Migrationen (`supabase db push`); nur auf **Produktion** außerdem die Auth-Einstellungen (`supabase config push`, Passkey-Einstellungen per Management API, Google-Anmeldung);
+   - **database:** Datenbank-Migrationen (`supabase db push`); nur auf **Produktion** außerdem die Auth-Einstellungen (`supabase config push`, Passkey-Einstellungen per Management API, Google-Anmeldung). Vor dem Push schreibt `scripts/keep-app-schemas.sh` die App-Schemas, die die Daten-API gerade freigibt, mit in die Liste; sonst würde der Push die Tabellen aller Apps verstecken;
    - **platform:** Portal (`mininode.app`), API (`api.`) und KI-Proxy (`ai.`); Wrangler legt Domains an, die Geheimnisse der Worker werden aus GitHub hochgeladen;
-   - **apps:** jede **geänderte** App (oder alle: *all_apps*): Migrationen der App, Deploy, Eintrag in `platform.apps`; anschließend **Prune** (Worker von Apps, die nicht mehr im
+   - **apps:** jede **geänderte** App (oder alle: *all_apps*): Migrationen der App, Deploy, Eintrag in `platform.apps`; danach gibt `mininode expose` die Schemas **aller** Apps mit Tabellen in der Daten-API frei (auch die, die nicht dran waren); anschließend **Prune** (Worker von Apps, die nicht mehr im
      Repository liegen, werden gelöscht, ihr Eintrag deaktiviert);
    - **nucbox:** Container-Apps und Bibliothek über SSH (nur wenn `NUCBOX_TUNNEL_ID` gesetzt ist).
 
