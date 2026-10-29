@@ -18,8 +18,7 @@ interface Feedback {
 const TEXT: Record<DeviceStatus, string> = {
   on: 'Auf diesem Gerät eingeschaltet. Erinnerungen und Nachrichten deiner Apps kommen auch, wenn keine App offen ist.',
   off: 'Auf diesem Gerät aus. Schalte sie ein, um Erinnerungen deiner Apps auch bei geschlossener App zu bekommen.',
-  denied:
-    'Im Browser blockiert. Erlaube Benachrichtigungen in den Website-Einstellungen für mininode.app und lade die Seite neu.',
+  denied: `Im Browser blockiert. Erlaube Benachrichtigungen in den Website-Einstellungen für ${location.hostname} und lade die Seite neu.`,
   'install-first':
     'Auf iPhone und iPad erst nach „Zum Home-Bildschirm“: tippe auf Teilen und dann auf „Zum Home-Bildschirm“, öffne MiniNode von dort und schalte sie hier ein.',
   unsupported: 'Dieser Browser unterstützt keine Push-Benachrichtigungen.',

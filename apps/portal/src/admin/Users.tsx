@@ -4,6 +4,7 @@ import { useStepUp } from '../auth/StepUp.tsx';
 import { Dialog } from '../components/Dialog.tsx';
 import { ApiError, api } from '../lib/api.ts';
 import { type AppRow, listApps } from '../lib/apps.ts';
+import { platformDomain } from '../lib/host.ts';
 import { platform } from '../lib/supabase.ts';
 import { dateTime } from './AdminLayout.tsx';
 
@@ -308,7 +309,9 @@ export function Users() {
     <>
       <div className="stack" style={{ gap: 6 }}>
         <h1 style={{ fontSize: 36 }}>Nutzer &amp; Rollen</h1>
-        <p className="muted">Nur auf Einladung. Ein Login gilt für alle Apps unter mininode.app.</p>
+        <p className="muted">
+          Nur auf Einladung. Ein Login gilt für alle Apps unter {platformDomain()}.
+        </p>
       </div>
       {error && (
         <p className="error" role="alert">

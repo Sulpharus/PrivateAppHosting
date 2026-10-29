@@ -149,7 +149,7 @@ function checkSources(
           rule: 'no-client-ai-keys',
           file: rel,
           message:
-            'reads an AI key in client code; call mn.ai instead (keys stay on ai.mininode.app)',
+            'reads an AI key in client code; call mn.ai instead (keys stay on the platform AI proxy)',
         });
       }
       if (

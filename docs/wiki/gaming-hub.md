@@ -5,7 +5,7 @@ order: 70
 summary: Wie Spiele funktionieren, was der Hub speichert und wie man ein Spiel hinzufügt
 ---
 
-Spiele erscheinen **nur im Gaming Hub** (`mininode.app/games`), nicht auf der Startseite zwischen den Apps (ADR 0009).
+Spiele erscheinen **nur im Gaming Hub** (`{{domain}}/games`), nicht auf der Startseite zwischen den Apps (ADR 0009).
 
 ## Was der Hub zeigt
 

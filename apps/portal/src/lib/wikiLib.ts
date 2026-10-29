@@ -10,6 +10,8 @@
 // Besides them, reference pages are generated from the repository itself (apps, workflows,
 // commands, decisions, runbooks), so those lists cannot fall behind.
 
+import { repoLink, repoUrl } from './instance.ts';
+
 export interface Article {
   slug: string;
   title: string;
@@ -59,8 +61,6 @@ export function sortArticles(articles: Article[]): Article[] {
 }
 
 const cell = (text: string): string => text.replace(/\|/g, '\\|').replace(/\s+/g, ' ').trim();
-
-const REPO = 'https://github.com/Sulpharus/PrivateAppHosting';
 
 // ---------- generated reference pages ----------
 
@@ -121,7 +121,7 @@ export function appsReference(manifests: string[]): string {
       m.i18n?.languages?.length ? m.i18n.languages.join('/') : '',
     ].filter(Boolean);
     lines.push(
-      `| ${cell(m.name ?? '')} | \`${m.slug}.mininode.app\` | ${cell(m.description ?? '')} | ${cell(`${m.kind ?? ''}, ${m.target ?? ''}`)} | ${DATA_MODE[m.data?.mode ?? 'none'] ?? cell(m.data?.mode ?? '')} | ${cell(extras.join(', '))} |`,
+      `| ${cell(m.name ?? '')} | \`${m.slug}.{{domain}}\` | ${cell(m.description ?? '')} | ${cell(`${m.kind ?? ''}, ${m.target ?? ''}`)} | ${DATA_MODE[m.data?.mode ?? 'none'] ?? cell(m.data?.mode ?? '')} | ${cell(extras.join(', '))} |`,
     );
   }
   return lines.join('\n');
@@ -208,7 +208,7 @@ export function commandsReference(binSource: string): string {
 }
 
 /** The architecture decisions in docs/adr. */
-export function decisionsReference(files: Record<string, string>): string {
+export function decisionsReference(files: Record<string, string>, base = repoUrl()): string {
   const rows = Object.entries(files)
     .map(([path, source]) => {
       const file = path.split('/').pop() ?? path;
@@ -231,13 +231,13 @@ export function decisionsReference(files: Record<string, string>): string {
     '| --- | --- | --- | --- |',
     ...rows.map(
       (r) =>
-        `| [${r.number}](${REPO}/blob/main/docs/adr/${r.file}) | ${cell(r.title)} | ${cell(r.status)} | ${cell(r.date)} |`,
+        `| ${repoLink(r.number, `blob/main/docs/adr/${r.file}`, base)} | ${cell(r.title)} | ${cell(r.status)} | ${cell(r.date)} |`,
     ),
   ].join('\n');
 }
 
 /** The runbooks in docs/runbooks. */
-export function runbooksReference(files: Record<string, string>): string {
+export function runbooksReference(files: Record<string, string>, base = repoUrl()): string {
   const rows = Object.entries(files)
     .filter(([path]) => !path.endsWith('/README.md'))
     .map(([path, source]) => {
@@ -258,7 +258,8 @@ export function runbooksReference(files: Record<string, string>): string {
     '| Runbook | Worum es geht |',
     '| --- | --- |',
     ...rows.map(
-      (r) => `| [${cell(r.title)}](${REPO}/blob/main/docs/runbooks/${r.file}) | ${cell(r.first)} |`,
+      (r) =>
+        `| ${repoLink(cell(r.title), `blob/main/docs/runbooks/${r.file}`, base)} | ${cell(r.first)} |`,
     ),
   ].join('\n');
 }

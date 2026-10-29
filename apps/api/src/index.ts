@@ -20,7 +20,7 @@ import { uninstall } from './routes/uninstall.ts';
 
 export const app = new Hono<AppContext>();
 
-// Browsers call the API from the portal and from hosted apps on *.mininode.app.
+// Browsers call the API from the portal and from hosted apps on *.<domain>.
 app.use(
   '*',
   cors({

@@ -9,6 +9,7 @@ import { RESERVED_SLUGS, slugSchema, UNINSTALL_PROTECTED_SLUGS } from '@mininode
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { type AppContext, problem, requireUser } from '../lib/auth.ts';
+import { deployEnvironment } from '../lib/environment.ts';
 import { dispatchWorkflow } from '../lib/github.ts';
 import { adminClient } from '../lib/supabase.ts';
 
@@ -50,8 +51,7 @@ uninstall.post(
     if (app.kind === 'link')
       return problem(400, 'is_link', 'Link-Kacheln entfernst du mit „Entfernen“.');
 
-    const environment =
-      new URL(c.env.PORTAL_URL).hostname === 'mininode.app' ? 'production' : 'staging';
+    const environment = deployEnvironment(c.env);
     const library = (app.manifest as { library?: string } | null)?.library;
 
     // The audit row first: a destructive action leaves a trace even if a later step fails.

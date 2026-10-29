@@ -2,6 +2,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import react from '@vitejs/plugin-react';
 import { defineConfig, type Plugin } from 'vite';
+import { instanceDefines } from './instance-define.ts';
 import { trimForWiki } from './wiki-sources.ts';
 
 /** Stamps public/sw.js with a build version, so each deploy replaces the service worker. */
@@ -39,6 +40,7 @@ function wikiSources(): Plugin {
 
 export default defineConfig({
   plugins: [react(), serviceWorkerVersion(), wikiSources()],
+  define: instanceDefines(),
   // fs.allow: the admin's KI-Werkstatt bundles docs/ai and packages/ui/kit from the repo root.
   server: { port: 5173, strictPort: true, fs: { allow: ['../..'] } },
   // supabase-js + React make up most of the main chunk (~170 kB gzipped).

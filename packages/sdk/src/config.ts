@@ -7,7 +7,7 @@ export interface MininodeConfig {
   portalUrl: string;
   apiUrl: string;
   aiUrl: string;
-  /** `.mininode.app` in production; undefined on localhost. */
+  /** `.<domain>` in production; undefined on localhost. */
   cookieDomain?: string;
 }
 

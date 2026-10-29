@@ -1,4 +1,4 @@
-// Reads and verifies the Supabase session that the portal stores in a cookie on `.mininode.app`.
+// Reads and verifies the Supabase session that the portal stores in a cookie on `.<domain>`.
 // The cookie format follows @supabase/ssr: optional `base64-` prefix with base64url JSON, split
 // into `<name>.0`, `<name>.1`, … chunks when large.
 

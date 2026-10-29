@@ -91,7 +91,7 @@ describe('reference pages', () => {
       'kein json',
     ]);
     expect(md).toContain('**1 Apps**');
-    expect(md).toContain('`rezepte.mininode.app`');
+    expect(md).toContain('`rezepte.{{domain}}`');
     expect(md).toContain('Essen \\| Plan');
     expect(md).toContain('privat je Person');
     expect(md).toContain('de/en');
@@ -117,17 +117,21 @@ describe('reference pages', () => {
 
   it('lists decisions and runbooks', () => {
     expect(
-      decisionsReference({
-        'docs/adr/0019-x.md': '# ADR 0019: Backups\n\n- Status: accepted\n- Date: 2026-10-05\n',
-      }),
+      decisionsReference(
+        { 'docs/adr/0019-x.md': '# ADR 0019: Backups\n\n- Status: accepted\n- Date: 2026-10-05\n' },
+        'https://github.com/Sulpharus/PrivateAppHosting',
+      ),
     ).toContain(
       '| [0019](https://github.com/Sulpharus/PrivateAppHosting/blob/main/docs/adr/0019-x.md) | Backups | accepted | 2026-10-05 |',
     );
     expect(
-      runbooksReference({
-        'docs/runbooks/README.md': '# Runbooks\n',
-        'docs/runbooks/backups.md': '# Backups\n\nA full backup.\n',
-      }),
+      runbooksReference(
+        {
+          'docs/runbooks/README.md': '# Runbooks\n',
+          'docs/runbooks/backups.md': '# Backups\n\nA full backup.\n',
+        },
+        'https://github.com/Sulpharus/PrivateAppHosting',
+      ),
     ).toContain(
       '| [Backups](https://github.com/Sulpharus/PrivateAppHosting/blob/main/docs/runbooks/backups.md) | A full backup. |',
     );

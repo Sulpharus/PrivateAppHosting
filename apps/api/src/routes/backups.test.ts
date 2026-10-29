@@ -11,6 +11,7 @@ const env = {
   SUPABASE_SECRET_KEY: 'sb_secret_test',
   PORTAL_URL: 'https://mininode.app',
   GITHUB_DISPATCH_TOKEN: 'gh-token',
+  GITHUB_REPO: 'Sulpharus/PrivateAppHosting',
 } as unknown as ApiEnv;
 
 function signedIn(role: 'admin' | 'user', recent = true): void {

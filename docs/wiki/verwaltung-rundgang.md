@@ -5,7 +5,7 @@ order: 10
 summary: Ein Rundgang durch alle Seiten der Verwaltung und wofür man sie braucht
 ---
 
-Die Verwaltung erreichst du über `mininode.app/admin` (nur Admins; heikle Aktionen verlangen eine frische Anmeldung, siehe [Rollen](wiki:rollen-zugriff)).
+Die Verwaltung erreichst du über `{{domain}}/admin` (nur Admins; heikle Aktionen verlangen eine frische Anmeldung, siehe [Rollen](wiki:rollen-zugriff)).
 Links in der Seitenleiste:
 
 | Seite | Wofür |

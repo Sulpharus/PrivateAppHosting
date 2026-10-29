@@ -21,7 +21,7 @@ export function initApi(config: PortalConfig): void {
   apiUrl = config.apiUrl;
 }
 
-/** Calls api.mininode.app with the current access token. */
+/** Calls api.<domain> with the current access token. */
 export async function api<T>(
   path: string,
   init: { method?: string; body?: unknown } = {},

@@ -5,7 +5,7 @@ order: 40
 summary: Wie Apps KI nutzen, ohne Schlüssel im Browser, und wie Kosten begrenzt werden
 ---
 
-Apps rufen KI **nicht** direkt auf. `mn.ai` geht zu `ai.mininode.app` (`apps/ai-proxy`), das über **Cloudflare AI Gateway** zum Anbieter
+Apps rufen KI **nicht** direkt auf. `mn.ai` geht zu `ai.{{domain}}` (`apps/ai-proxy`), das über **Cloudflare AI Gateway** zum Anbieter
 (Gemini oder Claude) weiterleitet. Die Schlüssel bleiben beim Gateway und im Proxy-Worker.
 
 ## Was der Proxy prüft

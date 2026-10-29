@@ -181,7 +181,7 @@ describe('the generated reference pages', () => {
     for (const name of readdirSync(`${root}hosted`))
       if (existsSync(`${root}hosted/${name}/mininode.json`))
         expect(apps, name).toContain(
-          `\`${JSON.parse(read(`hosted/${name}/mininode.json`)).slug}.mininode.app\``,
+          `\`${JSON.parse(read(`hosted/${name}/mininode.json`)).slug}.{{domain}}\``,
         );
     const workflows = byslug('ref-workflows').body;
     for (const name of readdirSync(`${root}.github/workflows`))

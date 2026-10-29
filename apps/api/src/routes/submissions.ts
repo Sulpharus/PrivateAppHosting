@@ -24,6 +24,7 @@ import { z } from 'zod';
 import type { ApiEnv } from '../env.ts';
 import { type AppContext, problem, requireUser } from '../lib/auth.ts';
 import { readCapped, sha256Hex } from '../lib/body.ts';
+import { deployEnvironment } from '../lib/environment.ts';
 import { dispatchWorkflow } from '../lib/github.ts';
 import { putInstaller, r2Configured } from '../lib/r2.ts';
 import { adminClient } from '../lib/supabase.ts';
@@ -81,8 +82,7 @@ interface SubmissionRow {
   created_at: string;
 }
 
-const environmentOf = (env: ApiEnv) =>
-  new URL(env.PORTAL_URL).hostname === 'mininode.app' ? 'production' : 'staging';
+const environmentOf = deployEnvironment;
 
 async function audit(db: SupabaseClient, actor: string, action: string, detail: object) {
   const { error } = await db

@@ -188,7 +188,7 @@ password_requirements = ""
 enabled = true
 
 # Configure WebAuthn relying party settings (required when passkey is enabled).
-# Production uses rp_id = "mininode.app" and origin https://mininode.app (see docs/adr/0001).
+# Production uses the platform domain as rp_id and origin (set by `mininode configure`, ADR 0001).
 [auth.webauthn]
 rp_display_name = "MiniNode"
 rp_id = "localhost"
@@ -289,7 +289,7 @@ uri = "pg-functions://postgres/platform/custom_access_token_hook"
 # Locally, mails land in the bundled Mailpit UI instead.
 # [auth.hook.send_email]
 # enabled = true
-# uri = "https://api.mininode.app/hooks/send-email"
+# uri = "https://api.<your domain>/hooks/send-email"
 # secrets = "env(SEND_EMAIL_HOOK_SECRET)"
 
 # Configure one of the supported SMS providers: `twilio`, `twilio_verify`, `messagebird`, `textlocal`, `vonage`.
@@ -458,5 +458,7 @@ rp_id = "mininode.app"
 rp_origins = ["https://mininode.app"]
 
 # Staging has no domain yet; the deploy workflow does not push config there until it has one.
+# mininode:staging-begin
 [remotes.staging]
 project_id = "ttgrtecdqouiogiwcjag"
+# mininode:staging-end

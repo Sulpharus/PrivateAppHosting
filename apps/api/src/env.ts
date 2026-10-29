@@ -11,7 +11,7 @@ export interface ApiEnv extends Env {
   /** 32 hex chars shared with Guacamole's json-auth extension. */
   GUACAMOLE_JSON_SECRET: string;
   NUCBOX_CONTROL_TOKEN: string;
-  /** Cloudflare Access service token for control.mininode.app. */
+  /** Cloudflare Access service token for control.<domain>. */
   ACCESS_CLIENT_ID?: string;
   ACCESS_CLIENT_SECRET?: string;
   /** Google OAuth client (same as the Supabase Google provider) for Google services in apps. */
@@ -29,8 +29,6 @@ export interface ApiEnv extends Env {
    * workflow (ADR 0011). Without it the library only shows links.
    */
   GITHUB_DISPATCH_TOKEN?: string;
-  /** owner/repo of the workflow; defaults to Sulpharus/PrivateAppHosting. */
-  GITHUB_REPO?: string;
   /**
    * R2 (S3 API) credentials with Object Read & Write on the installers bucket. Without them
    * programs cannot be uploaded in Verwaltung (web apps can).

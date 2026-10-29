@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-// window.storage → mn.kv (per user, synced), window.claude.complete → mn.ai.chat (via ai.mininode.app)
+// window.storage → mn.kv (per user, synced), window.claude.complete → mn.ai.chat (via ai.<domain>)
 export default function App({ mn }) {
   const [notes, setNotes] = useState([]);
   const [text, setText] = useState('');

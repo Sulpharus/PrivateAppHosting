@@ -1,4 +1,4 @@
-// ai.mininode.app — lets hosted apps use AI models without ever holding a provider key.
+// ai.<domain> — lets hosted apps use AI models without ever holding a provider key.
 // Per request: session → origin ↔ app → grant → model allow-list → budget reservation →
 // provider call through AI Gateway → settle the real cost.
 

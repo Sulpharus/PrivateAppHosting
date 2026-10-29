@@ -55,7 +55,7 @@ export function passkeyErrorMessage(error: unknown): string {
   if (/credential_not_found/i.test(text))
     return 'Dieser Passkey ist nicht (mehr) bei MiniNode registriert. Melde dich mit Passwort an und lege unter „Dein Konto“ einen neuen an.';
   if (/verification_failed|SecurityError|rp.?id/i.test(text))
-    return 'Der Passkey passt nicht zu dieser Adresse. Öffne mininode.app direkt und versuche es noch einmal.';
+    return `Der Passkey passt nicht zu dieser Adresse. Öffne ${location.hostname} direkt und versuche es noch einmal.`;
   if (/challenge_expired/i.test(text))
     return 'Das hat zu lange gedauert. Bitte noch einmal versuchen.';
   if (/too_many_passkeys/i.test(text)) return 'Du hast bereits die maximale Anzahl an Passkeys.';

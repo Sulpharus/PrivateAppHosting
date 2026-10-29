@@ -12,8 +12,7 @@ const schema = z.object({
 
   SUPABASE_URL: z.url(),
   SUPABASE_PUBLISHABLE_KEY: z.string().min(1),
-  PORTAL_URL: z.url().default('https://mininode.app'),
-  PLATFORM_DOMAIN: z.string().default('mininode.app'),
+  PORTAL_URL: z.url(),
 
   PROXMOX_URL: z.url(),
   PROXMOX_NODE: z.string().default('nucbox'),
@@ -42,7 +41,10 @@ const schema = z.object({
   R2_BUCKET: z.string().default('mininode-installers'),
 });
 
-export type Config = z.infer<typeof schema>;
+export type Config = z.infer<typeof schema> & {
+  /** `<slug>.<PLATFORM_DOMAIN>` are the apps' addresses: the portal's host name. */
+  PLATFORM_DOMAIN: string;
+};
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   const parsed = schema.safeParse(env);
@@ -52,5 +54,5 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     );
     throw new Error(`invalid configuration:\n  ${problems.join('\n  ')}`);
   }
-  return parsed.data;
+  return { ...parsed.data, PLATFORM_DOMAIN: new URL(parsed.data.PORTAL_URL).hostname };
 }

@@ -12,6 +12,13 @@ import { hostedTargets, pruneApps } from './deploy/prune.ts';
 import { dropExemptions, uninstallApp } from './deploy/uninstall.ts';
 import { type DoctorReport, doctor, hostedApps } from './doctor.ts';
 import { exportApp } from './export.ts';
+import {
+  configureInstance,
+  environmentVariables,
+  type InitAnswers,
+  initInstance,
+  loadInstanceConfig,
+} from './instance/index.ts';
 import { integrate, reportMarkdown } from './integrate/index.ts';
 import type { IntegrateResult } from './integrate/types.ts';
 import { biomeSkip, lintExemption, tidy, verifyBuild } from './integrate/verify.ts';
@@ -21,6 +28,11 @@ const ROOT = resolve(import.meta.dirname, '../../..');
 
 const USAGE = `mininode <command>
 
+  init [--domain d --accountId id --supabaseRef ref --publishableKey key]
+       [--zone z] [--repository owner/repo] [--mailFrom a@b] [--force]
+                                    Write mininode.config.json (asks for what is missing), then configure
+  configure [--check]               Write the config into the wrangler files and supabase/config.toml
+  config env [production|staging]   KEY=value lines for the workflows ($GITHUB_ENV)
   doctor <app-dir> | --all          Check hosted apps (manifest, secrets, SDK, RLS, CSP)
   dev <app-dir> [--port 8790]       Serve an app locally behind the gate (local Supabase)
   deploy <app-dir> [--env staging]  Build, migrate, deploy and register one app
@@ -46,6 +58,16 @@ const USAGE = `mininode <command>
   library install <entry> <slug>    App-Bibliothek: register an installed program
   library remove <slug> <entry>     App-Bibliothek: disable a removed program
 `;
+
+const INIT_FLAGS: [string, keyof InitAnswers][] = [
+  ['--domain', 'domain'],
+  ['--zone', 'zone'],
+  ['--accountId', 'accountId'],
+  ['--supabaseRef', 'supabaseRef'],
+  ['--publishableKey', 'publishableKey'],
+  ['--repository', 'repository'],
+  ['--mailFrom', 'mailFrom'],
+];
 
 function print(report: DoctorReport): boolean {
   const errors = report.findings.filter((f) => f.severity === 'error');
@@ -74,6 +96,38 @@ function envFlag(args: string[]): DeployEnv {
 async function main(args: string[]): Promise<number> {
   const [command, target] = args;
   switch (command) {
+    case 'init': {
+      const answers: InitAnswers = {};
+      for (const [name, key] of INIT_FLAGS) {
+        const value = flag(args, name);
+        if (value) answers[key] = value;
+      }
+      const config = await initInstance(ROOT, answers, { overwrite: args.includes('--force') });
+      const { changed } = configureInstance(ROOT, config);
+      console.log(`wrote mininode.config.json; updated ${changed.join(', ') || 'nothing else'}`);
+      return 0;
+    }
+    case 'configure': {
+      const { changed } = configureInstance(ROOT, loadInstanceConfig(ROOT), {
+        check: args.includes('--check'),
+      });
+      if (args.includes('--check')) {
+        for (const file of changed) console.error(`out of date: ${file}`);
+        if (changed.length > 0) console.error('run `pnpm mininode configure`');
+        return changed.length > 0 ? 1 : 0;
+      }
+      console.log(changed.length > 0 ? `updated ${changed.join(', ')}` : 'already up to date');
+      return 0;
+    }
+    case 'config': {
+      const name = args[2] ?? 'production';
+      if (target !== 'env' || (name !== 'production' && name !== 'staging')) break;
+      for (const [key, value] of Object.entries(
+        environmentVariables(loadInstanceConfig(ROOT), name),
+      ))
+        console.log(`${key}=${value}`);
+      return 0;
+    }
     case 'doctor': {
       if (!target) break;
       const dirs = target === '--all' ? hostedApps(ROOT) : [resolve(process.cwd(), target)];

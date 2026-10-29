@@ -12,7 +12,7 @@ Zu jedem Schritt gibt es im [Wiki](/admin/wiki) mehr. Du musst nicht alles an ei
 
 Lies in fünf Minuten den Überblick: [Was ist MiniNode?](wiki:ueberblick). Merke dir drei Dinge:
 
-- Eine App ist ein Ordner mit `mininode.json`; sie läuft unter `<name>.mininode.app` hinter einem gemeinsamen Login.
+- Eine App ist ein Ordner mit `mininode.json`; sie läuft unter `<name>.{{domain}}` hinter einem gemeinsamen Login.
 - Die **Datenbank** schützt die Daten, nicht die App ([Daten speichern](wiki:daten-speichern)).
 - **Alles** geht über Git: ein Merge in `main` bringt eine Änderung live ([Deploy](wiki:deploy-workflows)).
 
@@ -20,7 +20,7 @@ Die Begriffe stehen in [Begriffe von A bis Z](wiki:begriffe).
 
 ## Anmelden und einen Passkey einrichten
 
-1. Öffne `https://mininode.app/login` und melde dich an (das erste Konto des Projekts ist Admin).
+1. Öffne `https://{{domain}}/login` und melde dich an (das erste Konto des Projekts ist Admin).
 2. Öffne **Dein Konto** (Menü oben rechts) und lege einen **Passkey** an (Fingerabdruck, Gesicht oder Windows Hello).
 3. Lege einen **zweiten Passkey** auf einem anderen Gerät an: so bist du nicht ausgesperrt, wenn ein Gerät verloren geht.
 4. Optional: koppel eine **Authenticator-App** als zweiten Faktor ([Anmeldung](wiki:anmeldung)).

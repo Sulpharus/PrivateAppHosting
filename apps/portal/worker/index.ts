@@ -17,7 +17,11 @@ export function portalConfig(env: Env) {
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    const headers = securityHeaders({ supabaseUrl: env.SUPABASE_URL });
+    const headers = securityHeaders({
+      supabaseUrl: env.SUPABASE_URL,
+      apiOrigin: new URL(env.API_URL).origin,
+      aiOrigin: new URL(env.AI_URL).origin,
+    });
 
     if (url.pathname === '/config.json') {
       return Response.json(portalConfig(env), {

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Navigate, NavLink, Outlet, useLocation } from 'react-router';
 import { useAuth } from '../auth/AuthProvider.tsx';
 import { TopBar } from '../components/TopBar.tsx';
+import { repoUrl } from '../lib/instance.ts';
 import { platform } from '../lib/supabase.ts';
 
 const LINKS: [string, string][] = [
@@ -25,7 +26,7 @@ const KNOWLEDGE: [string, string][] = [
 const EXTERNAL: [string, string][] = [
   ['https://dash.cloudflare.com/', 'Cloudflare (Deploys, DNS, Logs)'],
   ['https://supabase.com/dashboard/projects', 'Supabase (Datenbank)'],
-  ['https://github.com/Sulpharus/PrivateAppHosting/actions', 'GitHub Actions'],
+  ...(repoUrl() ? [[`${repoUrl()}/actions`, 'GitHub Actions'] as [string, string]] : []),
 ];
 
 export function AdminLayout() {

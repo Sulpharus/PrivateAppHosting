@@ -3,6 +3,7 @@ import { type DragEvent, useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router';
 import { useStepUp } from '../auth/StepUp.tsx';
 import { ApiError, api, apiUpload } from '../lib/api.ts';
+import { appHost } from '../lib/host.ts';
 import {
   formatSize,
   isRunning,
@@ -335,7 +336,7 @@ function SubmissionCard({
         {row.slug && (
           <>
             {' · '}
-            <span className="mono">{row.slug}.mininode.app</span>
+            <span className="mono">{appHost(row.slug)}</span>
           </>
         )}
       </p>

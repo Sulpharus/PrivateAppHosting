@@ -8,6 +8,7 @@ import { ApiError, api } from '../lib/api.ts';
 import { clearAppIcon, setAppIcon } from '../lib/appIcon.ts';
 import { type AppRow, listApps, tileUrl } from '../lib/apps.ts';
 import { type Category, listCategories } from '../lib/catalog.ts';
+import { appHost } from '../lib/host.ts';
 import { platform } from '../lib/supabase.ts';
 import { useArrangement } from '../lib/useArrangement.ts';
 import { dateTime } from './AdminLayout.tsx';
@@ -453,9 +454,7 @@ export function Apps() {
                           >
                             {app.name}
                           </a>
-                          <div className="muted mono">
-                            {app.link_url ?? `${app.slug}.mininode.app`}
-                          </div>
+                          <div className="muted mono">{app.link_url ?? appHost(app.slug)}</div>
                           <div className="row" style={{ gap: 4, flexWrap: 'wrap' }}>
                             <label className="button small ghost" style={{ cursor: 'pointer' }}>
                               {app.icon_path ? 'Logo ändern' : 'Logo hochladen'}

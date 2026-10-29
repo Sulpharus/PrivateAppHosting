@@ -35,7 +35,7 @@ Claude Code arbeitet im Repository (lokal oder in einer Cloud-Sitzung). Es liest
 ## Cloud-Sitzungen: Besonderheiten
 
 - Lokalen Stack mit `scripts/cloud-stack.sh` starten (Docker läuft nicht von selbst), dann `pnpm exec supabase db reset --local`. Der Container startet ab und zu neu: beides wiederholen.
-- `*.mininode.app` und die Produktions-Datenbank sind aus der Sitzung **nicht erreichbar**; um einen Deploy zu prüfen, liest man die Logs der GitHub-Actions-Läufe.
+- `*.{{domain}}` und die Produktions-Datenbank sind aus der Sitzung **nicht erreichbar**; um einen Deploy zu prüfen, liest man die Logs der GitHub-Actions-Läufe.
 - Alte Dev-Server per PID beenden, nie mit `pkill -f`.
 - Echte Schlüssel gehören nicht in den Chat. Ist einer gelandet: widerrufen.
 

@@ -49,7 +49,7 @@ läuft über kleine Signale (`team:<id>`), nie über Inhalte. Große Dateien (Vi
 
 1. Jede App hat ihre **eigene Adresse**. Browser setzen den `Origin`-Header selbst; Seitenskripte können ihn nicht fälschen.
 2. Die Datenbankfunktion `platform.calling_app()` liest ihn und schlägt ihn in `platform.app_origins` nach (der Deploy trägt
-   `https://<name>.mininode.app` ein).
+   `https://<name>.{{domain}}` ein).
 3. Jede Regel prüft **Person und aufrufende App** (`platform.app_access(<name>)`): Freigabe vorhanden *und* die Anfrage kommt von dieser
    App. Das Portal hat keine App-Identität.
 

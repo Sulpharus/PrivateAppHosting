@@ -12,7 +12,7 @@ summary: Glocke, Push aufs Handy, Erinnerungen und Apps ohne Internet
   fragen nie selbst nach der Erlaubnis. Ein geteiltes Gerät gehört der zuletzt angemeldeten Person; Abmelden schaltet Push dort ab.
 - **Erinnerungen zu einer Zeit:** `mn.push.schedule({ key, at, title, body, path })` (gleicher `key` ersetzt; bis 500 je Person und App, bis 400 Tage voraus),
   `cancel`, `list`, `status`. Der Cron der API läuft jede Minute, gibt Fälliges in die Glocke und verschickt es an alle Geräte.
-- Ein Tipp öffnet `https://<name>.mininode.app<pfad>`; Links bleiben im System.
+- Ein Tipp öffnet `https://<name>.{{domain}}<pfad>`; Links bleiben im System.
 
 Einrichten: `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` (`node scripts/vapid-keys.ts`). Wechselst du sie später, muss jedes Gerät Push neu einschalten.
 

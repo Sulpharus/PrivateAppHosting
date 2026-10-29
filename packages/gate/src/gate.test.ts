@@ -1,7 +1,7 @@
 import { createLocalJWKSet, exportJWK, generateKeyPair, SignJWT } from 'jose';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { decide, isNavigation } from './decide.ts';
-import { contentSecurityPolicy } from './headers.ts';
+import { contentSecurityPolicy, platformOrigins } from './headers.ts';
 import { createVerifier, hasRecentAuth, readSession, type Verifier } from './session.ts';
 
 const SUPABASE_URL = 'https://proj.supabase.co';
@@ -164,7 +164,10 @@ describe('helpers', () => {
   });
 
   it('builds a CSP without inline scripts and with platform endpoints', () => {
-    const csp = contentSecurityPolicy({ supabaseUrl: SUPABASE_URL });
+    const csp = contentSecurityPolicy({
+      supabaseUrl: SUPABASE_URL,
+      ...platformOrigins('https://mininode.app'),
+    });
     expect(csp).toContain("script-src 'self'");
     expect(csp).not.toContain("script-src 'self' 'unsafe-inline'");
     expect(csp).toContain('wss://proj.supabase.co');
@@ -176,7 +179,11 @@ describe('helpers', () => {
   });
 
   it('allows WebAssembly only for apps that declare it', () => {
-    const csp = contentSecurityPolicy({ supabaseUrl: SUPABASE_URL, wasm: true });
+    const csp = contentSecurityPolicy({
+      supabaseUrl: SUPABASE_URL,
+      ...platformOrigins('https://mininode.app'),
+      wasm: true,
+    });
     expect(csp).toContain("script-src 'self' 'wasm-unsafe-eval'");
     expect(csp).not.toMatch(/script-src[^;]*unsafe-inline/);
   });

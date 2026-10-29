@@ -52,11 +52,6 @@ jobs:
       SLUG: ${{ inputs.slug }}
       PURGE: ${{ inputs.purge }}
       DEPLOY_ENV: ${{ inputs.environment }}
-      SUPABASE_URL: ${{ inputs.environment == 'production' && 'https://ojicmpgqvoyakigvubek.supabase.co' || 'https://ttgrtecdqouiogiwcjag.supabase.co' }}
-      SUPABASE_PUBLISHABLE_KEY: ${{ inputs.environment == 'production' && 'sb_publishable_jv1tZqYWg51sNxJ5-GjMMw_tZqa1s1C' || 'sb_publishable_zQfFz-ruNPkIQauwa253iw_4zOZmiOB' }}
-      SUPABASE_PROJECT_REF: ${{ inputs.environment == 'production' && 'ojicmpgqvoyakigvubek' || 'ttgrtecdqouiogiwcjag' }}
-      CLOUDFLARE_ACCOUNT_ID: d690896e2d267adb0dd97027832767e5
-      STAGING_DOMAIN: ${{ vars.STAGING_DOMAIN }}
       AUTOMERGE: ${{ vars.INTEGRATE_AUTOMERGE }}
     steps:
       - name: Check the address
@@ -68,6 +63,9 @@ jobs:
           # The token is used by the push step only, not left in .git/config for the steps that
           # run the repository's code with the keys.
           persist-credentials: false
+      - uses: ./.github/actions/load-config
+        with:
+          environment: ${{ inputs.environment }}
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v5
         with:

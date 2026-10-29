@@ -133,7 +133,7 @@ async function ensureTarget(budget: Budget, token: string, id: string | null): P
   const created = await google(budget, token, 'POST', '/calendars', {
     body: {
       summary: 'MiniNode',
-      description: 'Termine aus MiniNode (mininode.app), automatisch abgeglichen.',
+      description: 'Termine aus MiniNode, automatisch abgeglichen.',
       timeZone: DEFAULT_TZ,
     },
   });

@@ -7,12 +7,12 @@ summary: Wie man sich anmeldet, Passkeys einrichtet und was bei verlorenem Handy
 
 ## Eine Anmeldung für alles
 
-Alle Anmelde-Seiten liegen auf **`https://mininode.app/login`** (ADR 0001). Apps haben kein eigenes Login: sie rufen
+Alle Anmelde-Seiten liegen auf **`https://{{domain}}/login`** (ADR 0001). Apps haben kein eigenes Login: sie rufen
 `mn.auth.requireLogin()` auf und werden dorthin geschickt, mit `?next=` für den Rückweg. Die Kennung für Passkeys
-(*RP ID*) ist `mininode.app` und gilt als dauerhaft: würde sie sich ändern, wären alle Passkeys ungültig.
+(*RP ID*) ist `{{domain}}` und gilt als dauerhaft: würde sie sich ändern, wären alle Passkeys ungültig.
 
-Die Anmeldung gilt für alle Unterseiten (`*.mininode.app`); jede App-Schranke prüft sie selbst. Ist die Sitzung abgelaufen,
-leitet die Schranke kurz zu `mininode.app/auth/refresh` und wieder zurück.
+Die Anmeldung gilt für alle Unterseiten (`*.{{domain}}`); jede App-Schranke prüft sie selbst. Ist die Sitzung abgelaufen,
+leitet die Schranke kurz zu `{{domain}}/auth/refresh` und wieder zurück.
 
 ## Wege der Anmeldung
 

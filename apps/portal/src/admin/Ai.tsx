@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useStepUp } from '../auth/StepUp.tsx';
+import { platformDomain } from '../lib/host.ts';
 import { platform } from '../lib/supabase.ts';
 import { euro } from './AdminLayout.tsx';
 
@@ -82,8 +83,8 @@ export function Ai() {
       <div className="stack" style={{ gap: 6 }}>
         <h1 style={{ fontSize: 36 }}>KI-Proxy</h1>
         <p className="muted">
-          Apps rufen KI über <code>ai.mininode.app</code> auf. Die Schlüssel bleiben auf dem Server;
-          jede Anfrage wird vorab gegen die Budgets reserviert.
+          Apps rufen KI über <code>ai.{platformDomain()}</code> auf. Die Schlüssel bleiben auf dem
+          Server; jede Anfrage wird vorab gegen die Budgets reserviert.
         </p>
       </div>
       {error && (

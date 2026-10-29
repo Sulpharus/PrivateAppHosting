@@ -85,14 +85,14 @@ function git(root: string, args: string[]): Buffer {
 }
 
 /**
- * Identifiers of this instance: the Cloudflare account and Supabase project refs (from the
- * deploy workflow and the Worker configs) and every commit author's address and name. Throws
+ * Identifiers of this instance: the Cloudflare account and Supabase project refs (from
+ * mininode.config.json and the Worker configs) and every commit author's address and name. Throws
  * when the account or the projects cannot be found, so a moved setting cannot silently weaken
  * the check.
  */
 export function instanceIdentifiers(root: string): string[] {
   const ids = new Set<string>();
-  const config = [join(root, '.github/workflows/deploy.yml')];
+  const config = [join(root, 'mininode.config.json')];
   const apps = join(root, 'apps');
   if (existsSync(apps))
     for (const app of readdirSync(apps)) config.push(join(apps, app, 'wrangler.jsonc'));
@@ -100,13 +100,13 @@ export function instanceIdentifiers(root: string): string[] {
   let projects = 0;
   for (const file of config.filter((f) => existsSync(f))) {
     const text = readFileSync(file, 'utf8');
-    for (const m of text.matchAll(/(?:CLOUDFLARE_ACCOUNT_ID:\s*|"account_id":\s*")([a-f0-9]{32})/g))
+    for (const m of text.matchAll(/(?:"accountId":\s*"|"account_id":\s*")([a-f0-9]{32})/g))
       if (m[1] && !ids.has(m[1])) {
         ids.add(m[1]);
         accounts++;
       }
     const refs = [
-      ...(/SUPABASE_PROJECT_REF:([^\n]*)/.exec(text)?.[1] ?? '').matchAll(/'([a-z]{20})'/g),
+      ...text.matchAll(/"projectRef":\s*"([a-z]{20})"/g),
       ...text.matchAll(/https:\/\/([a-z]{20})\.supabase\.co/g),
     ];
     for (const m of refs)
@@ -117,7 +117,7 @@ export function instanceIdentifiers(root: string): string[] {
   }
   if (accounts === 0 || projects === 0)
     throw new Error(
-      'could not find the Cloudflare account and the Supabase projects of this instance (deploy.yml, apps/*/wrangler.jsonc); refusing to export without them',
+      'could not find the Cloudflare account and the Supabase projects of this instance (mininode.config.json, apps/*/wrangler.jsonc); refusing to export without them',
     );
   const log = git(root, ['log', '--format=%ae%n%ce%n%an%n%cn']).toString('utf8');
   for (const entry of log.split('\n')) {

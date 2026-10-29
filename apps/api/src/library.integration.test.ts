@@ -18,7 +18,11 @@ describe.skipIf(!enabled)('app library', () => {
     SUPABASE_SECRET_KEY: secretKey,
     PORTAL_URL: 'https://mininode.app',
   };
-  const env = { ...base, GITHUB_DISPATCH_TOKEN: 'gh-token' } as unknown as ApiEnv;
+  const env = {
+    ...base,
+    GITHUB_DISPATCH_TOKEN: 'gh-token',
+    GITHUB_REPO: 'Sulpharus/PrivateAppHosting',
+  } as unknown as ApiEnv;
   const admin = createClient(url ?? 'http://127.0.0.1', secretKey ?? 'unused', {
     auth: { persistSession: false },
   });

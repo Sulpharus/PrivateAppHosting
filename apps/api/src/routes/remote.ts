@@ -20,7 +20,7 @@ interface RemoteSessionRow {
   status: 'queued' | 'active' | 'ended';
 }
 
-/** Headers for control.mininode.app (behind Cloudflare Access + a bearer token). */
+/** Headers for control.<domain> (behind Cloudflare Access + a bearer token). */
 export function controlHeaders(env: ApiEnv): Record<string, string> {
   const headers: Record<string, string> = {
     Authorization: `Bearer ${env.NUCBOX_CONTROL_TOKEN}`,

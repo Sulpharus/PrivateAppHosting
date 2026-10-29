@@ -20,7 +20,7 @@ Es gibt mehrere Wege. Wähle nach dem, was du hast:
 ## Nach dem Einbau: immer dasselbe
 
 1. **Prüfen:** der Pull Request muss grün sein (Prüfungen, `mininode doctor`).
-2. **Mergen:** der Deploy migriert die Tabellen der App, veröffentlicht sie unter `<name>.mininode.app` und trägt sie ein.
+2. **Mergen:** der Deploy migriert die Tabellen der App, veröffentlicht sie unter `<name>.{{domain}}` und trägt sie ein.
 3. **Freigeben:** Verwaltung → Apps → Zugriff, oder „Für alle neuen Nutzer“ ([Rollen](wiki:rollen-zugriff)).
 4. **Gemeinsame Daten genehmigen**, falls die App welche anfragt: Verwaltung → Gemeinsame Daten
    ([Gemeinsame Daten](wiki:gemeinsame-daten)).

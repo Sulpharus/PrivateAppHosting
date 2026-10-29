@@ -5,7 +5,7 @@ import type { PortalConfig } from '../config.ts';
 let client: SupabaseClient | undefined;
 
 /**
- * The session lives in the `mn-auth` cookie on `.mininode.app`, so every hosted app and its gate
+ * The session lives in the `mn-auth` cookie on the platform domain (`.<domain>`), so every hosted app and its gate
  * see the same login. Keep this cookie name in sync with packages/gate and packages/sdk.
  */
 export function initSupabase(config: PortalConfig): SupabaseClient {

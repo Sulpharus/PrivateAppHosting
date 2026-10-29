@@ -7,7 +7,7 @@
 //   GET  /installers/:id      platform API → job status
 //   GET  /resources           platform API → CPU, memory and disk of host, VMs and containers
 // Everything except /health and /auth requires `Authorization: Bearer <CONTROL_TOKEN>`; the
-// hostname control.mininode.app additionally sits behind Cloudflare Access.
+// hostname control.<domain> additionally sits behind Cloudflare Access.
 
 import { timingSafeEqual } from 'node:crypto';
 import { Hono, type MiddlewareHandler } from 'hono';

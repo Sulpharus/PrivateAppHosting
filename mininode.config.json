@@ -1,0 +1,23 @@
+{
+  "cloudflare": {
+    "accountId": "d690896e2d267adb0dd97027832767e5"
+  },
+  "github": {
+    "repository": "Sulpharus/PrivateAppHosting"
+  },
+  "environments": {
+    "production": {
+      "domain": "mininode.app",
+      "supabase": {
+        "projectRef": "ojicmpgqvoyakigvubek",
+        "publishableKey": "sb_publishable_jv1tZqYWg51sNxJ5-GjMMw_tZqa1s1C"
+      }
+    },
+    "staging": {
+      "supabase": {
+        "projectRef": "ttgrtecdqouiogiwcjag",
+        "publishableKey": "sb_publishable_zQfFz-ruNPkIQauwa253iw_4zOZmiOB"
+      }
+    }
+  }
+}

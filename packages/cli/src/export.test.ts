@@ -12,6 +12,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { exportApp, instanceIdentifiers, MARKER, scanText } from './export.ts';
+import { loadInstanceConfig } from './instance/load.ts';
 
 const ROOT = resolve(import.meta.dirname, '../../..');
 const dirs: string[] = [];
@@ -38,14 +39,20 @@ function repo(
   for (const [name, target] of Object.entries(links)) symlinkSync(target, join(app, name));
   mkdirSync(join(root, '.github/workflows'), { recursive: true });
   writeFileSync(
-    join(root, '.github/workflows/deploy.yml'),
-    `  CLOUDFLARE_ACCOUNT_ID: ${ACCOUNT}\n  SUPABASE_PROJECT_REF: \${{ x && 'abcdefghijklmnopqrst' || 'tsrqponmlkjihgfedcba' }}\n`,
+    join(root, 'mininode.config.json'),
+    JSON.stringify({
+      cloudflare: { accountId: ACCOUNT },
+      environments: {
+        production: { supabase: { projectRef: 'abcdefghijklmnopqrst' } },
+        staging: { supabase: { projectRef: 'tsrqponmlkjihgfedcba' } },
+      },
+    }),
   );
   // An untracked local file that must never reach an export.
   writeFileSync(join(root, '.env.local'), ['DB', 'PASSWORD=not-a-real-one'].join('_'));
   const git = (...args: string[]) => spawnSync('git', args, { cwd: root, encoding: 'utf8' });
   git('init', '-q');
-  git('add', '-A', '--', 'hosted', '.github');
+  git('add', '-A', '--', 'hosted', '.github', 'mininode.config.json');
   git('-c', 'user.name=Owner Person', '-c', 'user.email=owner@private.test', 'commit', '-qm', 'i');
   return { root, app };
 }
@@ -78,16 +85,16 @@ describe('mininode export', () => {
 
   it('finds the Cloudflare account and both Supabase projects of this repository', () => {
     const ids = instanceIdentifiers(ROOT);
-    const deploy = readFileSync(join(ROOT, '.github/workflows/deploy.yml'), 'utf8');
-    const account = /CLOUDFLARE_ACCOUNT_ID:\s*([a-f0-9]{32})/.exec(deploy)?.[1];
-    expect(account).toBeDefined();
-    expect(ids).toContain(account);
-    for (const ref of deploy.match(/'[a-z]{20}'/g) ?? []) expect(ids).toContain(ref.slice(1, -1));
+    const config = loadInstanceConfig(ROOT);
+    expect(ids).toContain(config.cloudflare.accountId);
+    expect(ids).toContain(config.environments.production.supabase.projectRef);
+    if (config.environments.staging)
+      expect(ids).toContain(config.environments.staging.supabase.projectRef);
   });
 
   it('refuses to run when the instance settings cannot be found', () => {
     const { root } = repo({ 'mininode.json': manifest });
-    writeFileSync(join(root, '.github/workflows/deploy.yml'), 'jobs: {}\n');
+    writeFileSync(join(root, 'mininode.config.json'), '{}');
     expect(() => instanceIdentifiers(root)).toThrow('refusing to export');
   });
 
