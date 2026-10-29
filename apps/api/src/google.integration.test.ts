@@ -23,7 +23,7 @@ describe.skipIf(!enabled)('google services for apps', () => {
     SUPABASE_URL: url,
     SUPABASE_PUBLISHABLE_KEY: publishableKey,
     SUPABASE_SECRET_KEY: secretKey,
-    PORTAL_URL: 'https://mininode.app',
+    PORTAL_URL: 'https://example.org',
     GOOGLE_CLIENT_ID: 'client',
     GOOGLE_CLIENT_SECRET: 'secret',
     GOOGLE_TOKEN_KEY: btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32)))),
@@ -175,7 +175,7 @@ describe.skipIf(!enabled)('google services for apps', () => {
   });
 
   it('refuses without the app origin, and from the portal', async () => {
-    for (const from of [undefined, 'https://mininode.app']) {
+    for (const from of [undefined, 'https://example.org']) {
       const res = await call('/google/token', {
         method: 'POST',
         body: { app: slug },

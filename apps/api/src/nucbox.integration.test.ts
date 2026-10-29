@@ -16,7 +16,7 @@ describe.skipIf(!enabled)('nucbox resources', () => {
     SUPABASE_URL: url,
     SUPABASE_PUBLISHABLE_KEY: publishableKey,
     SUPABASE_SECRET_KEY: secretKey,
-    PORTAL_URL: 'https://mininode.app',
+    PORTAL_URL: 'https://example.org',
     NUCBOX_CONTROL_URL: 'https://control.test',
     NUCBOX_CONTROL_TOKEN: 'control-token',
   } as unknown as ApiEnv;

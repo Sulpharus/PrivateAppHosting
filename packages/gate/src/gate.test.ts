@@ -6,7 +6,7 @@ import { createVerifier, hasRecentAuth, readSession, type Verifier } from './ses
 
 const SUPABASE_URL = 'https://proj.supabase.co';
 const ISSUER = `${SUPABASE_URL}/auth/v1`;
-const PORTAL = 'https://mininode.app';
+const PORTAL = 'https://example.org';
 
 let privateKey: CryptoKey;
 let verifier: Verifier;
@@ -43,7 +43,7 @@ function cookie(session: object, chunked = false): string {
 }
 
 const allowAll = async () => true;
-const url = new URL('https://rezepte.mininode.app/woche?tag=2');
+const url = new URL('https://rezepte.example.org/woche?tag=2');
 
 describe('readSession', () => {
   it('reads plain, base64 and chunked cookies', () => {
@@ -166,12 +166,12 @@ describe('helpers', () => {
   it('builds a CSP without inline scripts and with platform endpoints', () => {
     const csp = contentSecurityPolicy({
       supabaseUrl: SUPABASE_URL,
-      ...platformOrigins('https://mininode.app'),
+      ...platformOrigins('https://example.org'),
     });
     expect(csp).toContain("script-src 'self'");
     expect(csp).not.toContain("script-src 'self' 'unsafe-inline'");
     expect(csp).toContain('wss://proj.supabase.co');
-    expect(csp).toContain('https://ai.mininode.app');
+    expect(csp).toContain('https://ai.example.org');
     // An app reads its own in-memory files (files.js saves a download link's blob to MiniNode).
     expect(csp).toMatch(/connect-src 'self' blob: /);
     expect(csp).toContain("frame-ancestors 'none'");
@@ -181,7 +181,7 @@ describe('helpers', () => {
   it('allows WebAssembly only for apps that declare it', () => {
     const csp = contentSecurityPolicy({
       supabaseUrl: SUPABASE_URL,
-      ...platformOrigins('https://mininode.app'),
+      ...platformOrigins('https://example.org'),
       wasm: true,
     });
     expect(csp).toContain("script-src 'self' 'wasm-unsafe-eval'");
@@ -216,7 +216,7 @@ describe('precompressed WebAssembly', () => {
   it('serves app.wasm from app.wasm.br, still Brotli encoded', async () => {
     const { handleAppRequest } = await import('./worker.ts');
     const response = await handleAppRequest(
-      new Request('https://wordcraft.mininode.app/app.wasm'),
+      new Request('https://wordcraft.example.org/app.wasm'),
       env({ '/app.wasm.br': 'BROTLI' }),
     );
     expect(response.status).toBe(200);
@@ -232,12 +232,12 @@ describe('precompressed WebAssembly', () => {
     expect(hasContentHash('/lightcraft_web_bg.wasm')).toBe(false);
     expect(hasContentHash('/build-2026/app.wasm')).toBe(false);
     const hashed = await handleAppRequest(
-      new Request('https://wordcraft.mininode.app/app-dac7e7b375acbaf2_bg.wasm'),
+      new Request('https://wordcraft.example.org/app-dac7e7b375acbaf2_bg.wasm'),
       env({ '/app-dac7e7b375acbaf2_bg.wasm.br': 'BROTLI' }),
     );
     expect(hashed.headers.get('Cache-Control')).toBe('public, max-age=31536000, immutable');
     const plain = await handleAppRequest(
-      new Request('https://lightcraft.mininode.app/app_bg.wasm'),
+      new Request('https://lightcraft.example.org/app_bg.wasm'),
       env({ '/app_bg.wasm.br': 'BROTLI' }),
     );
     expect(plain.headers.get('Content-Encoding')).toBe('br');
@@ -249,7 +249,7 @@ describe('precompressed WebAssembly', () => {
     const { handleAppRequest } = await import('./worker.ts');
     const files = { '/app_bg.wasm.br': 'BROTLI' };
     const same = await handleAppRequest(
-      new Request('https://lightcraft.mininode.app/app_bg.wasm', {
+      new Request('https://lightcraft.example.org/app_bg.wasm', {
         headers: { 'If-None-Match': '"6-etag"' },
       }),
       env(files),
@@ -257,7 +257,7 @@ describe('precompressed WebAssembly', () => {
     expect(same.status).toBe(304);
     expect(same.headers.get('ETag')).toBe('"6-etag"');
     const changed = await handleAppRequest(
-      new Request('https://lightcraft.mininode.app/app_bg.wasm', {
+      new Request('https://lightcraft.example.org/app_bg.wasm', {
         headers: { 'If-None-Match': '"old"' },
       }),
       env(files),
@@ -269,7 +269,7 @@ describe('precompressed WebAssembly', () => {
   it('ignores .wasm.br files of apps without wasm', async () => {
     const { handleAppRequest } = await import('./worker.ts');
     const response = await handleAppRequest(
-      new Request('https://other.mininode.app/app.wasm'),
+      new Request('https://other.example.org/app.wasm'),
       env({ '/app.wasm.br': 'BROTLI' }, ''),
     );
     expect(response.headers.get('Content-Encoding')).toBeNull();
@@ -279,7 +279,7 @@ describe('precompressed WebAssembly', () => {
   it('never sends a single-page app’s index.html as WebAssembly', async () => {
     const { handleAppRequest } = await import('./worker.ts');
     const response = await handleAppRequest(
-      new Request('https://spa.mininode.app/missing.wasm'),
+      new Request('https://spa.example.org/missing.wasm'),
       env({}, '1', '<!doctype html><title>SPA</title>'),
     );
     expect(response.headers.get('Content-Encoding')).toBeNull();
@@ -289,7 +289,7 @@ describe('precompressed WebAssembly', () => {
   it('serves a plain .wasm file as it is', async () => {
     const { handleAppRequest } = await import('./worker.ts');
     const response = await handleAppRequest(
-      new Request('https://wordcraft.mininode.app/small.wasm'),
+      new Request('https://wordcraft.example.org/small.wasm'),
       env({ '/small.wasm': 'RAW' }),
     );
     expect(response.headers.get('Content-Encoding')).toBeNull();
@@ -300,9 +300,9 @@ describe('precompressed WebAssembly', () => {
 describe('connectSources', () => {
   it('adds the portal only when running locally', async () => {
     const { connectSources } = await import('./worker.ts');
-    expect(connectSources({ PORTAL_URL: 'https://mininode.app', CONNECT_SRC: '' })).toEqual([]);
+    expect(connectSources({ PORTAL_URL: 'https://example.org', CONNECT_SRC: '' })).toEqual([]);
     expect(
-      connectSources({ PORTAL_URL: 'https://mininode.app', CONNECT_SRC: 'https://a.example' }),
+      connectSources({ PORTAL_URL: 'https://example.org', CONNECT_SRC: 'https://a.example' }),
     ).toEqual(['https://a.example']);
     expect(connectSources({ PORTAL_URL: 'http://localhost:5173', CONNECT_SRC: '' })).toEqual([
       'http://localhost:5173',

@@ -38,7 +38,7 @@ fi
 while IFS= read -r line; do
   line=${line//[$'\r']/}
   [ "${#line}" -ge 5 ] || continue
-  case "$line" in *noreply*|*'[bot]'*|Claude*|GitHub*|*users.noreply.github.com) continue ;; esac
+  case "$line" in *noreply*|*'[bot]'*|Claude*|GitHub*|mininode-*) continue ;; esac
   identifiers+=("$line")
 done < <(git log --format='%ae%n%ce%n%an%n%cn' | sort -u)
 
@@ -93,10 +93,19 @@ rm -f "$stage/mininode.config.json"
 node packages/cli/src/bin.ts configure --root "$stage" --config "$stage/mininode.config.example.json" >/dev/null
 
 # 5. Prose that names the example installation reads as an example domain and repository.
-while IFS= read -r -d '' file; do
-  sed -i -e 's#Sulpharus/PrivateAppHosting#your-name/your-repository#g' -e 's#[Ss]ulpharus#your-name#g' \
-    -e 's#hallo@mininode\.app#hello@example.com#g' -e 's#mininode\.app#example.com#g' "$file"
-done < <(find "$stage" -type f \( -name '*.md' -o -name '*.mdx' \) -not -path '*/node_modules/*' -print0)
+# (replacements come from the installation's own settings, so this script names none of them)
+sed_args=()
+for domain in $(jq -r '[.environments[].domain] | .[] | select(. != null)' mininode.config.json 2>/dev/null); do
+  sed_args+=(-e "s#hallo@$domain#hello@example.com#g" -e "s#$domain#example.com#g")
+done
+repository=$(jq -r '.github.repository // empty' mininode.config.json 2>/dev/null || true)
+if [ -n "$repository" ]; then
+  sed_args+=(-e "s#$repository#your-name/your-repository#g" -e "s#${repository%%/*}#your-name#gI")
+fi
+if [ "${#sed_args[@]}" -gt 0 ]; then
+  while IFS= read -r -d '' file; do sed -i "${sed_args[@]}" "$file"; done \
+    < <(find "$stage" -type f \( -name '*.md' -o -name '*.mdx' \) -not -path '*/node_modules/*' -print0)
+fi
 
 # 6. The lockfile without the apps (they are the only workspace members that left).
 (cd "$stage" && pnpm install --lockfile-only --ignore-scripts >/dev/null)

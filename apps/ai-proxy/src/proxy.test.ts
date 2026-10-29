@@ -62,7 +62,7 @@ function harness(
     provider: () => provider,
   }));
 
-  const env = { PORTAL_URL: 'https://mininode.app', MODEL_CATALOG: '' } as ProxyEnv;
+  const env = { PORTAL_URL: 'https://example.org', MODEL_CATALOG: '' } as ProxyEnv;
   const waits: Promise<unknown>[] = [];
   const ctx = {
     waitUntil: (p: Promise<unknown>) => waits.push(p),
@@ -72,11 +72,11 @@ function harness(
 
   const post = (path: string, body: object, headers: Record<string, string> = {}) =>
     app.fetch(
-      new Request(`https://ai.mininode.app${path}`, {
+      new Request(`https://ai.example.org${path}`, {
         method: 'POST',
         headers: {
           Authorization: 'Bearer good',
-          Origin: 'https://rezepte.mininode.app',
+          Origin: 'https://rezepte.example.org',
           'Content-Type': 'application/json',
           ...headers,
         },
@@ -114,7 +114,7 @@ describe('ai proxy', () => {
 
   it('rejects requests from another origin', async () => {
     const { post } = harness();
-    const res = await post('/v1/chat', chat, { Origin: 'https://budget.mininode.app' });
+    const res = await post('/v1/chat', chat, { Origin: 'https://budget.example.org' });
     expect(res.status).toBe(403);
   });
 
@@ -187,40 +187,40 @@ describe('ai proxy', () => {
 
 describe('originMatchesApp', () => {
   it('only accepts the app subdomain over https', () => {
-    expect(
-      originMatchesApp('https://rezepte.mininode.app', 'rezepte', 'https://mininode.app'),
-    ).toBe(true);
-    expect(originMatchesApp('http://rezepte.mininode.app', 'rezepte', 'https://mininode.app')).toBe(
+    expect(originMatchesApp('https://rezepte.example.org', 'rezepte', 'https://example.org')).toBe(
+      true,
+    );
+    expect(originMatchesApp('http://rezepte.example.org', 'rezepte', 'https://example.org')).toBe(
       false,
     );
     expect(
-      originMatchesApp('https://rezepte.mininode.app.evil.io', 'rezepte', 'https://mininode.app'),
+      originMatchesApp('https://rezepte.example.org.evil.io', 'rezepte', 'https://example.org'),
     ).toBe(false);
-    expect(originMatchesApp(null, 'rezepte', 'https://mininode.app')).toBe(false);
+    expect(originMatchesApp(null, 'rezepte', 'https://example.org')).toBe(false);
   });
 });
 
 describe('CORS', () => {
-  const env = { PORTAL_URL: 'https://mininode.app' } as ProxyEnv;
+  const env = { PORTAL_URL: 'https://example.org' } as ProxyEnv;
   const preflight = (origin: string) =>
     createApp().request('/v1/chat', { method: 'OPTIONS', headers: { Origin: origin } }, env);
 
   it('answers the portal and its apps, and nobody else', async () => {
     expect(
-      (await preflight('https://rezepte.mininode.app')).headers.get('Access-Control-Allow-Origin'),
-    ).toBe('https://rezepte.mininode.app');
+      (await preflight('https://rezepte.example.org')).headers.get('Access-Control-Allow-Origin'),
+    ).toBe('https://rezepte.example.org');
     const foreign = await preflight('https://evil.example');
     expect(foreign.status).toBe(204);
     expect(foreign.headers.get('Access-Control-Allow-Origin')).toBeNull();
   });
 
   it('knows the platform origins', () => {
-    const portal = 'https://mininode.app';
-    expect(isPlatformOrigin('https://mininode.app', portal)).toBe(true);
-    expect(isPlatformOrigin('https://x.mininode.app', portal)).toBe(true);
-    expect(isPlatformOrigin('http://x.mininode.app', portal)).toBe(false);
-    expect(isPlatformOrigin('https://mininode.app.evil.io', portal)).toBe(false);
-    expect(isPlatformOrigin('https://evilmininode.app', portal)).toBe(false);
+    const portal = 'https://example.org';
+    expect(isPlatformOrigin('https://example.org', portal)).toBe(true);
+    expect(isPlatformOrigin('https://x.example.org', portal)).toBe(true);
+    expect(isPlatformOrigin('http://x.example.org', portal)).toBe(false);
+    expect(isPlatformOrigin('https://example.org.evil.io', portal)).toBe(false);
+    expect(isPlatformOrigin('https://evilexample.org', portal)).toBe(false);
     expect(isPlatformOrigin(null, portal)).toBe(false);
     expect(isPlatformOrigin('http://rezepte.mininode.localhost', 'http://mininode.localhost')).toBe(
       true,

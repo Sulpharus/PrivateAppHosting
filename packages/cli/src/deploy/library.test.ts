@@ -75,7 +75,7 @@ describe('App-Bibliothek CLI', () => {
       manifest: { library: 'jellyfin', container: { port: 8096 } },
     });
     const origins = calls.find((c) => c.url.includes('/app_origins'));
-    expect(origins?.body).toEqual([{ origin: 'https://kino.mininode.app', app_slug: 'kino' }]);
+    expect(origins?.body).toEqual([{ origin: 'https://kino.example.org', app_slug: 'kino' }]);
     const enable = calls.find((c) => c.method === 'PATCH' && c.url.includes('/apps'));
     expect(enable?.body).toEqual({ status: 'online' });
   });

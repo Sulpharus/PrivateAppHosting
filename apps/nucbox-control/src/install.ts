@@ -179,7 +179,7 @@ export function createInstaller(options: {
       name,
       image: options.wineImage,
       env: {},
-      labels: { 'app.mininode.job': 'install', 'app.mininode.app': request.app },
+      labels: { 'app.mininode.job': 'install', 'app.mininode.slug': request.app },
       network: options.dockerNetwork,
       memoryMb: 1536,
       volumes: { [wineVolume(request.app)]: '/wine' },

@@ -27,7 +27,7 @@ describe.skipIf(!enabled)('uploads', () => {
     SUPABASE_URL: url,
     SUPABASE_PUBLISHABLE_KEY: publishableKey,
     SUPABASE_SECRET_KEY: secretKey,
-    PORTAL_URL: 'https://mininode.app',
+    PORTAL_URL: 'https://example.org',
     NUCBOX_CONTROL_URL: 'https://control.example',
   } as unknown as ApiEnv;
   const configured = {

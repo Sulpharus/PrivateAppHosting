@@ -7,9 +7,9 @@ const config: MininodeConfig = {
   appName: 'Wetter',
   supabaseUrl: 'http://127.0.0.1:54321',
   supabasePublishableKey: 'pk',
-  portalUrl: 'https://mininode.app',
-  apiUrl: 'https://api.mininode.app',
-  aiUrl: 'https://ai.mininode.app',
+  portalUrl: 'https://example.org',
+  apiUrl: 'https://api.example.org',
+  aiUrl: 'https://ai.example.org',
 };
 
 afterEach(() => vi.restoreAllMocks());
@@ -30,7 +30,7 @@ describe('mn.api', () => {
     const calls = stub(Response.json({ temp: 21 }));
     const data = await api('openweather').json<{ temp: number }>('/weather?q=M%C3%BCnchen');
     expect(data.temp).toBe(21);
-    expect(calls[0]?.url).toBe('https://api.mininode.app/proxy/openweather/weather?q=M%C3%BCnchen');
+    expect(calls[0]?.url).toBe('https://api.example.org/proxy/openweather/weather?q=M%C3%BCnchen');
     expect(new Headers(calls[0]?.init?.headers).get('Authorization')).toBe('Bearer session');
     expect(calls[0]?.init?.credentials).toBe('omit');
   });

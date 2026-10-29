@@ -119,10 +119,10 @@ describe('reference pages', () => {
     expect(
       decisionsReference(
         { 'docs/adr/0019-x.md': '# ADR 0019: Backups\n\n- Status: accepted\n- Date: 2026-10-05\n' },
-        'https://github.com/Sulpharus/PrivateAppHosting',
+        'https://github.com/owner/platform',
       ),
     ).toContain(
-      '| [0019](https://github.com/Sulpharus/PrivateAppHosting/blob/main/docs/adr/0019-x.md) | Backups | accepted | 2026-10-05 |',
+      '| [0019](https://github.com/owner/platform/blob/main/docs/adr/0019-x.md) | Backups | accepted | 2026-10-05 |',
     );
     expect(
       runbooksReference(
@@ -130,10 +130,10 @@ describe('reference pages', () => {
           'docs/runbooks/README.md': '# Runbooks\n',
           'docs/runbooks/backups.md': '# Backups\n\nA full backup.\n',
         },
-        'https://github.com/Sulpharus/PrivateAppHosting',
+        'https://github.com/owner/platform',
       ),
     ).toContain(
-      '| [Backups](https://github.com/Sulpharus/PrivateAppHosting/blob/main/docs/runbooks/backups.md) | A full backup. |',
+      '| [Backups](https://github.com/owner/platform/blob/main/docs/runbooks/backups.md) | A full backup. |',
     );
   });
 });

@@ -115,7 +115,7 @@ export function createScheduler(options: {
         env: { PROGRAM: request.program, VNC_PASSWORD: password, LANG: 'de_DE.UTF-8' },
         labels: {
           'app.mininode.runtime': 'wine',
-          'app.mininode.app': request.app,
+          'app.mininode.slug': request.app,
           'app.mininode.vnc-password': password,
         },
         network: config.DOCKER_NETWORK,
@@ -170,7 +170,7 @@ export function createScheduler(options: {
       }
       for (const container of await docker.list(WINE_LABEL)) {
         if (!container.running) continue;
-        const app = container.labels['app.mininode.app'] ?? '';
+        const app = container.labels['app.mininode.slug'] ?? '';
         const used = lastUsed.get(app) ?? startedAt;
         if (t - used > config.WINE_IDLE_MINUTES * 60_000) {
           await docker.stop(container.name);

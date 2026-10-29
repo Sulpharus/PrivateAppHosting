@@ -7,9 +7,9 @@ const config: MininodeConfig = {
   appName: 'Kalender',
   supabaseUrl: 'http://127.0.0.1:54321',
   supabasePublishableKey: 'pk',
-  portalUrl: 'https://mininode.app',
-  apiUrl: 'https://api.mininode.app',
-  aiUrl: 'https://ai.mininode.app',
+  portalUrl: 'https://example.org',
+  apiUrl: 'https://api.example.org',
+  aiUrl: 'https://ai.example.org',
 };
 
 afterEach(() => vi.restoreAllMocks());
@@ -35,7 +35,7 @@ describe('mn.google', () => {
     const google = createGoogle(config, async () => 'session');
     await google.fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events');
     await google.fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events');
-    expect(calls[0]?.url).toBe('https://api.mininode.app/google/token');
+    expect(calls[0]?.url).toBe('https://api.example.org/google/token');
     expect(JSON.parse(String(calls[0]?.init?.body))).toEqual({ app: 'kalender' });
     expect(calls.filter((call) => call.url.endsWith('/google/token'))).toHaveLength(1);
     expect(new Headers(calls[1]?.init?.headers).get('Authorization')).toBe('Bearer at1');
@@ -66,7 +66,7 @@ describe('mn.google', () => {
     expect(await google.connected()).toBe(false);
     const error = await google.accessToken().catch((err: unknown) => err);
     expect(error).toBeInstanceOf(GoogleError);
-    expect((error as GoogleError).connectUrl).toBe('https://mininode.app/account#google');
+    expect((error as GoogleError).connectUrl).toBe('https://example.org/account#google');
   });
 
   it('never sends the token to hosts other than Google APIs', async () => {
@@ -90,9 +90,9 @@ describe('mn.google.calendarSync', () => {
     await google.calendarSync.set({ enabled: true, pushSources: ['app:sportplaner:activity'] });
     expect(await google.calendarSync.sync()).toEqual({ ran: true });
     expect(calls.map((c) => [c.init?.method, c.url])).toEqual([
-      ['GET', 'https://api.mininode.app/google/calendar'],
-      ['PUT', 'https://api.mininode.app/google/calendar'],
-      ['POST', 'https://api.mininode.app/google/calendar/sync'],
+      ['GET', 'https://api.example.org/google/calendar'],
+      ['PUT', 'https://api.example.org/google/calendar'],
+      ['POST', 'https://api.example.org/google/calendar/sync'],
     ]);
     expect(new Headers(calls[1]?.init?.headers).get('Authorization')).toBe('Bearer session');
   });

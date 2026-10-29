@@ -60,7 +60,7 @@ describe('VAPID (RFC 8292)', () => {
     const header = await vapidAuthorization('https://fcm.googleapis.com/fcm/send/abc', {
       publicKey,
       privateKey: jwk.d ?? '',
-      subject: 'mailto:hallo@mininode.app',
+      subject: 'mailto:hallo@example.org',
     });
     const match = /^vapid t=([^.]+)\.([^.]+)\.([^,]+), k=(.+)$/.exec(header);
     expect(match?.[4]).toBe(publicKey);

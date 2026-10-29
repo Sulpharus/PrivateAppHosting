@@ -79,13 +79,13 @@ describe('guacamole json auth', () => {
 });
 
 describe('auth email hook', () => {
-  const portal = 'https://mininode.app';
+  const portal = 'https://example.org';
   const base = {
     user: { email: 'anna@example.com' },
     email_data: {
       token: '123456',
       token_hash: 'hash',
-      redirect_to: 'https://rezepte.mininode.app/',
+      redirect_to: 'https://rezepte.example.org/',
       email_action_type: 'recovery' as const,
       token_new: '',
       token_hash_new: '',
@@ -96,7 +96,7 @@ describe('auth email hook', () => {
     const [message] = buildMessages(base, portal);
     expect(message?.to).toBe('anna@example.com');
     expect(message?.text).toContain(
-      'https://mininode.app/auth/confirm?token_hash=hash&type=recovery',
+      'https://example.org/auth/confirm?token_hash=hash&type=recovery',
     );
     expect(message?.text).toContain('Code: 123456');
   });
@@ -119,8 +119,8 @@ describe('auth email hook', () => {
 
   it('never redirects off the platform domain', () => {
     expect(safeNext('https://evil.example/phish', portal)).toBe('/');
-    expect(safeNext('https://mininode.app.evil.example/', portal)).toBe('/');
-    expect(safeNext('https://budget.mininode.app/x', portal)).toBe('https://budget.mininode.app/x');
-    expect(safeNext('/welcome', portal)).toBe('https://mininode.app/welcome');
+    expect(safeNext('https://example.org.evil.example/', portal)).toBe('/');
+    expect(safeNext('https://budget.example.org/x', portal)).toBe('https://budget.example.org/x');
+    expect(safeNext('/welcome', portal)).toBe('https://example.org/welcome');
   });
 });

@@ -8,9 +8,9 @@ const config: MininodeConfig = {
   appName: 'Wetter',
   supabaseUrl: 'http://127.0.0.1:54321',
   supabasePublishableKey: 'pk',
-  portalUrl: 'https://mininode.app',
-  apiUrl: 'https://api.mininode.app',
-  aiUrl: 'https://ai.mininode.app',
+  portalUrl: 'https://example.org',
+  apiUrl: 'https://api.example.org',
+  aiUrl: 'https://ai.example.org',
 };
 
 const personalRefusal = () =>
@@ -45,11 +45,11 @@ afterEach(() => {
 describe('personal key popup', () => {
   it('builds the setup link with the API and a way back', () => {
     const url = new URL(
-      keySetupUrl('https://mininode.app', 'openweather', 'https://wetter.mininode.app/x'),
+      keySetupUrl('https://example.org', 'openweather', 'https://wetter.example.org/x'),
     );
     expect(url.pathname).toBe('/account/keys');
     expect(url.searchParams.get('service')).toBe('openweather');
-    expect(url.searchParams.get('next')).toBe('https://wetter.mininode.app/x');
+    expect(url.searchParams.get('next')).toBe('https://wetter.example.org/x');
   });
 
   it('asks once when a personal key is missing and still throws for the app', async () => {

@@ -31,7 +31,7 @@ describe.skipIf(!enabled)('google calendar sync', () => {
     SUPABASE_URL: url,
     SUPABASE_PUBLISHABLE_KEY: publishableKey,
     SUPABASE_SECRET_KEY: secretKey,
-    PORTAL_URL: 'https://mininode.app',
+    PORTAL_URL: 'https://example.org',
     GOOGLE_CLIENT_ID: 'client',
     GOOGLE_CLIENT_SECRET: 'secret',
     GOOGLE_TOKEN_KEY: btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32)))),

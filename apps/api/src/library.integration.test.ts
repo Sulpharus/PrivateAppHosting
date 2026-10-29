@@ -16,12 +16,12 @@ describe.skipIf(!enabled)('app library', () => {
     SUPABASE_URL: url,
     SUPABASE_PUBLISHABLE_KEY: publishableKey,
     SUPABASE_SECRET_KEY: secretKey,
-    PORTAL_URL: 'https://mininode.app',
+    PORTAL_URL: 'https://example.org',
   };
   const env = {
     ...base,
     GITHUB_DISPATCH_TOKEN: 'gh-token',
-    GITHUB_REPO: 'Sulpharus/PrivateAppHosting',
+    GITHUB_REPO: 'owner/platform',
   } as unknown as ApiEnv;
   const admin = createClient(url ?? 'http://127.0.0.1', secretKey ?? 'unused', {
     auth: { persistSession: false },
@@ -143,7 +143,7 @@ describe.skipIf(!enabled)('app library', () => {
     expect(res.status).toBe(202);
     expect(dispatches).toHaveLength(1);
     expect(dispatches[0]?.url).toBe(
-      'https://api.github.com/repos/Sulpharus/PrivateAppHosting/actions/workflows/library.yml/dispatches',
+      'https://api.github.com/repos/owner/platform/actions/workflows/library.yml/dispatches',
     );
     expect(dispatches[0]?.headers.get('Authorization')).toBe('Bearer gh-token');
     expect(dispatches[0]?.body).toEqual({

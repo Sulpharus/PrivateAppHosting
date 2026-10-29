@@ -111,7 +111,7 @@ describe('registerApp', () => {
     await registerApp(db, parsed.manifest, '1.0.0', ['https://Haushalt.MiniNode.app']);
     const origins = calls.find((c) => c.url.includes('/app_origins'));
     expect(origins?.body).toEqual([
-      { origin: 'https://haushalt.mininode.app', app_slug: 'haushalt' },
+      { origin: 'https://haushalt.example.org', app_slug: 'haushalt' },
     ]);
   });
 

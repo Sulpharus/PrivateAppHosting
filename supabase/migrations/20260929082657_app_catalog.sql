@@ -468,13 +468,5 @@ grant execute on function
   platform.admin_delete_set(uuid)
   to authenticated;
 
--- ---------- the first link tile ----------
-insert into platform.apps
-  (slug, name, description, kind, target, link_url, manifest, status, is_default)
-values ('att', 'ATT - Werkzeugkasten', 'Sammlung praktischer Online-Werkzeuge (All The Tools)',
-  'link', 'external', 'https://att-allthetools.com', '{}', 'online', true)
-on conflict (slug) do nothing;
-insert into platform.app_grants (user_id, app_slug)
-select user_id, 'att' from platform.profiles
-where exists (select 1 from platform.apps where slug = 'att' and kind = 'link')
-on conflict do nothing;
+-- (The first link tile was seeded here once. A new installation starts without any app or link:
+-- Verwaltung → Apps adds them.)

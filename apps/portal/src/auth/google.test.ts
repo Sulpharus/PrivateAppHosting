@@ -38,10 +38,10 @@ describe('googleErrorFromUrl', () => {
 
 describe('returnUrl', () => {
   it('comes back to the login page with next and the marker', () => {
-    const url = new URL(returnUrl('https://rezepte.mininode.app/woche'));
+    const url = new URL(returnUrl('https://rezepte.example.org/woche'));
     expect(url.origin).toBe(location.origin);
     expect(url.pathname).toBe('/login');
-    expect(url.searchParams.get('next')).toBe('https://rezepte.mininode.app/woche');
+    expect(url.searchParams.get('next')).toBe('https://rezepte.example.org/woche');
     expect(url.searchParams.get('via')).toBe('google');
   });
 });
