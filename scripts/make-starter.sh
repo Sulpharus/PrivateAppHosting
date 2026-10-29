@@ -113,7 +113,7 @@ fi
 # 7. Leak check: every identifier of this installation, anywhere in the result.
 leaks=0
 for id in "${identifiers[@]}"; do
-  if hits=$(grep -rIlF --exclude-dir=node_modules -e "$id" "$stage" 2>/dev/null) && [ -n "$hits" ]; then
+  if hits=$(grep -rilF --exclude-dir=node_modules -e "$id" "$stage" 2>/dev/null) && [ -n "$hits" ]; then
     printf 'LEAK: "%s" is still in:\n%s\n' "$id" "${hits//$stage\//  }" >&2
     leaks=1
   fi

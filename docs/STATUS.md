@@ -111,6 +111,11 @@ since the PR #12 deploy. Earlier deploys stopped at medialog and never shipped t
 
 ## Waiting on the owner
 
+0. **Before merging the anywhere-installable work (ADR 0026), upgrade the NucBox once:**
+   - add `MININODE_OWNER=sulpharus` to `platform.env`, and `MININODE_OWNER=sulpharus`, `MININODE_REPO=Sulpharus/PrivateAppHosting`, `MININODE_DOMAIN=mininode.app` to `/etc/mininode/deploy.env` (they used to be built into the scripts; without them the NucBox deploy stops);
+   - a staging domain now lives in `mininode.config.json` (`environments.staging.domain`), no longer in the variable `STAGING_DOMAIN`;
+   - sign-in limits in Supabase drop to 10 per 5 minutes per address (people behind one router share it) and passwords need 12 characters;
+   - old Wine containers carry the label `app.mininode.app`: `docker rm -f` them once, new ones use `app.mininode.slug`.
 0. **Anywhere-installable work (ADR 0026), nothing merged yet:**
    - The desktop edition ran end to end on Linux in this session (installer, login in a real browser, two apps, backup, restore, password reset). **Not tested on real Windows or macOS or ARM hardware:** try `install.ps1` once on Windows and `install.sh` on a Mac.
    - Review the starter ZIP once (`scripts/package-release.sh 0.1.0 /tmp/out`, then unpack it): it is built to carry nothing of this installation, and the build stops when it finds something; but read `docs/runbooks/setup-cloudflare.md` as a stranger would.

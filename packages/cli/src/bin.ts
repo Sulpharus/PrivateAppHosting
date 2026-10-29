@@ -127,7 +127,15 @@ async function main(args: string[]): Promise<number> {
         const out = flag(args, '--out');
         const domain = flag(args, '--domain');
         if (!out || !domain) break;
-        const scheme = flag(args, '--scheme') === 'https' ? 'https' : 'http';
+        const schemeFlag = flag(args, '--scheme') ?? 'http';
+        if (schemeFlag !== 'http' && schemeFlag !== 'https')
+          throw new Error('--scheme must be http or https');
+        const scheme = schemeFlag;
+        for (const name of ['--port', '--host-port']) {
+          const value = flag(args, name);
+          if (value !== undefined && !(/^\d+$/.test(value) && +value >= 1 && +value <= 65535))
+            throw new Error(`${name} must be a port number from 1 to 65535`);
+        }
         const written = initDesktop(
           resolve(process.cwd(), out),
           {

@@ -69,6 +69,10 @@ docker compose version >/dev/null 2>&1 || die "Docker Compose v2 is missing (the
 
 fresh=yes
 [ -f "$DIR/.env" ] && fresh=no
+# Volumes of an earlier installation would keep its database passwords: new secrets would not fit.
+if [ "$fresh" = yes ] && docker volume inspect mininode_db-data >/dev/null 2>&1; then
+  die "an earlier MiniNode installation left its data (docker volume mininode_db-data) and this folder has no .env. Reinstall into the old folder, or delete the data first: docker compose -p mininode down --volumes"
+fi
 
 # 2. The port must be free, unless this installation already uses it.
 check_port=${HOST_PORT:-$PORT}
