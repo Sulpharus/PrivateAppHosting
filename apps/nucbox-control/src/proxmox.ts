@@ -114,3 +114,20 @@ export function proxmoxClient(options: {
     },
   };
 }
+
+/** Without a Proxmox host there is no Windows VM: asking for it fails with a message that says why. */
+export function noHypervisor(): Hypervisor {
+  const unavailable = (): never => {
+    throw new Error(
+      'Windows programs need a Proxmox host (set PROXMOX_URL); Docker apps work without',
+    );
+  };
+  return {
+    state: async () => 'unknown',
+    wake: async () => unavailable(),
+    hibernate: async () => unavailable(),
+    guestReady: async () => false,
+    snapshot: async () => unavailable(),
+    guestExec: async () => unavailable(),
+  };
+}

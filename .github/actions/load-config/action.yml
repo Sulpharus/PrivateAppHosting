@@ -1,0 +1,36 @@
+name: Load the instance configuration
+description: >
+  Reads mininode.config.json (checkout first) and exports the identifiers of one environment to the
+  rest of the job: MININODE_DOMAIN, MININODE_ZONE, CLOUDFLARE_ACCOUNT_ID, SUPABASE_PROJECT_REF,
+  SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY. Same values as `mininode config env`.
+inputs:
+  environment:
+    description: production or staging
+    default: production
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        ENVIRONMENT: ${{ inputs.environment }}
+      run: |
+        set -euo pipefail
+        [[ "$ENVIRONMENT" =~ ^(production|staging)$ ]] || { echo "::error::unknown environment"; exit 1; }
+        [ -f mininode.config.json ] || { echo "::error::mininode.config.json is missing: run 'pnpm mininode init' and commit it"; exit 1; }
+        # Every value is checked against the format before it reaches $GITHUB_ENV.
+        jq -r --arg e "$ENVIRONMENT" '
+          def check(re; v): if (v | type) == "string" and (v | test(re)) then v else error("invalid value: \(v)") end;
+          .environments[$e] as $env
+          | check("^[0-9a-f]{32}$"; .cloudflare.accountId) as $account
+          | check("^[a-z]{20}$"; $env.supabase.projectRef) as $ref
+          | ($env.domain // "") as $domain
+          | (.zone // $domain) as $zone
+          | (if $domain == "" then "" else check("^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}$"; $domain) end) as $domain
+          | (if $zone == "" then "" else check("^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}$"; $zone) end) as $zone
+          | (if $domain == "" then empty else "MININODE_DOMAIN=\($domain)" end),
+            "MININODE_ZONE=\($zone)",
+            "CLOUDFLARE_ACCOUNT_ID=\($account)",
+            "SUPABASE_PROJECT_REF=\($ref)",
+            "SUPABASE_URL=https://\($ref).supabase.co",
+            "SUPABASE_PUBLISHABLE_KEY=\(check("^sb_publishable_[A-Za-z0-9_-]{16,}$"; $env.supabase.publishableKey))"
+        ' mininode.config.json >> "$GITHUB_ENV"

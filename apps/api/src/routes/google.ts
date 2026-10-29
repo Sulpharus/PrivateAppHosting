@@ -44,7 +44,7 @@ const notConnected = () =>
   problem(
     409,
     'google_not_connected',
-    'Verbinde zuerst dein Google-Konto unter „Dein Konto“ auf mininode.app.',
+    'Verbinde zuerst dein Google-Konto unter „Dein Konto“ im Portal.',
   );
 
 const log = (event: string, detail: Record<string, unknown>) =>

@@ -249,11 +249,11 @@ describe('install script', () => {
 
 describe('forward auth helpers', () => {
   it('extracts app slugs only from direct subdomains', () => {
-    expect(slugFromHost('rezepte.mininode.app', 'mininode.app')).toBe('rezepte');
-    expect(slugFromHost('Rezepte.mininode.app:443', 'mininode.app')).toBe('rezepte');
-    expect(slugFromHost('mininode.app', 'mininode.app')).toBeNull();
-    expect(slugFromHost('a.b.mininode.app', 'mininode.app')).toBeNull();
-    expect(slugFromHost('rezepte.evil.app', 'mininode.app')).toBeNull();
+    expect(slugFromHost('rezepte.example.org', 'example.org')).toBe('rezepte');
+    expect(slugFromHost('Rezepte.example.org:443', 'example.org')).toBe('rezepte');
+    expect(slugFromHost('example.org', 'example.org')).toBeNull();
+    expect(slugFromHost('a.b.example.org', 'example.org')).toBeNull();
+    expect(slugFromHost('rezepte.evil.app', 'example.org')).toBeNull();
   });
 
   it('caches grant answers for the TTL', async () => {
@@ -316,8 +316,8 @@ describe('server', () => {
         sign: null,
       }),
       auth: {
-        platformDomain: 'mininode.app',
-        portalUrl: 'https://mininode.app',
+        platformDomain: 'example.org',
+        portalUrl: 'https://example.org',
         verifier,
         checkGrant: async () => granted,
       },
@@ -333,7 +333,7 @@ describe('server', () => {
 
   const forwarded = (cookie?: string, mode = 'navigate') =>
     new Headers({
-      'X-Forwarded-Host': 'rechner.mininode.app',
+      'X-Forwarded-Host': 'rechner.example.org',
       'X-Forwarded-Uri': '/seite?x=1',
       'X-Forwarded-Proto': 'https',
       'Sec-Fetch-Mode': mode,
@@ -362,7 +362,7 @@ describe('server', () => {
     const nav = await build(true).request('/auth', { headers: forwarded() });
     expect(nav.status).toBe(302);
     expect(nav.headers.get('Location')).toBe(
-      `https://mininode.app/login?next=${encodeURIComponent('https://rechner.mininode.app/seite?x=1')}`,
+      `https://example.org/login?next=${encodeURIComponent('https://rechner.example.org/seite?x=1')}`,
     );
     const api = await build(true).request('/auth', { headers: forwarded(undefined, 'cors') });
     expect(api.status).toBe(401);

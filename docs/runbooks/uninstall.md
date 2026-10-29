@@ -23,12 +23,12 @@ wrote into the shared suite data (`source_app`) stay when an app is deleted.
 
 ## Programs
 
-- **App-Bibliothek** (Jellyfin and others): the container is stopped on the NucBox. Its data
+- **App-Bibliothek** (Jellyfin and others): the container is stopped on the physical server. Its data
   folder stays there until you delete it: `ssh nucbox`, then
   `sudo rm -rf /srv/mininode/apps/<slug>` (check the path with `ls /srv/mininode/apps` first).
   The DNS entry `<slug>.mininode.app` (a CNAME to the tunnel, made by the install) also stays:
   delete it in the Cloudflare dashboard → DNS.
-- **Other container apps** on the NucBox (not from the library): the registry entry goes, the
+- **Other container apps** on the physical server (not from the library): the registry entry goes, the
   container does not. Stop it there (`docker compose -f /srv/mininode/apps/<slug>/compose.yml down`).
 - **Programs installed in the Windows VM** (uploaded .exe/.msi): only the registry entry goes.
   Uninstall the program inside the VM yourself.

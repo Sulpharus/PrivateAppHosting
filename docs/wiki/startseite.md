@@ -5,12 +5,12 @@ order: 50
 summary: Was Nutzer auf der Startseite sehen: Kacheln, Favoriten, Kategorien, Pakete, Schubladen
 ---
 
-Die Startseite `mininode.app` zeigt jeder Person **die Apps, die sie öffnen darf** (ADR 0007).
+Die Startseite `{{domain}}` zeigt jeder Person **die Apps, die sie öffnen darf** (ADR 0007).
 
 ## Kacheln
 
 - Jede App ist eine **Kachel** mit Logo (oder Monogramm), Name und Beschreibung. Ein Klick öffnet die App
-  (`<name>.mininode.app`). **Link-Kacheln** öffnen eine fremde Website in einem neuen Tab und sind als „Link“ markiert.
+  (`<name>.{{domain}}`). **Link-Kacheln** öffnen eine fremde Website in einem neuen Tab und sind als „Link“ markiert.
 - **Favoriten:** der Stern an der Kachel; Favoriten gehören zum Konto und wandern mit auf andere Geräte.
 - **Remote-Apps** zeigen ihren Zustand live (frei, belegt seit …).
 - **Benachrichtigungen:** die Glocke oben; mit eingeschaltetem Push kommen sie auch aufs Handy ([Push](wiki:push-offline)).

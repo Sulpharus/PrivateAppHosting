@@ -84,7 +84,7 @@ export const UserIcon = ({ size = 20 }: IconProps) => (
   </svg>
 );
 
-export const PinIcon = ({ size = 16 }: IconProps) => (
+const PinIcon = ({ size = 16 }: IconProps) => (
   <svg {...base(size)} aria-hidden="true">
     <path d="M6.5 2.5h5l-1 5 3 3H4.5l3-3zM9 10.5v5" />
   </svg>

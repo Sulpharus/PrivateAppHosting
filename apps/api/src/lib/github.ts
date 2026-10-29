@@ -3,15 +3,25 @@
 import type { ApiEnv } from '../env.ts';
 import { problem } from './auth.ts';
 
-const DEFAULT_REPO = 'Sulpharus/PrivateAppHosting';
+/** owner/repo whose workflows the API starts (`github.repository` in mininode.config.json). */
+function workflowRepo(env: ApiEnv): string | undefined {
+  return env.GITHUB_REPO && /^[\w.-]+\/[\w.-]+$/.test(env.GITHUB_REPO)
+    ? env.GITHUB_REPO
+    : undefined;
+}
 
-/** owner/repo whose workflows the API starts. */
-export function workflowRepo(env: ApiEnv): string {
-  return env.GITHUB_REPO ?? DEFAULT_REPO;
+function notConfigured(token: string | undefined): Response {
+  return problem(
+    503,
+    'not_configured',
+    token
+      ? 'Noch nicht eingerichtet: das GitHub-Repository fehlt (github.repository in mininode.config.json).'
+      : 'Noch nicht eingerichtet: der GitHub-Startschlüssel fehlt (LIBRARY_DISPATCH_TOKEN).',
+  );
 }
 
 /** What a refused call usually means, so the owner knows what to fix. */
-export function refusalHint(status: number): string {
+function refusalHint(status: number): string {
   if (status === 401) return 'Der Startschlüssel ist ungültig oder abgelaufen.';
   if (status === 403)
     return 'Dem Startschlüssel fehlt die Berechtigung „Actions: Read and write“ für dieses Repository.';
@@ -32,13 +42,8 @@ export async function dispatchWorkflow(
   inputs: Record<string, string>,
 ): Promise<{ runs: string } | Response> {
   const token = env.GITHUB_DISPATCH_TOKEN;
-  if (!token)
-    return problem(
-      503,
-      'not_configured',
-      'Noch nicht eingerichtet: der GitHub-Startschlüssel fehlt (LIBRARY_DISPATCH_TOKEN).',
-    );
   const repo = workflowRepo(env);
+  if (!token || !repo) return notConfigured(token);
   const response = await fetch(
     `https://api.github.com/repos/${repo}/actions/workflows/${workflow}/dispatches`,
     {
@@ -88,13 +93,9 @@ export async function githubGet<T>(
   options: { notFound?: string } = {},
 ): Promise<T | Response> {
   const token = env.GITHUB_DISPATCH_TOKEN;
-  if (!token)
-    return problem(
-      503,
-      'not_configured',
-      'Noch nicht eingerichtet: der GitHub-Startschlüssel fehlt (LIBRARY_DISPATCH_TOKEN).',
-    );
-  const response = await fetch(`https://api.github.com/repos/${workflowRepo(env)}${path}`, {
+  const repo = workflowRepo(env);
+  if (!token || !repo) return notConfigured(token);
+  const response = await fetch(`https://api.github.com/repos/${repo}${path}`, {
     headers: githubHeaders(token),
     signal: AbortSignal.timeout(15_000),
   }).catch(() => null);
@@ -121,14 +122,10 @@ export async function artifactDownloadUrl(
   artifactId: number,
 ): Promise<string | Response> {
   const token = env.GITHUB_DISPATCH_TOKEN;
-  if (!token)
-    return problem(
-      503,
-      'not_configured',
-      'Noch nicht eingerichtet: der GitHub-Startschlüssel fehlt.',
-    );
+  const repo = workflowRepo(env);
+  if (!token || !repo) return notConfigured(token);
   const response = await fetch(
-    `https://api.github.com/repos/${workflowRepo(env)}/actions/artifacts/${artifactId}/zip`,
+    `https://api.github.com/repos/${repo}/actions/artifacts/${artifactId}/zip`,
     {
       headers: githubHeaders(token),
       redirect: 'manual',

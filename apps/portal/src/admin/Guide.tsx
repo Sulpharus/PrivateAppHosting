@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router';
+import { withDomain } from '../lib/host.ts';
 import { headingId, renderMarkdown } from '../lib/markdown.ts';
 import { findArticle, GUIDE_SLUG } from '../lib/wiki.ts';
 import { parseGuide } from '../lib/wikiLib.ts';
@@ -56,7 +57,7 @@ export function Guide() {
     <>
       <div className="stack" style={{ gap: 6 }}>
         <h1 style={{ fontSize: 36 }}>Startup-Guide</h1>
-        <Prose html={renderMarkdown(guide.intro).html} className="muted" />
+        <Prose html={renderMarkdown(withDomain(guide.intro)).html} className="muted" />
       </div>
 
       <div className="card">
@@ -110,7 +111,7 @@ export function Guide() {
               </div>
               {isOpen && (
                 <Prose
-                  html={renderMarkdown(step.body, { idPrefix: `${step.id}-` }).html}
+                  html={renderMarkdown(withDomain(step.body), { idPrefix: `${step.id}-` }).html}
                   id={`step-${step.id}`}
                 />
               )}

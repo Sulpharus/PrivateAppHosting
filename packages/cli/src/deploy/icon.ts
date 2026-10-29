@@ -11,7 +11,7 @@ const MAX_BYTES = 256 * 1024;
 const TYPES = { svg: 'image/svg+xml', webp: 'image/webp', png: 'image/png' } as const;
 type Ext = keyof typeof TYPES;
 
-export interface FoundIcon {
+interface FoundIcon {
   file: string;
   ext: Ext;
   bytes: Buffer;

@@ -1,5 +1,5 @@
-// App-Bibliothek (ADR 0011): the admin installs curated programs on the NucBox. The API only
-// starts the GitHub workflow (library.yml); the NucBox reads the entry from main itself.
+// App-Bibliothek (ADR 0011): the admin installs curated programs on the physical server. The API only
+// starts the GitHub workflow (library.yml); the physical server reads the entry from main itself.
 //   GET  /admin/library   admin → whether installs can be started
 //   POST /admin/library   admin + recent sign-in → { action, entry, slug } starts the workflow
 
@@ -8,6 +8,7 @@ import { libraryEntry } from '@mininode/manifest/library';
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { type AppContext, problem, requireUser } from '../lib/auth.ts';
+import { deployEnvironment } from '../lib/environment.ts';
 import { dispatchWorkflow } from '../lib/github.ts';
 import { adminClient } from '../lib/supabase.ts';
 
@@ -65,8 +66,7 @@ library.post('/admin/library', requireUser({ role: 'admin', recentAuth: 600 }), 
   if (action === 'remove' && installedAs !== entryId)
     return problem(404, 'not_installed', `${entry.name} ist unter ${slug} nicht installiert.`);
 
-  const environment =
-    new URL(c.env.PORTAL_URL).hostname === 'mininode.app' ? 'production' : 'staging';
+  const environment = deployEnvironment(c.env);
   const started = await dispatchWorkflow(c.env, 'library.yml', {
     action,
     entry: entryId,

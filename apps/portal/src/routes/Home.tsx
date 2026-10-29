@@ -40,6 +40,7 @@ import {
   setFavorite,
   sortApps,
 } from '../lib/catalog.ts';
+import { appHost } from '../lib/host.ts';
 import { useArrangement } from '../lib/useArrangement.ts';
 
 /** `all`, `favorites`, `shared`, `cat:<category id>` or `drawer:<drawer id>`. */
@@ -469,7 +470,7 @@ export function Home() {
                       <div className="tile-title">
                         <strong>{app.name}</strong>
                         <span className="mono">
-                          {app.link_url ? hostOf(app.link_url) : `${app.slug}.mininode.app`}
+                          {app.link_url ? hostOf(app.link_url) : appHost(app.slug)}
                         </span>
                       </div>
                       {app.link_url && (
@@ -518,7 +519,7 @@ export function Home() {
                 <h2 className="section-title">Remote-Apps</h2>
                 <span className="spacer" />
                 <span className="muted" style={{ fontSize: 13 }}>
-                  auf der NucBox
+                  auf der Server-Hardware
                 </span>
               </div>
               {remoteApps.map((app) => (

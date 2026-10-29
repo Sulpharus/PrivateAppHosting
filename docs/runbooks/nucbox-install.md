@@ -1,6 +1,37 @@
-# NucBox install (Proxmox, Linux VM, Windows VM)
+# Physical server install (plain Docker host, or Proxmox with Linux and Windows VMs)
 
-Target: NucBox G9 (Intel N150, 16 GB, 2× NVMe). Time: about 2 hours, most of it waiting for
+Two ways to build the home server. **Plain Docker host** works on any Linux machine and runs
+container apps, the App-Bibliothek and Wine sessions. **Proxmox** adds the Windows VM for native
+Windows programs. Do the section "Plain Docker host" for either, then the Proxmox sections only
+if you want Windows programs.
+
+## Plain Docker host (any Linux hardware)
+
+1. A Debian/Ubuntu-like machine (x64 or ARM) with systemd, 2 GB RAM or more, a fixed LAN address
+   is convenient. Outbound internet only; nothing needs to be reachable from outside.
+2. Install what the scripts need and fetch the code (your own repository, or the unpacked
+   starter ZIP):
+
+   ```bash
+   apt install -y docker.io docker-compose-v2 jq curl restic sops age gh git
+   systemctl enable --now docker
+   mkdir -p /srv/mininode /srv/mininode/platform /srv/mininode/apps /mnt/backup /etc/mininode
+   git clone https://github.com/<you>/<repo>.git /srv/mininode/infra-src   # or unpack the ZIP there
+   ln -s /srv/mininode/infra-src/infra /srv/mininode/infra
+   ```
+3. Do steps 3 to 8 of "Linux VM" below (deploy user, GitHub token, Cloudflare resources, secrets,
+   first start, backups) on this machine. In `secrets.env` **leave out all `PROXMOX_*` and
+   `WINDOWS_*` lines**: nucbox-control then runs as a plain Docker controller and Verwaltung →
+   Hardware-Server shows this machine's CPU, memory and disk instead of a Proxmox node. Create an
+   empty `proxmox-ca.pem` next to `compose.yml` (`touch proxmox-ca.pem`), the compose file mounts it.
+   Put your GitHub owner (lower case) into `platform.env` as `MININODE_OWNER` and into
+   `/etc/mininode/deploy.env` as `MININODE_OWNER`, `MININODE_REPO` (`owner/repo`) and
+   `MININODE_DOMAIN` (your platform domain).
+4. Windows programs are not available on this machine (asking for one says so). Docker apps and the
+   App-Bibliothek are.
+
+
+Target: mini PC G9 (Intel N150, 16 GB, 2× NVMe). Time: about 2 hours, most of it waiting for
 installers. Nothing on the box is reachable from the internet except through the Cloudflare
 Tunnel; there are no port forwards on the router.
 
@@ -69,7 +100,7 @@ NVMe 1: Proxmox + VM disks      NVMe 2: /mnt/backup (restic, vzdump)
    ```bash
    apt install -y qemu-guest-agent docker.io docker-compose jq curl restic sops age gh git
    systemctl enable --now qemu-guest-agent docker
-   mkdir -p /srv/mininode && git clone https://github.com/Sulpharus/PrivateAppHosting /srv/mininode/infra-src
+   mkdir -p /srv/mininode && git clone https://github.com/<you>/<repo>.git /srv/mininode/infra-src
    ln -s /srv/mininode/infra-src/infra /srv/mininode/infra
    mkdir -p /srv/mininode/platform /srv/mininode/apps /mnt/backup /etc/mininode
    ```
@@ -95,7 +126,7 @@ NVMe 1: Proxmox + VM disks      NVMe 2: /mnt/backup (restic, vzdump)
    `echo "$GH_TOKEN" | docker login ghcr.io -u <github-user> --password-stdin`.
    For the App-Bibliothek also add `CATALOG_TOKEN` (fine-grained, this repository, Contents:
    read) to the same file (`app-library.md`).
-5. Cloudflare resources: run `infra/cloudflare/bootstrap.sh` here (see `first-setup.md`).
+5. Cloudflare resources: run `infra/cloudflare/bootstrap.sh` here (see `setup-cloudflare.md`).
 6. Secrets (SOPS + age):
 
    ```bash
@@ -112,7 +143,7 @@ NVMe 1: Proxmox + VM disks      NVMe 2: /mnt/backup (restic, vzdump)
    scp root@10.10.0.1:/root/proxmox-ca.pem .
    echo "DOCKER_GID=$(getent group docker | cut -d: -f3)" >> platform.env
    ```
-7. First start: the control image comes from the deploy workflow (job *NucBox platform image
+7. First start: the control image comes from the deploy workflow (job *Physical server platform image
    control*); put its digest into `platform.env`, then
    `docker compose --env-file platform.env up -d`. Check that the tunnel shows *Healthy* in
    Cloudflare Zero Trust → Networks → Tunnels.
@@ -147,7 +178,7 @@ NVMe 1: Proxmox + VM disks      NVMe 2: /mnt/backup (restic, vzdump)
 
 ## 4. Verify
 
-- `https://control.mininode.app/health` asks for Cloudflare Access, then shows `{"ok":true}`.
+- `https://control.<domain>/health` asks for Cloudflare Access, then shows `{"ok":true}`.
 - Deploy a container fixture (`pnpm mininode deploy fixtures/…` via CI) and open it: login,
   403 without a grant, app with a grant.
 - Admin → Remote-Apps → *Installieren* for a remote app; then open it from the phone. Close the

@@ -28,6 +28,7 @@ function fakeFetch(existing: { slug: string; manifest: unknown; status?: string 
 const env = { ...process.env };
 beforeEach(() => {
   Object.assign(process.env, {
+    MININODE_DOMAIN: 'example.org',
     SUPABASE_URL: 'https://db.example.com',
     SUPABASE_PUBLISHABLE_KEY: 'pub',
     SUPABASE_SECRET_KEY: 'secret',
@@ -75,7 +76,7 @@ describe('App-Bibliothek CLI', () => {
       manifest: { library: 'jellyfin', container: { port: 8096 } },
     });
     const origins = calls.find((c) => c.url.includes('/app_origins'));
-    expect(origins?.body).toEqual([{ origin: 'https://kino.mininode.app', app_slug: 'kino' }]);
+    expect(origins?.body).toEqual([{ origin: 'https://kino.example.org', app_slug: 'kino' }]);
     const enable = calls.find((c) => c.method === 'PATCH' && c.url.includes('/apps'));
     expect(enable?.body).toEqual({ status: 'online' });
   });

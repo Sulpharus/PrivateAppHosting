@@ -24,7 +24,7 @@ describe.skipIf(!enabled)('host-level api keys', () => {
     SUPABASE_URL: url,
     SUPABASE_PUBLISHABLE_KEY: publishableKey,
     SUPABASE_SECRET_KEY: secretKey,
-    PORTAL_URL: 'https://mininode.app',
+    PORTAL_URL: 'https://example.org',
     VAULT_KEY: btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32)))),
   } as unknown as ApiEnv;
   const ctx = { waitUntil: () => undefined, passThroughOnException: () => undefined, props: {} };

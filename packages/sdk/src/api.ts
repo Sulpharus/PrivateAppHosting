@@ -3,7 +3,7 @@ import { promptForKey } from './key-prompt.ts';
 
 // External APIs with host-level keys (ADR 0006): an app declares each API in mininode.json
 // (`apis`), the admin enters the key once under Verwaltung → API-Schlüssel, and calls go through
-// api.mininode.app, which adds the key. Apps never hold the key.
+// api.<domain>, which adds the key. Apps never hold the key.
 
 export class ExternalApiError extends Error {
   constructor(

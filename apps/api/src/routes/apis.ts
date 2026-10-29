@@ -58,7 +58,7 @@ function allowed(key: string): boolean {
  * cannot be decrypted once the entry points elsewhere (defence in depth; the deploy also drops
  * the key when the target changes).
  */
-export function keyBinding(
+function keyBinding(
   service: Pick<ServiceRow, 'id' | 'base_url' | 'auth'>,
   userId?: string,
 ): string {
@@ -147,7 +147,7 @@ apis.all('/proxy/:service/*', requireUser(), async (c) => {
       'api_not_declared',
       'Diese App hat die API nicht in mininode.json angemeldet.',
     );
-  if (!isAllowedApiBase(service.base_url))
+  if (!isAllowedApiBase(service.base_url, new URL(c.env.PORTAL_URL).hostname))
     return problem(503, 'api_blocked', `${service.name} hat eine unzulässige Adresse.`);
   // Keyless APIs are only proxied (the browser cannot reach them); everything else needs its key.
   const keyless = service.auth.type === 'none';
@@ -208,7 +208,7 @@ apis.all('/proxy/:service/*', requireUser(), async (c) => {
     if (value) headers.set(name, value);
   }
   // Some public APIs refuse requests without a User-Agent (Workers send none by default).
-  headers.set('User-Agent', 'MiniNode/1.0 (+https://mininode.app)');
+  headers.set('User-Agent', `MiniNode/1.0 (+${c.env.PORTAL_URL})`);
   try {
     if (!keyless && vaultKey && sealedKey)
       withKey(

@@ -9,6 +9,7 @@ import { RESERVED_SLUGS, slugSchema, UNINSTALL_PROTECTED_SLUGS } from '@mininode
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { type AppContext, problem, requireUser } from '../lib/auth.ts';
+import { deployEnvironment } from '../lib/environment.ts';
 import { dispatchWorkflow } from '../lib/github.ts';
 import { adminClient } from '../lib/supabase.ts';
 
@@ -50,8 +51,7 @@ uninstall.post(
     if (app.kind === 'link')
       return problem(400, 'is_link', 'Link-Kacheln entfernst du mit „Entfernen“.');
 
-    const environment =
-      new URL(c.env.PORTAL_URL).hostname === 'mininode.app' ? 'production' : 'staging';
+    const environment = deployEnvironment(c.env);
     const library = (app.manifest as { library?: string } | null)?.library;
 
     // The audit row first: a destructive action leaves a trace even if a later step fails.
@@ -68,7 +68,7 @@ uninstall.post(
       return problem(500, 'audit_failed', 'Das Löschen konnte nicht protokolliert werden.');
 
     // The uninstall workflow first: it is the one that must run. A library program is stopped on the
-    // NucBox by a second workflow; if only that one fails to start, the answer says so.
+    // physical server by a second workflow; if only that one fails to start, the answer says so.
     const started = await dispatchWorkflow(c.env, 'uninstall-app.yml', {
       slug: slug.data,
       purge: String(parsed.data.purge),
@@ -86,7 +86,7 @@ uninstall.post(
         return problem(
           502,
           'library_not_started',
-          'Das Löschen läuft, aber der Container auf der NucBox wurde nicht angehalten (App-Bibliothek → Entfernen, noch einmal versuchen).',
+          'Das Löschen läuft, aber der Container auf der Server-Hardware wurde nicht angehalten (App-Bibliothek → Entfernen, noch einmal versuchen).',
         );
     }
 
@@ -107,7 +107,7 @@ uninstall.post(
           app.kind === 'remote'
             ? 'Das Programm bleibt auf der Windows-VM installiert. Deinstalliere es dort, wenn du es nicht mehr brauchst.'
             : library
-              ? 'Der Container wird auf der NucBox gestoppt; sein Datenordner dort bleibt liegen, bis du ihn selbst löschst (runbooks/uninstall.md).'
+              ? 'Der Container wird auf der Server-Hardware gestoppt; sein Datenordner dort bleibt liegen, bis du ihn selbst löschst (runbooks/uninstall.md).'
               : null,
       },
       202,

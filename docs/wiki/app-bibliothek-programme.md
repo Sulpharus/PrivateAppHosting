@@ -5,7 +5,7 @@ order: 90
 summary: Container-Programme, Windows-Programme und Wine: was es gibt und wie man sie installiert
 ---
 
-Neben Web-Apps betreibt MiniNode **Programme auf deinem Heimserver** (der NucBox, siehe [NucBox](wiki:nucbox)). Sie laufen hinter dem
+Neben Web-Apps betreibt MiniNode **Programme auf deinem Heimserver** (die Server-Hardware, siehe [Server-Hardware](wiki:nucbox)). Sie laufen hinter dem
 MiniNode-Login und sind von jedem Gerät im Browser erreichbar.
 
 ## App-Bibliothek (ADR 0011)
@@ -20,13 +20,13 @@ Versionen oder Programme kommen per Pull Request.
   [App löschen](wiki:app-loeschen).
 - Fehlerhafte Starts rollen sich selbst zurück (Gesundheitsprüfung nach 60 s).
 
-Einrichtung einmalig: `LIBRARY_DISPATCH_TOKEN` (Actions: Read and write) und auf der NucBox `CATALOG_TOKEN` (Contents: Read), siehe
+Einrichtung einmalig: `LIBRARY_DISPATCH_TOKEN` (Actions: Read and write) und auf der Server-Hardware `CATALOG_TOKEN` (Contents: Read), siehe
 `app-library.md`.
 
 ## Programme für PC/Server hochladen (ADR 0013)
 
 `.exe`/`.msi` unter Verwaltung → Apps → [Hochladen](wiki:hochladen): Die API legt die Datei in Cloudflare R2
-(`installers/<name>/<datei>`), registriert eine Remote-App und startet die Installation auf der NucBox: **Snapshot der VM, Prüfsumme prüfen,
+(`installers/<name>/<datei>`), registriert eine Remote-App und startet die Installation auf der Server-Hardware: **Snapshot der VM, Prüfsumme prüfen,
 stille Installation** (Windows-VM) oder Wine-Container. Klappt etwas nicht („Braucht Prüfung“), stehen im Protokoll die Gründe; meist
 helfen andere stille Argumente (Inno Setup: `/VERYSILENT /NORESTART`) oder der richtige Programmpfad, dann „Erneut versuchen“. Die VM lässt
 sich in Proxmox auf den Snapshot `pre-<name>-…` zurückrollen. Installer über 95 MB legst du selbst in R2 (`programs.md`).

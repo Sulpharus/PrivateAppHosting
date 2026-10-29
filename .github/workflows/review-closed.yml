@@ -41,15 +41,15 @@ jobs:
     environment: ${{ needs.marker.outputs.env }}
     env:
       SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
-      SUPABASE_URL: ${{ needs.marker.outputs.env == 'production' && 'https://ojicmpgqvoyakigvubek.supabase.co' || 'https://ttgrtecdqouiogiwcjag.supabase.co' }}
-      SUPABASE_PUBLISHABLE_KEY: ${{ needs.marker.outputs.env == 'production' && 'sb_publishable_jv1tZqYWg51sNxJ5-GjMMw_tZqa1s1C' || 'sb_publishable_zQfFz-ruNPkIQauwa253iw_4zOZmiOB' }}
-      STAGING_DOMAIN: ${{ vars.STAGING_DOMAIN }}
       REASON: ${{ github.event.issue.state_reason }}
       ID: ${{ needs.marker.outputs.id }}
       DEPLOY_ENV: ${{ needs.marker.outputs.env }}
       ISSUE: ${{ github.event.issue.html_url }}
     steps:
       - uses: actions/checkout@v5
+      - uses: ./.github/actions/load-config
+        with:
+          environment: ${{ needs.marker.outputs.env }}
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v5
         with:

@@ -1,4 +1,4 @@
-// Installers go to the R2 bucket the NucBox reads from (nucbox-control signs download links for
+// Installers go to the R2 bucket the physical server reads from (nucbox-control signs download links for
 // the same keys). The API Worker uses R2's S3 API with its own credentials, so the Worker needs no
 // bucket binding: without credentials, program uploads are simply switched off.
 

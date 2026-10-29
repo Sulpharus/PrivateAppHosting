@@ -14,9 +14,9 @@ import { adminClient } from '../lib/supabase.ts';
 
 export const backups = new Hono<AppContext>();
 
-export const BACKUP_WORKFLOW = 'backup.yml';
+const BACKUP_WORKFLOW = 'backup.yml';
 /** The artifact names the workflow gives (`mininode-backup-<date>[-nofiles]`). */
-export const ARTIFACT_PREFIX = 'mininode-backup-';
+const ARTIFACT_PREFIX = 'mininode-backup-';
 
 interface GithubRun {
   id: number;
@@ -37,9 +37,9 @@ interface GithubArtifact {
   workflow_run?: { id: number } | null;
 }
 
-export type BackupState = 'running' | 'ready' | 'failed' | 'cancelled' | 'expired';
+type BackupState = 'running' | 'ready' | 'failed' | 'cancelled' | 'expired';
 
-export interface BackupRow {
+interface BackupRow {
   runId: number;
   startedAt: string;
   state: BackupState;

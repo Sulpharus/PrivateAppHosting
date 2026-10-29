@@ -2,7 +2,7 @@ name: Release
 # Registered with GitHub on the default branch (touched again so Actions lists it).
 
 # Packages the editions and attaches them to a GitHub release (scripts/package-release.sh).
-#   v1.2.0            all three: cloud, pc-server and complete
+#   v1.2.0            all four: starter, cloud, pc-server and complete
 #   cloud-v1.2.0      only the Cloud edition (own version)
 #   pc-server-v1.2.0  only the PC/server edition (own version)
 # Push the tag, or run this workflow by hand with an existing tag.
@@ -42,10 +42,17 @@ jobs:
           case "$TAG" in
             cloud-v*)     editions="cloud";                    version="${TAG#cloud-v}" ;;
             pc-server-v*) editions="pc-server";                version="${TAG#pc-server-v}" ;;
-            v*)           editions="cloud pc-server complete"; version="${TAG#v}" ;;
+            v*)           editions="starter cloud pc-server complete"; version="${TAG#v}" ;;
             *) echo "unsupported tag: $TAG" >&2; exit 1 ;;
           esac
           { echo "editions=$editions"; echo "version=$version"; } >> "$GITHUB_OUTPUT"
+      # The starter's lockfile is regenerated without the apps, which needs Node and pnpm.
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
       - name: Build the packages
         env:
           VERSION: ${{ steps.plan.outputs.version }}
@@ -58,6 +65,7 @@ jobs:
       - name: Publish
         run: |
           notes="Editions of this release:
+          - **Starter** (\`mininode-starter-*.zip\`): the whole platform without apps and without anything of the installation that built it. Start here: docs/runbooks/getting-started.md.
           - **Cloud** (\`mininode-cloud-*.zip\`): the platform for Cloudflare + Supabase.
           - **PC/server** (\`mininode-pc-server-*.zip\`): the home-server side (Proxmox VE host, Linux VM with Docker, optional Windows 11 VM). See its README-EDITION.md for operating systems.
           - **Complete** (\`mininode-complete-*.zip\`): the whole repository.

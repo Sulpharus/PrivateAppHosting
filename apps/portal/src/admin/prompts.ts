@@ -77,7 +77,7 @@ export const MODULE_GROUPS: { id: string; label: string; hint: string }[] = [
   },
 ];
 
-export interface ModuleGroup {
+interface ModuleGroup {
   id: string;
   label: string;
   hint: string;
@@ -233,7 +233,9 @@ export function compose(brief: Brief, lib: Library): string {
   lines.push('');
   if (named) {
     lines.push(`- **Name:** ${name}`);
-    lines.push(`- **Slug:** \`${slug}\` (it becomes https://${slug}.mininode.app)`);
+    lines.push(
+      `- **Slug:** \`${slug}\` (it becomes https://${slug}.${typeof location === 'undefined' ? '<your-domain>' : location.hostname})`,
+    );
   } else {
     lines.push(
       '- **Name and slug:** the brief gives none. Choose a short, distinctive name (not "Neue App", not "New app", not a generic word like "Tracker") and its slug (lowercase letters, digits and hyphens, e.g. `garantie-box`), and use them in `mininode.json`, the `<title>`, the app header and the README. Tell the owner which you chose.',

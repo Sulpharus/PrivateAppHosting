@@ -18,16 +18,18 @@
 
 set -euo pipefail
 
-OWNER=${MININODE_OWNER:-sulpharus}
-REPO=${MININODE_REPO:-Sulpharus/PrivateAppHosting}
-DOMAIN=${MININODE_DOMAIN:-mininode.app}
 ROOT=${MININODE_ROOT:-/srv/mininode}
-SIGNER="$REPO/.github/workflows/deploy.yml"
 # GH_TOKEN (read-only: attestations, packages) for `gh attestation verify`; CATALOG_TOKEN
 # (Contents: read) for the App-Bibliothek catalog.
 # shellcheck source=/dev/null
 [ -f /etc/mininode/deploy.env ] && . /etc/mininode/deploy.env
 export GH_TOKEN
+# This installation's identity (set in /etc/mininode/deploy.env or the environment): the GitHub
+# owner and repository that build the images, and the platform domain.
+OWNER=${MININODE_OWNER:?set MININODE_OWNER (GitHub owner, lower case) in /etc/mininode/deploy.env}
+REPO=${MININODE_REPO:?set MININODE_REPO (owner/repository) in /etc/mininode/deploy.env}
+DOMAIN=${MININODE_DOMAIN:?set MININODE_DOMAIN (the platform domain) in /etc/mininode/deploy.env}
+SIGNER="$REPO/.github/workflows/deploy.yml"
 
 log() { printf '%s %s\n' "$(date -u +%FT%TZ)" "$*" >&2; }
 die() { log "error: $*"; exit 1; }

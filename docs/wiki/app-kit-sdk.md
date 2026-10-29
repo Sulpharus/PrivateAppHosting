@@ -52,7 +52,7 @@ const user = await mn.auth.requireLogin();  // schickt zum zentralen Login, fall
 | `mn.game` | Spielername, Zeit, Ergebnis, Bestenliste | [Gaming Hub](wiki:gaming-hub) |
 | `mn.realtime(kanal)` | Live-Updates zwischen Nutzern | |
 
-**Wichtig:** Datenaufrufe funktionieren nur von der registrierten Adresse der App (`https://<name>.mininode.app`, lokal der Port von
+**Wichtig:** Datenaufrufe funktionieren nur von der registrierten Adresse der App (`https://<name>.{{domain}}`, lokal der Port von
 `mininode dev`), weil der Zeilenschutz die aufrufende App am `Origin`-Header erkennt (ADR 0002). Von einer fremden Seite oder einem
 beliebigen Dev-Server aus sieht man keine Daten.
 

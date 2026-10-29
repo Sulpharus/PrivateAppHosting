@@ -1,11 +1,11 @@
-name: NucBox deploy over SSH
+name: Physical server deploy over SSH
 description: Runs one nucbox-deploy command through Cloudflare Access (forced-command SSH).
 inputs:
   command: { description: "Arguments for nucbox-deploy", required: true }
   ssh-key: { description: "Private key of the deploy user", required: true }
   access-client-id: { description: "Access service token id", required: true }
   access-client-secret: { description: "Access service token secret", required: true }
-  host: { description: "SSH hostname", default: ssh.mininode.app }
+  host: { description: "SSH hostname (ssh.<domain>)", required: true }
 runs:
   using: composite
   steps:

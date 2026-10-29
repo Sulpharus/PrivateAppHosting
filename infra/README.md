@@ -12,4 +12,6 @@
 | `nucbox/windows/` | Windows 11 VM setup and RemoteApp account lockdown |
 | `nucbox/*.example.env` | Templates for secrets (`secrets.sops.env` is the encrypted, committed form) |
 
-Runbooks: `docs/runbooks/` (start with `first-setup.md`, then `nucbox-install.md`).
+Runbooks: `docs/runbooks/` (start with `getting-started.md`).
+
+- `desktop/`: the desktop edition: `install.sh`, `install.ps1`, `mininode-desktop`, the Docker Compose stack and the host image (`setup-desktop.md`).

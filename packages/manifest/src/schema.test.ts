@@ -224,9 +224,7 @@ describe('apis', () => {
       'https://127.0.0.1/x',
       'https://localhost/x',
       'https://[::1]/x',
-      'https://api.mininode.app/x',
       'https://abc.supabase.co',
-      'https://api.mininode.app./x',
       'https://abc.supabase.co.',
       'https://evil.workers.dev',
       'https://user:pw@api.example.com',
@@ -234,6 +232,14 @@ describe('apis', () => {
       'not a url',
     ])
       expect(isAllowedApiBase(bad), bad).toBe(false);
+  });
+
+  it("refuses the installation's own domain and its subdomains", () => {
+    expect(isAllowedApiBase('https://api.apps.example.org/x')).toBe(true);
+    expect(isAllowedApiBase('https://api.apps.example.org/x', 'apps.example.org')).toBe(false);
+    expect(isAllowedApiBase('https://apps.example.org/x', 'Apps.Example.org')).toBe(false);
+    expect(isAllowedApiBase('https://api.apps.example.org./x', 'apps.example.org')).toBe(false);
+    expect(isAllowedApiBase('https://api.example.org/x', 'apps.example.org')).toBe(true);
   });
 });
 

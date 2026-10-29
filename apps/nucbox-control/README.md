@@ -1,6 +1,6 @@
 # @mininode/nucbox-control
 
-Small Node service on the NucBox Linux VM (compose service `nucbox-control`,
+Small Node service on the physical server Linux VM (compose service `nucbox-control`,
 `control.mininode.app` behind Cloudflare Access). It is the only component that can touch the
 hypervisor and the Docker socket.
 

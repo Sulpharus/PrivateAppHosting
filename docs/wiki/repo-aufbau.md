@@ -5,7 +5,7 @@ order: 10
 summary: Wo im Repository was liegt
 ---
 
-Alles liegt in einem Monorepo (pnpm, Turborepo): `github.com/Sulpharus/PrivateAppHosting`.
+Alles liegt in einem Monorepo (pnpm, Turborepo): im Repository deiner Installation. Was sie von anderen Installationen unterscheidet (Domain, Cloudflare-Konto, Supabase-Projekt, GitHub-Repository), steht in `mininode.config.json` (angelegt von `pnpm mininode init`, nur öffentliche Kennungen, nie Geheimnisse; ADR 0026).
 
 ```
 .
@@ -13,6 +13,7 @@ Alles liegt in einem Monorepo (pnpm, Turborepo): `github.com/Sulpharus/PrivateAp
 │  ├─ portal/            Startseite, /login, Konto, Verwaltung (React + Vite auf einem Worker)
 │  ├─ api/               Plattform-API (Hono-Worker): Einladungen, Schlüssel, Uploads, Sicherung, …
 │  ├─ ai-proxy/          KI-Proxy (Hono-Worker)
+│  ├─ desktop-host/      Desktop-Version: führt Portal, API, KI-Proxy und App-Schranken auf einem Computer aus (Node + workerd)
 │  └─ nucbox-control/    VM-Strom, Warteschlange, Guacamole-Token, Deploy-Skript (Node)
 ├─ hosted/               Nutzer-Apps, je ein Ordner mit mininode.json
 ├─ inbox/                Ablage für ZIPs (nicht in Git)
@@ -24,7 +25,7 @@ Alles liegt in einem Monorepo (pnpm, Turborepo): `github.com/Sulpharus/PrivateAp
 │  ├─ cli/               mininode-Befehle (doctor, deploy, integrate, backup, uninstall, …)
 │  └─ config/            gemeinsame tsconfig
 ├─ supabase/             Migrationen, Tests (pgTAP), Konfiguration
-├─ infra/                Cloudflare (Tunnel, DNS, Access) und NucBox (Compose, Backup, Windows)
+├─ infra/                Cloudflare (Tunnel, DNS, Access), Desktop-Version (Installer, Compose) und Server-Hardware (Compose, Backup, Windows)
 ├─ fixtures/             Beispiel-Exporte mit erwarteten Ergebnissen
 ├─ docs/                 ai/ (Vorgaben für KI), adr/ (Entscheidungen), runbooks/, suite/, wiki/ (dieses Wiki)
 ├─ e2e/                  Playwright-Tests

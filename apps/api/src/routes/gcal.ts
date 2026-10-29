@@ -133,7 +133,7 @@ async function ensureTarget(budget: Budget, token: string, id: string | null): P
   const created = await google(budget, token, 'POST', '/calendars', {
     body: {
       summary: 'MiniNode',
-      description: 'Termine aus MiniNode (mininode.app), automatisch abgeglichen.',
+      description: 'Termine aus MiniNode, automatisch abgeglichen.',
       timeZone: DEFAULT_TZ,
     },
   });
@@ -367,7 +367,7 @@ interface CalendarRow {
  * invocation's subrequests (two more save links and finish); `minGap` refuses a run that
  * follows the last one too closely.
  */
-export async function syncUser(
+async function syncUser(
   env: ApiEnv,
   userId: string,
   size = 44,

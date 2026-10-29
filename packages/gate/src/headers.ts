@@ -4,13 +4,23 @@ export interface CspOptions {
   supabaseUrl: string;
   /** Extra origins the app may fetch from (declared in the manifest, reviewed by doctor). */
   connectSrc?: readonly string[];
-  platformDomain?: string;
+  /** The platform API and AI proxy the page may call (origins). */
+  apiOrigin: string;
+  aiOrigin: string;
   /** The app runs WebAssembly (manifest `wasm`): allows compiling it, not JavaScript eval. */
   wasm?: boolean;
 }
 
+/** The conventional addresses on a platform domain: `api.<domain>` and `ai.<domain>`. */
+export function platformOrigins(portalUrl: string): { apiOrigin: string; aiOrigin: string } {
+  const portal = new URL(portalUrl);
+  return {
+    apiOrigin: `${portal.protocol}//api.${portal.host}`,
+    aiOrigin: `${portal.protocol}//ai.${portal.host}`,
+  };
+}
+
 export function contentSecurityPolicy(options: CspOptions): string {
-  const domain = options.platformDomain ?? 'mininode.app';
   const supabase = new URL(options.supabaseUrl);
   const realtime = `${supabase.protocol === 'https:' ? 'wss:' : 'ws:'}//${supabase.host}`;
   const connect = [
@@ -19,8 +29,8 @@ export function contentSecurityPolicy(options: CspOptions): string {
     'blob:',
     supabase.origin,
     realtime,
-    `https://api.${domain}`,
-    `https://ai.${domain}`,
+    options.apiOrigin,
+    options.aiOrigin,
     ...(options.connectSrc ?? []),
   ];
   return [

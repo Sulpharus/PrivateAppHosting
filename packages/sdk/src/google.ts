@@ -1,7 +1,7 @@
 import type { MininodeConfig } from './config.ts';
 
 // Google services (ADR 0004): apps that declare `google` in mininode.json get short-lived access
-// tokens for the signed-in user's Gmail and Calendar from api.mininode.app, limited to the
+// tokens for the signed-in user's Gmail and Calendar from api.<domain>, limited to the
 // declared scopes. The user connects Google once in the portal ("Mit Google anmelden" or
 // "Dein Konto"); apps never see a password or refresh token.
 
@@ -20,7 +20,7 @@ export class GoogleError extends Error {
 
 type TokenSource = () => Promise<string | null>;
 
-export interface CalendarSyncState {
+interface CalendarSyncState {
   available: boolean;
   connected: boolean;
   email: string | null;
@@ -43,7 +43,7 @@ export interface CalendarSyncState {
   }[];
 }
 
-export interface CalendarSyncSettings {
+interface CalendarSyncSettings {
   enabled: boolean;
   pushSources: string[];
   /** Google calendar id → shown in MiniNode. */

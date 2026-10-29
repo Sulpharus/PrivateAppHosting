@@ -29,9 +29,9 @@ function fakeMn(over: Record<string, unknown> = {}) {
   const track = vi.fn(() => stop);
   const mn = {
     auth: { requireLogin: vi.fn(async () => ({})) },
-    config: { portalUrl: 'https://mininode.app' },
+    config: { portalUrl: 'https://example.org' },
     game: {
-      hubUrl: () => 'https://mininode.app/games/x',
+      hubUrl: () => 'https://example.org/games/x',
       username: async () => 'Lena',
       track,
       result: vi.fn(async () => undefined),
@@ -79,7 +79,7 @@ describe('connect', () => {
     (window as unknown as { mininode: unknown }).mininode = { mininode: async () => mn };
     expect(await game.connect({ player: '#player', hub: '#hub' })).toBe(mn);
     expect(document.querySelector<HTMLAnchorElement>('#hub')?.href).toBe(
-      'https://mininode.app/games/x',
+      'https://example.org/games/x',
     );
     expect(document.querySelector('#player')?.textContent).toBe('Du spielst als Lena.');
   });
@@ -89,7 +89,7 @@ describe('connect', () => {
     (window as unknown as { mininode: unknown }).mininode = { mininode: async () => mn };
     await game.connect({ player: '#player' });
     expect(document.querySelector('#player a')?.getAttribute('href')).toBe(
-      'https://mininode.app/games',
+      'https://example.org/games',
     );
     (window as unknown as { mininode: unknown }).mininode = {
       mininode: async () => {

@@ -1,6 +1,6 @@
 # infra/cloudflare
 
-- `bootstrap.sh`: run once (idempotent) with an API token; see `docs/runbooks/first-setup.md`.
+- `bootstrap.sh`: run once (idempotent) with an API token; see `docs/runbooks/setup-cloudflare.md`.
   Secrets Cloudflare shows only once land in `./cloudflare-secrets/` (git-ignored).
 - `dns-upsert.sh <host> <target>`: proxied CNAME upsert; refuses to overwrite non-CNAME records
   (Worker custom domains).

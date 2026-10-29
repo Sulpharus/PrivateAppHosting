@@ -17,13 +17,9 @@ create policy app_origins_admin_select on platform.app_origins for select to aut
   using ((select platform.is_admin()));
 grant select on platform.app_origins to authenticated;
 
--- Production apps deployed before this migration. The domain is hardcoded: on staging these rows
--- are useless but harmless, and every deploy registers the right origin for its environment.
-insert into platform.app_origins (origin, app_slug)
-select 'https://' || slug || '.mininode.app', slug
-from platform.apps
-where target = 'cloudflare'
-on conflict (origin) do nothing;
+-- (A one-off backfill of the origins of apps deployed before this migration used to be here. It
+-- named one installation's domain; every deploy registers the right origin for its own, and an
+-- installation that never had an app before this migration has nothing to backfill.)
 
 -- The app whose page sent this request, or null (no Origin, unknown origin, server clients).
 -- PostgREST and Storage pass request.headers. Realtime does not, so postgres_changes on app data

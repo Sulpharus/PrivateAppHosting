@@ -29,13 +29,13 @@ describe('CORS for uploads', () => {
       {
         method: 'OPTIONS',
         headers: {
-          Origin: 'https://mininode.app',
+          Origin: 'https://example.org',
           'Access-Control-Request-Method': 'POST',
           'Access-Control-Request-Headers':
             'authorization,x-filename,x-runtime,x-slug,x-program,x-silent-args',
         },
       },
-      { PORTAL_URL: 'https://mininode.app' } as unknown as ApiEnv,
+      { PORTAL_URL: 'https://example.org' } as unknown as ApiEnv,
     );
     const allowed = (response.headers.get('Access-Control-Allow-Headers') ?? '').toLowerCase();
     for (const header of ['x-filename', 'x-runtime', 'x-slug', 'x-program', 'x-silent-args'])

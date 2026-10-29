@@ -17,7 +17,7 @@ export interface AiChatOptions {
   search?: boolean;
 }
 
-export interface AiSource {
+interface AiSource {
   title: string;
   url: string;
 }

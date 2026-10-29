@@ -121,7 +121,7 @@ self.addEventListener('push', (event) => {
 // Tap: focus a window that already shows the target, otherwise open it.
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  // Only the portal and its apps (*.mininode.app); anything else opens the start page.
+  // Only the portal and its apps (the portal's domain and its subdomains); anything else opens the start page.
   let target = new URL('/', self.location.origin).toString();
   try {
     const url = new URL(event.notification.data?.url ?? '/', self.location.origin);

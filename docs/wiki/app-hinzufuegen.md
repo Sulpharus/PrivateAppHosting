@@ -11,7 +11,7 @@ Es gibt mehrere Wege. Wähle nach dem, was du hast:
 | --- | --- | --- |
 | eine fertige **Web-App als ZIP** (aus Claude, AI Studio, Vite, Next.js) | **Hochladen**: ein Skript baut sie ein | Verwaltung → Apps → Hochladen ([Hochladen](wiki:hochladen)) |
 | nur eine **Idee** | **KI-Werkstatt** liefert den Prompt, die KI baut, dann Hochladen | Verwaltung → KI-Werkstatt ([KI-Werkstatt](wiki:ki-werkstatt)) |
-| ein **Windows-Programm** (`.exe`, `.msi`) | Hochladen als Programm; die NucBox installiert es | [Programme](wiki:app-bibliothek-programme) |
+| ein **Windows-Programm** (`.exe`, `.msi`) | Hochladen als Programm; die Server-Hardware installiert es | [Programme](wiki:app-bibliothek-programme) |
 | ein **bekanntes Linux-Programm** (Jellyfin, n8n …) | App-Bibliothek, ein Klick | Verwaltung → Hardware-Server → App-Bibliothek |
 | eine **fremde Website**, nur als Kachel | Link-Kachel | Verwaltung → Apps → Link-Kachel anlegen |
 | ein Projekt, das das Skript **nicht versteht** | Claude Code mit dem Skill `integrate-app` | [Mit Claude Code arbeiten](wiki:claude-code) |
@@ -20,7 +20,7 @@ Es gibt mehrere Wege. Wähle nach dem, was du hast:
 ## Nach dem Einbau: immer dasselbe
 
 1. **Prüfen:** der Pull Request muss grün sein (Prüfungen, `mininode doctor`).
-2. **Mergen:** der Deploy migriert die Tabellen der App, veröffentlicht sie unter `<name>.mininode.app` und trägt sie ein.
+2. **Mergen:** der Deploy migriert die Tabellen der App, veröffentlicht sie unter `<name>.{{domain}}` und trägt sie ein.
 3. **Freigeben:** Verwaltung → Apps → Zugriff, oder „Für alle neuen Nutzer“ ([Rollen](wiki:rollen-zugriff)).
 4. **Gemeinsame Daten genehmigen**, falls die App welche anfragt: Verwaltung → Gemeinsame Daten
    ([Gemeinsame Daten](wiki:gemeinsame-daten)).

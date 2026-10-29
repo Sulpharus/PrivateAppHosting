@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
-# One-time, idempotent Cloudflare setup for mininode.app. Safe to re-run: existing resources are
+# One-time, idempotent Cloudflare setup for the platform domain. Safe to re-run: existing resources are
 # detected by name and left alone.
 #
-# Creates: zone hardening, AI Gateway `mininode`, R2 buckets, the NucBox tunnel with its ingress,
+# Creates: zone hardening, AI Gateway `mininode`, R2 buckets, the physical server tunnel with its ingress,
 # DNS records for the tunnel hostnames, Access apps + service tokens for ssh/control.
 # Proxmox is never exposed; reach it over the LAN or via `cloudflared access ssh` + port forward.
-# Worker hostnames (mininode.app, api., ai., <slug>.) are NOT created here: `wrangler deploy`
+# Worker hostnames (<domain>, api., ai., <slug>.) are NOT created here: `wrangler deploy`
 # attaches them as custom domains.
 #
-# Requires: bash, curl, jq. Run it on the NucBox Linux VM (it writes the tunnel token there).
+# Requires: bash, curl, jq. Run it on the physical server Linux VM (it writes the tunnel token there).
 #   CLOUDFLARE_API_TOKEN=... CLOUDFLARE_ACCOUNT_ID=... ./infra/cloudflare/bootstrap.sh
-# Token permissions: see docs/runbooks/first-setup.md ("Cloudflare API token").
+# Token permissions: see docs/runbooks/setup-cloudflare.md ("Cloudflare API token").
 #
 # Secrets that Cloudflare shows only once (service-token secrets, tunnel token) are written to
 # $OUT_DIR (default ./cloudflare-secrets, mode 700), never printed.
@@ -19,7 +19,7 @@ set -euo pipefail
 
 : "${CLOUDFLARE_API_TOKEN:?set CLOUDFLARE_API_TOKEN}"
 : "${CLOUDFLARE_ACCOUNT_ID:?set CLOUDFLARE_ACCOUNT_ID}"
-DOMAIN="${DOMAIN:-mininode.app}"
+DOMAIN="${DOMAIN:?set DOMAIN (the platform domain, e.g. apps.example.com)}"
 TUNNEL_NAME="${TUNNEL_NAME:-mininode-nucbox}"
 OWNER_EMAIL="${OWNER_EMAIL:?set OWNER_EMAIL (the admin who may open Access-protected hosts)}"
 OUT_DIR="${OUT_DIR:-./cloudflare-secrets}"
@@ -111,7 +111,7 @@ cf GET "$ACC/cfd_tunnel/$TUNNEL_ID/token" | jq -r '.' >"$OUT_DIR/TUNNEL_TOKEN"
 
 # Service names resolve inside the compose network of infra/nucbox/compose.yml.
 # Container apps (target nucbox) all enter through Traefik; DNS stays explicit per app
-# (the deploy workflow creates <slug>.mininode.app → tunnel), so the ingress wildcard never
+# (the deploy workflow creates <slug>.<domain> → tunnel), so the ingress wildcard never
 # exposes anything that has no DNS record.
 INGRESS=$(jq -nc --arg d "$DOMAIN" '{config:{ingress:[
   {hostname:("remote."+$d),  service:"http://guacamole:8080", originRequest:{}},
@@ -183,7 +183,7 @@ access_app "nucbox-control" "control.$DOMAIN" self_hosted \
 
 cat <<EOF
 
-Done. Next steps (docs/runbooks/first-setup.md):
+Done. Next steps (docs/runbooks/setup-cloudflare.md):
   • Copy $OUT_DIR/TUNNEL_TOKEN into infra/nucbox/secrets.env (TUNNEL_TOKEN=...).
   • GitHub secrets: CF_ACCESS_CLIENT_ID / CF_ACCESS_CLIENT_SECRET ← github-deploy.*
   • API Worker secrets: wrangler secret put ACCESS_CLIENT_ID / ACCESS_CLIENT_SECRET (apps/api) ← mininode-api.*

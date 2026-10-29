@@ -10,8 +10,23 @@ import { checkLibraryInstall, installLibraryApp, removeLibraryApp } from './depl
 import { appSchemasWithTables, existingAppSchemas, exposeSchemas } from './deploy/migrate.ts';
 import { hostedTargets, pruneApps } from './deploy/prune.ts';
 import { dropExemptions, uninstallApp } from './deploy/uninstall.ts';
+import {
+  createDesktopAccount,
+  initDesktop,
+  migrateDesktop,
+  setDesktopPassword,
+  waitForDataApi,
+} from './desktop/index.ts';
+import { readMigrations } from './desktop/migrations.ts';
 import { type DoctorReport, doctor, hostedApps } from './doctor.ts';
 import { exportApp } from './export.ts';
+import {
+  configureInstance,
+  environmentVariables,
+  type InitAnswers,
+  initInstance,
+  loadInstanceConfig,
+} from './instance/index.ts';
 import { integrate, reportMarkdown } from './integrate/index.ts';
 import type { IntegrateResult } from './integrate/types.ts';
 import { biomeSkip, lintExemption, tidy, verifyBuild } from './integrate/verify.ts';
@@ -21,9 +36,20 @@ const ROOT = resolve(import.meta.dirname, '../../..');
 
 const USAGE = `mininode <command>
 
+  init [--domain d --accountId id --supabaseRef ref --publishableKey key]
+       [--zone z] [--repository owner/repo] [--mailFrom a@b] [--force]
+                                    Write mininode.config.json (asks for what is missing), then configure
+  desktop init --out <dir> --domain d [--scheme http|https] [--port 8787] [--host-port n] [--lan] [--force]
+                                    Desktop edition: write .env, kong.yml and roles.sql with fresh secrets
+  desktop migrate                   Desktop edition: apply the platform migrations (inside the host container)
+  desktop admin <email>             Desktop edition: create an account (password from MININODE_ADMIN_PASSWORD)
+  desktop password <email>          Desktop edition: set a new password for an account (same variable)
+  configure [--check] [--config file] [--root dir]
+                                    Write the config into the wrangler files and supabase/config.toml
+  config env [production|staging]   KEY=value lines for the workflows ($GITHUB_ENV)
   doctor <app-dir> | --all          Check hosted apps (manifest, secrets, SDK, RLS, CSP)
   dev <app-dir> [--port 8790]       Serve an app locally behind the gate (local Supabase)
-  deploy <app-dir> [--env staging]  Build, migrate, deploy and register one app
+  deploy <app-dir> [--env staging|desktop]  Build, migrate, deploy and register one app
   deploy --changed <base-ref>       Deploy every app changed since <base-ref>
   deploy --since-deployed           Deploy every app changed since the commit it was last deployed from
   expose [--env staging]            Expose the schema of every app with tables in the Data API (deploy)
@@ -33,7 +59,7 @@ const USAGE = `mininode <command>
   integrate <zip|dir> [--slug x]    Turn an export into hosted/<slug> by script (exit 2: needs review)
                                     [--build] [--tidy] [--json file] [--report file]
   exempt <slug> [--skip|--remove]   Exempt an imported app from the linter, or from Biome entirely (publish step); --remove forgets it
-  uninstall <slug> [--purge] [--env]  Take an app offline (Worker deleted); --purge also deletes its data, files and registry entry
+  uninstall <slug> [--purge] [--env]  Take an app offline (Worker deleted, or removed from the desktop host with --env desktop); --purge also deletes its data, files and registry entry
   submission fetch <id> --out <file>  Download an uploaded ZIP (workflow)
   submission status <id> <status> [--result file] [--report file] [--pr url] [--review url] [--run url] [--only-if-pr url]
                                     Report the state of an upload (workflow)
@@ -46,6 +72,16 @@ const USAGE = `mininode <command>
   library install <entry> <slug>    App-Bibliothek: register an installed program
   library remove <slug> <entry>     App-Bibliothek: disable a removed program
 `;
+
+const INIT_FLAGS: [string, keyof InitAnswers][] = [
+  ['--domain', 'domain'],
+  ['--zone', 'zone'],
+  ['--accountId', 'accountId'],
+  ['--supabaseRef', 'supabaseRef'],
+  ['--publishableKey', 'publishableKey'],
+  ['--repository', 'repository'],
+  ['--mailFrom', 'mailFrom'],
+];
 
 function print(report: DoctorReport): boolean {
   const errors = report.findings.filter((f) => f.severity === 'error');
@@ -65,15 +101,125 @@ function flag(args: string[], name: string): string | undefined {
   return index >= 0 ? args[index + 1] : undefined;
 }
 
-function envFlag(args: string[]): DeployEnv {
+function envFlag(args: string[], allowDesktop = false): DeployEnv {
   const env = flag(args, '--env') ?? 'production';
   if (env === 'production' || env === 'staging' || env === 'local') return env;
+  if (env === 'desktop' && allowDesktop) return env;
   throw new Error(`unknown --env ${env} (production, staging or local)`);
 }
 
 async function main(args: string[]): Promise<number> {
   const [command, target] = args;
   switch (command) {
+    case 'init': {
+      const answers: InitAnswers = {};
+      for (const [name, key] of INIT_FLAGS) {
+        const value = flag(args, name);
+        if (value) answers[key] = value;
+      }
+      const config = await initInstance(ROOT, answers, { overwrite: args.includes('--force') });
+      const { changed } = configureInstance(ROOT, config);
+      console.log(`wrote mininode.config.json; updated ${changed.join(', ') || 'nothing else'}`);
+      return 0;
+    }
+    case 'desktop': {
+      const sub = args[1];
+      if (sub === 'init') {
+        const out = flag(args, '--out');
+        const domain = flag(args, '--domain');
+        if (!out || !domain) break;
+        const schemeFlag = flag(args, '--scheme') ?? 'http';
+        if (schemeFlag !== 'http' && schemeFlag !== 'https')
+          throw new Error('--scheme must be http or https');
+        const scheme = schemeFlag;
+        for (const name of ['--port', '--host-port']) {
+          const value = flag(args, name);
+          if (value !== undefined && !(/^\d+$/.test(value) && +value >= 1 && +value <= 65535))
+            throw new Error(`${name} must be a port number from 1 to 65535`);
+        }
+        const written = initDesktop(
+          resolve(process.cwd(), out),
+          {
+            domain,
+            scheme,
+            port: Number(flag(args, '--port') ?? 8787),
+            ...(flag(args, '--host-port') ? { hostPort: Number(flag(args, '--host-port')) } : {}),
+            bind: args.includes('--lan') ? '0.0.0.0' : '127.0.0.1',
+          },
+          { force: args.includes('--force') },
+        );
+        console.log(`wrote ${written.join(', ')} to ${out}`);
+        return 0;
+      }
+      if (sub === 'migrate') {
+        const url = process.env.SUPABASE_DB_URL;
+        if (!url) throw new Error('SUPABASE_DB_URL is required');
+        const applied = await migrateDesktop(
+          url,
+          readMigrations(join(ROOT, 'supabase/migrations')),
+        );
+        const { SUPABASE_URL: apiUrl, SUPABASE_SECRET_KEY: apiKey } = process.env;
+        if (apiUrl && apiKey) await waitForDataApi(apiUrl, apiKey);
+        console.log(
+          applied.length > 0 ? `${applied.length} migration(s) applied` : 'database is up to date',
+        );
+        return 0;
+      }
+      if (sub === 'admin') {
+        const email = args[2];
+        const password = process.env.MININODE_ADMIN_PASSWORD;
+        const key = process.env.SUPABASE_SECRET_KEY;
+        const url = process.env.SUPABASE_URL;
+        if (!email || !password || !key || !url)
+          throw new Error(
+            'needs an email argument and MININODE_ADMIN_PASSWORD, SUPABASE_SECRET_KEY, SUPABASE_URL',
+          );
+        await createDesktopAccount(url, key, email, password);
+        console.log(`account ${email} created`);
+        return 0;
+      }
+      if (sub === 'password') {
+        const email = args[2];
+        const password = process.env.MININODE_ADMIN_PASSWORD;
+        const key = process.env.SUPABASE_SECRET_KEY;
+        const url = process.env.SUPABASE_URL;
+        if (!email || !password || !key || !url)
+          throw new Error(
+            'needs an email argument and MININODE_ADMIN_PASSWORD, SUPABASE_SECRET_KEY, SUPABASE_URL',
+          );
+        await setDesktopPassword(url, key, email, password);
+        console.log(`password of ${email} changed`);
+        return 0;
+      }
+      break;
+    }
+    case 'configure': {
+      const file = flag(args, '--config');
+      // --root: another copy of the platform (packaging renders the starter this way).
+      const rootFlag = flag(args, '--root');
+      const root = rootFlag ? resolve(process.cwd(), rootFlag) : ROOT;
+      const { changed } = configureInstance(
+        root,
+        loadInstanceConfig(root, file ? resolve(process.cwd(), file) : undefined),
+        { check: args.includes('--check') },
+      );
+      if (args.includes('--check')) {
+        for (const file of changed) console.error(`out of date: ${file}`);
+        if (changed.length > 0) console.error('run `pnpm mininode configure`');
+        return changed.length > 0 ? 1 : 0;
+      }
+      console.log(changed.length > 0 ? `updated ${changed.join(', ')}` : 'already up to date');
+      return 0;
+    }
+    case 'config': {
+      const name = args[2] ?? 'production';
+      if (target !== 'env' || (name !== 'production' && name !== 'staging')) break;
+      for (const [key, value] of Object.entries(
+        environmentVariables(loadInstanceConfig(ROOT), name),
+      ))
+        console.log(`${key}=${value}`);
+      return 0;
+    }
     case 'doctor': {
       if (!target) break;
       const dirs = target === '--all' ? hostedApps(ROOT) : [resolve(process.cwd(), target)];
@@ -116,7 +262,9 @@ async function main(args: string[]): Promise<number> {
       const envValue = flag(args, '--env');
       const stray = args.filter((arg) => !known.has(arg) && arg !== envValue);
       if (stray.length > 0) throw new Error(`unknown option ${stray[0]} (use --purge or --env)`);
-      const result = await uninstallApp(envFlag(args), target, { purge: args.includes('--purge') });
+      const result = await uninstallApp(envFlag(args, true), target, {
+        purge: args.includes('--purge'),
+      });
       console.log(JSON.stringify(result));
       return 0;
     }
@@ -293,7 +441,7 @@ async function main(args: string[]): Promise<number> {
     }
     case 'deploy': {
       if (!target) break;
-      const env = envFlag(args);
+      const env = envFlag(args, true);
       const dryRun = args.includes('--dry-run');
       const base = flag(args, '--changed');
       const sinceDeployed = args.includes('--since-deployed');

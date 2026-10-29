@@ -2,7 +2,7 @@
 
 A full backup of the platform from Verwaltung → Sicherung (ADR 0019): all accounts (with
 passwords and passkeys), the data of the platform and of every app, the stored files and the hosting
-settings, in one password-protected file you keep yourself. The NucBox keeps its own nightly
+settings, in one password-protected file you keep yourself. The physical server keeps its own nightly
 backups (`restore.md`); this one does not depend on it.
 
 ## One-time setup
@@ -52,7 +52,7 @@ Actions if the quota fills (a failed run says so).
 **Not inside:** the Worker and GitHub secrets (they cannot be read back; keep them in the password
 manager: `SUPABASE_SECRET_KEY`, `VAULT_KEY`, `GOOGLE_TOKEN_KEY`, `VAPID_*`, `GUACAMOLE_JSON_SECRET`,
 `NUCBOX_CONTROL_TOKEN`, …, the list in `apps/api/wrangler.jsonc` and `key-rotation.md`), the code of
-the apps (git), the NucBox and the Windows VM (`restore.md`). Keys that people stored in
+the apps (git), the physical server and the Windows VM (`restore.md`). Keys that people stored in
 Verwaltung → API-Schlüssel are in the database, encrypted with `VAULT_KEY`: **keep `VAULT_KEY` and
 `GOOGLE_TOKEN_KEY`, or those keys and Google links are unreadable after a restore.**
 
@@ -93,11 +93,11 @@ half.
 ### Into a new Supabase project (the old one is gone)
 
 1. Create the project, put its URL, keys and `SUPABASE_DB_URL` into the GitHub secrets, the Worker
-   secrets and `wrangler.jsonc`/`first-setup.md` as in the first setup (§1 to §4); re-enter the
+   secrets and `wrangler.jsonc`/`setup-cloudflare.md` as in the first setup (§1 to §4); re-enter the
    secrets from your password manager.
 2. Run the deploy workflow with *all apps*: it applies the migrations and creates the app schemas.
 3. In the Supabase dashboard switch the Auth hooks (custom access token, send email) and the Google
-   provider on again (`first-setup.md` §3).
+   provider on again (`setup-cloudflare.md` (section 5)).
 4. Restore as above (`--yes`). If it stops with "lacks migrations" or "lacks tables", the deploy of
    step 2 did not finish for that app; fix it and run the restore again, nothing was changed.
 5. Check the portal, then a hosted app with files.

@@ -8,7 +8,7 @@ summary: Deutsch und Englisch in jeder App, Sprachpakete und die deutschen Zahle
 ## Eine Sprache pro Person
 
 Jede Person wählt die Sprache **einmal** unter *Dein Konto → Sprache / Language* (Deutsch oder English). Sie steht im Profil
-(`platform.profiles.language`) und im Cookie `mn-lang` auf `*.mininode.app`; so folgt jede App und jedes neue Gerät (ADR 0017). Die
+(`platform.profiles.language`) und im Cookie `mn-lang` auf `*.{{domain}}`; so folgt jede App und jedes neue Gerät (ADR 0017). Die
 Oberfläche des Portals selbst (Verwaltung, Wiki) ist noch Deutsch.
 
 ## Sprachpakete in Apps

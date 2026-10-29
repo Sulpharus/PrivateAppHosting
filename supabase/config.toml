@@ -188,7 +188,7 @@ password_requirements = ""
 enabled = true
 
 # Configure WebAuthn relying party settings (required when passkey is enabled).
-# Production uses rp_id = "mininode.app" and origin https://mininode.app (see docs/adr/0001).
+# Production uses the platform domain as rp_id and origin (set by `mininode configure`, ADR 0001).
 [auth.webauthn]
 rp_display_name = "MiniNode"
 rp_id = "localhost"
@@ -204,9 +204,10 @@ anonymous_users = 30
 # Number of sessions that can be refreshed in a 5 minute interval per IP address.
 token_refresh = 150
 # Number of sign up and sign-in requests that can be made in a 5 minute interval per IP address (excludes anonymous users).
-sign_in_sign_ups = 30
+# Few people share an address here, so 10 slows password guessing without ever locking out a person.
+sign_in_sign_ups = 10
 # Number of OTP / Magic link verifications that can be made in a 5 minute interval per IP address.
-token_verifications = 30
+token_verifications = 10
 # Number of Web3 logins that can be made in a 5 minute interval per IP address.
 web3 = 30
 
@@ -289,7 +290,7 @@ uri = "pg-functions://postgres/platform/custom_access_token_hook"
 # Locally, mails land in the bundled Mailpit UI instead.
 # [auth.hook.send_email]
 # enabled = true
-# uri = "https://api.mininode.app/hooks/send-email"
+# uri = "https://api.<your domain>/hooks/send-email"
 # secrets = "env(SEND_EMAIL_HOOK_SECRET)"
 
 # Configure one of the supported SMS providers: `twilio`, `twilio_verify`, `messagebird`, `textlocal`, `vonage`.
@@ -433,6 +434,8 @@ project_id = "ojicmpgqvoyakigvubek"
 [remotes.production.auth]
 site_url = "https://mininode.app"
 additional_redirect_urls = ["https://mininode.app/**", "https://*.mininode.app/**"]
+# Length beats composition rules: long enough that guessing is hopeless (a passkey avoids typing it).
+minimum_password_length = 12
 
 [remotes.production.auth.email]
 # Password changes need a sign-in within 24 h (the portal re-authenticates via step-up).
@@ -458,5 +461,7 @@ rp_id = "mininode.app"
 rp_origins = ["https://mininode.app"]
 
 # Staging has no domain yet; the deploy workflow does not push config there until it has one.
+# mininode:staging-begin
 [remotes.staging]
 project_id = "ttgrtecdqouiogiwcjag"
+# mininode:staging-end

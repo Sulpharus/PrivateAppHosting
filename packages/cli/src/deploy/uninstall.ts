@@ -17,17 +17,18 @@ import {
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import postgres from 'postgres';
 import { listObjects, removeObjects } from '../backup/storage.ts';
+import { desktopDataDir, removeDesktopApp } from './desktop.ts';
 import { type DeployEnv, environmentSettings } from './environment.ts';
 import { unexposeSchemas } from './migrate.ts';
 
-export interface UninstallOptions {
+interface UninstallOptions {
   /** Also delete the app's data (default: only take it offline). */
   purge?: boolean;
   log?: (line: string) => void;
   fetch?: typeof fetch;
 }
 
-export interface UninstallResult {
+interface UninstallResult {
   slug: string;
   worker: 'deleted' | 'none' | 'not-cloudflare' | 'local';
   schema: 'dropped' | 'none' | 'kept';
@@ -170,7 +171,11 @@ export async function uninstallApp(
   }
 
   if (app && app.target !== 'cloudflare') result.worker = 'not-cloudflare';
-  else if (envName === 'local') result.worker = 'local';
+  else if (envName === 'desktop') {
+    removeDesktopApp(slug, desktopDataDir());
+    result.worker = 'local';
+    log(`${slug}: removed from the desktop host`);
+  } else if (envName === 'local') result.worker = 'local';
   else {
     result.worker = await deleteWorker(envName, slug, request);
     log(`${slug}: Worker ${result.worker}`);
@@ -191,7 +196,7 @@ export async function uninstallApp(
     await probe.end();
   }
   if (exists) {
-    if (envName === 'local') await hideLocally(databaseUrl, schema);
+    if (envName === 'local' || envName === 'desktop') await hideLocally(databaseUrl, schema);
     else {
       const projectRef = process.env.SUPABASE_PROJECT_REF;
       const accessToken = process.env.SUPABASE_ACCESS_TOKEN;

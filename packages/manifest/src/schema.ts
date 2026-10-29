@@ -181,8 +181,11 @@ const apiAuthSchema = z.discriminatedUnion('type', [
     .strict(),
 ]);
 
-/** Public HTTPS hosts only: no IP literals, no localhost, nothing on the platform itself. */
-export function isAllowedApiBase(value: string): boolean {
+/**
+ * Public HTTPS hosts only: no IP literals, no localhost, nothing on the platform itself.
+ * `platformDomain` is this installation's domain; the checks that run in the API pass it.
+ */
+export function isAllowedApiBase(value: string, platformDomain?: string): boolean {
   try {
     const url = new URL(value);
     const host = url.hostname.toLowerCase();
@@ -196,9 +199,13 @@ export function isAllowedApiBase(value: string): boolean {
       !host.endsWith('.') &&
       !/^[\d.]+$/.test(host) &&
       !host.startsWith('[') &&
-      !['localhost', 'mininode.app', 'supabase.co', 'workers.dev', 'pages.dev'].some(
-        (d) => host === d || host.endsWith(`.${d}`),
-      )
+      ![
+        'localhost',
+        'supabase.co',
+        'workers.dev',
+        'pages.dev',
+        ...(platformDomain ? [platformDomain.toLowerCase()] : []),
+      ].some((d) => host === d || host.endsWith(`.${d}`))
     );
   } catch {
     return false;

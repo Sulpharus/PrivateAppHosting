@@ -3,7 +3,7 @@
 // Plain DOM and inline styles: apps do not all load the platform's stylesheet, so the colours are
 // literal values on purpose (the one exception to "tokens only"; they match the portal's tokens).
 
-export interface KeyPromptInfo {
+interface KeyPromptInfo {
   service: string;
   serviceName: string;
   /** `api_key_unreadable`: a stored key no longer works and has to be entered again. */

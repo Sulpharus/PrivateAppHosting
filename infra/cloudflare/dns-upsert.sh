@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Creates or updates one proxied CNAME: dns-upsert.sh <hostname> <target>
-# Used by the deploy workflow for container apps (<slug>.mininode.app → tunnel).
+# Used by the deploy workflow for container apps (<slug>.<domain> → tunnel).
 set -euo pipefail
 name=$1 target=$2
-zone_name=${ZONE_NAME:-mininode.app}
+zone_name=${ZONE_NAME:?set ZONE_NAME to the Cloudflare zone (mininode.config.json: zone or domain)}
 api=https://api.cloudflare.com/client/v4
 auth=(-H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN:?}" -H 'Content-Type: application/json')
 

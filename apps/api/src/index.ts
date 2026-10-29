@@ -15,12 +15,13 @@ import { library } from './routes/library.ts';
 import { nucbox } from './routes/nucbox.ts';
 import { deliverPushes, push } from './routes/push.ts';
 import { controlHeaders, remote } from './routes/remote.ts';
+import { setup } from './routes/setup.ts';
 import { submissions } from './routes/submissions.ts';
 import { uninstall } from './routes/uninstall.ts';
 
 export const app = new Hono<AppContext>();
 
-// Browsers call the API from the portal and from hosted apps on *.mininode.app.
+// Browsers call the API from the portal and from hosted apps on *.<domain>.
 app.use(
   '*',
   cors({
@@ -69,6 +70,7 @@ app.route('/hooks', hooks);
 app.route('/push', push);
 app.route('/invites', invites);
 app.route('/remote', remote);
+app.route('/setup', setup);
 
 app.delete('/admin/users/:id', requireUser({ role: 'admin', recentAuth: 600 }), async (c) => {
   const parsed = z.uuid().safeParse(c.req.param('id'));
@@ -151,7 +153,7 @@ app.onError((error, c) => {
 });
 
 /**
- * Every 5 minutes (cron runs every minute, see `scheduled`): expire idle remote sessions, release stale AI reservations, tell the NucBox
+ * Every 5 minutes (cron runs every minute, see `scheduled`): expire idle remote sessions, release stale AI reservations, tell the physical server
  * which runtimes are still needed, and touch the database so the free project never pauses.
  */
 export async function maintenance(env: ApiEnv): Promise<void> {
@@ -165,6 +167,8 @@ export async function maintenance(env: ApiEnv): Promise<void> {
     if (result.error) throw new Error(result.error.message);
   }
 
+  // No hardware server connected (cloud-only or desktop-only installation): nothing to tell.
+  if (!env.NUCBOX_CONTROL_URL) return;
   const activeApps = [...new Set((active.data ?? []).map((row) => row.app_slug as string))];
   const sync = await fetch(`${env.NUCBOX_CONTROL_URL}/sessions/sync`, {
     method: 'POST',

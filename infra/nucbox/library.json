@@ -1,10 +1,10 @@
 {
-  "$comment": "App library (ADR 0011): self-hostable programs the admin installs on the NucBox with one click. Images are pinned by digest; nucbox-deploy reads this file from main. Schema: packages/manifest/src/library.ts.",
+  "$comment": "App library (ADR 0011): self-hostable programs the admin installs on the physical server with one click. Images are pinned by digest; nucbox-deploy reads this file from main. Schema: packages/manifest/src/library.ts.",
   "entries": [
     {
       "id": "jellyfin",
       "name": "Jellyfin",
-      "description": "Filme, Serien und Musik von der NucBox im Browser streamen",
+      "description": "Filme, Serien und Musik von der Server-Hardware im Browser streamen",
       "category": "Unterhaltung",
       "website": "https://jellyfin.org",
       "docs": "https://jellyfin.org/docs/",
@@ -15,7 +15,7 @@
       "volumes": { "config": "/config", "cache": "/cache", "media": "/media" },
       "env": { "JELLYFIN_PublishedServerUrl": "https://{host}" },
       "readOnly": false,
-      "note": "Medien in den Ordner apps/<slug>/data/media auf der NucBox legen. Die TV- und Handy-Apps von Jellyfin kommen nicht durch den MiniNode-Login; im Browser geht alles."
+      "note": "Medien in den Ordner apps/<slug>/data/media auf der Server-Hardware legen. Die TV- und Handy-Apps von Jellyfin kommen nicht durch den MiniNode-Login; im Browser geht alles."
     },
     {
       "id": "n8n",

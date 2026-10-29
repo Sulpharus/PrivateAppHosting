@@ -29,15 +29,15 @@ Die Begriffe, die in Verwaltung, Dokumentation und Gesprächen mit Claude Code v
 | **kv** | Der einfache Schlüssel-Wert-Speicher `mn.kv` für Apps |
 | **Manifest** | Die Datei `mininode.json` einer App ([Apps verstehen](wiki:apps-verstehen)) |
 | **Migration** | Eine SQL-Datei, die die Datenbank verändert; Plattform: `supabase/migrations`, Apps: `hosted/<name>/db/` |
-| **NucBox** | Dein Heimserver (NucBox G9 mit Proxmox): Linux-VM, Windows-VM, Container ([NucBox](wiki:nucbox)) |
+| **Server-Hardware** | Dein Heimserver (Mini-PC G9 mit Proxmox): Linux-VM, Windows-VM, Container ([Server-Hardware](wiki:nucbox)) |
 | **Passkey** | Anmelden mit Fingerabdruck, Gesicht oder Windows Hello statt Passwort |
-| **Portal** | `mininode.app`: Startseite, Login, Konto und Verwaltung |
+| **Portal** | `{{domain}}`: Startseite, Login, Konto und Verwaltung |
 | **Prune** | Aufräumen: Worker von Apps löschen, die nicht mehr im Repository liegen |
 | **Pull Request (PR)** | Änderungsvorschlag auf GitHub, der geprüft und dann gemergt wird |
 | **RLS** | *Row Level Security*: der Zeilenschutz der Datenbank, die eigentliche Sicherheitsgrenze |
 | **Runbook** | Schritt-für-Schritt-Anleitung für den Betrieb unter `docs/runbooks/` ([Liste](wiki:ref-runbooks)) |
 | **SDK** | `@mininode/sdk`: die Bibliothek, mit der Apps Daten, Dateien, KI und mehr nutzen ([App-Kit und SDK](wiki:app-kit-sdk)) |
-| **Slug** | Der kurze Name einer App, zugleich ihre Adresse: `rezepte` → `rezepte.mininode.app` |
+| **Slug** | Der kurze Name einer App, zugleich ihre Adresse: `rezepte` → `rezepte.{{domain}}` |
 | **Step-up** | Erneute Bestätigung deiner Identität (Passkey/Passwort) vor heiklen Aktionen |
 | **Supabase** | Der Dienst für Datenbank, Login und Dateispeicher |
 | **trusted** | Rolle für vertraute Personen, die mit deinem Konto arbeiten dürfen ([Rollen](wiki:rollen-zugriff)) |

@@ -31,7 +31,7 @@ export function Welcome() {
   const finish = async () => {
     setError(null);
     if (!hasPasskey && password.length < 10) {
-      setError('Richte einen Passkey ein oder vergib ein Passwort mit mindestens 10 Zeichen.');
+      setError('Richte einen Passkey ein oder vergib ein Passwort mit mindestens 12 Zeichen.');
       return;
     }
     setBusy(true);
@@ -46,7 +46,7 @@ export function Welcome() {
       if (updateError) {
         setBusy(false);
         setError(
-          'Das Passwort ist zu schwach. Nimm mindestens 10 Zeichen mit Buchstaben und Ziffern.',
+          'Das Passwort ist zu schwach. Nimm mindestens 12 Zeichen mit Buchstaben und Ziffern.',
         );
         return;
       }
@@ -94,13 +94,13 @@ export function Welcome() {
         <label className="field">
           <span>
             {hasPasskey
-              ? 'Passwort als Reserve (optional, mindestens 10 Zeichen)'
-              : 'Passwort (mindestens 10 Zeichen)'}
+              ? 'Passwort als Reserve (optional, mindestens 12 Zeichen)'
+              : 'Passwort (mindestens 12 Zeichen)'}
           </span>
           <input
             type="password"
             autoComplete="new-password"
-            minLength={10}
+            minLength={12}
             value={password}
             onChange={(event) => setPassword(event.target.value)}
           />

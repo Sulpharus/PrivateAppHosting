@@ -32,21 +32,21 @@ Non-goals: public sign-up, multi-tenant SaaS, a hot standby database.
 | Domain | `mininode.app` (Cloudflare Registrar, Cloudflare DNS) |
 | Default host | **Cloudflare Workers Paid** ($5/month): static assets plus Worker code, with the Worker running first only for navigations and `/api/*` |
 | Next.js | In order of preference: static export, then vinext (beta), then OpenNext, then **Vercel** as the exception |
-| Home server | NucBox G9 (N150, 16 GB) running **Proxmox VE**: a Linux VM (Docker) and a Windows 11 Pro VM |
+| Home server | Physical server G9 (N150, 16 GB) running **Proxmox VE**: a Linux VM (Docker) and a Windows 11 Pro VM |
 | Exposure | **Cloudflare Tunnel** only. Admin surfaces (Proxmox, SSH, Guacamole admin) sit behind **Cloudflare Access** |
 | Database | **Supabase Cloud** Free (production). A second free project serves as **staging**. No hot standby; a scripted monthly **restore drill** instead |
 | Keep-alive | A daily real query (not a cached request), monitored by a dead-man's switch |
-| Backups | Nightly `pg_dump` + storage sync on the NucBox, then restic to NVMe (7/4/6) and an encrypted restic copy in R2. Restore drill scripted and alerting. On demand: a password-protected backup of all data from Verwaltung (ADR 0019) |
+| Backups | Nightly `pg_dump` + storage sync on the physical server, then restic to NVMe (7/4/6) and an encrypted restic copy in R2. Restore drill scripted and alerting. On demand: a password-protected backup of all data from Verwaltung (ADR 0019) |
 | Auth | Supabase Auth, invite-only. **Passkeys** (Face ID, fingerprint, Windows Hello) primary, email + password fallback. All auth UI lives at **`mininode.app/login`** (ADR 0001) |
 | Email | **Off for now** (Cloudflare Email Sending needs Workers Paid). Invites and password resets are one-time links the admin shares directly. The Email Sending binding and Send Email hook stay implemented and switch on with one config change |
 | Roles | `admin` (owner), `trusted` (shared-account apps), `user` |
 | Isolation | **RLS is the security boundary.** Every app table policy calls `platform.app_access(slug)` (user grant **and** the calling app, identified by its origin; ADR 0002); a schema per app is for tidiness only |
-| Deploy | `git push` to `main` runs GitHub Actions. Cloud targets deploy with `wrangler`. The NucBox deploys by pulling a digest-pinned image through a forced-command SSH over Access |
+| Deploy | `git push` to `main` runs GitHub Actions. Cloud targets deploy with `wrangler`. The physical server deploys by pulling a digest-pinned image through a forced-command SSH over Access |
 | Integration | The `integrate-app` skill (Claude Code, local PC or cloud) runs against **local Supabase only**, then `mininode doctor` |
 | AI | `ai.mininode.app` Worker (auth, per-app model allow-list, reserve/settle budget) forwarding through **Cloudflare AI Gateway** |
 | Remote apps | Guacamole with **encrypted JSON auth** issued by the platform API. Windows 11 RemoteApp in a locked-down session. Wine via RDP/VNC images. Android optional (disabled by default) |
-| Monitoring | Healthchecks.io dead-man's switches + an external uptime check + phone alerts (ntfy), all independent of the NucBox |
-| Secrets | GitHub/Cloudflare secrets for CI and Workers; NucBox `.env` encrypted in the repo with **SOPS + age** |
+| Monitoring | Healthchecks.io dead-man's switches + an external uptime check + phone alerts (ntfy), all independent of the physical server |
+| Secrets | GitHub/Cloudflare secrets for CI and Workers; physical server `.env` encrypted in the repo with **SOPS + age** |
 | Stack | TypeScript monorepo: pnpm, Turborepo, Biome, React + Vite, Hono, Vitest, Playwright, pgTAP |
 
 Monthly cost: Workers Paid ≈ 4.60 €, domain ≈ 1 € (≈ 12 €/year), everything else on free tiers.
@@ -63,11 +63,11 @@ Total **≈ 6 €** (budget 15 €). A Windows 11 Pro licence is a one-off cost.
                    ├─ ai.mininode.app ......... apps/ai-proxy (Hono → AI Gateway → Gemini / Claude)
                    ├─ <slug>.mininode.app ..... hosted app Worker (gate from packages/gate) | Vercel (exception)
                    ├─ remote.mininode.app ─┐
-                   ├─ <slug>.mininode.app ─┴── Tunnel ──▶ NucBox · Linux VM
+                   ├─ <slug>.mininode.app ─┴── Tunnel ──▶ physical server · Linux VM
                    │                                        cloudflared · Traefik · forward-auth
                    │                                        container apps · Guacamole · nucbox-control
                    │                                        backup job · Wine images · (Redroid, optional)
-                   │                                      NucBox · Windows 11 VM (RemoteApp, on demand)
+                   │                                      physical server · Windows 11 VM (RemoteApp, on demand)
                    ├─ Access: proxmox / ssh / guac-admin (owner + CI service token)
                    └─ R2: installers, encrypted backups · AI Gateway
  Supabase Cloud (prod) + Supabase Cloud (staging) ◀── supabase-js + RLS from every app
@@ -84,7 +84,7 @@ Total **≈ 6 €** (budget 15 €). A Windows 11 Pro licence is a one-off cost.
 
 DNS is explicit: CI creates one record per app. There is no wildcard catch-all.
 
-### 3.2 NucBox (16 GB)
+### 3.2 Physical server (16 GB)
 
 | Component | RAM | Policy |
 |---|---|---|
@@ -205,7 +205,7 @@ Everything else is derived from manifests: portal tiles, DNS, deploy, Host Manag
    - Migrations to staging, then production.
    - Deploy by target and update DNS.
    - Register the app in `platform.apps`.
-5. **NucBox deploy:**
+5. **Physical server deploy:**
    - The CI job runs `cloudflared access ssh` with a service token.
    - The SSH key is `restrict,command="nucbox-deploy"`; the script accepts only a slug regex
      and a `sha256:` digest.
@@ -294,7 +294,7 @@ staging and production.
   most used, new, old), curated app sets ("Pakete"), link tiles to external websites, remote apps
   with live status, notifications and profile (ADR 0007). Light and dark mode, desktop and mobile.
 - **Host Manager** (`mininode.app/admin`, admin only, step-up): **Overview, Apps (incl. inbox,
-  categories, whitelist, link tiles), Kategorien & Pakete, Users & roles, Remote apps, NucBox
+  categories, whitelist, link tiles), Kategorien & Pakete, Users & roles, Remote apps, physical server
   (resource usage of host, VMs, storage and containers), AI proxy, API keys** are functional.
   - Deployments, Domains, Logs and Hosts link out to the Cloudflare, Supabase and GitHub
     dashboards; they never show placeholder data.
@@ -329,7 +329,7 @@ staging and production.
 ├─ docs/
 │  ├─ ai/                # NEW-APP-SPEC, playbooks
 │  ├─ adr/               # architecture decisions
-│  └─ runbooks/          # restore, key rotation, add an app, NucBox install
+│  └─ runbooks/          # restore, key rotation, add an app, physical server install
 ├─ .claude/              # skills (incl. integrate-app), settings
 └─ .github/workflows/    # ci.yml, deploy.yml, nightly.yml
 ```
@@ -363,7 +363,7 @@ staging and production.
 | 1 · Identity & portal | Platform schema + RLS + pgTAP, invites, email hook, central login (passkeys + password), start page, admin (Users) | Invite → fingerprint sign-in works end to end (e2e with virtual authenticator) |
 | 2 · Cloud apps | Manifest, SDK, gate, doctor, cloudflare deploy, DNS, admin (Apps) | A sample SPA fixture deploys behind login with private data |
 | 3 · AI layer | NEW-APP-SPEC, playbooks, integrate-app skill, fixtures, AI proxy + budget RPC, admin (AI) | Fixture snapshots pass; budget tests pass |
-| 4 · NucBox | Proxmox runbook, tunnel, Traefik, forward-auth, deploy script, backups, restore drill, monitoring | A container fixture runs behind login; the restore drill passes |
+| 4 · physical server | Proxmox runbook, tunnel, Traefik, forward-auth, deploy script, backups, restore drill, monitoring | A container fixture runs behind login; the restore drill passes |
 | 5 · Remote apps | Guacamole JSON auth, nucbox-control (VM power, queue), Windows lockdown scripts, admin (Remote) | A Windows program opens from the phone; the VM hibernates when idle |
 | 6 · Optional | Wine images, Redroid profile, Vercel path, analytics | Each behind a flag with a smoke test |
 
@@ -386,46 +386,39 @@ Everyday apps and platform features that grew next to the phases, each with its 
 | Google Calendar two-way sync | done | ADR 0010, `docs/runbooks/kalender.md` |
 | Haushalt: PDF statements, fixed costs, Dein Monat, statistics | done | `hosted/haushalt` |
 | Sportplaner and Haushalt write their dates as suite records | done | planned sessions (`activity`), payments of fixed costs (`contract`) |
-| App library with one-click NucBox installs (Jellyfin, n8n …) | done, needs the NucBox | ADR 0011, `docs/runbooks/app-library.md` |
+| App library with one-click physical server installs (Jellyfin, n8n …) | done, needs the physical server | ADR 0011, `docs/runbooks/app-library.md` |
 | Apps as GitHub projects (no data, no keys) | done | ADR 0012, `docs/runbooks/app-export.md` |
 | Sportplaner course price split per session | done | `hosted/sportplaner/js/price.js` |
 | German date, time and number formats in every app (kit date fields) | done | `packages/ui/kit/ui.js`, `docs/ai/DESIGN-SYSTEM.md` §8 |
 | Uploads in Verwaltung, script-first integration (`mininode integrate`), AI review queue | done, needs `INTEGRATE_TOKEN` | ADR 0013, `docs/runbooks/uploads.md` |
-| Programs for the PC/server from Verwaltung (R2 upload, install, path detection) | done, needs R2 secrets and the NucBox | ADR 0013, `docs/runbooks/programs.md` |
+| Programs for the PC/server from Verwaltung (R2 upload, install, path detection) | done, needs R2 secrets and the physical server | ADR 0013, `docs/runbooks/programs.md` |
 | Own drawers and own order (start page, Gaming Hub) | done | ADR 0015 |
 | API keys site-wide or personal, popup and instruction page | done | ADR 0014 |
 | Release editions: cloud, PC/server, complete per version | done | ADR 0016, `docs/runbooks/releases.md` |
 | App logos (upload in Verwaltung, deploy picks up `icon.svg`, prompt block) | done | ADR 0018 |
 | Language switch (de/en per person) and language packages for every app | done; portal UI itself still German | ADR 0017, `docs/ai/LANGUAGE-PACKAGES.md`, `packages/ui/kit/i18n.js` |
 
-### 15.2 Sharing the platform (proposed, not started)
+### 15.2 Sharing the platform (built, ADR 0026)
 
-Goal: others can download MiniNode, run it on their own Cloudflare + Supabase (and optionally a
-PC as NucBox) and remix it, without anything private from this installation.
+Goal: others download MiniNode, run it on their own Cloudflare + Supabase, on one computer, or both,
+and remix it, without anything private from the installation that built the download.
 
-- **Already in place:**
-  - no secrets in the repository (rule + gitleaks in CI);
-  - user data only in Supabase;
-  - setup runbooks;
-  - single apps exportable (ADR 0012).
-- **Instance settings out of the code:** about 130 files name `mininode.app`. A few also name
-  the Supabase project refs, publishable keys, the Cloudflare account id or the GitHub owner.
-  They move into one `mininode.config.json` (domain, Cloudflare account, Supabase refs and
-  keys, repository). The Workers, the deploy workflow, the portal and the apps read it, and the
-  apps take the portal URL from the SDK.
-- **A clean start:** a public template repository generated from `main` (core code, docs,
-  sample app) with one fresh commit, not this repository's history. The personal apps and
-  their tests stay here. The export check of ADR 0012 runs over the whole template.
-- **First-run setup:**
-  - a `pnpm mininode init` wizard writes the config;
-  - `infra/cloudflare/bootstrap.sh` and `supabase link` already do the provider side;
-  - the first account becomes admin, as today.
+- **Instance settings out of the code:** `mininode.config.json` (domain, zone, Cloudflare account,
+  Supabase references and publishable keys, GitHub repository), written by `pnpm mininode init`,
+  rendered into the wrangler files and `supabase/config.toml` by `pnpm mininode configure`, read by
+  the workflows (`.github/actions/load-config`). Code takes addresses from its environment.
+- **A clean start:** the starter package (`scripts/make-starter.sh`): committed files only, no
+  apps, no instance file, neutral placeholders, a lockfile without the apps, and a scan for every
+  identifier of the building installation.
 - **Hosts:**
-  - Cloudflare Workers is the default.
-  - The manifest already knows `vercel`.
-  - A plain Node/Docker host (the NucBox alone, any VPS) would need the gate and the API as a
-    Node server. That is the largest piece.
-- **License:** chosen by the owner (e.g. AGPL-3.0 to keep remixes open, or MIT).
+  - Cloudflare Workers (variant 1);
+  - the desktop edition (variant 2): the same Workers in workerd through Miniflare
+    (`apps/desktop-host`) plus Supabase in Docker (`infra/desktop`), installed by
+    `install.sh`/`install.ps1` on any machine with Docker;
+  - both (variant 3): variant 1 plus the home server, which runs on any Linux machine with Docker
+    (Proxmox only for Windows programs).
+- **License:** PolyForm Noncommercial 1.0.0 (`LICENSE`): free for non-commercial use. **Still the owner's call:** publishing
+  the starter as its own public repository.
 
 ---
 
@@ -445,6 +438,6 @@ The external review raised these points, and all were adopted:
 - AI proxy hardening.
 - RemoteApp lockdown.
 - Android becomes optional.
-- Monitoring runs off the NucBox, and secrets are handled with SOPS.
+- Monitoring runs off the physical server, and secrets are handled with SOPS.
 - `mininode doctor`, the generated short spec and `specVersion`.
 - Repo naming: `apps/` vs `hosted/`.

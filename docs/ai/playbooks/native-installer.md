@@ -1,6 +1,6 @@
 # Playbook: native program (Windows / Android)
 
-Native programs run on the NucBox and are used through the browser (Guacamole).
+Native programs run on the physical server and are used through the browser (Guacamole).
 
 1. **Do not commit the installer.** Upload it to R2 (`installers/<slug>/<file>`) and note its
    SHA-256 (`sha256sum file.exe`). Prefer a `wingetId` when the program is in winget.

@@ -7,7 +7,7 @@ export interface GuacConnection {
   parameters: Record<string, string>;
 }
 
-export interface GuacAuthPayload {
+interface GuacAuthPayload {
   username: string;
   /** Epoch milliseconds after which Guacamole rejects the blob. */
   expires: number;

@@ -5,7 +5,7 @@ order: 40
 summary: Wie Apps KI nutzen, ohne Schlüssel im Browser, und wie Kosten begrenzt werden
 ---
 
-Apps rufen KI **nicht** direkt auf. `mn.ai` geht zu `ai.mininode.app` (`apps/ai-proxy`), das über **Cloudflare AI Gateway** zum Anbieter
+Apps rufen KI **nicht** direkt auf. `mn.ai` geht zu `ai.{{domain}}` (`apps/ai-proxy`), das über **Cloudflare AI Gateway** zum Anbieter
 (Gemini oder Claude) weiterleitet. Die Schlüssel bleiben beim Gateway und im Proxy-Worker.
 
 ## Was der Proxy prüft
@@ -36,5 +36,5 @@ Kosten diesen Monat, Anfragen, Verbrauch je App und die **Budgets** zum Einstell
 
 ## Einrichten
 
-GitHub-Geheimnisse `GEMINI_API_KEY` / `ANTHROPIC_API_KEY` (Anbieter-Schlüssel) und `AI_GATEWAY_TOKEN` (Gateway-Einstellungen), siehe `first-setup.md`.
+GitHub-Geheimnisse `GEMINI_API_KEY` / `ANTHROPIC_API_KEY` (Anbieter-Schlüssel) und `AI_GATEWAY_TOKEN` (Gateway-Einstellungen), siehe `setup-cloudflare.md`.
 Noch nicht möglich: Bilder und Scans durch die KI lesen lassen (der Proxy leitet nur Text weiter).

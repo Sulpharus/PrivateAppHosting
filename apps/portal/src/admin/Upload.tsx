@@ -3,6 +3,7 @@ import { type DragEvent, useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router';
 import { useStepUp } from '../auth/StepUp.tsx';
 import { ApiError, api, apiUpload } from '../lib/api.ts';
+import { appHost } from '../lib/host.ts';
 import {
   formatSize,
   isRunning,
@@ -57,7 +58,7 @@ export function Upload() {
       .order('created_at', { ascending: false })
       .limit(30);
     const list = (data as Submission[] | null) ?? [];
-    // A running install only reaches its end when somebody asks the NucBox: the API does that.
+    // A running install only reaches its end when somebody asks the physical server: the API does that.
     const refreshed = await Promise.all(
       list.map((row) =>
         row.kind === 'program' && row.status === 'installing'
@@ -86,7 +87,7 @@ export function Upload() {
     kind === 'webapp' && config && !config.webapp
       ? 'Der automatische Einbau ist noch nicht eingerichtet (LIBRARY_DISPATCH_TOKEN, siehe Runbook uploads.md).'
       : kind === 'program' && config && !config.program
-        ? 'Programme brauchen die R2-Zugangsdaten der API und die NucBox (siehe Runbook uploads.md).'
+        ? 'Programme brauchen die R2-Zugangsdaten der API und die Server-Hardware (siehe Runbook uploads.md).'
         : null;
 
   const choose = (picked: File | null | undefined) => {
@@ -124,7 +125,7 @@ export function Upload() {
       setNotice(
         kind === 'webapp'
           ? 'Hochgeladen. Das Skript baut die App jetzt ein; das dauert etwa zwei Minuten.'
-          : 'Hochgeladen. Die NucBox installiert das Programm jetzt; das dauert einige Minuten.',
+          : 'Hochgeladen. Die Server-Hardware installiert das Programm jetzt; das dauert einige Minuten.',
       );
       setFile(null);
       setSlug('');
@@ -335,7 +336,7 @@ function SubmissionCard({
         {row.slug && (
           <>
             {' · '}
-            <span className="mono">{row.slug}.mininode.app</span>
+            <span className="mono">{appHost(row.slug)}</span>
           </>
         )}
       </p>

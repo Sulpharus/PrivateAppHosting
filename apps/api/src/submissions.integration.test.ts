@@ -1,4 +1,4 @@
-// Uploads from Verwaltung (ADR 0013) against the local Supabase stack. GitHub, R2 and the NucBox
+// Uploads from Verwaltung (ADR 0013) against the local Supabase stack. GitHub, R2 and the physical server
 // are stubbed; storage and the database are real.
 import { createClient } from '@supabase/supabase-js';
 import postgres from 'postgres';
@@ -27,7 +27,7 @@ describe.skipIf(!enabled)('uploads', () => {
     SUPABASE_URL: url,
     SUPABASE_PUBLISHABLE_KEY: publishableKey,
     SUPABASE_SECRET_KEY: secretKey,
-    PORTAL_URL: 'https://mininode.app',
+    PORTAL_URL: 'https://example.org',
     NUCBOX_CONTROL_URL: 'https://control.example',
   } as unknown as ApiEnv;
   const configured = {
@@ -199,7 +199,7 @@ describe.skipIf(!enabled)('uploads', () => {
     expect(res.status).toBe(503);
   });
 
-  it('installs a program: R2, a remote app, the NucBox, then the found path', async () => {
+  it('installs a program: R2, a remote app, the physical server, then the found path', async () => {
     const filename = `Prog${run}-Setup-1.0.exe`;
     const res = await upload('admin', filename, exe, configured, { 'X-Slug': slug });
     expect(res.status).toBe(202);

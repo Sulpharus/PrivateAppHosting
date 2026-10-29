@@ -3,7 +3,7 @@
 Where things stand, what the owner still has to do, and what a new session should know.
 Update it at the end of every working session; history belongs in git, not here.
 
-Last updated: 2026-10-21 (app schemas kept in the Data API on every deploy; Google setup card).
+Last updated: 2026-10-29 (instance config, desktop edition, starter package, login hardening; ADR 0026).
 
 ## Start here
 
@@ -28,7 +28,7 @@ Where things are documented:
 | --- | --- |
 | Architecture, phases, data model | `PLAN.md` |
 | Decisions | `docs/adr/0001`–`0018` |
-| Operations: setup, NucBox, keys, Kalender, App-Bibliothek, app export, restore | `docs/runbooks/` (index in its README) |
+| Operations: setup, physical server, keys, Kalender, App-Bibliothek, app export, restore | `docs/runbooks/` (index in its README) |
 | Building apps with AI: spec, design system, prompt modules, playbooks | `docs/ai/` |
 | Shared data types (suite) | `docs/suite/data-types.md` |
 | Concepts, how-tos, first steps (German, for the owner) | `docs/wiki/`, shown in Verwaltung → Wissen |
@@ -44,7 +44,7 @@ Where things are documented:
 | Haushalt | Fixed costs (end date, amount changes, statement matching), "Dein Monat", statistics, PDF statement import (pdf.js vendored) | `hosted/haushalt` |
 | Kalender map | View Karte: pins, ways and travel times (OpenStreetMap routing), start point, map styles; Aether Notes shows where people live (pins, heat map, towns, who lives nearby) and hands meetups to the Kalender | `hosted/kalender/map.js`, `hosted/kalender/route.js`, `hosted/aether-notes/src/components/MapView.tsx` |
 | Kalender sources | Sportplaner sessions (`activity`) and Haushalt payments (`contract`) as suite records | `hosted/sportplaner/js/suite.js`, `hosted/haushalt/plan.js` |
-| App-Bibliothek | Jellyfin, n8n, Uptime Kuma, Stirling PDF on the NucBox with one click | ADR 0011, runbook `app-library.md` |
+| App-Bibliothek | Jellyfin, n8n, Uptime Kuma, Stirling PDF on the physical server with one click | ADR 0011, runbook `app-library.md` |
 | App export | An app as its own GitHub repository, without data or keys | ADR 0012, runbook `app-export.md` |
 | Deploys | One failing app no longer stops the others | `.github/workflows/deploy.yml`, `mininode deploy --since-deployed` (each app against its registered `deployed_version`; `--changed <ref>` stays for CI dry runs) |
 | Gaming Hub | Games show only in the hub; the start page's "Gaming Hub" button and "Spiele" tab are always there | ADR 0009, `apps/portal/src/routes/Home.tsx` |
@@ -75,6 +75,7 @@ Where things are documented:
 | Craft apps: light and dark | Every Craft app follows the system appearance. The patches give each app's lightest theme MiniNode's white surfaces and neutrals (DesignCraft Light, PhotoCraft Pro (Light), FilmCraft Light, LightCraft Paper); DesignCraft and LightCraft replace the grey defaults earlier builds stored once per account (`designcraft.theme-follow`, `lightcraft.theme-follow`). Checked in Chromium in light and dark for DesignCraft, PhotoCraft, FilmCraft and LightCraft (temporary spec); idle main-thread time 3–4 % each | `hosted/{designcraft,photocraft,filmcraft,lightcraft}/patches` |
 | Reiseplaner brief | Feature spec for a trip planner (reuses Kalender, Bill the Splitter, the Kalender map) | `docs/ai/briefs/reiseplaner.brief.md` |
 | Data API schemas | Every deploy's `supabase config push` reset the exposed schemas to `public, graphql_public, platform`, hiding `app_sportplaner`, `app_haushalt`, `app_medialog` and `app_wunschliste` until each app's next deploy (2026-10-20: Sportplaner empty while the Kalender still showed its sessions). `scripts/keep-app-schemas.sh` now writes the live app schemas into the pushed config, `mininode expose` re-exposes every app with tables on each deploy, and `exposeSchemas` refuses to write a list it could not read. Sportplaner shows "could not be loaded" instead of an empty library | `.github/workflows/deploy.yml`, `packages/cli/src/deploy/migrate.ts`, `hosted/sportplaner/js/boot.js` |
+| Anywhere-installable | `mininode.config.json` holds the domain, Cloudflare account, Supabase references and repository (`mininode init`, `configure`, workflows via `load-config`; CI checks `configure --check`). **Desktop edition**: `apps/desktop-host` (the platform Workers in workerd via Miniflare) + Supabase in Docker (`infra/desktop`), `install.sh`/`install.ps1`, `mininode-desktop` (start, add, backup, restore, update, password), `mininode deploy --env desktop`. Optional Proxmox in nucbox-control (plain Docker host works). **Starter package** (`scripts/make-starter.sh`, no apps, leak-checked). Three setup runbooks (`getting-started`, `setup-cloudflare`, `setup-desktop`, `setup-both`). Login hardening (AI-proxy CORS, ES256-only verification, 10 sign-ins / 5 min, 12-character passwords) | ADR 0026, `docs/runbooks/`, `apps/desktop-host`, `infra/desktop`, `scripts/make-starter.sh`, CI jobs *Starter package* and *Desktop edition* |
 | German formats | Date, month and time inputs as German parts in every browser; full dates as "01. Okt. 2026"; German numbers | `packages/ui/kit/ui.js`, `docs/ai/DESIGN-SYSTEM.md` §8 |
 
 The Sportplaner map (tab "Karte") and course mode (editor step "Zeiten" → "Kurs") are live
@@ -110,6 +111,16 @@ since the PR #12 deploy. Earlier deploys stopped at medialog and never shipped t
 
 ## Waiting on the owner
 
+0. **Before merging the anywhere-installable work (ADR 0026), upgrade the physical server once:**
+   - add `MININODE_OWNER=sulpharus` to `platform.env`, and `MININODE_OWNER=sulpharus`, `MININODE_REPO=Sulpharus/PrivateAppHosting`, `MININODE_DOMAIN=mininode.app` to `/etc/mininode/deploy.env` (they used to be built into the scripts; without them the physical server deploy stops);
+   - a staging domain now lives in `mininode.config.json` (`environments.staging.domain`), no longer in the variable `STAGING_DOMAIN`;
+   - sign-in limits in Supabase drop to 10 per 5 minutes per address (people behind one router share it) and passwords need 12 characters;
+   - old Wine containers carry the label `app.mininode.app`: `docker rm -f` them once, new ones use `app.mininode.slug`.
+0. **Anywhere-installable work (ADR 0026), nothing merged yet:**
+   - The desktop edition ran end to end on Linux in this session (installer, login in a real browser, two apps, backup, restore, password reset). **Not tested on real Windows or macOS or ARM hardware:** try `install.ps1` once on Windows and `install.sh` on a Mac.
+   - Review the starter ZIP once (`scripts/package-release.sh 0.1.0 /tmp/out`, then unpack it): it is built to carry nothing of this installation, and the build stops when it finds something; but read `docs/runbooks/setup-cloudflare.md` as a stranger would.
+   - License is PolyForm Noncommercial 1.0.0 (`LICENSE`, "Required Notice" names `Sulpharus`): change the notice if the licensor should be named differently. Apps you export need their own license.
+   - The migrations `…_app_identity` and `…_app_catalog` no longer seed an origin backfill and the "ATT" link tile (already applied here; a new installation starts empty).
 0. **Check in Verwaltung → Hochladen and Apps (nothing the code can do for you):** the page still
    says "Der automatische Einbau ist noch nicht eingerichtet" until `LIBRARY_DISPATCH_TOKEN`
    (fine-grained token, Actions: read and write, secret of the GitHub environment `production`)
@@ -141,20 +152,20 @@ since the PR #12 deploy. Earlier deploys stopped at medialog and never shipped t
 3. **Google (sign-in, Gmail and Calendar in apps, Kalender sync):** the code is complete, but the
    deploy skips it because the GitHub environment `production` has no `GOOGLE_CLIENT_ID`,
    `GOOGLE_CLIENT_SECRET` or `GOOGLE_TOKEN_KEY` (checked in the 2026-10-20 deploy logs). Create the
-   OAuth client (`first-setup.md` §3.1), add the three secrets (`GOOGLE_TOKEN_KEY`: `openssl rand
+   OAuth client (`setup-cloudflare.md` (section 9, Google)), add the three secrets (`GOOGLE_TOKEN_KEY`: `openssl rand
    -base64 32`, keep a copy), run a deploy, then connect Google under "Dein Konto" and switch on
    "Google Kalender" in the Kalender. Until then *Dein Konto* shows the admin a card with these
    steps.
-3. NucBox setup (`nucbox-install.md`): `vars.NUCBOX_TUNNEL_ID`, deploy SSH key, Access
+3. Physical server setup (`nucbox-install.md`): `vars.NUCBOX_TUNNEL_ID`, deploy SSH key, Access
    secrets. Container apps and the App-Bibliothek need it.
 4. GitHub tokens:
    - `LIBRARY_DISPATCH_TOKEN`: Actions write, this repository. Starts the library and export
      workflows.
    - `CATALOG_TOKEN`: Contents read, this repository. Goes into `/etc/mininode/deploy.env` on
-     the NucBox.
+     the physical server.
    - `EXPORT_REPO_TOKEN`: Administration + Contents write, all repositories.
    - See `app-library.md` and `app-export.md`.
-5. Pick a license before sharing an exported app.
+5. Exported apps carry no license of their own: add one before sharing.
 
 ## Open and proposed work
 
@@ -172,7 +183,7 @@ since the PR #12 deploy. Earlier deploys stopped at medialog and never shipped t
   `mininode integrate`: it integrates by script, builds and passes doctor. It was not committed to
   `hosted/`; upload it again from Verwaltung when wanted. Its scan/OCR feature needs image support
   in the AI proxy (not there yet, see ADR 0013). The zip held one app although two were announced.
-- **Not tested on production:** the upload workflows, the R2 upload, the NucBox program install
+- **Not tested on production:** the upload workflows, the R2 upload, the physical server program install
   and the personal-key proxy path run only against unit tests and the local database. Try each once
   with a small file before relying on it. The e2e stack has no API Worker, so saving a key and
   starting an upload are not covered by Playwright.

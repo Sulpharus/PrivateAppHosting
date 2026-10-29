@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router';
+import { withDomain } from '../lib/host.ts';
+import { repoUrl } from '../lib/instance.ts';
 import { renderMarkdown } from '../lib/markdown.ts';
 import { findArticle, WIKI_ARTICLES } from '../lib/wiki.ts';
 import { type Article, CATEGORIES, searchArticles } from '../lib/wikiLib.ts';
@@ -8,10 +10,8 @@ import { type Article, CATEGORIES, searchArticles } from '../lib/wikiLib.ts';
 // reference pages generated from the repository). Every article has an "Bearbeiten" link to its
 // file on GitHub: the wiki is updated together with the system (docs/wiki/wissen-pflegen.md).
 
-const REPO = 'https://github.com/Sulpharus/PrivateAppHosting';
-
 /** Scrolls to a heading and moves focus there; no animation when the person asked for none. */
-export function goToHeading(id: string): void {
+function goToHeading(id: string): void {
   const target = document.getElementById(id);
   if (!target) return;
   const calm = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
@@ -140,7 +140,10 @@ function ArticleLink({ article }: { article: Article }) {
 
 function ArticleView({ slug }: { slug: string }) {
   const article = findArticle(slug);
-  const rendered = useMemo(() => (article ? renderMarkdown(article.body) : null), [article]);
+  const rendered = useMemo(
+    () => (article ? renderMarkdown(withDomain(article.body)) : null),
+    [article],
+  );
   // A new article starts at the top, like a new page.
   const { pathname } = useLocation();
   useEffect(() => {
@@ -214,14 +217,19 @@ function ArticleView({ slug }: { slug: string }) {
       {!article.generated && (
         <p className="muted" style={{ fontSize: 14 }}>
           Fehlt etwas oder stimmt etwas nicht mehr?{' '}
-          <a
-            href={`${REPO}/edit/main/docs/wiki/${article.slug}.md`}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Artikel bearbeiten
-          </a>
-          . Das Wiki wird zusammen mit dem System gepflegt (
+          {repoUrl() && (
+            <>
+              <a
+                href={`${repoUrl()}/edit/main/docs/wiki/${article.slug}.md`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Artikel bearbeiten
+              </a>
+              .{' '}
+            </>
+          )}
+          Das Wiki wird zusammen mit dem System gepflegt (
           <Link to="/admin/wiki/wissen-pflegen">wie</Link>
           ).
         </p>

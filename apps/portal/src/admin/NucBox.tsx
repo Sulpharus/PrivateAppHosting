@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { ApiError, api } from '../lib/api.ts';
 import { dateTime } from './AdminLayout.tsx';
 
-// What the NucBox uses and what is left: the Proxmox host, its VMs and storage, and the
+// What the physical server uses and what is left: the Proxmox host, its VMs and storage, and the
 // containers on the Linux VM (nucbox-control → GET /resources). Refreshes every 15 seconds.
 
 interface Usage {
@@ -70,7 +70,9 @@ export function NucBox() {
       setReport(await api<Report>('/admin/nucbox/resources'));
       setError(null);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Die NucBox ist gerade nicht erreichbar.');
+      setError(
+        err instanceof ApiError ? err.message : 'Die Server-Hardware ist gerade nicht erreichbar.',
+      );
     }
   }, []);
 

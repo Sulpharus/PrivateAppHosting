@@ -6,7 +6,7 @@ import type { Config } from './config.ts';
 import type { DockerEngine } from './docker.ts';
 import type { Hypervisor } from './proxmox.ts';
 
-export type RuntimeName = 'windows' | 'wine' | 'android';
+type RuntimeName = 'windows' | 'wine' | 'android';
 
 export interface PrepareRequest {
   app: string;
@@ -14,7 +14,7 @@ export interface PrepareRequest {
   program: string;
 }
 
-export interface GuacConnection {
+interface GuacConnection {
   protocol: 'rdp' | 'vnc';
   parameters: Record<string, string>;
 }
@@ -26,7 +26,7 @@ export type PrepareResult =
 export class RuntimeUnavailable extends Error {}
 
 const WINE_LABEL = 'app.mininode.runtime=wine';
-export const wineContainer = (slug: string) => `mn-wine-${slug}`;
+const wineContainer = (slug: string) => `mn-wine-${slug}`;
 export const wineVolume = (slug: string) => `mn-wine-${slug}`;
 
 type RuntimeConfig = Pick<
@@ -87,7 +87,8 @@ export function createScheduler(options: {
           hostname: config.WINDOWS_HOST,
           port: '3389',
           username: config.WINDOWS_RDP_USER,
-          password: config.WINDOWS_RDP_PASSWORD,
+          // Set whenever a Proxmox host is configured (config.ts); without one wake() already failed.
+          password: config.WINDOWS_RDP_PASSWORD ?? '',
           security: 'nla',
           'ignore-cert': 'true',
           // The alias is registered in TSAppAllowList by the installer (install.ts).
@@ -102,7 +103,7 @@ export function createScheduler(options: {
 
   async function prepareWine(request: PrepareRequest): Promise<PrepareResult> {
     if (!config.WINE_ENABLED)
-      throw new RuntimeUnavailable('Wine ist auf dieser NucBox deaktiviert.');
+      throw new RuntimeUnavailable('Wine ist auf dieser Server-Hardware deaktiviert.');
     const name = wineContainer(request.app);
     let info = await docker.inspect(name);
     if (!info?.running) {
@@ -114,7 +115,7 @@ export function createScheduler(options: {
         env: { PROGRAM: request.program, VNC_PASSWORD: password, LANG: 'de_DE.UTF-8' },
         labels: {
           'app.mininode.runtime': 'wine',
-          'app.mininode.app': request.app,
+          'app.mininode.slug': request.app,
           'app.mininode.vnc-password': password,
         },
         network: config.DOCKER_NETWORK,
@@ -169,7 +170,7 @@ export function createScheduler(options: {
       }
       for (const container of await docker.list(WINE_LABEL)) {
         if (!container.running) continue;
-        const app = container.labels['app.mininode.app'] ?? '';
+        const app = container.labels['app.mininode.slug'] ?? '';
         const used = lastUsed.get(app) ?? startedAt;
         if (t - used > config.WINE_IDLE_MINUTES * 60_000) {
           await docker.stop(container.name);

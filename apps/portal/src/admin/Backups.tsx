@@ -9,6 +9,7 @@ import {
   STATE_LABEL,
   STATE_TONE,
 } from '../lib/backups.ts';
+import { repoUrl } from '../lib/instance.ts';
 import { formatSize } from '../lib/submissions.ts';
 import { dateTime } from './AdminLayout.tsx';
 
@@ -16,7 +17,7 @@ import { dateTime } from './AdminLayout.tsx';
 // stored files, settings; one password-protected archive); this page starts it, shows the runs and
 // hands out the download. Restoring is a command on the owner's computer (runbook backups.md).
 
-const RUNBOOK = 'https://github.com/Sulpharus/PrivateAppHosting/blob/main/docs/runbooks/backups.md';
+const RUNBOOK = repoUrl() ? `${repoUrl()}/blob/main/docs/runbooks/backups.md` : '';
 
 export function Backups() {
   const { run } = useStepUp();
@@ -212,9 +213,13 @@ export function Backups() {
           <li>
             Wiederherstellen geht auf deinem Rechner mit{' '}
             <span className="mono">pnpm mininode backup restore</span>:{' '}
-            <a href={RUNBOOK} target="_blank" rel="noopener noreferrer">
-              Anleitung
-            </a>
+            {RUNBOOK ? (
+              <a href={RUNBOOK} target="_blank" rel="noopener noreferrer">
+                Anleitung
+              </a>
+            ) : (
+              'siehe docs/runbooks/backups.md'
+            )}
             .
           </li>
         </ul>

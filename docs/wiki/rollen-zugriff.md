@@ -51,5 +51,5 @@ der Authenticator-App. Siehe [Anmeldung](wiki:anmeldung).
 
 Verwaltung → **Nutzer & Rollen** → Abschnitt *Neue Einladung*: Rolle wählen, Apps wählen, **Einladungslink erstellen** und den Link der Person schicken
 (Messenger). Der Link öffnet eine Seite mit einem **Weiter**-Knopf; erst der Klick löst den Link ein, damit Mail-Scanner ihn
-nicht verbrauchen. E-Mail-Versand ist aus, solange Cloudflare Email Sending nicht eingeschaltet ist (`first-setup.md`).
+nicht verbrauchen. E-Mail-Versand ist aus, solange Cloudflare Email Sending nicht eingeschaltet ist (`setup-cloudflare.md`).
 Rollen ändern und Nutzer löschen geht auf derselben Seite.

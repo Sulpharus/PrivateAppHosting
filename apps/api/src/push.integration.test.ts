@@ -17,20 +17,20 @@ const enabled = Boolean(url && publishableKey && secretKey && dbUrl);
 
 describe('absoluteUrl', () => {
   it('opens app paths on the app subdomain and portal paths on the portal', () => {
-    expect(absoluteUrl('https://mininode.app', 'todo', '/heute')).toBe(
-      'https://todo.mininode.app/heute',
+    expect(absoluteUrl('https://example.org', 'todo', '/heute')).toBe(
+      'https://todo.example.org/heute',
     );
-    expect(absoluteUrl('https://mininode.app', 'todo', null)).toBe('https://todo.mininode.app/');
-    expect(absoluteUrl('https://mininode.app', null, '/account')).toBe(
-      'https://mininode.app/account',
+    expect(absoluteUrl('https://example.org', 'todo', null)).toBe('https://todo.example.org/');
+    expect(absoluteUrl('https://example.org', null, '/account')).toBe(
+      'https://example.org/account',
     );
   });
 
   it('never leaves the portal and its apps', () => {
     for (const url of ['//evil.example/x', '/\\evil.example', 'https://evil.example/'])
-      expect(absoluteUrl('https://mininode.app', 'todo', url)).toBe('https://todo.mininode.app/');
-    expect(absoluteUrl('https://mininode.app', null, 'https://rezepte.mininode.app/a')).toBe(
-      'https://rezepte.mininode.app/a',
+      expect(absoluteUrl('https://example.org', 'todo', url)).toBe('https://todo.example.org/');
+    expect(absoluteUrl('https://example.org', null, 'https://rezepte.example.org/a')).toBe(
+      'https://rezepte.example.org/a',
     );
   });
 });
@@ -85,8 +85,8 @@ describe.skipIf(!enabled)('push delivery', () => {
       SUPABASE_URL: url,
       SUPABASE_PUBLISHABLE_KEY: publishableKey,
       SUPABASE_SECRET_KEY: secretKey,
-      PORTAL_URL: 'https://mininode.app',
-      MAIL_FROM: 'hallo@mininode.app',
+      PORTAL_URL: 'https://example.org',
+      MAIL_FROM: 'hallo@example.org',
       VAPID_PUBLIC_KEY: toBase64Url(
         new Uint8Array((await crypto.subtle.exportKey('raw', pair.publicKey)) as ArrayBuffer),
       ),
@@ -135,7 +135,7 @@ describe.skipIf(!enabled)('push delivery', () => {
     expect(open(phone?.body ?? new Uint8Array())).toEqual({
       title: 'Müll rausbringen',
       body: 'Heute',
-      url: `https://${slug}.mininode.app/heute`,
+      url: `https://${slug}.example.org/heute`,
       tag: expect.any(String),
     });
     const devices =
@@ -182,9 +182,7 @@ describe.skipIf(!enabled)('push delivery', () => {
       env,
     );
     expect(again.status).toBe(429);
-    expect(open(received.at(-1)?.body ?? new Uint8Array()).url).toBe(
-      'https://mininode.app/account',
-    );
+    expect(open(received.at(-1)?.body ?? new Uint8Array()).url).toBe('https://example.org/account');
   });
 
   it('publishes the VAPID public key for the portal', async () => {

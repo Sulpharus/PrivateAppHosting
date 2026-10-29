@@ -1,4 +1,4 @@
-// App library (ADR 0011): curated self-hostable programs that the admin installs on the NucBox.
+// App library (ADR 0011): curated self-hostable programs that the admin installs on the physical server.
 // The catalog lives in infra/nucbox/library.json; nucbox-deploy reads the same file from main
 // and applies the same limits (keep both in sync).
 

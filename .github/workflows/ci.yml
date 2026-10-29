@@ -33,6 +33,8 @@ jobs:
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test
+      - name: Worker and Supabase config match mininode.config.json
+        run: pnpm mininode configure --check
       - name: Doctor all hosted apps
         run: pnpm mininode doctor --all
       - name: Patched Craft builds
@@ -64,9 +66,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+      # The starter package regenerates its lockfile.
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
       - name: Shellcheck
         run: |
-          shellcheck -S warning infra/cloudflare/*.sh infra/nucbox/deploy/nucbox-deploy \
+          shellcheck -S warning infra/cloudflare/*.sh infra/desktop/install.sh infra/desktop/mininode-desktop infra/nucbox/deploy/nucbox-deploy \
             infra/nucbox/deploy/test.sh infra/nucbox/wine/entrypoint.sh infra/nucbox/backup/*.sh scripts/*.sh
       - name: nucbox-deploy rollouts (stubbed docker)
         run: |
@@ -93,12 +102,76 @@ jobs:
         run: |
           docker run -d --name control -p 8080:8080 \
             -e CONTROL_TOKEN=$(openssl rand -hex 32) -e SUPABASE_URL=https://example.supabase.co \
-            -e SUPABASE_PUBLISHABLE_KEY=x -e PROXMOX_URL=https://127.0.0.1:8006 -e PROXMOX_TOKEN=x \
+            -e SUPABASE_PUBLISHABLE_KEY=x -e PORTAL_URL=https://example.org -e PROXMOX_URL=https://127.0.0.1:8006 -e PROXMOX_TOKEN=x \
             -e WINDOWS_RDP_PASSWORD=x mininode-nucbox-control:ci
           for i in $(seq 1 20); do curl -fsS localhost:8080/health && break; sleep 1; done
-          code=$(curl -s -o /dev/null -w '%{http_code}' -H 'X-Forwarded-Host: demo.mininode.app' \
+          code=$(curl -s -o /dev/null -w '%{http_code}' -H 'X-Forwarded-Host: demo.example.org' \
             -H 'Sec-Fetch-Mode: navigate' localhost:8080/auth)
           test "$code" = 302 || { docker logs control; exit 1; }
+
+  starter:
+    name: Starter package installs and passes its own checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Build the starter (also scans it for identifiers of this installation)
+        run: scripts/make-starter.sh ci "$RUNNER_TEMP/out"
+      - name: Unpack, set up an installation, run its checks
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP" && unzip -q out/mininode-starter-ci.zip && cd mininode-starter-ci
+          test -z "$(find hosted -mindepth 1 ! -name README.md)"
+          pnpm install --frozen-lockfile
+          pnpm mininode init --domain apps.example.org --zone example.org --accountId 0123456789abcdef0123456789abcdef \
+            --supabaseRef abcdefghijklmnopqrst --publishableKey sb_publishable_0123456789abcdef --repository me/platform
+          pnpm mininode configure --check
+          pnpm check
+          pnpm mininode doctor --all
+
+  desktop:
+    name: Desktop edition installs and signs in
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install (the real installer)
+        env:
+          MININODE_ADMIN_PASSWORD: ci-password-${{ github.run_id }}-abcdef
+        run: infra/desktop/install.sh --dir "$RUNNER_TEMP/mininode" --admin-email ci@example.org
+      - name: Sign in through the host, with the keys made by the installer
+        env:
+          PASSWORD: ci-password-${{ github.run_id }}-abcdef
+        run: |
+          set -euo pipefail
+          key=$(sed -n "s/^SUPABASE_PUBLISHABLE_KEY='\(.*\)'\$/\1/p" "$RUNNER_TEMP/mininode/.env")
+          curl -fsS http://mininode.localhost:8787/config.json | jq -e '.supabaseUrl == "http://supabase.mininode.localhost:8787"'
+          curl -fsS http://supabase.mininode.localhost:8787/auth/v1/.well-known/jwks.json | jq -e '.keys | length == 1 and (.[0] | has("d") | not)'
+          token=$(curl -fsS -X POST 'http://supabase.mininode.localhost:8787/auth/v1/token?grant_type=password' \
+            -H "apikey: $key" -H 'Content-Type: application/json' \
+            -d "{\"email\":\"ci@example.org\",\"password\":\"$PASSWORD\"}" | jq -r .access_token)
+          claims=$(printf '%s' "$token" | cut -d. -f2 | tr '_-' '/+' | base64 -d 2>/dev/null || true)
+          echo "$claims" | jq -e '.mn_role == "admin" and .iss == "http://supabase.mininode.localhost:8787/auth/v1"'
+          # The data API answers a signed-in admin, and refuses a visitor.
+          curl -fsS "http://supabase.mininode.localhost:8787/rest/v1/profiles?select=role" -H "apikey: $key" \
+            -H "Authorization: Bearer $token" -H 'Accept-Profile: platform' | jq -e '.[0].role == "admin"'
+          code=$(curl -s -o /dev/null -w '%{http_code}' "http://supabase.mininode.localhost:8787/rest/v1/profiles?select=role" \
+            -H "apikey: $key" -H 'Accept-Profile: platform')
+          test "$code" != 200
+          # First-run setup is closed for good once the installer made the admin.
+          curl -fsS http://api.mininode.localhost:8787/setup | jq -e '.open == false'
+          code=$(curl -s -o /dev/null -w '%{http_code}' -X POST http://api.mininode.localhost:8787/setup \
+            -H 'Content-Type: application/json' -d '{"email":"intruder@example.org","password":"another long password"}')
+          test "$code" = 409
+      - name: Containers on failure
+        if: failure()
+        run: |
+          cd "$RUNNER_TEMP/mininode" && docker compose ps && docker compose logs --tail 60
 
   database:
     name: Database, integration and e2e

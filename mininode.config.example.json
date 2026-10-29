@@ -1,0 +1,13 @@
+{
+  "cloudflare": { "accountId": "00000000000000000000000000000000" },
+  "github": { "repository": "your-name/your-repository" },
+  "environments": {
+    "production": {
+      "domain": "apps.example.com",
+      "supabase": {
+        "projectRef": "abcdefghijklmnopqrst",
+        "publishableKey": "sb_publishable_replace_with_your_publishable_key"
+      }
+    }
+  }
+}

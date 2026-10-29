@@ -36,7 +36,7 @@ marked experimental and needs an explicit client opt-in.
   `platform.has_grant` and `platform.is_admin` require an aal2 session once the user has a
   verified factor, so the portal, the gate and every app's RLS follow without their own checks.
   The access token hook reports `mn_role: user` and `mn_mfa: pending` until the code is
-  verified, so the API and NucBox (which trust `mn_role`) follow too, and the gate sends such
+  verified, so the API and physical server (which trust `mn_role`) follow too, and the gate sends such
   sessions to the portal's code step.
   A passkey sign-in (AMR method `webauthn`) counts as enough on its own, because it already
   proves possession of a device. The e2e test `e2e/mfa.spec.ts` covers that exemption; re-run it

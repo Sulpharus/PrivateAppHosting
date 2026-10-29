@@ -5,7 +5,7 @@ import { createGame, PING_MS } from './game.ts';
 
 const config = {
   appSlug: 'memory',
-  portalUrl: 'https://mininode.app',
+  portalUrl: 'https://example.org',
 } as MininodeConfig;
 
 function fakeSupabase(fail = false) {
@@ -93,6 +93,6 @@ describe('mn.game', () => {
       fn: 'game_result',
       args: { p_outcome: 'win', p_stats: { moves: 24 }, p_seconds: 95 },
     });
-    expect(game.hubUrl()).toBe('https://mininode.app/games/memory');
+    expect(game.hubUrl()).toBe('https://example.org/games/memory');
   });
 });

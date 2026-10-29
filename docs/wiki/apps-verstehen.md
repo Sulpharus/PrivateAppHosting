@@ -25,7 +25,7 @@ Mehr zur Technik: [Überblick](wiki:ueberblick).
 
 ## Die Adresse (Slug)
 
-Der **Slug** ist der Name und die Adresse: `rezepte` → `https://rezepte.mininode.app`. Er hat 2 bis 32 Zeichen,
+Der **Slug** ist der Name und die Adresse: `rezepte` → `https://rezepte.{{domain}}`. Er hat 2 bis 32 Zeichen,
 Kleinbuchstaben, Ziffern und einzelne Bindestriche, beginnt mit einem Buchstaben. Reserviert (nicht vergebbar) sind
 `admin`, `ai`, `api`, `auth`, `control`, `guac`, `login`, `mail`, `proxmox`, `remote`, `ssh`, `staging`, `status`, `www`.
 Einmal vergeben, ändert man den Slug nicht mehr (Daten und Freigaben hängen daran).

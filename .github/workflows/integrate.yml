@@ -39,8 +39,6 @@ concurrency:
 
 env:
   DEPLOY_ENV: ${{ inputs.environment }}
-  SUPABASE_URL: ${{ inputs.environment == 'production' && 'https://ojicmpgqvoyakigvubek.supabase.co' || 'https://ttgrtecdqouiogiwcjag.supabase.co' }}
-  SUPABASE_PUBLISHABLE_KEY: ${{ inputs.environment == 'production' && 'sb_publishable_jv1tZqYWg51sNxJ5-GjMMw_tZqa1s1C' || 'sb_publishable_zQfFz-ruNPkIQauwa253iw_4zOZmiOB' }}
   SUBMISSION: ${{ inputs.submission }}
   RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
@@ -52,11 +50,13 @@ jobs:
     environment: ${{ inputs.environment }}
     env:
       SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
-      STAGING_DOMAIN: ${{ vars.STAGING_DOMAIN }}
     steps:
       - uses: actions/checkout@v5
         with:
           persist-credentials: false
+      - uses: ./.github/actions/load-config
+        with:
+          environment: ${{ inputs.environment }}
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v5
         with:
@@ -85,6 +85,9 @@ jobs:
       - uses: actions/checkout@v5
         with:
           persist-credentials: false
+      - uses: ./.github/actions/load-config
+        with:
+          environment: ${{ inputs.environment }}
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v5
         with:
@@ -132,7 +135,6 @@ jobs:
       issues: write
     env:
       SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
-      STAGING_DOMAIN: ${{ vars.STAGING_DOMAIN }}
       GH_TOKEN: ${{ secrets.INTEGRATE_TOKEN || github.token }}
       CODE: ${{ needs.build.outputs.code }}
       AUTOMERGE: ${{ vars.INTEGRATE_AUTOMERGE }}
@@ -141,6 +143,9 @@ jobs:
         with:
           fetch-depth: 0
           token: ${{ secrets.INTEGRATE_TOKEN || github.token }}
+      - uses: ./.github/actions/load-config
+        with:
+          environment: ${{ inputs.environment }}
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v5
         with:

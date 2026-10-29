@@ -1,4 +1,4 @@
-# Playbook: Python server (runs on the NucBox)
+# Playbook: Python server (runs on the physical server)
 
 Same contract as [node-server](node-server.md) — container, forward-auth headers, `/health`,
 Supabase with the user's token — with Python specifics:

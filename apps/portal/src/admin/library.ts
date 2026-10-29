@@ -31,7 +31,7 @@ export const LIBRARY: Library = {
   modules: sortParts(Object.values(modules).map(parsePart)),
 };
 
-export interface BuildFile {
+interface BuildFile {
   name: string;
   title: string;
   description: string;

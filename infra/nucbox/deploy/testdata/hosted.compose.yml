@@ -5,7 +5,7 @@ networks:
     external: true
 services:
   app:
-    image: ghcr.io/sulpharus/mininode-rezepte@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+    image: ghcr.io/owner/mininode-rezepte@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
     container_name: app-rezepte
     # Apps never run as root, whatever their Dockerfile says.
     user: "10001:10001"
@@ -29,7 +29,7 @@ services:
       options: { max-size: "10m", max-file: "3" }
     labels:
       traefik.enable: "true"
-      traefik.http.routers.rezepte.rule: Host(`rezepte.mininode.app`)
+      traefik.http.routers.rezepte.rule: Host(`rezepte.example.org`)
       traefik.http.routers.rezepte.entrypoints: web
       traefik.http.routers.rezepte.middlewares: mininode-strip@file,mininode-auth@file,mininode-headers@file
       traefik.http.services.rezepte.loadbalancer.server.port: "3000"

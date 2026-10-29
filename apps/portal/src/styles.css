@@ -894,7 +894,7 @@ code,
   background: var(--bad);
 }
 
-/* NucBox usage: label and value above each bar */
+/* physical server usage: label and value above each bar */
 .usage {
   display: flex;
   flex-direction: column;

@@ -3,6 +3,7 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   rmSync,
   symlinkSync,
@@ -12,8 +13,16 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { exportApp, instanceIdentifiers, MARKER, scanText } from './export.ts';
+import { loadInstanceConfig } from './instance/load.ts';
 
 const ROOT = resolve(import.meta.dirname, '../../..');
+// A fresh copy of the platform (the starter ZIP) has neither a git history nor apps.
+const IS_CHECKOUT = existsSync(join(ROOT, '.git'));
+const HAS_APPS =
+  existsSync(join(ROOT, 'hosted')) &&
+  readdirSync(join(ROOT, 'hosted')).some((name) =>
+    existsSync(join(ROOT, 'hosted', name, 'mininode.json')),
+  );
 const dirs: string[] = [];
 afterEach(() => {
   for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true });
@@ -38,14 +47,20 @@ function repo(
   for (const [name, target] of Object.entries(links)) symlinkSync(target, join(app, name));
   mkdirSync(join(root, '.github/workflows'), { recursive: true });
   writeFileSync(
-    join(root, '.github/workflows/deploy.yml'),
-    `  CLOUDFLARE_ACCOUNT_ID: ${ACCOUNT}\n  SUPABASE_PROJECT_REF: \${{ x && 'abcdefghijklmnopqrst' || 'tsrqponmlkjihgfedcba' }}\n`,
+    join(root, 'mininode.config.json'),
+    JSON.stringify({
+      cloudflare: { accountId: ACCOUNT },
+      environments: {
+        production: { supabase: { projectRef: 'abcdefghijklmnopqrst' } },
+        staging: { supabase: { projectRef: 'tsrqponmlkjihgfedcba' } },
+      },
+    }),
   );
   // An untracked local file that must never reach an export.
   writeFileSync(join(root, '.env.local'), ['DB', 'PASSWORD=not-a-real-one'].join('_'));
   const git = (...args: string[]) => spawnSync('git', args, { cwd: root, encoding: 'utf8' });
   git('init', '-q');
-  git('add', '-A', '--', 'hosted', '.github');
+  git('add', '-A', '--', 'hosted', '.github', 'mininode.config.json');
   git('-c', 'user.name=Owner Person', '-c', 'user.email=owner@private.test', 'commit', '-qm', 'i');
   return { root, app };
 }
@@ -76,18 +91,21 @@ describe('mininode export', () => {
     );
   });
 
-  it('finds the Cloudflare account and both Supabase projects of this repository', () => {
-    const ids = instanceIdentifiers(ROOT);
-    const deploy = readFileSync(join(ROOT, '.github/workflows/deploy.yml'), 'utf8');
-    const account = /CLOUDFLARE_ACCOUNT_ID:\s*([a-f0-9]{32})/.exec(deploy)?.[1];
-    expect(account).toBeDefined();
-    expect(ids).toContain(account);
-    for (const ref of deploy.match(/'[a-z]{20}'/g) ?? []) expect(ids).toContain(ref.slice(1, -1));
-  });
+  it.skipIf(!IS_CHECKOUT || !existsSync(join(ROOT, 'mininode.config.json')))(
+    'finds the Cloudflare account and both Supabase projects of this repository',
+    () => {
+      const ids = instanceIdentifiers(ROOT);
+      const config = loadInstanceConfig(ROOT);
+      expect(ids).toContain(config.cloudflare.accountId);
+      expect(ids).toContain(config.environments.production.supabase.projectRef);
+      if (config.environments.staging)
+        expect(ids).toContain(config.environments.staging.supabase.projectRef);
+    },
+  );
 
   it('refuses to run when the instance settings cannot be found', () => {
     const { root } = repo({ 'mininode.json': manifest });
-    writeFileSync(join(root, '.github/workflows/deploy.yml'), 'jobs: {}\n');
+    writeFileSync(join(root, 'mininode.config.json'), '{}');
     expect(() => instanceIdentifiers(root)).toThrow('refusing to export');
   });
 
@@ -195,20 +213,24 @@ describe('mininode export', () => {
     expect(readFileSync(join(other, 'keep.txt'), 'utf8')).toBe('mine');
   });
 
-  it('exports every hosted app of this repository without findings', () => {
-    const hosted = spawnSync('git', ['ls-files', 'hosted/*/mininode.json'], {
-      cwd: ROOT,
-      encoding: 'utf8',
-    })
-      .stdout.split('\n')
-      .filter(Boolean);
-    expect(hosted.length).toBeGreaterThan(0);
-    for (const file of hosted) {
-      const out = mkdtempSync(join(tmpdir(), 'mn-export-out-'));
-      dirs.push(out);
-      const result = exportApp(ROOT, join(ROOT, file, '..'), out);
-      expect(result.findings, file).toEqual([]);
-    }
-    // One export per hosted app: slow on a busy CI runner, so the default 5 s is too tight.
-  }, 60_000);
+  it.skipIf(!IS_CHECKOUT || !HAS_APPS)(
+    'exports every hosted app of this repository without findings',
+    () => {
+      const hosted = spawnSync('git', ['ls-files', 'hosted/*/mininode.json'], {
+        cwd: ROOT,
+        encoding: 'utf8',
+      })
+        .stdout.split('\n')
+        .filter(Boolean);
+      expect(hosted.length).toBeGreaterThan(0);
+      for (const file of hosted) {
+        const out = mkdtempSync(join(tmpdir(), 'mn-export-out-'));
+        dirs.push(out);
+        const result = exportApp(ROOT, join(ROOT, file, '..'), out);
+        expect(result.findings, file).toEqual([]);
+      }
+      // One export per hosted app: slow on a busy CI runner, so the default 5 s is too tight.
+    },
+    60_000,
+  );
 });

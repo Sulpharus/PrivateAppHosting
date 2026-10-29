@@ -6,13 +6,13 @@
 // lists (nested, ordered and not), tables, > quotes, --- rules and links (https, /admin paths,
 // #anchors and wiki:<slug> for another article).
 
-export interface Heading {
+interface Heading {
   level: number;
   text: string;
   id: string;
 }
 
-export interface Rendered {
+interface Rendered {
   html: string;
   headings: Heading[];
 }
@@ -25,7 +25,7 @@ const ESCAPES: Record<string, string> = {
   "'": '&#39;',
 };
 
-export function escapeHtml(text: string): string {
+function escapeHtml(text: string): string {
   return text.replace(/[&<>"']/g, (c) => ESCAPES[c] ?? c);
 }
 
@@ -145,7 +145,7 @@ const isSeparator = (line: string): boolean =>
   /^\s*\|?(\s*:?-{2,}:?\s*\|)+\s*:?-{2,}:?\s*\|?\s*$/.test(line) ||
   /^\s*\|\s*:?-{2,}:?\s*\|\s*$/.test(line);
 
-export interface RenderOptions {
+interface RenderOptions {
   /** Put in front of every heading id, so several texts on one page cannot share an id. */
   idPrefix?: string;
 }

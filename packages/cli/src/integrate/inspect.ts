@@ -42,7 +42,7 @@ export interface Inspection {
 }
 
 /** The Material Symbols style an app uses, or null. */
-export function iconFontStyle(texts: string[]): 'outlined' | 'rounded' | 'sharp' | null {
+function iconFontStyle(texts: string[]): 'outlined' | 'rounded' | 'sharp' | null {
   for (const text of texts) {
     const match =
       /material-symbols-(outlined|rounded|sharp)|Material[+ ]Symbols[+ ](Outlined|Rounded|Sharp)/i.exec(
@@ -102,13 +102,13 @@ export function serverRoutes(source: string): string[] {
 }
 
 /** The `<script type="module" src>` of the page. */
-export function htmlModuleEntry(html: string): string | null {
+function htmlModuleEntry(html: string): string | null {
   const tag = /<script\b[^>]*\btype=["']module["'][^>]*>/i.exec(html)?.[0] ?? '';
   const src = /\bsrc=["']([^"']+)["']/i.exec(tag)?.[1];
   return src && !/^https?:/i.test(src) ? src.replace(/^\.?\//, '') : null;
 }
 
-export function htmlProblems(html: string, file: string, inlineScripts: boolean): Reason[] {
+function htmlProblems(html: string, file: string, inlineScripts: boolean): Reason[] {
   const reasons: Reason[] = [];
   if (
     inlineScripts &&
@@ -137,7 +137,7 @@ export function htmlProblems(html: string, file: string, inlineScripts: boolean)
 }
 
 /** Registry versions only: no paths, git, tarball or workspace sources that could pull in other code. */
-export function isRegistrySpec(spec: string): boolean {
+function isRegistrySpec(spec: string): boolean {
   return /^[\^~<>=*xX0-9. |-]+$/.test(spec) || ['latest', 'next'].includes(spec);
 }
 
@@ -365,5 +365,5 @@ function statSize(root: string, file: string): number {
   return existsSync(path) ? statSync(path).size : 0;
 }
 
-export const isInstaller = (file: string) => INSTALLERS.test(file);
-export const fileExtension = (file: string) => extname(file).toLowerCase();
+const isInstaller = (file: string) => INSTALLERS.test(file);
+const fileExtension = (file: string) => extname(file).toLowerCase();

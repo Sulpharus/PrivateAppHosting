@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Nightly backup (systemd timer mininode-backup.timer, 03:30).
-# What:  Supabase database (pg_dump, custom format) + NucBox app data, platform config and
+# What:  Supabase database (pg_dump, custom format) + physical server app data, platform config and
 #        Wine prefixes. The Windows VM is backed up by Proxmox itself (vzdump job, see runbook).
 # Where: two restic repositories: local NVMe and R2 (both encrypted with RESTIC_PASSWORD).
 # Keep:  7 daily, 4 weekly, 6 monthly. Healthchecks.io is pinged on start/success/failure.

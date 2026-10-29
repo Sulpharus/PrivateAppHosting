@@ -27,6 +27,7 @@ const manifest = parsed.manifest;
 const production = environmentSettings('production', {
   SUPABASE_URL: 'https://p.supabase.co',
   SUPABASE_PUBLISHABLE_KEY: 'pk',
+  MININODE_DOMAIN: 'example.org',
 });
 
 describe('wrangler config', () => {
@@ -34,9 +35,9 @@ describe('wrangler config', () => {
     const config = appWranglerConfig({ manifest, env: production, assetsDir: '/tmp/a' });
     expect(config.name).toBe('mn-app-haushalt');
     expect(config.main).toBe(GATE_ENTRY);
-    expect(config.routes).toEqual([{ pattern: 'haushalt.mininode.app', custom_domain: true }]);
+    expect(config.routes).toEqual([{ pattern: 'haushalt.example.org', custom_domain: true }]);
     expect(config.assets.run_worker_first).toEqual(['/*', '!/assets/*']);
-    expect(config.vars).toMatchObject({ APP_SLUG: 'haushalt', PORTAL_URL: 'https://mininode.app' });
+    expect(config.vars).toMatchObject({ APP_SLUG: 'haushalt', PORTAL_URL: 'https://example.org' });
   });
 
   it('lets apps with a google block call the Google APIs', () => {

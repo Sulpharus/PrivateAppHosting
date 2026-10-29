@@ -12,6 +12,8 @@ const category = `Eigene ${run}`;
 const setName = `Start ${run}`;
 const older = `Tagebuch ${run}`;
 const newer = `Vokabeln ${run}`;
+const tile = 'Werkzeugkasten';
+const tileUrl = 'https://tools.example.org';
 
 test.beforeAll(async () => {
   await createUser(adminEmail, 'admin', 'Wolfram');
@@ -24,6 +26,8 @@ test.beforeAll(async () => {
   await grant(userId, `${run}-vokabeln`);
   await createApp(`${run}-geheim`, `Geheim ${run}`);
   await grant(userId, `${run}-geheim`);
+  await createApp(`${run}-werkzeug`, tile, { kind: 'link', target: 'external', link_url: tileUrl });
+  await grant(userId, `${run}-werkzeug`);
 });
 
 test.afterAll(async () => {
@@ -74,7 +78,7 @@ test('admin curates categories and sets; users filter, sort and keep favourites'
     category,
   );
 
-  // The user: the set, the ATT link tile, favourites, category filter and sorting.
+  // The user: the set, the link tile, favourites, category filter and sorting.
   await context.clearCookies();
   await signIn(page, userEmail);
   const set = page.getByRole('region', { name: setName });
@@ -87,8 +91,8 @@ test('admin curates categories and sets; users filter, sort and keep favourites'
     await page.setViewportSize({ width: 1280, height: 720 });
   }
 
-  const att = page.getByRole('link', { name: /ATT - Werkzeugkasten/ });
-  await expect(att).toHaveAttribute('href', 'https://att-allthetools.com');
+  const att = page.getByRole('link', { name: tile });
+  await expect(att).toHaveAttribute('href', tileUrl);
   await expect(att).toHaveAttribute('target', '_blank');
   await expect(att).toHaveAttribute('rel', 'noopener noreferrer');
 
@@ -147,6 +151,6 @@ test('whitelist: only the admin and chosen people see the app', async ({ page, c
 
   await context.clearCookies();
   await signIn(page, userEmail);
-  await expect(page.getByRole('link', { name: /ATT - Werkzeugkasten/ })).toBeVisible();
+  await expect(page.getByRole('link', { name: tile })).toBeVisible();
   await expect(page.getByRole('link', { name: new RegExp(secret) })).toHaveCount(0);
 });

@@ -20,6 +20,17 @@ Meist eine **zwischengespeicherte** PWA-Version: Seite neu laden oder die App sc
 | App mit Tabellen (Sportplaner, Haushalt, Medialog, Wunschliste) leer oder „konnten nicht geladen werden“, der Kalender zeigt die Termine aber noch | das Schema der App fehlt in der Daten-API. Die Daten sind da. Deploy starten (GitHub → Actions → *Deploy* → *Run workflow*): der Schritt *Expose the schemas* gibt alle wieder frei. Kam am 20.10. vor, weil `supabase config push` die Liste zurückgesetzt hat (behoben) |
 | App zeigt keine Daten | wird sie von ihrer eigenen Adresse aufgerufen? Daten gehen nur von dort ([App-Kit und SDK](wiki:app-kit-sdk)) |
 
+## Desktop-Version
+
+| Symptom | Ursache und Schritt |
+| --- | --- |
+| Installer: „Docker is installed but not running“ | Docker Desktop oder den Dienst starten, Installer erneut ausführen |
+| „port 8787 is already in use“ | `--port 8788` wählen oder das andere Programm beenden |
+| `mininode.localhost` lässt sich nicht öffnen | manche Systeme lösen `*.localhost` nicht auf: Chrome, Edge oder Firefox nehmen oder Einträge in die hosts-Datei schreiben (`mininode.localhost`, `api.`, `ai.`, `supabase.` und je App) |
+| Bauen bricht mit einem Zertifikatsfehler ab | Firmen-Proxy: sein Zertifikat mit `--ca-file` übergeben |
+| kurz nach dem Start Fehler 503 oder leere Daten | die Datenbank startet noch: eine Minute warten; `mininode-desktop logs rest` zeigt, wann sie bereit ist |
+| Passwort vergessen | `mininode-desktop password <E-Mail>` |
+
 ## Hochladen, Einbau, Deploy
 
 | Symptom | Ursache und Schritt |
@@ -64,7 +75,7 @@ Meist eine **zwischengespeicherte** PWA-Version: Seite neu laden oder die App sc
 | Lokal geht Docker/Supabase nicht | `scripts/cloud-stack.sh` (Cloud-Sitzung), dann `pnpm exec supabase db reset --local` |
 | Alter Dev-Server blockiert Port | Prozess per PID beenden (`ps -eo pid,args \| grep -E "[w]rangler\|[v]ite"`), nicht `pkill -f` |
 | Deploy bricht bei `supabase link` ab: „FGA Authentication Error. Unauthorized“ | Fehler der Supabase-Seite, nicht des Tokens (Projekt-Abfrage 200, Listen-Abfragen 500). Der Deploy versucht den Link jetzt bis zu 5-mal; sonst Deploy neu starten |
-| Eine App ist nach einem Deploy nicht auf dem neuesten Stand | Der Deploy vergleicht jede App mit `platform.apps.deployed_version` (Verwaltung → Apps zeigt sie). Alles neu ausliefern: Actions → Deploy → Run workflow → `all_apps`. Apps, die nur registriert werden (NucBox, Remote), bekommen ihre Version schon beim Registrieren; schlägt ihr Rollout-Job fehl, `all_apps` ausführen |
+| Eine App ist nach einem Deploy nicht auf dem neuesten Stand | Der Deploy vergleicht jede App mit `platform.apps.deployed_version` (Verwaltung → Apps zeigt sie). Alles neu ausliefern: Actions → Deploy → Run workflow → `all_apps`. Apps, die nur registriert werden (Server-Hardware, Remote), bekommen ihre Version schon beim Registrieren; schlägt ihr Rollout-Job fehl, `all_apps` ausführen |
 | Punkte im Monat sind weiß statt farbig | Der ausgewählte Tag ist dunkel; das Kit färbte dort alle Punkte in die Hintergrundfarbe. Der Kalender setzt jetzt die Quellenfarbe mit hellem Ring. Im Sportplaner sind **noch nicht erledigte** Einheiten im Modus „Geplant“ absichtlich Ringe, erledigte gefüllt |
 | Echte Schlüssel in Chat/Terminal gelandet | widerrufen, neu erstellen |
 

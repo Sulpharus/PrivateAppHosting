@@ -49,7 +49,7 @@ function copyTree(inspection: Inspection, outDir: string, drop: (file: string) =
 }
 
 /** The manifest the script writes: private data, login required, reviewed by the admin. */
-export function buildManifest(
+function buildManifest(
   ctx: ConvertContext,
   kind: 'spa' | 'static',
 ): ManifestInput & { $schema: string } {
@@ -161,7 +161,7 @@ function cleanAssets(ctx: ConvertContext, converted: Converted) {
  * origin) instead of Google, whose address the content security policy blocks. The full font is
  * large: `scripts/subset-icons.py` cuts it to the icons the app uses.
  */
-export const ICON_FONT_VERSION = '^0.47.6';
+const ICON_FONT_VERSION = '^0.47.6';
 
 /** An app that ships its own (smaller) copy of the font does not need the package. */
 const ownIconFont = (inspection: Inspection) =>

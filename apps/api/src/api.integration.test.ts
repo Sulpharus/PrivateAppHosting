@@ -31,8 +31,8 @@ describe.skipIf(!enabled)('api against local Supabase', () => {
     SUPABASE_URL: url,
     SUPABASE_PUBLISHABLE_KEY: publishableKey,
     SUPABASE_SECRET_KEY: secretKey,
-    PORTAL_URL: 'https://mininode.app',
-    MAIL_FROM: 'hallo@mininode.app',
+    PORTAL_URL: 'https://example.org',
+    MAIL_FROM: 'hallo@example.org',
     GUACAMOLE_URL: 'http://127.0.0.1:9',
     NUCBOX_CONTROL_URL: 'http://127.0.0.1:9',
     SEND_EMAIL_HOOK_SECRET: 'v1,whsec_c2VjcmV0',
@@ -116,7 +116,7 @@ describe.skipIf(!enabled)('api against local Supabase', () => {
     expect(res.status).toBe(201);
     const body = (await res.json()) as { id: string; link: string; emailSent: boolean };
     expect(body.emailSent).toBe(true);
-    expect(body.link).toMatch(/^https:\/\/mininode\.app\/auth\/confirm\?token_hash=.+&type=invite/);
+    expect(body.link).toMatch(/^https:\/\/example\.org\/auth\/confirm\?token_hash=.+&type=invite/);
     expect(sent.at(-1)).toMatchObject({ to: email });
 
     const { data: invite } = await admin
@@ -211,7 +211,7 @@ describe.skipIf(!enabled)('api against local Supabase', () => {
       token: adminToken,
     });
     expect(self.status).toBe(400);
-    expect(link).toMatch(/^https:\/\/mininode\.app\/auth\/confirm\?token_hash=.+&type=recovery/);
+    expect(link).toMatch(/^https:\/\/example\.org\/auth\/confirm\?token_hash=.+&type=recovery/);
   });
 
   it('deletes users only as admin and records it', async () => {

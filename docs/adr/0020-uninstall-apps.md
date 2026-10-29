@@ -30,7 +30,7 @@ did not exist). The owner wants to delete an installed app completely.
   is started again.
 - **Without purge** the data stays and the app is only offline; deploying it again brings it back.
 - **Not done by a workflow**, and said so in the dialog result: the data folder of a library
-  program on the NucBox, and a program that was installed in the Windows VM.
+  program on the physical server, and a program that was installed in the Windows VM.
 
 ## Consequences
 

@@ -15,7 +15,7 @@ export type SubmissionStatus =
   | 'dismissed'
   | 'queued';
 
-export interface StatusExtras {
+interface StatusExtras {
   pr?: string;
   review?: string;
   run?: string;

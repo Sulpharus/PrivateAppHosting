@@ -70,7 +70,7 @@ function p256Jwk(publicKey: Uint8Array, privateKey?: Uint8Array): JsonWebKey {
 const ecdhWith = (peer: CryptoKey) =>
   ({ name: 'ECDH', public: peer }) as unknown as SubtleCryptoDeriveKeyAlgorithm;
 
-export interface EncryptOptions {
+interface EncryptOptions {
   /** Test hooks: fixed sender key pair and salt instead of random ones. */
   senderKeys?: CryptoKeyPair;
   salt?: Uint8Array;

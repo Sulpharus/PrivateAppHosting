@@ -19,7 +19,7 @@ export interface AppSet {
   apps: string[];
 }
 
-export interface Usage {
+interface Usage {
   app_slug: string;
   opens: number;
   last_opened_at: string;

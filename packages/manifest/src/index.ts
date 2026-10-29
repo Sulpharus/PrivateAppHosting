@@ -1,11 +1,11 @@
 import { type Manifest, manifestSchema } from './schema.ts';
 
 export * from './i18n.ts';
+export * from './instance.ts';
 export * from './schema.ts';
 export { programName, slugify, type UploadKind, uploadKind } from './slug.ts';
 
 export const MANIFEST_FILENAME = 'mininode.json';
-export const PLATFORM_DOMAIN = 'mininode.app';
 
 export type ManifestResult = { ok: true; manifest: Manifest } | { ok: false; errors: string[] };
 
@@ -20,10 +20,6 @@ export function parseManifest(input: unknown): ManifestResult {
       return `${path}: ${issue.message}`;
     }),
   };
-}
-
-export function appHostname(slug: string): string {
-  return `${slug}.${PLATFORM_DOMAIN}`;
 }
 
 /** Postgres schema that holds an app's tables. Dashes are not valid in unquoted identifiers. */

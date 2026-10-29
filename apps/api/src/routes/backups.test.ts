@@ -9,8 +9,9 @@ const SUPABASE_URL = 'http://supabase.test';
 const env = {
   SUPABASE_URL,
   SUPABASE_SECRET_KEY: 'sb_secret_test',
-  PORTAL_URL: 'https://mininode.app',
+  PORTAL_URL: 'https://example.org',
   GITHUB_DISPATCH_TOKEN: 'gh-token',
+  GITHUB_REPO: 'owner/platform',
 } as unknown as ApiEnv;
 
 function signedIn(role: 'admin' | 'user', recent = true): void {

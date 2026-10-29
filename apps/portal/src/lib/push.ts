@@ -7,7 +7,7 @@ import { platform } from './supabase.ts';
 
 export type DeviceStatus = 'unsupported' | 'install-first' | 'denied' | 'on' | 'off';
 
-export function pushSupported(): boolean {
+function pushSupported(): boolean {
   return (
     typeof window !== 'undefined' &&
     'serviceWorker' in navigator &&
@@ -151,7 +151,7 @@ export function listenForRenewals(): void {
 export function pushErrorMessage(error: unknown): string {
   const text = error instanceof Error ? error.message : String(error);
   if (text === 'denied')
-    return 'Benachrichtigungen sind im Browser blockiert. Erlaube sie in den Website-Einstellungen für mininode.app.';
+    return `Benachrichtigungen sind im Browser blockiert. Erlaube sie in den Website-Einstellungen für ${location.hostname}.`;
   if (text === 'not_configured') return 'Push ist auf MiniNode noch nicht eingerichtet.';
   if (text === 'unsupported') return 'Dieser Browser unterstützt keine Push-Benachrichtigungen.';
   if (/no_devices|keinem Gerät/.test(text))

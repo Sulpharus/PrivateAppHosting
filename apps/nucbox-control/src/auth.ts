@@ -31,7 +31,7 @@ export function cachedGrants(check: GrantChecker, ttlMs = 60_000, now = Date.now
   };
 }
 
-/** `<slug>.mininode.app` → `slug`; anything else (apex, nested, foreign hosts) → null. */
+/** `<slug>.<domain>` → `slug`; anything else (apex, nested, foreign hosts) → null. */
 export function slugFromHost(host: string | null, platformDomain: string): string | null {
   if (!host) return null;
   const hostname = host.split(':')[0]?.toLowerCase() ?? '';

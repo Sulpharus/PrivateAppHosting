@@ -1,11 +1,11 @@
 # App-Bibliothek
 
-Install well-known programs (Jellyfin, n8n, Uptime Kuma, Stirling PDF) on the NucBox with one
+Install well-known programs (Jellyfin, n8n, Uptime Kuma, Stirling PDF) on the physical server with one
 click from Verwaltung → Hardware-Server → App-Bibliothek. See ADR 0011 for the design.
 
 ## One-time setup
 
-The NucBox must be running (`nucbox-install.md`) and `vars.NUCBOX_TUNNEL_ID` must be set.
+The physical server must be running (`nucbox-install.md`) and `vars.NUCBOX_TUNNEL_ID` must be set.
 
 1. **Dispatch token (GitHub → Cloudflare Worker).**
    - GitHub → Settings → Developer settings → Fine-grained tokens → *Generate new token*.
@@ -13,7 +13,7 @@ The NucBox must be running (`nucbox-install.md`) and `vars.NUCBOX_TUNNEL_ID` mus
      - Permissions: *Actions: Read and write*. Nothing else.
    - Save it as the secret `LIBRARY_DISPATCH_TOKEN` in the GitHub environment `production`.
    - The next deploy uploads it to the API Worker as `GITHUB_DISPATCH_TOKEN`.
-2. **Catalog token (NucBox).**
+2. **Catalog token (physical server).**
    - Create a second fine-grained token for the same repository with *Contents: Read-only*.
    - On the Linux VM, add it to the deploy settings:
 
@@ -31,7 +31,7 @@ The NucBox must be running (`nucbox-install.md`) and `vars.NUCBOX_TUNNEL_ID` mus
   - Progress and errors: GitHub → Actions → *App-Bibliothek*.
 - **Aktualisieren:** installs the version the catalog on `main` names now. Data stays.
 - **Entfernen:** stops the program and disables the app.
-  - The data stays in `/srv/mininode/apps/<slug>/data` on the NucBox.
+  - The data stays in `/srv/mininode/apps/<slug>/data` on the physical server.
   - Installing again at the same address brings it back with its data.
 
 First steps per program:
@@ -65,7 +65,7 @@ First steps per program:
 | --- | --- |
 | "GITHUB_DISPATCH_TOKEN fehlt" | Step 1 not done, or no deploy since. Run the Deploy workflow. |
 | "GitHub hat den Start abgelehnt (403/404)" | The token lacks *Actions: write* or is for another repository. |
-| Workflow step *nucbox-deploy* fails with "reading the library catalog failed" | `CATALOG_TOKEN` is missing or expired on the NucBox (step 2). |
+| Workflow step *nucbox-deploy* fails with "reading the library catalog failed" | `CATALOG_TOKEN` is missing or expired on the physical server (step 2). |
 | "… unhealthy, rolling back" | The program did not answer on its health path within 60 s. The log shows the last 50 lines. Common causes: too little memory, or a volume the image cannot write (check `user`). |
 | Workflow is skipped | `vars.NUCBOX_TUNNEL_ID` is empty, or it was not started from `main`. |
 | "ist schon vergeben" | Another app uses that address. Pick another one. |

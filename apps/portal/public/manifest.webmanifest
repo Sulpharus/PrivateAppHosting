@@ -1,7 +1,7 @@
 {
   "name": "MiniNode",
   "short_name": "MiniNode",
-  "description": "Deine privaten Apps unter mininode.app",
+  "description": "Deine privaten Apps",
   "lang": "de",
   "start_url": "/",
   "scope": "/",

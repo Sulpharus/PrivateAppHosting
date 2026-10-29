@@ -1,4 +1,4 @@
-# ADR 0011: App library with one-click NucBox installs
+# ADR 0011: App library with one-click physical server installs
 
 - Status: accepted
 - Date: 2026-09-30
@@ -6,7 +6,7 @@
 ## Context
 
 Besides the apps built for MiniNode, the admin wants well-known self-hostable programs
-(Jellyfin, n8n, …) on the NucBox: installed with one click, reachable from any device, and behind
+(Jellyfin, n8n, …) on the physical server: installed with one click, reachable from any device, and behind
 the same login as everything else. These are third-party images. They carry no build provenance
 from this repository, and they do not follow the app spec: they have their own users, write
 where they like and often expect root.
@@ -37,7 +37,7 @@ where they like and often expect root.
 - The workflow runs `mininode library check`, the DNS upsert to the tunnel,
   `nucbox-deploy library <slug> <entry>`, and `mininode library install`. The last step
   registers the app in `platform.apps` as a `container`/`nucbox` app with `manifest.library`.
-- The NucBox never trusts the caller for what to run. `nucbox-deploy` reads the entry from
+- The physical server never trusts the caller for what to run. `nucbox-deploy` reads the entry from
   `library.json` on `main` itself (`CATALOG_TOKEN`, Contents: read), re-checks the same limits,
   pulls by digest and writes the compose file.
 - The hardening of own apps stays: no capabilities, `no-new-privileges`, memory and pid limits,
@@ -54,7 +54,7 @@ where they like and often expect root.
   appears as a tile. `access.default` is off, so nobody gets it automatically.
 - Traefik asks nucbox-control (`/auth`) on every request. Browsers on any device work.
   - Native clients (Jellyfin TV apps, n8n webhooks from outside) cannot pass the login. This is
-    accepted: nothing on the NucBox is exposed without the MiniNode login.
+    accepted: nothing on the physical server is exposed without the MiniNode login.
 
 **Updates and removal.**
 - "Aktualisieren" reruns the install with the digest the catalog on `main` now names.
@@ -68,6 +68,6 @@ where they like and often expect root.
   login. Two logins are the price of not patching third-party software.
 - Catalog entries can only be checked on real hardware: the health check and rollback protect
   the box, but a new entry should be tried once before it is announced.
-- Installs need the NucBox (`vars.NUCBOX_TUNNEL_ID`), `LIBRARY_DISPATCH_TOKEN` in the GitHub
-  environment, and `CATALOG_TOKEN` on the NucBox. Without them the page shows links only and
+- Installs need the physical server (`vars.NUCBOX_TUNNEL_ID`), `LIBRARY_DISPATCH_TOKEN` in the GitHub
+  environment, and `CATALOG_TOKEN` on the physical server. Without them the page shows links only and
   says what is missing.

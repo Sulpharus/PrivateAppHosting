@@ -31,7 +31,7 @@ services:
       options: { max-size: "10m", max-file: "3" }
     labels:
       traefik.enable: "true"
-      traefik.http.routers.kino.rule: Host(`kino.mininode.app`)
+      traefik.http.routers.kino.rule: Host(`kino.example.org`)
       traefik.http.routers.kino.entrypoints: web
       traefik.http.routers.kino.middlewares: mininode-strip@file,mininode-auth@file,mininode-headers@file
       traefik.http.services.kino.loadbalancer.server.port: "8096"

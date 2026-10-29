@@ -29,7 +29,7 @@ interface ClaimedNotification {
   url: string | null;
 }
 
-export interface PushMessage {
+interface PushMessage {
   title: string;
   body?: string;
   /** Absolute URL opened on tap (always the portal or one of its apps). */
@@ -54,7 +54,7 @@ function vapid(env: ApiEnv): VapidKeys | null {
 }
 
 /**
- * `/heute` of app `todo` → https://todo.mininode.app/heute. Anything that would leave the portal
+ * `/heute` of app `todo` → https://todo.<domain>/heute. Anything that would leave the portal
  * or its apps (another host, `//host`) falls back to the app's or portal's start page.
  */
 export function absoluteUrl(portalUrl: string, appSlug: string | null, url: string | null): string {

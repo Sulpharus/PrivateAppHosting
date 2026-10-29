@@ -27,7 +27,7 @@ export interface InstallJob {
   finishedAt?: string;
 }
 
-export type UrlSigner = (r2Key: string) => Promise<string>;
+type UrlSigner = (r2Key: string) => Promise<string>;
 
 export function r2Signer(options: {
   endpoint: string;
@@ -56,7 +56,7 @@ export function r2Signer(options: {
 export const psQuote = (value: string) =>
   `'${value.replace(/['\u2018\u2019\u201a\u201b]/g, (q) => q + q)}'`;
 
-export function defaultSilentArgs(r2Key: string): string {
+function defaultSilentArgs(r2Key: string): string {
   return r2Key.toLowerCase().endsWith('.msi') ? '/qn /norestart' : '/S';
 }
 
@@ -179,7 +179,7 @@ export function createInstaller(options: {
       name,
       image: options.wineImage,
       env: {},
-      labels: { 'app.mininode.job': 'install', 'app.mininode.app': request.app },
+      labels: { 'app.mininode.job': 'install', 'app.mininode.slug': request.app },
       network: options.dockerNetwork,
       memoryMb: 1536,
       volumes: { [wineVolume(request.app)]: '/wine' },

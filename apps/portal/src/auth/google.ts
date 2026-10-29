@@ -167,7 +167,7 @@ async function scrubProviderTokens(session: Session): Promise<void> {
 
 /**
  * Right after a Google sign-in the session carries Google's refresh token. The session cookie
- * is shared with every app on *.mininode.app, so the token is taken into memory and scrubbed
+ * is shared with every app on *.<domain>, so the token is taken into memory and scrubbed
  * from the session first, then handed to the API, which stores it encrypted (ADR 0004).
  */
 export function handOverGoogleGrant(session: Session): Promise<void> {

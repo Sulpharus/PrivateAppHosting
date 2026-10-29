@@ -4,7 +4,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { type BackupManifest, MANIFEST_FILE, manifestSchema, sha256File } from './manifest.ts';
 
-export interface VerifyResult {
+interface VerifyResult {
   manifest: BackupManifest | null;
   problems: string[];
 }
@@ -17,7 +17,7 @@ function listFiles(root: string, dir = root): string[] {
   );
 }
 
-export function readManifest(dir: string): BackupManifest {
+function readManifest(dir: string): BackupManifest {
   const path = join(dir, MANIFEST_FILE);
   if (!existsSync(path))
     throw new Error(`${dir} has no ${MANIFEST_FILE}: this is not a backup folder`);

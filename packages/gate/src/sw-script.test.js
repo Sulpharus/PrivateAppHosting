@@ -10,7 +10,7 @@ const script = readFileSync(join(import.meta.dirname, '../assets/sw.js'), 'utf8'
 function fetchHandler() {
   const listeners = {};
   const self = {
-    location: { origin: 'https://app.mininode.app' },
+    location: { origin: 'https://app.example.org' },
     addEventListener: (type, listener) => {
       listeners[type] = listener;
     },
@@ -20,7 +20,7 @@ function fetchHandler() {
 }
 
 const event = (path, mode = 'cors') => ({
-  request: { method: 'GET', mode, url: `https://app.mininode.app${path}` },
+  request: { method: 'GET', mode, url: `https://app.example.org${path}` },
   respondWith: vi.fn(),
 });
 

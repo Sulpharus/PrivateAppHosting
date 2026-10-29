@@ -7,22 +7,22 @@ summary: Wie man sich anmeldet, Passkeys einrichtet und was bei verlorenem Handy
 
 ## Eine Anmeldung für alles
 
-Alle Anmelde-Seiten liegen auf **`https://mininode.app/login`** (ADR 0001). Apps haben kein eigenes Login: sie rufen
+Alle Anmelde-Seiten liegen auf **`https://{{domain}}/login`** (ADR 0001). Apps haben kein eigenes Login: sie rufen
 `mn.auth.requireLogin()` auf und werden dorthin geschickt, mit `?next=` für den Rückweg. Die Kennung für Passkeys
-(*RP ID*) ist `mininode.app` und gilt als dauerhaft: würde sie sich ändern, wären alle Passkeys ungültig.
+(*RP ID*) ist `{{domain}}` und gilt als dauerhaft: würde sie sich ändern, wären alle Passkeys ungültig.
 
-Die Anmeldung gilt für alle Unterseiten (`*.mininode.app`); jede App-Schranke prüft sie selbst. Ist die Sitzung abgelaufen,
-leitet die Schranke kurz zu `mininode.app/auth/refresh` und wieder zurück.
+Die Anmeldung gilt für alle Unterseiten (`*.{{domain}}`); jede App-Schranke prüft sie selbst. Ist die Sitzung abgelaufen,
+leitet die Schranke kurz zu `{{domain}}/auth/refresh` und wieder zurück.
 
 ## Wege der Anmeldung
 
 | Weg | Hinweis |
 | --- | --- |
 | **Passkey** | Hauptweg: Fingerabdruck, Gesicht, Windows Hello. Einrichten unter *Dein Konto* |
-| **E-Mail und Passwort** | Rückfall für Geräte ohne Passkey; mindestens 10 Zeichen |
-| **Mit Google anmelden** | Optional (`first-setup.md` §3.1); die Google-Adresse muss zum Konto passen, es werden keine neuen Konten angelegt |
+| **E-Mail und Passwort** | Rückfall für Geräte ohne Passkey; mindestens 12 Zeichen |
+| **Mit Google anmelden** | Optional (`setup-cloudflare.md` (section 9, Google)); die Google-Adresse muss zum Konto passen, es werden keine neuen Konten angelegt |
 
-Neue Konten entstehen **nur über Einladungen** ([Rollen](wiki:rollen-zugriff)). Das erste Konto des Projekts wird Admin.
+Neue Konten entstehen **nur über Einladungen** ([Rollen](wiki:rollen-zugriff)). Das erste Konto entsteht beim ersten Öffnen einer neuen Installation auf der Seite „Admin-Account anlegen“ und wird Admin; danach ist diese Seite geschlossen.
 
 ## Zweiter Faktor (Authenticator-App)
 
@@ -50,3 +50,14 @@ Die Seite *Dein Konto* (Menü oben rechts) bündelt:
 
 Abmelden läuft über das Portal (`/logout`) und schaltet Push auf diesem Gerät aus, damit ein geteiltes Gerät nicht Meldungen
 der falschen Person bekommt.
+
+## Das Sicherheitsmodell in Kürze
+
+Das Login ist sorgfältig gebaut, aber **kein System ist „undurchdringlich“**; das ist ehrlich, was es leistet und was nicht:
+
+- **Wer rein darf:** nur eingeladene Konten (Anmeldung für Fremde ist aus). Passwörter haben mindestens 12 Zeichen, Anmeldeversuche pro Adresse sind begrenzt; Passkeys und Authenticator-App schützen zusätzlich.
+- **Wie geprüft wird:** die Schranke jeder App und die API prüfen bei jeder Seite die Signatur der Sitzung (nur asymmetrische Verfahren), die Freigabe der App und den zweiten Faktor; die Datenbank erzwingt die Rechte selbst (Zeilen-Sicherheit).
+  Weiterleitungen nach der Anmeldung gehen nur auf die eigene Domain.
+- **Was bleibt:** die Sitzung steckt in einem Cookie, das JavaScript lesen kann (nötig, weil alle Apps auf Unterdomains sie teilen). Darum laufen Apps mit strenger Inhaltsrichtlinie (kein fremdes Skript), und nur Apps, die du prüfst, kommen auf die Plattform.
+  Eine gestohlene Sitzung gilt bis zu einer Stunde, auch nach dem Abmelden. Schütze Konten mit Passkeys, halte Geräte aktuell und lade nur Personen ein, denen du vertraust.
+- **Selbst prüfen:** `docs/runbooks/getting-started.md` hat fünf kurze Prüfungen nach jeder Installation.

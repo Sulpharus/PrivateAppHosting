@@ -7,7 +7,7 @@ import type { Json } from './kv.ts';
 // built from the MiniNode assistant brief) or keeps its data in `localStorage`, so these apps run
 // without being rewritten. New apps use `mn.*` directly.
 
-export interface CompatUser {
+interface CompatUser {
   id: string;
   username: string;
   email: string | null;
@@ -136,7 +136,7 @@ export function createMiniNodeCompat(mn: Mininode) {
   };
 }
 
-export type MiniNodeCompat = ReturnType<typeof createMiniNodeCompat>;
+type MiniNodeCompat = ReturnType<typeof createMiniNodeCompat>;
 
 declare global {
   interface Window {

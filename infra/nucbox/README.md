@@ -1,6 +1,6 @@
 # infra/nucbox
 
-Everything that runs on the NucBox. Install and operations: `docs/runbooks/nucbox-install.md`,
+Everything that runs on the physical server. Install and operations: `docs/runbooks/nucbox-install.md`,
 `restore.md`, `key-rotation.md`.
 
 On the Linux VM the repo is cloned to `/srv/mininode/infra-src`; `/srv/mininode/platform` holds

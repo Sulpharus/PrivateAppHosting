@@ -5,16 +5,18 @@ order: 30
 summary: Welche Prüfungen es gibt, was sie sichern und was ein roter Lauf heißt
 ---
 
-## Die vier Prüfungen jedes Pull Requests (`ci.yml`)
+## Die Prüfungen jedes Pull Requests (`ci.yml`)
 
 | Prüfung | Was sie macht |
 | --- | --- |
 | **Lint, typecheck, test** | Biome, `tsc`, alle Vitest-Tests (Turborepo); `mininode doctor --all` für alle Apps; ein Probe-Deploy der geänderten Apps (bauen, Gate-Konfiguration); **die Kurzfassung der App-Spezifikation ist aktuell** (`pnpm spec:short`, sonst rot, wenn du `docs/ai/NEW-APP-SPEC.md` änderst); **das JSON-Schema des Manifests ist aktuell** |
 | **Database, integration and e2e** | startet ein lokales Supabase; pgTAP (`db:test`), Integrationstests, **Sicherung/Löschen-Rundlauf** (`test:roundtrip`), dann alle Playwright-e2e-Tests |
-| **Infra scripts and images** | Shell-Skripte (shellcheck), Docker-Images der NucBox, Test des Deploy-Skripts |
+| **Infra scripts and images** | Shell-Skripte (shellcheck), Docker-Images der Server-Hardware, Test des Deploy-Skripts |
 | **Secret scan** | gitleaks über jeden Commit |
+| **Starter package** | baut das Starter-ZIP (und prüft, dass nichts von dieser Installation darin steckt), entpackt es, richtet eine Installation ein und lässt dort `pnpm check` laufen |
+| **Desktop edition** | startet den echten Installer, meldet sich über das Gateway an und prüft Schlüssel, Rolle und Zugriff der Daten-API |
 
-Auf `main` sollen diese vier Prüfungen **verbindlich** sein (Regel unter Settings → Rules); sonst lässt GitHub rote Pull Requests zu.
+Auf `main` sollen die ersten vier Prüfungen **verbindlich** sein (Regel unter Settings → Rules); sonst lässt GitHub rote Pull Requests zu.
 
 ## Testarten
 

@@ -2,7 +2,7 @@ import { fileURLToPath } from 'node:url';
 import { googleConnectSrc, type Manifest } from '@mininode/manifest';
 import type { EnvironmentSettings } from './environment.ts';
 
-export const COMPATIBILITY_DATE = '2026-09-23';
+const COMPATIBILITY_DATE = '2026-09-23';
 
 export const GATE_ENTRY = fileURLToPath(new URL('../../../gate/src/worker.ts', import.meta.url));
 

@@ -21,7 +21,7 @@ export function initApi(config: PortalConfig): void {
   apiUrl = config.apiUrl;
 }
 
-/** Calls api.mininode.app with the current access token. */
+/** Calls api.<domain> with the current access token. */
 export async function api<T>(
   path: string,
   init: { method?: string; body?: unknown } = {},
@@ -39,6 +39,28 @@ export async function api<T>(
     ...(init.body !== undefined ? { body: JSON.stringify(init.body) } : {}),
   });
   if (response.status === 204) return undefined as T;
+  const payload = (await response.json().catch(() => ({}))) as { error?: string; message?: string };
+  if (!response.ok) {
+    throw new ApiError(
+      payload.message ?? 'Unbekannter Fehler.',
+      payload.error ?? 'error',
+      response.status,
+    );
+  }
+  return payload as T;
+}
+
+/** Calls api.<domain> without a session, for the few public routes (first-run setup). */
+export async function publicApi<T>(
+  path: string,
+  init: { method?: string; body?: unknown } = {},
+): Promise<T> {
+  const response = await fetch(`${apiUrl}${path}`, {
+    method: init.method ?? 'GET',
+    ...(init.body !== undefined
+      ? { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(init.body) }
+      : {}),
+  });
   const payload = (await response.json().catch(() => ({}))) as { error?: string; message?: string };
   if (!response.ok) {
     throw new ApiError(

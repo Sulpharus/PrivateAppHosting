@@ -16,9 +16,8 @@ import type { IntegrateResult, Reason } from './types.ts';
 import { copyProject, projectRoot, UnpackError, unpackZip } from './unpack.ts';
 
 export { reportMarkdown } from './report.ts';
-export type { IntegrateResult, Reason } from './types.ts';
 
-export interface IntegrateOptions {
+interface IntegrateOptions {
   /** A ZIP or an unpacked folder. */
   input: string;
   /** Repository root (hosted/ lives there). */
@@ -44,7 +43,7 @@ const GENERIC_NAMES = new Set([
  */
 const PLACEHOLDER =
   /^(neue[- ]?app|new[- ]?app|my[- ]?app|meine[- ]?app|upload|export|download|untitled|app)$/i;
-export const isPlaceholder = (value: string | undefined): boolean =>
+const isPlaceholder = (value: string | undefined): boolean =>
   !value || PLACEHOLDER.test(value.trim());
 
 /**

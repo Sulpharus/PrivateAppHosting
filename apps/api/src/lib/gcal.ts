@@ -31,7 +31,7 @@ function parts(date: Date, tz: string): Record<string, number> {
 const pad = (n: number) => String(n).padStart(2, '0');
 
 /** Local `YYYY-MM-DD` of an instant. */
-export function localDate(date: Date, tz: string): string {
+function localDate(date: Date, tz: string): string {
   const p = parts(date, tz);
   return `${p.year}-${pad(p.month ?? 0)}-${pad(p.day ?? 0)}`;
 }
@@ -127,7 +127,7 @@ export function plainText(html: string): string {
 }
 
 /** An occurrence key from a Google start time (`originalStartTime`). */
-export function keyOf(time: GoogleTime | undefined, tz: string): string | null {
+function keyOf(time: GoogleTime | undefined, tz: string): string | null {
   if (!time) return null;
   if (time.date) return `${time.date}T00:00`;
   if (time.dateTime) return localKey(new Date(time.dateTime), tz);

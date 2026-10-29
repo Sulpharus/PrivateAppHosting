@@ -1,7 +1,13 @@
 // Deploy targets: production and staging share code but use separate Supabase projects,
-// portal origins and Worker names.
+// portal origins and Worker names. The domain and project of each come from
+// mininode.config.json; the workflows export the same values (`mininode config env`).
+import { resolve } from 'node:path';
+import { publicOrigin } from '@mininode/manifest';
+import { loadInstanceConfig } from '../instance/load.ts';
 
-export type DeployEnv = 'production' | 'staging' | 'local';
+const ROOT = resolve(import.meta.dirname, '../../../..');
+
+export type DeployEnv = 'production' | 'staging' | 'local' | 'desktop';
 
 export interface EnvironmentSettings {
   name: DeployEnv;
@@ -18,6 +24,12 @@ function required(name: string, env: NodeJS.ProcessEnv): string {
   return value;
 }
 
+function configuredDomain(name: 'production' | 'staging'): string {
+  const domain = loadInstanceConfig(ROOT).environments[name]?.domain;
+  if (!domain) throw new Error(`no domain for ${name}: set it in mininode.config.json`);
+  return domain;
+}
+
 export function environmentSettings(
   name: DeployEnv,
   env: NodeJS.ProcessEnv = process.env,
@@ -32,7 +44,24 @@ export function environmentSettings(
       workerPrefix: 'mn-local-',
     };
   }
-  const domain = name === 'production' ? 'mininode.app' : required('STAGING_DOMAIN', env);
+  if (name === 'desktop') {
+    // The desktop installation is configured by its .env (see infra/desktop), not by mininode.config.json.
+    const domain = required('MININODE_DOMAIN', env);
+    const scheme = env.MININODE_SCHEME === 'https' ? 'https' : 'http';
+    const port = Number(env.MININODE_PORT ?? 8787);
+    return {
+      name,
+      domain,
+      portalUrl: publicOrigin({ domain, scheme, port }),
+      supabaseUrl: required('SUPABASE_URL', env),
+      supabasePublishableKey: required('SUPABASE_PUBLISHABLE_KEY', env),
+      workerPrefix: 'mn-desktop-',
+    };
+  }
+  const domain =
+    env.MININODE_DOMAIN ??
+    (name === 'staging' ? env.STAGING_DOMAIN : undefined) ??
+    configuredDomain(name);
   return {
     name,
     domain,

@@ -8,7 +8,7 @@ import { platform } from 'node:os';
 
 export type PgTool = 'pg_dump' | 'pg_restore' | 'psql';
 
-export interface Connection {
+interface Connection {
   env: Record<string, string>;
   /** Host the tools connect from (inside a container: the Docker host). */
   host: string;

@@ -3,8 +3,8 @@ import { cpSync, existsSync, mkdirSync, readdirSync, statSync } from 'node:fs';
 import { basename, join, resolve, sep } from 'node:path';
 
 /** An export is a few MB of source; anything bigger is not an app. */
-export const MAX_UNPACKED_BYTES = 200 * 1024 * 1024;
-export const MAX_FILES = 20_000;
+const MAX_UNPACKED_BYTES = 200 * 1024 * 1024;
+const MAX_FILES = 20_000;
 
 export class UnpackError extends Error {}
 
