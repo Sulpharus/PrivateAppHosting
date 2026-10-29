@@ -37,13 +37,13 @@ export interface ResourceReport {
   errors: string[];
 }
 
-export interface HostSource {
+interface HostSource {
   host(): Promise<ResourceReport['host']>;
   vms(): Promise<ResourceReport['vms']>;
   storage(): Promise<ResourceReport['storage']>;
 }
 
-export interface ContainerSource {
+interface ContainerSource {
   containers(): Promise<ResourceReport['containers']>;
 }
 

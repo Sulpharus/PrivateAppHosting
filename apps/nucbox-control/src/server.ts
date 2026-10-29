@@ -46,7 +46,7 @@ const installSchema = z.object({
     .optional(),
 });
 
-export interface ServerDeps {
+interface ServerDeps {
   controlToken: string;
   scheduler: Scheduler;
   installer: Installer;

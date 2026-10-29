@@ -128,7 +128,7 @@ export function appsReference(manifests: string[]): string {
 }
 
 /** The words of a workflow header comment that say what it is for (the first sentence). */
-export function workflowPurpose(source: string): string {
+function workflowPurpose(source: string): string {
   const comment: string[] = [];
   for (const line of source.split('\n').slice(1)) {
     if (line.startsWith('#')) comment.push(line.replace(/^#\s?/, ''));
@@ -145,7 +145,7 @@ export function workflowPurpose(source: string): string {
 }
 
 /** What starts a workflow: the keys under `on:`, or the inline forms `on: push` and `on: [push, x]`. */
-export function workflowTriggers(source: string): string[] {
+function workflowTriggers(source: string): string[] {
   const inline = /^on:\s*(\[[^\]]*\]|[a-z_]+)\s*$/m.exec(source)?.[1];
   if (inline)
     return inline
@@ -355,7 +355,7 @@ export function searchArticles(articles: Article[], query: string): Article[] {
 }
 
 /** The steps of the Startup-Guide: every `## ` heading with the text below it. */
-export interface GuideStep {
+interface GuideStep {
   id: string;
   title: string;
   body: string;

@@ -2,6 +2,7 @@
 Controls a MiniNode desktop installation on Windows (Linux/macOS: mininode-desktop).
   mininode-desktop start | stop | restart | status | logs [service] | url | migrate
   mininode-desktop add <app folder | app.zip>   install or update a web app
+  mininode-desktop remove <slug> [--purge]      take an app offline; --purge also deletes its data
   mininode-desktop admin <email>                create an account (asks for the password)
   mininode-desktop password <email>             set a new password for an account
   mininode-desktop restore <backup folder>      replace ALL data with a backup (asks first)
@@ -62,6 +63,11 @@ switch ($command) {
     if ($rest.Count -lt 1) { Fail 'usage: admin <email>' }
     ReadPassword
     Compose exec -T -e MININODE_ADMIN_PASSWORD -w /app host node packages/cli/src/bin.ts desktop admin $rest[0]
+  }
+  'remove' {
+    NeedInstalled
+    if ($rest.Count -lt 1) { Fail 'usage: remove <slug> [--purge]' }
+    Mn uninstall $rest[0] --env desktop @($rest | Select-Object -Skip 1)
   }
   'password' {
     NeedInstalled

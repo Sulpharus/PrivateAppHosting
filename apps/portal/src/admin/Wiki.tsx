@@ -11,7 +11,7 @@ import { type Article, CATEGORIES, searchArticles } from '../lib/wikiLib.ts';
 // file on GitHub: the wiki is updated together with the system (docs/wiki/wissen-pflegen.md).
 
 /** Scrolls to a heading and moves focus there; no animation when the person asked for none. */
-export function goToHeading(id: string): void {
+function goToHeading(id: string): void {
   const target = document.getElementById(id);
   if (!target) return;
   const calm = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;

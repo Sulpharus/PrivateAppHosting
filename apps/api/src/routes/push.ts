@@ -29,7 +29,7 @@ interface ClaimedNotification {
   url: string | null;
 }
 
-export interface PushMessage {
+interface PushMessage {
   title: string;
   body?: string;
   /** Absolute URL opened on tap (always the portal or one of its apps). */

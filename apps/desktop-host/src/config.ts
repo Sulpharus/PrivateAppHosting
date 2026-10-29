@@ -56,7 +56,7 @@ export type DesktopConfig = z.infer<typeof schema> & {
   supabaseUrl: string;
 };
 
-export function origin(config: z.infer<typeof schema>, subdomain?: string): string {
+function origin(config: z.infer<typeof schema>, subdomain?: string): string {
   return publicOrigin(
     { domain: config.MININODE_DOMAIN, scheme: config.MININODE_SCHEME, port: config.MININODE_PORT },
     subdomain,

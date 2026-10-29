@@ -27,6 +27,7 @@ Der Installer fragt nach einem Passwort (12 Zeichen oder mehr) für das erste Ko
 | `status`, `start`, `stop`, `restart` | Dienste ansehen, starten, anhalten (die Daten bleiben) |
 | `logs host` | Protokoll eines Dienstes (`host`, `auth`, `rest`, `storage`, `kong`, `db`) |
 | `add <Ordner oder ZIP>` | eine Web-App installieren oder aktualisieren (prüft, baut, legt Tabellen an, schaltet sie frei) |
+| `remove <Name>` | eine App offline nehmen (mit `--purge` auch ihre Daten löschen) |
 | `admin <E-Mail>` / `password <E-Mail>` | ein Konto anlegen / ein neues Passwort setzen (ohne E-Mail-Versand) |
 | `backup` / `restore <Ordner>` | alles sichern / alles aus einer Sicherung zurückholen |
 | `update <Ordner>` | auf eine neuere MiniNode-Version wechseln (sichert vorher) |

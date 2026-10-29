@@ -23,7 +23,7 @@ export function appsFromPaths(paths: string[]): string[] {
  * Paths every app ships or runs behind: when one of them changes, all apps have to be redeployed,
  * not only the ones whose folder changed.
  */
-export const SHARED_PATHS = [
+const SHARED_PATHS = [
   'pnpm-lock.yaml',
   'packages/sdk/src',
   'packages/ui/kit',

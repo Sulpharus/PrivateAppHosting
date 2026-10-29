@@ -12,7 +12,7 @@ export interface ModelEntry {
   output: number;
 }
 
-export const DEFAULT_CATALOG: Record<ModelAlias, ModelEntry> = {
+const DEFAULT_CATALOG: Record<ModelAlias, ModelEntry> = {
   'gemini-flash': { provider: 'google', id: 'gemini-3.7-flash', input: 0.75, output: 3.75 },
   'gemini-pro': { provider: 'google', id: 'gemini-3.1-pro', input: 2, output: 12 },
   'claude-haiku': { provider: 'anthropic', id: 'claude-haiku-4-5', input: 1, output: 5 },

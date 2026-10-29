@@ -3,7 +3,7 @@
 
 declare const __GITHUB_REPOSITORY__: string | undefined;
 
-export const GITHUB_REPOSITORY: string =
+const GITHUB_REPOSITORY: string =
   typeof __GITHUB_REPOSITORY__ === 'string' ? __GITHUB_REPOSITORY__ : '';
 
 /** `https://github.com/<owner>/<repo>`, or '' without a repository. */

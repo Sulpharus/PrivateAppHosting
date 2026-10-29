@@ -77,7 +77,7 @@ export const MODULE_GROUPS: { id: string; label: string; hint: string }[] = [
   },
 ];
 
-export interface ModuleGroup {
+interface ModuleGroup {
   id: string;
   label: string;
   hint: string;

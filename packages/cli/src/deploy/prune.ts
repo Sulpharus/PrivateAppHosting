@@ -33,7 +33,7 @@ interface CloudflareList {
   errors?: { message: string }[];
 }
 
-export interface PruneOptions {
+interface PruneOptions {
   dryRun?: boolean;
   /** Prune even when the repository has no hosted apps at all. */
   force?: boolean;

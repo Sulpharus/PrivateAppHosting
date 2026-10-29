@@ -367,7 +367,7 @@ interface CalendarRow {
  * invocation's subrequests (two more save links and finish); `minGap` refuses a run that
  * follows the last one too closely.
  */
-export async function syncUser(
+async function syncUser(
   env: ApiEnv,
   userId: string,
   size = 44,

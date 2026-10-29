@@ -11,7 +11,7 @@ import {
 } from './edge.ts';
 
 // The newest date the bundled workerd knows; the platform Workers use 2026-09-23 on Cloudflare.
-export const COMPATIBILITY_DATE = '2026-07-15';
+const COMPATIBILITY_DATE = '2026-07-15';
 
 type Bindings = Record<string, string>;
 

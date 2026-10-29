@@ -2,7 +2,7 @@
 // handling as `supabase start`. A request that carries only the project's publishable or secret
 // key gets the matching role token, so PostgREST and Storage (which verify JWTs) accept it.
 
-export interface KongKeys {
+interface KongKeys {
   publishableKey: string;
   secretKey: string;
   anonJwt: string;

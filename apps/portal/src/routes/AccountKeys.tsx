@@ -9,7 +9,7 @@ import { platform } from '../lib/supabase.ts';
 // person brings their own key. An app that needs one sends people here (?service=<id>&next=<app>),
 // with instructions, the provider's page when known, and a field for the key.
 
-export interface PersonalKey {
+interface PersonalKey {
   service_id: string;
   name: string;
   docs_url: string | null;
@@ -19,7 +19,7 @@ export interface PersonalKey {
   apps: { slug: string; name: string; reason: string }[] | null;
 }
 
-export async function listPersonalKeys(): Promise<PersonalKey[]> {
+async function listPersonalKeys(): Promise<PersonalKey[]> {
   const { data, error } = await platform().rpc('my_api_keys');
   if (error) throw error;
   return (data as PersonalKey[] | null) ?? [];

@@ -7,7 +7,7 @@ import { basename, join } from 'node:path';
 import { appSchemaName } from '@mininode/manifest';
 import postgres from 'postgres';
 
-export interface MigrationFile {
+interface MigrationFile {
   filename: string;
   sql: string;
   checksum: string;
@@ -25,7 +25,7 @@ export function migrationFiles(appDir: string): MigrationFile[] {
     });
 }
 
-export type Plan = { apply: MigrationFile[]; changed: string[] };
+type Plan = { apply: MigrationFile[]; changed: string[] };
 
 export function plan(files: MigrationFile[], applied: Map<string, string>): Plan {
   const changed = files.filter(

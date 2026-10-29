@@ -49,7 +49,7 @@ const NOT_SERVED = new Set([
   'test',
 ]);
 
-export interface DeployOptions {
+interface DeployOptions {
   env: DeployEnv;
   version: string;
   dryRun?: boolean;

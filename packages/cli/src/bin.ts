@@ -58,7 +58,7 @@ const USAGE = `mininode <command>
   integrate <zip|dir> [--slug x]    Turn an export into hosted/<slug> by script (exit 2: needs review)
                                     [--build] [--tidy] [--json file] [--report file]
   exempt <slug> [--skip|--remove]   Exempt an imported app from the linter, or from Biome entirely (publish step); --remove forgets it
-  uninstall <slug> [--purge] [--env]  Take an app offline (Worker deleted); --purge also deletes its data, files and registry entry
+  uninstall <slug> [--purge] [--env]  Take an app offline (Worker deleted, or removed from the desktop host with --env desktop); --purge also deletes its data, files and registry entry
   submission fetch <id> --out <file>  Download an uploaded ZIP (workflow)
   submission status <id> <status> [--result file] [--report file] [--pr url] [--review url] [--run url] [--only-if-pr url]
                                     Report the state of an upload (workflow)
@@ -251,7 +251,9 @@ async function main(args: string[]): Promise<number> {
       const envValue = flag(args, '--env');
       const stray = args.filter((arg) => !known.has(arg) && arg !== envValue);
       if (stray.length > 0) throw new Error(`unknown option ${stray[0]} (use --purge or --env)`);
-      const result = await uninstallApp(envFlag(args), target, { purge: args.includes('--purge') });
+      const result = await uninstallApp(envFlag(args, true), target, {
+        purge: args.includes('--purge'),
+      });
       console.log(JSON.stringify(result));
       return 0;
     }

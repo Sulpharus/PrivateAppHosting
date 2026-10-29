@@ -10,7 +10,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync
 import { dirname, extname, join, relative, resolve, sep } from 'node:path';
 import { parseManifest } from '@mininode/manifest';
 
-export interface Finding {
+interface Finding {
   file: string;
   line: number;
   rule: string;
@@ -218,7 +218,7 @@ function checkOut(root: string, appDir: string, outDir: string): void {
     throw new Error(`${outDir} is not empty and not an earlier export`);
 }
 
-export interface ExportResult {
+interface ExportResult {
   slug: string;
   files: string[];
   findings: Finding[];

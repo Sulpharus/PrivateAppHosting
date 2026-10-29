@@ -82,6 +82,7 @@ by you), starts the containers, applies the database migrations, and creates the
 ~/mininode/mininode-desktop stop            # stop everything (data stays)
 ~/mininode/mininode-desktop start           # start again
 ~/mininode/mininode-desktop logs host       # follow a service: host, auth, rest, storage, kong, db
+~/mininode/mininode-desktop remove <slug>    # take an app offline (add --purge to delete its data too)
 ~/mininode/mininode-desktop admin <email>   # create another account
 ~/mininode/mininode-desktop password <email> # a new password for an account (no email needed)
 ~/mininode/mininode-desktop backup          # database, files and settings into ~/mininode/backups/<date>

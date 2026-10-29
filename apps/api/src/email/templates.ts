@@ -2,7 +2,7 @@
 // text fallback. Links always point at a portal page with a "Continue" button so that mail
 // scanners opening the link cannot consume one-time tokens.
 
-export interface Email {
+interface Email {
   subject: string;
   html: string;
   text: string;

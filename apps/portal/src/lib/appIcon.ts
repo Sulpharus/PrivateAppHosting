@@ -16,14 +16,14 @@ export function iconUrl(path: string | null | undefined): string | null {
   return `${config.supabaseUrl}/storage/v1/object/public/${BUCKET}/${encodeURIComponent(path)}`;
 }
 
-export interface PreparedIcon {
+interface PreparedIcon {
   blob: Blob;
   ext: 'webp' | 'svg';
   type: string;
 }
 
 /** An SVG as it is; any other picture as a centred square WebP of 256 px. */
-export async function prepareIcon(file: File): Promise<PreparedIcon> {
+async function prepareIcon(file: File): Promise<PreparedIcon> {
   if (file.type === 'image/svg+xml' || file.name.toLowerCase().endsWith('.svg')) {
     if (file.size > MAX_SVG_BYTES) throw new Error('Die SVG-Datei ist größer als 128 KB.');
     return { blob: file, ext: 'svg', type: 'image/svg+xml' };

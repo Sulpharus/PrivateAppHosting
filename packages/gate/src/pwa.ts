@@ -2,7 +2,7 @@
 // manifest and a generated icon, and adds the manifest link and /_mininode/pwa.js (which
 // registers /_mininode/sw.js) to every HTML page, so apps need no changes.
 
-export interface PwaApp {
+interface PwaApp {
   slug: string;
   name: string;
 }
@@ -47,7 +47,7 @@ export function webManifest(app: PwaApp, appIcons: { src: string; sizes: string 
   };
 }
 
-export type SplashLanguage = 'de' | 'en';
+type SplashLanguage = 'de' | 'en';
 
 const SPLASH_TEXT = {
   de: {
@@ -100,7 +100,7 @@ export function splashHtml(app: PwaApp, language: SplashLanguage = 'de'): string
 }
 
 /** Tags added to the end of <head> of every HTML page an app serves. */
-export const HEAD_TAGS =
+const HEAD_TAGS =
   '<link rel="manifest" href="/_mininode/manifest.webmanifest"><script src="/_mininode/pwa.js" defer></script>';
 
 /**

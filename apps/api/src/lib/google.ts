@@ -56,7 +56,7 @@ export class GoogleError extends Error {
   }
 }
 
-export interface GoogleAccessToken {
+interface GoogleAccessToken {
   accessToken: string;
   expiresIn: number;
   scopes: string[];

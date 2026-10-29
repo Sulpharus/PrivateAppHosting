@@ -19,7 +19,7 @@ import { connectionEnv, finished, LOCAL_HOSTS, pickRunner, type Runner } from '.
 import { type BucketInfo, ensureBucket, inParallel, type ObjectInfo, upload } from './storage.ts';
 import { verifyBackup } from './verify.ts';
 
-export interface RestoreOptions {
+interface RestoreOptions {
   dir: string;
   databaseUrl?: string;
   supabaseUrl?: string;
@@ -39,7 +39,7 @@ export interface RestoreOptions {
   log?: (message: string) => void;
 }
 
-export interface RestorePlan {
+interface RestorePlan {
   /** Where the database part would go. */
   target: { host: string; database: string } | null;
   /** Tables outside the backup that refer to its tables and are emptied with them (cascade). */
@@ -57,7 +57,7 @@ const quote = (name: string) => `"${name.replaceAll('"', '""')}"`;
 const qualified = (schema: string, table: string) => `${quote(schema)}.${quote(table)}`;
 
 /** What a restore would do, from the manifest and the target database. */
-export async function planRestore(
+async function planRestore(
   manifest: BackupManifest,
   databaseUrl: string | undefined,
 ): Promise<RestorePlan> {

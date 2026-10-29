@@ -43,7 +43,7 @@ export function envFile(settings: DesktopSettings, secrets: DesktopSecrets): str
 }
 
 /** Gives the database roles of the Supabase services the generated password (the official self-hosting step). */
-export const ROLES_SQL = `\\set pgpass \`echo "$POSTGRES_PASSWORD"\`
+const ROLES_SQL = `\\set pgpass \`echo "$POSTGRES_PASSWORD"\`
 ALTER USER authenticator WITH PASSWORD :'pgpass';
 ALTER USER supabase_auth_admin WITH PASSWORD :'pgpass';
 ALTER USER supabase_storage_admin WITH PASSWORD :'pgpass';

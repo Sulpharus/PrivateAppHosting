@@ -7,7 +7,7 @@ import { platform } from './supabase.ts';
 
 export type DeviceStatus = 'unsupported' | 'install-first' | 'denied' | 'on' | 'off';
 
-export function pushSupported(): boolean {
+function pushSupported(): boolean {
   return (
     typeof window !== 'undefined' &&
     'serviceWorker' in navigator &&

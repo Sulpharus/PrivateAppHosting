@@ -58,7 +58,7 @@ function allowed(key: string): boolean {
  * cannot be decrypted once the entry points elsewhere (defence in depth; the deploy also drops
  * the key when the target changes).
  */
-export function keyBinding(
+function keyBinding(
   service: Pick<ServiceRow, 'id' | 'base_url' | 'auth'>,
   userId?: string,
 ): string {

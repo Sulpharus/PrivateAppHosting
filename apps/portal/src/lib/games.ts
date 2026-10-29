@@ -174,7 +174,7 @@ export async function loadUsername(): Promise<string | null> {
   return rows?.[0]?.username ?? null;
 }
 
-export const USERNAME = /^[A-Za-z0-9_.-]{3,20}$/;
+const USERNAME = /^[A-Za-z0-9_.-]{3,20}$/;
 
 /** Saves the username; returns a German message when it cannot be used. */
 export async function saveUsername(name: string | null): Promise<string | null> {
@@ -234,7 +234,7 @@ export function byGenre(games: HubGame[]): [string, HubGame[]][] {
   return [...groups].sort((a, b) => GENRE_ORDER.indexOf(a[0]) - GENRE_ORDER.indexOf(b[0]));
 }
 
-export interface Achievement {
+interface Achievement {
   id: string;
   title: string;
   hint: string;

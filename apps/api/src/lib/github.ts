@@ -4,7 +4,7 @@ import type { ApiEnv } from '../env.ts';
 import { problem } from './auth.ts';
 
 /** owner/repo whose workflows the API starts (`github.repository` in mininode.config.json). */
-export function workflowRepo(env: ApiEnv): string | undefined {
+function workflowRepo(env: ApiEnv): string | undefined {
   return env.GITHUB_REPO && /^[\w.-]+\/[\w.-]+$/.test(env.GITHUB_REPO)
     ? env.GITHUB_REPO
     : undefined;
@@ -21,7 +21,7 @@ function notConfigured(token: string | undefined): Response {
 }
 
 /** What a refused call usually means, so the owner knows what to fix. */
-export function refusalHint(status: number): string {
+function refusalHint(status: number): string {
   if (status === 401) return 'Der Startschlüssel ist ungültig oder abgelaufen.';
   if (status === 403)
     return 'Dem Startschlüssel fehlt die Berechtigung „Actions: Read and write“ für dieses Repository.';

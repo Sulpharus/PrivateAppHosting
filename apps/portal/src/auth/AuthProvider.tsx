@@ -22,9 +22,9 @@ import { platform, supabase } from '../lib/supabase.ts';
 import { handOverGoogleGrant } from './google.ts';
 import { codeRequired } from './mfa.ts';
 
-export type Role = 'admin' | 'trusted' | 'user';
+type Role = 'admin' | 'trusted' | 'user';
 
-export interface Profile {
+interface Profile {
   userId: string;
   displayName: string;
   role: Role;

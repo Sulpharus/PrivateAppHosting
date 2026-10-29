@@ -15,7 +15,7 @@ function bytesToBase64(bytes: ArrayBuffer): string {
 }
 
 /** Accepts `v1,whsec_<base64>`, `whsec_<base64>` or the bare base64 secret. */
-export function secretBytes(secret: string): Uint8Array<ArrayBuffer> {
+function secretBytes(secret: string): Uint8Array<ArrayBuffer> {
   return base64ToBytes(secret.replace(/^v1,/, '').replace(/^whsec_/, ''));
 }
 

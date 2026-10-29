@@ -7,7 +7,7 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { type DeployEnv, environmentSettings } from './environment.ts';
 import { registerApp } from './register.ts';
 
-export interface LibraryOptions {
+interface LibraryOptions {
   /** fetch for Supabase (tests). */
   fetch?: typeof fetch;
 }

@@ -20,7 +20,7 @@ export class GoogleError extends Error {
 
 type TokenSource = () => Promise<string | null>;
 
-export interface CalendarSyncState {
+interface CalendarSyncState {
   available: boolean;
   connected: boolean;
   email: string | null;
@@ -43,7 +43,7 @@ export interface CalendarSyncState {
   }[];
 }
 
-export interface CalendarSyncSettings {
+interface CalendarSyncSettings {
   enabled: boolean;
   pushSources: string[];
   /** Google calendar id → shown in MiniNode. */

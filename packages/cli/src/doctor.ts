@@ -17,7 +17,7 @@ import {
 import { findIcon } from './deploy/icon.ts';
 import { NON_TEXT, scanText } from './export.ts';
 
-export type Severity = 'error' | 'warning';
+type Severity = 'error' | 'warning';
 
 export interface Finding {
   severity: Severity;

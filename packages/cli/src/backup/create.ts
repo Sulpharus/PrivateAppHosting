@@ -20,7 +20,7 @@ import {
 import { finished, pickRunner } from './pg.ts';
 import { download, inParallel, listBuckets, listObjects, type ObjectInfo } from './storage.ts';
 
-export interface CreateOptions {
+interface CreateOptions {
   databaseUrl: string;
   supabaseUrl: string;
   serviceKey: string;
@@ -35,10 +35,10 @@ export interface CreateOptions {
  * The accounts of the sign-in service: people, their logins and second factors, passkeys.
  * Sessions, tokens and the service's own bookkeeping are left out: everybody signs in again.
  */
-export const AUTH_TABLES = ['users', 'identities', 'mfa_factors', 'webauthn_credentials'];
+const AUTH_TABLES = ['users', 'identities', 'mfa_factors', 'webauthn_credentials'];
 
 /** The hosting settings that are worth reading without a database tool. */
-export const READABLE_SETTINGS = [
+const READABLE_SETTINGS = [
   'apps',
   'app_categories',
   'app_grants',
@@ -54,7 +54,7 @@ export const READABLE_SETTINGS = [
 ];
 
 /** Columns that hold keys or hashes stay out of the readable copies (the dump has them all). */
-export const SECRET_COLUMN = /(_enc$|cipher|secret|token|hash|password|key_value|api_?key|_key$)/i;
+const SECRET_COLUMN = /(_enc$|cipher|secret|token|hash|password|key_value|api_?key|_key$)/i;
 
 export function readableRow(row: Record<string, unknown>): Record<string, unknown> {
   return Object.fromEntries(Object.entries(row).filter(([name]) => !SECRET_COLUMN.test(name)));

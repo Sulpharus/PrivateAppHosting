@@ -43,7 +43,7 @@ function renderWorker(text: string, env: ResolvedEnvironment, vars: Record<strin
   return out;
 }
 
-export function renderPortal(text: string, env: ResolvedEnvironment): string {
+function renderPortal(text: string, env: ResolvedEnvironment): string {
   return renderWorker(text, env, {
     pattern: env.domain,
     SUPABASE_URL: env.supabaseUrl,
@@ -54,7 +54,7 @@ export function renderPortal(text: string, env: ResolvedEnvironment): string {
   });
 }
 
-export function renderApi(text: string, env: ResolvedEnvironment, repository = ''): string {
+function renderApi(text: string, env: ResolvedEnvironment, repository = ''): string {
   return renderWorker(text, env, {
     pattern: `api.${env.domain}`,
     PORTAL_URL: env.portalUrl,
@@ -67,7 +67,7 @@ export function renderApi(text: string, env: ResolvedEnvironment, repository = '
   });
 }
 
-export function renderAiProxy(text: string, env: ResolvedEnvironment): string {
+function renderAiProxy(text: string, env: ResolvedEnvironment): string {
   return renderWorker(text, env, {
     pattern: `ai.${env.domain}`,
     PORTAL_URL: env.portalUrl,
@@ -77,7 +77,7 @@ export function renderAiProxy(text: string, env: ResolvedEnvironment): string {
   });
 }
 
-export function renderSupabaseConfig(text: string, config: InstanceConfig): string {
+function renderSupabaseConfig(text: string, config: InstanceConfig): string {
   const production = resolveEnvironment(config, 'production');
   let out = setTomlValue(
     text,
@@ -126,7 +126,7 @@ const TARGETS: Target[] = [
   { path: 'supabase/config.toml', render: renderSupabaseConfig },
 ];
 
-export interface ConfigureResult {
+interface ConfigureResult {
   changed: string[];
 }
 

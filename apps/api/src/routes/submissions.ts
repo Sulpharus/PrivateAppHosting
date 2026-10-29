@@ -32,9 +32,9 @@ import { controlHeaders } from './remote.ts';
 
 export const submissions = new Hono<AppContext>();
 
-export const WEBAPP_MAX = 40 * 1024 * 1024;
+const WEBAPP_MAX = 40 * 1024 * 1024;
 /** What streams through a Worker request comfortably; bigger installers go to R2 by hand. */
-export const PROGRAM_MAX = 95 * 1024 * 1024;
+const PROGRAM_MAX = 95 * 1024 * 1024;
 
 const BUCKET = 'submissions';
 const idSchema = z.uuid();

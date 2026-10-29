@@ -68,7 +68,7 @@ jobs:
       - uses: actions/checkout@v5
       - name: Shellcheck
         run: |
-          shellcheck -S warning infra/cloudflare/*.sh infra/nucbox/deploy/nucbox-deploy \
+          shellcheck -S warning infra/cloudflare/*.sh infra/desktop/install.sh infra/desktop/mininode-desktop infra/nucbox/deploy/nucbox-deploy \
             infra/nucbox/deploy/test.sh infra/nucbox/wine/entrypoint.sh infra/nucbox/backup/*.sh scripts/*.sh
       - name: nucbox-deploy rollouts (stubbed docker)
         run: |

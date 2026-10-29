@@ -20,7 +20,7 @@ export interface ChatRequest {
   search?: boolean | undefined;
 }
 
-export interface Source {
+interface Source {
   title: string;
   url: string;
 }
@@ -47,7 +47,7 @@ export interface Provider {
   stream(request: ChatRequest): Promise<StreamResult>;
 }
 
-export interface ProviderKeys {
+interface ProviderKeys {
   gatewayBase: string;
   gatewayToken?: string | undefined;
   anthropicKey?: string | undefined;

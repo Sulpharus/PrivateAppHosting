@@ -6,7 +6,7 @@ import type { Config } from './config.ts';
 import type { DockerEngine } from './docker.ts';
 import type { Hypervisor } from './proxmox.ts';
 
-export type RuntimeName = 'windows' | 'wine' | 'android';
+type RuntimeName = 'windows' | 'wine' | 'android';
 
 export interface PrepareRequest {
   app: string;
@@ -14,7 +14,7 @@ export interface PrepareRequest {
   program: string;
 }
 
-export interface GuacConnection {
+interface GuacConnection {
   protocol: 'rdp' | 'vnc';
   parameters: Record<string, string>;
 }
@@ -26,7 +26,7 @@ export type PrepareResult =
 export class RuntimeUnavailable extends Error {}
 
 const WINE_LABEL = 'app.mininode.runtime=wine';
-export const wineContainer = (slug: string) => `mn-wine-${slug}`;
+const wineContainer = (slug: string) => `mn-wine-${slug}`;
 export const wineVolume = (slug: string) => `mn-wine-${slug}`;
 
 type RuntimeConfig = Pick<

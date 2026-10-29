@@ -45,7 +45,7 @@ const runbooks = raw(
   }),
 );
 
-export const ARTICLES: Article[] = buildArticles({
+const ARTICLES: Article[] = buildArticles({
   articles,
   manifests: Object.values(manifests),
   workflows,
