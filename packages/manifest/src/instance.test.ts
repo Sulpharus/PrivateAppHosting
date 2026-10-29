@@ -15,6 +15,9 @@ const valid = {
   },
 };
 
+// Built at run time: a literal would look like a leaked key to the secret scan.
+const wrongKind = ['sb', 'secret', 'x'.repeat(16)].join('_');
+
 describe('instance config', () => {
   it('accepts a minimal valid file', () => {
     expect(parseInstanceConfig(valid).ok).toBe(true);
@@ -58,7 +61,7 @@ describe('instance config', () => {
       {
         supabase: {
           projectRef: 'abcdefghijklmnopqrst',
-          publishableKey: ['sb', 'secret', '0123456789abcdef'].join('_'),
+          publishableKey: wrongKind,
         },
       },
     ],
