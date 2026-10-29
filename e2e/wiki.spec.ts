@@ -12,12 +12,12 @@ test.afterAll(async () => {
 test('the Wissen group has a Wiki with search and articles and a Startup-Guide with a checklist', async ({
   page,
 }) => {
-  await createUser(email, 'admin', 'Wolfram');
+  await createUser(email, 'admin', 'Walter');
   await page.goto('/login');
   await page.getByLabel('E-Mail').fill(email);
   await page.getByLabel('Passwort', { exact: true }).fill(PASSWORD);
   await page.getByRole('button', { name: 'Anmelden', exact: true }).click();
-  await expect(page.getByRole('heading', { level: 1 })).toContainText('Wolfram');
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('Walter');
 
   await page.goto('/admin');
   const nav = page.getByRole('navigation', { name: 'Verwaltung' });
@@ -59,7 +59,7 @@ test('the Startup-Guide remembers what is done', async ({ page }) => {
   await page.getByLabel('E-Mail').fill(email);
   await page.getByLabel('Passwort', { exact: true }).fill(PASSWORD);
   await page.getByRole('button', { name: 'Anmelden', exact: true }).click();
-  await expect(page.getByRole('heading', { level: 1 })).toContainText('Wolfram');
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('Walter');
 
   await page.goto('/admin/guide');
   await expect(page.getByRole('heading', { level: 1, name: 'Startup-Guide' })).toBeVisible();

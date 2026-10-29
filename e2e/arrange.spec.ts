@@ -11,7 +11,7 @@ const benEmail = `${run}-ben@example.com`;
 const names = { a: `Anker ${run}`, b: `Brise ${run}`, c: `Clou ${run}` };
 
 test.beforeAll(async () => {
-  await createUser(adminEmail, 'admin', 'Wolfram');
+  await createUser(adminEmail, 'admin', 'Walter');
   const anna = await createUser(annaEmail, 'user', 'Anna');
   const ben = await createUser(benEmail, 'user', 'Ben');
   for (const [key, name] of Object.entries(names)) {

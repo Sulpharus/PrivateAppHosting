@@ -6,7 +6,7 @@ const email = `${run}-anna@example.com`;
 const shots = process.env.SCREENSHOT_DIR;
 
 test.beforeAll(async () => {
-  const adminId = await createUser(`${run}-admin@example.com`, 'admin', 'Wolfram');
+  const adminId = await createUser(`${run}-admin@example.com`, 'admin', 'Walter');
   const userId = await createUser(email, 'trusted', 'Anna');
   const apps: [string, string, Record<string, unknown>?][] = [
     ['lesezeichen', 'Lesezeichen'],

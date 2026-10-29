@@ -2,7 +2,7 @@ begin;
 select plan(6);
 select tests.reset();
 
-select tests.create_user('admin@example.com', 'Wolfram') as admin_id \gset
+select tests.create_user('admin@example.com', 'Walter') as admin_id \gset
 select tests.create_user('lena@example.com', 'Lena') as lena_id \gset
 select tests.create_user('tom@example.com', 'Tom') as tom_id \gset
 select tests.create_user('mia@example.com', 'Mia') as mia_id \gset
@@ -15,7 +15,7 @@ insert into platform.app_grants (user_id, app_slug) values
 select tests.login(:'lena_id');
 select tests.as_app('medien');
 select is((select array_agg(display_name order by display_name) from platform.app_people('medien')),
-  array['Tom', 'Wolfram'], 'people with access, without the caller and without others');
+  array['Tom', 'Walter'], 'people with access, without the caller and without others');
 select tests.as_app('other');
 select is((select count(*)::int from platform.app_people('medien')), 0,
   'only from the app''s own page');
