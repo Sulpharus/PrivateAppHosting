@@ -91,7 +91,7 @@ describe('mininode export', () => {
     );
   });
 
-  it.skipIf(!existsSync(join(ROOT, 'mininode.config.json')))(
+  it.skipIf(!IS_CHECKOUT || !existsSync(join(ROOT, 'mininode.config.json')))(
     'finds the Cloudflare account and both Supabase projects of this repository',
     () => {
       const ids = instanceIdentifiers(ROOT);
