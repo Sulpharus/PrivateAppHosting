@@ -2,6 +2,8 @@
 // containers on the Linux VM use, and what is left. Read-only; every source may fail on its own.
 
 import { readFileSync } from 'node:fs';
+import { statfs } from 'node:fs/promises';
+import os from 'node:os';
 import { Agent, type Client, type Dispatcher } from 'undici';
 
 export interface Usage {
@@ -195,6 +197,33 @@ export function dockerResources(client: Client): ContainerSource {
         }),
       );
       return rows.sort((a, b) => b.memory.used - a.memory.used);
+    },
+  };
+}
+
+/** This computer itself, for a home server without Proxmox. */
+export function localResources(): HostSource {
+  return {
+    async host() {
+      const cores = os.cpus().length;
+      const total = os.totalmem();
+      const root = await statfs('/').catch(() => null);
+      return {
+        cpu: Math.min(1, (os.loadavg()[0] ?? 0) / Math.max(cores, 1)),
+        cores,
+        memory: { used: total - os.freemem(), total },
+        rootfs: root
+          ? { used: (root.blocks - root.bfree) * root.bsize, total: root.blocks * root.bsize }
+          : { used: 0, total: 0 },
+        uptimeSeconds: os.uptime(),
+        load: os.loadavg(),
+      };
+    },
+    async vms() {
+      return [];
+    },
+    async storage() {
+      return [];
     },
   };
 }

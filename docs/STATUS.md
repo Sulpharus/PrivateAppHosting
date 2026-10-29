@@ -141,7 +141,7 @@ since the PR #12 deploy. Earlier deploys stopped at medialog and never shipped t
 3. **Google (sign-in, Gmail and Calendar in apps, Kalender sync):** the code is complete, but the
    deploy skips it because the GitHub environment `production` has no `GOOGLE_CLIENT_ID`,
    `GOOGLE_CLIENT_SECRET` or `GOOGLE_TOKEN_KEY` (checked in the 2026-10-20 deploy logs). Create the
-   OAuth client (`first-setup.md` §3.1), add the three secrets (`GOOGLE_TOKEN_KEY`: `openssl rand
+   OAuth client (`setup-cloudflare.md` (section 9, Google)), add the three secrets (`GOOGLE_TOKEN_KEY`: `openssl rand
    -base64 32`, keep a copy), run a deploy, then connect Google under "Dein Konto" and switch on
    "Google Kalender" in the Kalender. Until then *Dein Konto* shows the admin a card with these
    steps.

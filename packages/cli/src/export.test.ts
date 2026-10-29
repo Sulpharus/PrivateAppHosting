@@ -83,14 +83,17 @@ describe('mininode export', () => {
     );
   });
 
-  it('finds the Cloudflare account and both Supabase projects of this repository', () => {
-    const ids = instanceIdentifiers(ROOT);
-    const config = loadInstanceConfig(ROOT);
-    expect(ids).toContain(config.cloudflare.accountId);
-    expect(ids).toContain(config.environments.production.supabase.projectRef);
-    if (config.environments.staging)
-      expect(ids).toContain(config.environments.staging.supabase.projectRef);
-  });
+  it.skipIf(!existsSync(join(ROOT, 'mininode.config.json')))(
+    'finds the Cloudflare account and both Supabase projects of this repository',
+    () => {
+      const ids = instanceIdentifiers(ROOT);
+      const config = loadInstanceConfig(ROOT);
+      expect(ids).toContain(config.cloudflare.accountId);
+      expect(ids).toContain(config.environments.production.supabase.projectRef);
+      if (config.environments.staging)
+        expect(ids).toContain(config.environments.staging.supabase.projectRef);
+    },
+  );
 
   it('refuses to run when the instance settings cannot be found', () => {
     const { root } = repo({ 'mininode.json': manifest });

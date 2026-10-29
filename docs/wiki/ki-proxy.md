@@ -36,5 +36,5 @@ Kosten diesen Monat, Anfragen, Verbrauch je App und die **Budgets** zum Einstell
 
 ## Einrichten
 
-GitHub-Geheimnisse `GEMINI_API_KEY` / `ANTHROPIC_API_KEY` (Anbieter-Schlüssel) und `AI_GATEWAY_TOKEN` (Gateway-Einstellungen), siehe `first-setup.md`.
+GitHub-Geheimnisse `GEMINI_API_KEY` / `ANTHROPIC_API_KEY` (Anbieter-Schlüssel) und `AI_GATEWAY_TOKEN` (Gateway-Einstellungen), siehe `setup-cloudflare.md`.
 Noch nicht möglich: Bilder und Scans durch die KI lesen lassen (der Proxy leitet nur Text weiter).

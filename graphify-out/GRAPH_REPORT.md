@@ -389,7 +389,7 @@
 - `Decision` --references--> `google()`  [INFERRED]
   docs/adr/0004-google-services-for-apps.md → apps/api/src/routes/gcal.ts
 - `3.1 Google sign-in (optional, 10 min)` --references--> `google()`  [INFERRED]
-  docs/runbooks/first-setup.md → apps/api/src/routes/gcal.ts
+  docs/runbooks/setup-cloudflare.md → apps/api/src/routes/gcal.ts
 - `Was für MiniNode geändert wurde` --references--> `google()`  [INFERRED]
   hosted/bill-the-splitter/README.md → apps/api/src/routes/gcal.ts
 - `10. Games (including multiplayer)` --references--> `version()`  [INFERRED]

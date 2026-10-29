@@ -10,7 +10,12 @@ import { checkLibraryInstall, installLibraryApp, removeLibraryApp } from './depl
 import { appSchemasWithTables, existingAppSchemas, exposeSchemas } from './deploy/migrate.ts';
 import { hostedTargets, pruneApps } from './deploy/prune.ts';
 import { dropExemptions, uninstallApp } from './deploy/uninstall.ts';
-import { createDesktopAccount, initDesktop, migrateDesktop } from './desktop/index.ts';
+import {
+  createDesktopAccount,
+  initDesktop,
+  migrateDesktop,
+  setDesktopPassword,
+} from './desktop/index.ts';
 import { readMigrations } from './desktop/migrations.ts';
 import { type DoctorReport, doctor, hostedApps } from './doctor.ts';
 import { exportApp } from './export.ts';
@@ -33,11 +38,13 @@ const USAGE = `mininode <command>
   init [--domain d --accountId id --supabaseRef ref --publishableKey key]
        [--zone z] [--repository owner/repo] [--mailFrom a@b] [--force]
                                     Write mininode.config.json (asks for what is missing), then configure
-  desktop init --out <dir> --domain d [--scheme http|https] [--port 8787] [--lan] [--force]
+  desktop init --out <dir> --domain d [--scheme http|https] [--port 8787] [--host-port n] [--lan] [--force]
                                     Desktop edition: write .env, kong.yml and roles.sql with fresh secrets
   desktop migrate                   Desktop edition: apply the platform migrations (inside the host container)
-  desktop admin <email>             Desktop edition: create the first account (password from MININODE_ADMIN_PASSWORD)
-  configure [--check]               Write the config into the wrangler files and supabase/config.toml
+  desktop admin <email>             Desktop edition: create an account (password from MININODE_ADMIN_PASSWORD)
+  desktop password <email>          Desktop edition: set a new password for an account (same variable)
+  configure [--check] [--config file] [--root dir]
+                                    Write the config into the wrangler files and supabase/config.toml
   config env [production|staging]   KEY=value lines for the workflows ($GITHUB_ENV)
   doctor <app-dir> | --all          Check hosted apps (manifest, secrets, SDK, RLS, CSP)
   dev <app-dir> [--port 8790]       Serve an app locally behind the gate (local Supabase)
@@ -127,6 +134,7 @@ async function main(args: string[]): Promise<number> {
             domain,
             scheme,
             port: Number(flag(args, '--port') ?? 8787),
+            ...(flag(args, '--host-port') ? { hostPort: Number(flag(args, '--host-port')) } : {}),
             bind: args.includes('--lan') ? '0.0.0.0' : '127.0.0.1',
           },
           { force: args.includes('--force') },
@@ -159,12 +167,31 @@ async function main(args: string[]): Promise<number> {
         console.log(`account ${email} created`);
         return 0;
       }
+      if (sub === 'password') {
+        const email = args[2];
+        const password = process.env.MININODE_ADMIN_PASSWORD;
+        const key = process.env.SUPABASE_SECRET_KEY;
+        const url = process.env.SUPABASE_URL;
+        if (!email || !password || !key || !url)
+          throw new Error(
+            'needs an email argument and MININODE_ADMIN_PASSWORD, SUPABASE_SECRET_KEY, SUPABASE_URL',
+          );
+        await setDesktopPassword(url, key, email, password);
+        console.log(`password of ${email} changed`);
+        return 0;
+      }
       break;
     }
     case 'configure': {
-      const { changed } = configureInstance(ROOT, loadInstanceConfig(ROOT), {
-        check: args.includes('--check'),
-      });
+      const file = flag(args, '--config');
+      // --root: another copy of the platform (packaging renders the starter this way).
+      const rootFlag = flag(args, '--root');
+      const root = rootFlag ? resolve(process.cwd(), rootFlag) : ROOT;
+      const { changed } = configureInstance(
+        root,
+        loadInstanceConfig(root, file ? resolve(process.cwd(), file) : undefined),
+        { check: args.includes('--check') },
+      );
       if (args.includes('--check')) {
         for (const file of changed) console.error(`out of date: ${file}`);
         if (changed.length > 0) console.error('run `pnpm mininode configure`');

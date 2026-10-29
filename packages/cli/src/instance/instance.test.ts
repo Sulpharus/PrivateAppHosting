@@ -1,5 +1,13 @@
 import { execFileSync } from 'node:child_process';
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  cpSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -64,7 +72,12 @@ describe('configure', () => {
   it('leaves nothing of the previous installation behind', () => {
     const root = scratch();
     configureInstance(root, buildConfig(answers));
-    const previous = loadInstanceConfig(REPO);
+    // This installation's file, or the example a fresh copy of the platform is rendered from.
+    const own = join(REPO, 'mininode.config.json');
+    const previous = loadInstanceConfig(
+      REPO,
+      existsSync(own) ? own : join(REPO, 'mininode.config.example.json'),
+    );
     const all = [
       'apps/portal/wrangler.jsonc',
       'apps/api/wrangler.jsonc',
@@ -133,9 +146,15 @@ describe('configure', () => {
     expect(() => setTomlValue('[t]\nk = 1\n[u]\nj = 1\n', 't', 'j', '2')).toThrow(/no j in \[t\]/);
   });
 
-  it('is in sync for this repository (the same check as CI)', () => {
-    expect(configureInstance(REPO, loadInstanceConfig(REPO), { check: true }).changed).toEqual([]);
-  });
+  // A fresh copy of the platform has no mininode.config.json until `mininode init` wrote it.
+  it.skipIf(!existsSync(join(REPO, 'mininode.config.json')))(
+    'is in sync for this repository (the same check as CI)',
+    () => {
+      expect(configureInstance(REPO, loadInstanceConfig(REPO), { check: true }).changed).toEqual(
+        [],
+      );
+    },
+  );
 });
 
 describe('init answers', () => {

@@ -13,7 +13,7 @@ Solange Google aus ist, zeigt *Dein Konto* dem Admin eine Karte mit den Schritte
 
 Einrichten in der Google-Cloud-Konsole (OAuth-Zustimmungsbildschirm, Veröffentlichungsstatus *In production*, Gmail- und Calendar-API
 aktivieren, OAuth-Client mit Rückleitung `https://<supabase>/auth/v1/callback`), danach `GOOGLE_CLIENT_ID` und `GOOGLE_CLIENT_SECRET` als
-GitHub-Geheimnisse; der nächste Deploy schaltet den Anbieter ein. Anleitung: Runbook `first-setup.md` §3.1. Nicht zur Prüfung einreichen: die
+GitHub-Geheimnisse; der nächste Deploy schaltet den Anbieter ein. Anleitung: Runbook `setup-cloudflare.md` (section 9, Google). Nicht zur Prüfung einreichen: die
 Warnung „Google hat diese App nicht überprüft“ ist hier normal (bis 100 Konten).
 
 Neue Konten entstehen nicht über Google: die Google-Adresse muss zu einem eingeladenen Konto passen, oder die Person verbindet Google unter

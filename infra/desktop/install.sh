@@ -9,10 +9,13 @@
 #   --dir          where the installation lives (settings, secrets, backups, your apps)
 #   --domain       the name MiniNode answers to; *.localhost needs no setup on this computer
 #   --port         the port in the address bar
+#   --scheme       http (default) or https when a tunnel or reverse proxy adds HTTPS in front
+#   --host-port    the port this computer listens on, if it differs from --port (e.g. --port 443 --host-port 8787 behind a tunnel)
 #   --lan          reachable from other devices on your network (see docs/runbooks/setup-desktop.md:
 #                  needs a wildcard DNS name for the domain, and plain http limits passkeys)
 #   --admin-email  create the first account with this address (asks for a password)
 #   --no-admin     skip creating an account
+#   --ca-file      PEM certificate of a company proxy that re-signs HTTPS (the build downloads packages)
 #
 # Running it again on an existing installation rebuilds, restarts and migrates; it keeps all data
 # and secrets.
@@ -22,8 +25,11 @@ SOURCE="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
 DIR="${HOME}/mininode"
 DOMAIN=mininode.localhost
 PORT=8787
+HOST_PORT=
+SCHEME=http
 LAN=no
 ADMIN_EMAIL=""
+CA_FILE=""
 ASK_ADMIN=yes
 IMAGE=mininode-desktop-host:local
 
@@ -35,15 +41,19 @@ while [ $# -gt 0 ]; do
     --dir) DIR=${2:?--dir needs a folder}; shift 2 ;;
     --domain) DOMAIN=${2:?--domain needs a name}; shift 2 ;;
     --port) PORT=${2:?--port needs a number}; shift 2 ;;
+    --host-port) HOST_PORT=${2:?--host-port needs a number}; shift 2 ;;
+    --scheme) SCHEME=${2:?--scheme needs http or https}; shift 2 ;;
     --lan) LAN=yes; shift ;;
     --admin-email) ADMIN_EMAIL=${2:?--admin-email needs an address}; shift 2 ;;
     --no-admin) ASK_ADMIN=no; shift ;;
-    -h|--help) sed -n '2,19p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    --ca-file) CA_FILE=${2:?--ca-file needs a certificate file}; shift 2 ;;
+    -h|--help) sed -n '2,23p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) die "unknown option $1 (try --help)" ;;
   esac
 done
 
 [[ "$DOMAIN" =~ ^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$ ]] || die "the domain must be a plain host name, e.g. mininode.localhost"
+[ "$SCHEME" = http ] || [ "$SCHEME" = https ] || die "--scheme must be http or https"
 [[ "$PORT" =~ ^[0-9]+$ ]] && [ "$PORT" -ge 1 ] && [ "$PORT" -le 65535 ] || die "the port must be a number from 1 to 65535"
 [ -f "$SOURCE/infra/desktop/Dockerfile" ] || die "run this from an unpacked MiniNode folder ($SOURCE has no infra/desktop)"
 
@@ -61,8 +71,9 @@ fresh=yes
 [ -f "$DIR/.env" ] && fresh=no
 
 # 2. The port must be free, unless this installation already uses it.
-if [ "$fresh" = yes ] && (exec 3<>"/dev/tcp/127.0.0.1/$PORT") 2>/dev/null; then
-  die "port $PORT is already in use on this computer; choose another with --port"
+check_port=${HOST_PORT:-$PORT}
+if [ "$fresh" = yes ] && (exec 3<>"/dev/tcp/127.0.0.1/$check_port") 2>/dev/null; then
+  die "port $check_port is already in use on this computer; choose another with --port (or --host-port)"
 fi
 
 say "Installing MiniNode into $DIR"
@@ -81,12 +92,15 @@ chmod +x "$DIR/mininode-desktop"
 
 # 4. The image (portal, API, AI proxy, gates, command line). The first build takes several minutes.
 say "Building MiniNode (first time: several minutes)…"
-docker build -q -f "$DIR/source/infra/desktop/Dockerfile" -t "$IMAGE" "$DIR/source" >/dev/null
+build_args=()
+[ -n "$CA_FILE" ] && { [ -f "$CA_FILE" ] || die "$CA_FILE not found"; build_args=(--secret "id=ca,src=$CA_FILE"); }
+docker build -q -f "$DIR/source/infra/desktop/Dockerfile" -t "$IMAGE" ${build_args[@]+"${build_args[@]}"} "$DIR/source" >/dev/null
 
 # 5. Secrets and configuration, made on this computer.
 if [ "$fresh" = yes ]; then
-  lan_flag=()
-  [ "$LAN" = yes ] && lan_flag=(--lan)
+  lan_flag=(--scheme "$SCHEME")
+  [ "$LAN" = yes ] && lan_flag+=(--lan)
+  [ -n "$HOST_PORT" ] && lan_flag+=(--host-port "$HOST_PORT")
   docker run --rm -u "$(id -u):$(id -g)" -v "$DIR:/out" -w /app "$IMAGE" \
     node packages/cli/src/bin.ts desktop init --out /out --domain "$DOMAIN" --port "$PORT" ${lan_flag[@]+"${lan_flag[@]}"}
   printf "MININODE_SOURCE='./source'\n" >> "$DIR/.env"

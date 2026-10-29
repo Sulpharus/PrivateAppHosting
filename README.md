@@ -23,7 +23,7 @@ password). Built for a handful of trusted people, not the public.
 | You want to… | Read |
 |---|---|
 | understand the design | [PLAN.md](PLAN.md), [docs/adr/](docs/adr/) |
-| set up the platform from scratch | [docs/runbooks/first-setup.md](docs/runbooks/first-setup.md) |
+| set up the platform from scratch | [docs/runbooks/setup-cloudflare.md](docs/runbooks/setup-cloudflare.md) |
 | set up the home server | [docs/runbooks/nucbox-install.md](docs/runbooks/nucbox-install.md) |
 | add an app | [docs/runbooks/uploads.md](docs/runbooks/uploads.md), [docs/runbooks/add-app.md](docs/runbooks/add-app.md) |
 | download the cloud or PC/server edition | [docs/runbooks/releases.md](docs/runbooks/releases.md) |

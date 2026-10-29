@@ -28,7 +28,7 @@ printf '#!/usr/bin/env bash\necho "chown $*" >>"$STUB_LOG"\n' >"$work/bin/chown"
 printf '#!/usr/bin/env bash\nexit 0\n' >"$work/bin/sleep"
 chmod +x "$work/bin/"*
 
-export PATH="$work/bin:$PATH" MININODE_ROOT="$work/root" STUB_LOG="$work/log" \
+export PATH="$work/bin:$PATH" MININODE_ROOT="$work/root" MININODE_OWNER=owner MININODE_REPO=owner/platform MININODE_DOMAIN=example.org STUB_LOG="$work/log" \
   CATALOG="$repo/infra/nucbox/library.json" GH_TOKEN=test
 deploy() { bash "$here/nucbox-deploy" "$@" 2>>"$work/stderr"; }
 fail() { echo "FAIL: $*" >&2; cat "$work/stderr" >&2; exit 1; }

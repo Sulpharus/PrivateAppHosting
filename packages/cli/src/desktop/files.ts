@@ -5,8 +5,10 @@ import type { DesktopSecrets } from './secrets.ts';
 export interface DesktopSettings {
   domain: string;
   scheme: 'http' | 'https';
-  /** The port people type in the browser. */
+  /** The port people type in the browser (443 behind an HTTPS tunnel). */
   port: number;
+  /** The port this computer listens on; differs from `port` behind a tunnel or reverse proxy. */
+  hostPort?: number;
   /** 127.0.0.1 = this computer only; 0.0.0.0 = the whole network. */
   bind: '127.0.0.1' | '0.0.0.0';
 }
@@ -21,6 +23,7 @@ export function envFile(settings: DesktopSettings, secrets: DesktopSecrets): str
     ['MININODE_SCHEME', settings.scheme],
     ['MININODE_PORT', String(settings.port)],
     ['BIND_ADDRESS', settings.bind],
+    ['HOST_PORT', String(settings.hostPort ?? settings.port)],
     ['PORTAL_PUBLIC_URL', publicOrigin(where)],
     ['SUPABASE_PUBLIC_URL', publicOrigin(where, 'supabase')],
     ['APPS_PUBLIC_PATTERN', publicOrigin(where, '*') + '/**'],

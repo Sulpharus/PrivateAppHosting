@@ -10,9 +10,12 @@ export function instanceConfigPath(root: string): string {
   return join(root, INSTANCE_CONFIG_FILENAME);
 }
 
-/** Reads and validates `mininode.config.json`; the error says what to run when it is missing. */
-export function loadInstanceConfig(root: string): InstanceConfig {
-  const path = instanceConfigPath(root);
+/**
+ * Reads and validates `mininode.config.json` (or another file with the same format, e.g. the
+ * example); the error says what to run when it is missing.
+ */
+export function loadInstanceConfig(root: string, file?: string): InstanceConfig {
+  const path = file ?? instanceConfigPath(root);
   if (!existsSync(path)) {
     throw new Error(`${INSTANCE_CONFIG_FILENAME} not found: run \`pnpm mininode init\` first`);
   }

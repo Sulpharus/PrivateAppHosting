@@ -87,7 +87,8 @@ export function createScheduler(options: {
           hostname: config.WINDOWS_HOST,
           port: '3389',
           username: config.WINDOWS_RDP_USER,
-          password: config.WINDOWS_RDP_PASSWORD,
+          // Set whenever a Proxmox host is configured (config.ts); without one wake() already failed.
+          password: config.WINDOWS_RDP_PASSWORD ?? '',
           security: 'nla',
           'ignore-cert': 'true',
           // The alias is registered in TSAppAllowList by the installer (install.ts).

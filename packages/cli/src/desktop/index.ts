@@ -134,3 +134,32 @@ export async function createDesktopAccount(
     );
   return body.id;
 }
+
+/** Sets a new password for an existing account (the recovery path when no email is configured). */
+export async function setDesktopPassword(
+  supabaseUrl: string,
+  secretKey: string,
+  email: string,
+  password: string,
+): Promise<void> {
+  const headers = { apikey: secretKey, 'Content-Type': 'application/json' };
+  const list = await fetch(`${supabaseUrl}/auth/v1/admin/users?per_page=1000`, { headers });
+  const body = (await list.json().catch(() => ({}))) as {
+    users?: { id: string; email?: string }[];
+  };
+  const user = body.users?.find(
+    (candidate) => candidate.email?.toLowerCase() === email.toLowerCase(),
+  );
+  if (!list.ok || !user) throw new Error(`no account with the address ${email}`);
+  const response = await fetch(`${supabaseUrl}/auth/v1/admin/users/${user.id}`, {
+    method: 'PUT',
+    headers,
+    body: JSON.stringify({ password }),
+  });
+  if (!response.ok) {
+    const failure = (await response.json().catch(() => ({}))) as { msg?: string; message?: string };
+    throw new Error(
+      `could not set the password (${response.status}): ${failure.msg ?? failure.message ?? 'unknown error'}`,
+    );
+  }
+}

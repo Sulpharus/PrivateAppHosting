@@ -2,7 +2,7 @@ name: Deploy
 
 # Runs after CI on main. Order: database → platform Workers → hosted apps → NucBox containers.
 # Secrets and variables live in the GitHub environment (production / staging); see
-# docs/runbooks/first-setup.md for the full list.
+# docs/runbooks/setup-cloudflare.md for the full list.
 
 on:
   push:

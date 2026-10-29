@@ -102,6 +102,40 @@ jobs:
             -H 'Sec-Fetch-Mode: navigate' localhost:8080/auth)
           test "$code" = 302 || { docker logs control; exit 1; }
 
+  desktop:
+    name: Desktop edition installs and signs in
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install (the real installer)
+        env:
+          MININODE_ADMIN_PASSWORD: ci-password-${{ github.run_id }}-abcdef
+        run: infra/desktop/install.sh --dir "$RUNNER_TEMP/mininode" --admin-email ci@example.org
+      - name: Sign in through the host, with the keys made by the installer
+        env:
+          PASSWORD: ci-password-${{ github.run_id }}-abcdef
+        run: |
+          set -euo pipefail
+          key=$(sed -n "s/^SUPABASE_PUBLISHABLE_KEY='\(.*\)'\$/\1/p" "$RUNNER_TEMP/mininode/.env")
+          curl -fsS http://mininode.localhost:8787/config.json | jq -e '.supabaseUrl == "http://supabase.mininode.localhost:8787"'
+          curl -fsS http://supabase.mininode.localhost:8787/auth/v1/.well-known/jwks.json | jq -e '.keys | length == 1 and (.[0] | has("d") | not)'
+          token=$(curl -fsS -X POST 'http://supabase.mininode.localhost:8787/auth/v1/token?grant_type=password' \
+            -H "apikey: $key" -H 'Content-Type: application/json' \
+            -d "{\"email\":\"ci@example.org\",\"password\":\"$PASSWORD\"}" | jq -r .access_token)
+          claims=$(printf '%s' "$token" | cut -d. -f2 | tr '_-' '/+' | base64 -d 2>/dev/null || true)
+          echo "$claims" | jq -e '.mn_role == "admin" and .iss == "http://supabase.mininode.localhost:8787/auth/v1"'
+          # The data API answers a signed-in admin, and refuses a visitor.
+          curl -fsS "http://supabase.mininode.localhost:8787/rest/v1/profiles?select=role" -H "apikey: $key" \
+            -H "Authorization: Bearer $token" -H 'Accept-Profile: platform' | jq -e '.[0].role == "admin"'
+          code=$(curl -s -o /dev/null -w '%{http_code}' "http://supabase.mininode.localhost:8787/rest/v1/profiles?select=role" \
+            -H "apikey: $key" -H 'Accept-Profile: platform')
+          test "$code" != 200
+      - name: Containers on failure
+        if: failure()
+        run: |
+          cd "$RUNNER_TEMP/mininode" && docker compose ps && docker compose logs --tail 60
+
   database:
     name: Database, integration and e2e
     runs-on: ubuntu-latest

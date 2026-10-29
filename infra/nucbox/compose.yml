@@ -25,7 +25,7 @@ services:
     command: tunnel --no-autoupdate --metrics 0.0.0.0:2000 run
     environment:
       TUNNEL_TOKEN: ${TUNNEL_TOKEN:?}
-    # ssh.mininode.app → the VM's sshd (forced-command deploy user only).
+    # ssh.<domain> → the VM's sshd (forced-command deploy user only).
     extra_hosts: ["host.docker.internal:host-gateway"]
     read_only: true
     cap_drop: [ALL]
@@ -57,7 +57,7 @@ services:
 
   nucbox-control:
     <<: *hardening
-    image: ghcr.io/sulpharus/mininode-nucbox-control@${CONTROL_DIGEST:?}
+    image: ghcr.io/${MININODE_OWNER:?}/mininode-nucbox-control@${CONTROL_DIGEST:?}
     env_file: [secrets.env]
     environment:
       PORT: "8080"

@@ -22,7 +22,7 @@ summary: Wie eine Änderung live geht und welche automatischen Abläufe es gibt
 ## Umgebungen
 
 `production` ({{domain}}) und `staging` (eigenes Supabase-Projekt `mininode-staging`). Geheimnisse und Variablen liegen in der **GitHub-Umgebung**
-(*Settings → Environments*); die Liste steht in `first-setup.md`. **Staging läuft nur auf Wunsch:** den Deploy von Hand starten (*Run workflow*, Umgebung `staging`) und dort üben; ein Push auf `main` geht nicht über Staging.
+(*Settings → Environments*); die Liste steht in `setup-cloudflare.md`. **Staging läuft nur auf Wunsch:** den Deploy von Hand starten (*Run workflow*, Umgebung `staging`) und dort üben; ein Push auf `main` geht nicht über Staging.
 
 ## Von Hand starten
 

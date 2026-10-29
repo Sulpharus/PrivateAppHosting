@@ -6,7 +6,9 @@
 #   mininode-desktop url | migrate
 #   mininode-desktop add <app folder | app.zip>   install or update a web app
 #   mininode-desktop admin <email>                create an account (asks for the password)
+#   mininode-desktop password <email>             set a new password for an account
 #   mininode-desktop backup [folder]              database, files and settings into one folder
+#   mininode-desktop restore <backup folder>      replace ALL data with a backup (asks first)
 #   mininode-desktop update <new source folder>   switch to a newer MiniNode and restart
 #   mininode-desktop uninstall                    remove containers (asks before deleting data)
 set -euo pipefail
@@ -101,13 +103,20 @@ cmd_admin() {
   compose exec -T -e MININODE_ADMIN_PASSWORD -w /app host node packages/cli/src/bin.ts desktop admin "$email"
 }
 
+cmd_password() {
+  need_installed
+  email=${1:?usage: password <email>}
+  read_password
+  compose exec -T -e MININODE_ADMIN_PASSWORD -w /app host node packages/cli/src/bin.ts desktop password "$email"
+}
+
 cmd_backup() {
   need_installed
   out=${1:-"$HERE/backups/$(date +%Y%m%d-%H%M%S)"}
   mkdir -p "$out"
   chmod 700 "$out"
   say "Backing up to $out …"
-  compose exec -T db pg_dump -U postgres -Fc postgres > "$out/database.dump"
+  compose exec -T db pg_dump -U supabase_admin -Fc postgres > "$out/database.dump"
   # Any image with tar will do; the database image is already here.
   tar_image=$(docker inspect --format '{{.Config.Image}}' "$(compose ps -q db)")
   for volume in storage-data host-data; do
@@ -116,6 +125,54 @@ cmd_backup() {
   cp "$HERE/.env" "$out/env.backup"
   chmod 600 "$out/env.backup"
   say "Done. The folder holds your secrets (env.backup): keep it somewhere private."
+}
+
+# After a restore every sequence must be at least as high as the largest id in its table
+# (a dump can hold a sequence value one behind its rows; the next insert would collide).
+SEQUENCE_REPAIR="do \$\$ declare r record; cur bigint; top bigint; begin
+  for r in select n.nspname sch, c.relname tbl, a.attname col,
+                  pg_get_serial_sequence(format('%I.%I', n.nspname, c.relname), a.attname) seq
+             from pg_class c join pg_namespace n on n.oid = c.relnamespace
+             join pg_attribute a on a.attrelid = c.oid and a.attnum > 0 and not a.attisdropped
+            where c.relkind = 'r' and n.nspname not in ('pg_catalog', 'information_schema') loop
+    continue when r.seq is null;
+    execute format('select coalesce(max(%I), 0) from %I.%I', r.col, r.sch, r.tbl) into top;
+    execute 'select last_value from ' || r.seq into cur;
+    if top > cur then perform setval(r.seq, top, true); end if;
+  end loop;
+end \$\$;"
+
+cmd_restore() {
+  need_installed
+  from=${1:?usage: restore <backup folder>}
+  [ -f "$from/database.dump" ] || die "$from has no database.dump"
+  say "This REPLACES everything in MiniNode (database, files, apps) with the backup in $from."
+  read -r -p "Type RESTORE to continue: " answer
+  [ "$answer" = RESTORE ] || die "not confirmed; nothing changed"
+  if [ -f "$from/env.backup" ] && ! cmp -s "$from/env.backup" "$HERE/.env"; then
+    say "The backup's secrets differ from this installation's. The data only works with its own secrets."
+    read -r -p "Use the backup's secrets (the current .env is kept as .env.before-restore)? [Y/n] " keep
+    if [ "${keep:-Y}" != n ] && [ "${keep:-Y}" != N ]; then
+      cp "$HERE/.env" "$HERE/.env.before-restore"
+      cp "$from/env.backup" "$HERE/.env"
+      chmod 600 "$HERE/.env" "$HERE/.env.before-restore"
+    fi
+  fi
+  compose stop host kong auth rest storage
+  compose up -d db
+  for _ in $(seq 1 30); do [ "$(compose ps --format '{{.Health}}' db)" = healthy ] && break; sleep 2; done
+  compose exec -T db pg_restore -U supabase_admin -d postgres --clean --if-exists < "$from/database.dump"
+  compose exec -T db psql -U supabase_admin -d postgres -v ON_ERROR_STOP=1 -c "$SEQUENCE_REPAIR"
+  tar_image=$(docker inspect --format '{{.Config.Image}}' "$(compose ps -q db)")
+  for volume in storage-data host-data; do
+    if [ -f "$from/$volume.tar.gz" ]; then
+      docker run --rm -v "mininode_$volume:/data" -v "$(cd "$from" && pwd -P):/in:ro" --entrypoint sh "$tar_image" \
+        -c "find /data -mindepth 1 -delete && tar xzf /in/$volume.tar.gz -C /data"
+    fi
+  done
+  compose up -d
+  wait_healthy
+  say "Restored. Everyone has to sign in again."
 }
 
 cmd_update() {
@@ -156,7 +213,9 @@ case "${1:-}" in
   migrate) need_installed; mn desktop migrate ;;
   add) shift; cmd_add "$@" ;;
   admin) shift; cmd_admin "$@" ;;
+  password) shift; cmd_password "$@" ;;
   backup) shift; cmd_backup "$@" ;;
+  restore) shift; cmd_restore "$@" ;;
   update) shift; cmd_update "$@" ;;
   uninstall) cmd_uninstall ;;
   *) sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//'; exit 2 ;;

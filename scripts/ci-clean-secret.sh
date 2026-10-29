@@ -7,7 +7,7 @@ name=$1 pattern=${2:-} hint=${3:-}
 raw=${!name:-}
 clean=$(printf '%s' "$raw" | tr -d '[:space:]"'"'")
 if [ -z "$clean" ]; then
-  echo "::error::$name is not set (docs/runbooks/first-setup.md, step 3)"
+  echo "::error::$name is not set (docs/runbooks/setup-cloudflare.md, section 5)"
   exit 1
 fi
 if [ -n "$pattern" ] && ! [[ $clean =~ $pattern ]]; then

@@ -5,26 +5,26 @@ import { cachedGrants } from './auth.ts';
 import { loadConfig } from './config.ts';
 import { dockerEngine } from './docker.ts';
 import { createInstaller, r2Signer } from './install.ts';
-import { proxmoxClient } from './proxmox.ts';
-import { collect, dockerResources, proxmoxResources } from './resources.ts';
+import { noHypervisor, proxmoxClient } from './proxmox.ts';
+import { collect, dockerResources, localResources, proxmoxResources } from './resources.ts';
 import { createScheduler } from './runtimes.ts';
 import { createServer } from './server.ts';
 
 const config = loadConfig();
-const hypervisor = proxmoxClient({
-  url: config.PROXMOX_URL,
-  node: config.PROXMOX_NODE,
-  token: config.PROXMOX_TOKEN,
-  caFile: config.PROXMOX_CA_FILE,
-});
+// Proxmox is optional: without it this is a plain Docker host (no Windows programs).
+const proxmox =
+  config.PROXMOX_URL && config.PROXMOX_TOKEN
+    ? {
+        url: config.PROXMOX_URL,
+        node: config.PROXMOX_NODE,
+        token: config.PROXMOX_TOKEN,
+        caFile: config.PROXMOX_CA_FILE,
+      }
+    : null;
+const hypervisor = proxmox ? proxmoxClient(proxmox) : noHypervisor();
 const docker = dockerEngine(config.DOCKER_SOCKET);
 const scheduler = createScheduler({ config, hypervisor, docker });
-const hostResources = proxmoxResources({
-  url: config.PROXMOX_URL,
-  node: config.PROXMOX_NODE,
-  token: config.PROXMOX_TOKEN,
-  caFile: config.PROXMOX_CA_FILE,
-});
+const hostResources = proxmox ? proxmoxResources(proxmox) : localResources();
 const containerResources = dockerResources(
   new Client('http://docker', { socketPath: config.DOCKER_SOCKET }),
 );

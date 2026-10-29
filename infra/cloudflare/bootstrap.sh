@@ -10,7 +10,7 @@
 #
 # Requires: bash, curl, jq. Run it on the NucBox Linux VM (it writes the tunnel token there).
 #   CLOUDFLARE_API_TOKEN=... CLOUDFLARE_ACCOUNT_ID=... ./infra/cloudflare/bootstrap.sh
-# Token permissions: see docs/runbooks/first-setup.md ("Cloudflare API token").
+# Token permissions: see docs/runbooks/setup-cloudflare.md ("Cloudflare API token").
 #
 # Secrets that Cloudflare shows only once (service-token secrets, tunnel token) are written to
 # $OUT_DIR (default ./cloudflare-secrets, mode 700), never printed.
@@ -183,7 +183,7 @@ access_app "nucbox-control" "control.$DOMAIN" self_hosted \
 
 cat <<EOF
 
-Done. Next steps (docs/runbooks/first-setup.md):
+Done. Next steps (docs/runbooks/setup-cloudflare.md):
   • Copy $OUT_DIR/TUNNEL_TOKEN into infra/nucbox/secrets.env (TUNNEL_TOKEN=...).
   • GitHub secrets: CF_ACCESS_CLIENT_ID / CF_ACCESS_CLIENT_SECRET ← github-deploy.*
   • API Worker secrets: wrangler secret put ACCESS_CLIENT_ID / ACCESS_CLIENT_SECRET (apps/api) ← mininode-api.*

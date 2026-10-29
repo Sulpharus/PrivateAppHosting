@@ -42865,14 +42865,14 @@
     },
     {
       "id": "docs_runbooks_first_setup",
-      "label": "first-setup.md",
+      "label": "setup-cloudflare.md",
       "_origin": "ast",
       "community": 216,
       "community_name": "runbooks/README.md",
       "file_type": "document",
       "node_kind": "page",
-      "norm_label": "first-setup.md",
-      "source_file": "docs/runbooks/first-setup.md",
+      "norm_label": "setup-cloudflare.md",
+      "source_file": "docs/runbooks/setup-cloudflare.md",
       "source_location": "L1"
     },
     {
@@ -47608,7 +47608,7 @@
       "file_type": "document",
       "node_kind": "heading",
       "norm_label": "1. cloudflare: domain and deploy token (5 min)",
-      "source_file": "docs/runbooks/first-setup.md",
+      "source_file": "docs/runbooks/setup-cloudflare.md",
       "source_location": "L17"
     },
     {
@@ -47620,7 +47620,7 @@
       "file_type": "document",
       "node_kind": "heading",
       "norm_label": "2. supabase: two values and one click (5 min)",
-      "source_file": "docs/runbooks/first-setup.md",
+      "source_file": "docs/runbooks/setup-cloudflare.md",
       "source_location": "L47"
     },
     {
@@ -47632,7 +47632,7 @@
       "file_type": "document",
       "node_kind": "heading",
       "norm_label": "3.1 google sign-in (optional, 10 min)",
-      "source_file": "docs/runbooks/first-setup.md",
+      "source_file": "docs/runbooks/setup-cloudflare.md",
       "source_location": "L80"
     },
     {
@@ -47644,7 +47644,7 @@
       "file_type": "document",
       "node_kind": "heading",
       "norm_label": "3. github secrets (3 min)",
-      "source_file": "docs/runbooks/first-setup.md",
+      "source_file": "docs/runbooks/setup-cloudflare.md",
       "source_location": "L56"
     },
     {
@@ -47656,7 +47656,7 @@
       "file_type": "document",
       "node_kind": "heading",
       "norm_label": "4. apps",
-      "source_file": "docs/runbooks/first-setup.md",
+      "source_file": "docs/runbooks/setup-cloudflare.md",
       "source_location": "L103"
     },
     {
@@ -47668,7 +47668,7 @@
       "file_type": "document",
       "node_kind": "heading",
       "norm_label": "5. first deploy and first login",
-      "source_file": "docs/runbooks/first-setup.md",
+      "source_file": "docs/runbooks/setup-cloudflare.md",
       "source_location": "L110"
     },
     {
@@ -47680,7 +47680,7 @@
       "file_type": "document",
       "node_kind": "heading",
       "norm_label": "6. nucbox (later)",
-      "source_file": "docs/runbooks/first-setup.md",
+      "source_file": "docs/runbooks/setup-cloudflare.md",
       "source_location": "L126"
     },
     {
@@ -47692,7 +47692,7 @@
       "file_type": "document",
       "node_kind": "heading",
       "norm_label": "already done",
-      "source_file": "docs/runbooks/first-setup.md",
+      "source_file": "docs/runbooks/setup-cloudflare.md",
       "source_location": "L5"
     },
     {
@@ -47704,7 +47704,7 @@
       "file_type": "document",
       "node_kind": "heading",
       "norm_label": "first setup",
-      "source_file": "docs/runbooks/first-setup.md",
+      "source_file": "docs/runbooks/setup-cloudflare.md",
       "source_location": "L1"
     },
     {
@@ -161536,7 +161536,7 @@
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
-      "source_file": "docs/runbooks/first-setup.md",
+      "source_file": "docs/runbooks/setup-cloudflare.md",
       "source_location": "L1",
       "weight": 1.0
     },
@@ -161547,7 +161547,7 @@
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
-      "source_file": "docs/runbooks/first-setup.md",
+      "source_file": "docs/runbooks/setup-cloudflare.md",
       "source_location": "L80",
       "weight": 1.0
     },
@@ -161558,7 +161558,7 @@
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
-      "source_file": "docs/runbooks/first-setup.md",
+      "source_file": "docs/runbooks/setup-cloudflare.md",
       "source_location": "L103",
       "weight": 1.0
     },
@@ -161569,7 +161569,7 @@
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
-      "source_file": "docs/runbooks/first-setup.md",
+      "source_file": "docs/runbooks/setup-cloudflare.md",
       "source_location": "L110",
       "weight": 1.0
     },
@@ -161580,7 +161580,7 @@
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
-      "source_file": "docs/runbooks/first-setup.md",
+      "source_file": "docs/runbooks/setup-cloudflare.md",
       "source_location": "L126",
       "weight": 1.0
     },
@@ -161591,7 +161591,7 @@
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
-      "source_file": "docs/runbooks/first-setup.md",
+      "source_file": "docs/runbooks/setup-cloudflare.md",
       "source_location": "L17",
       "weight": 1.0
     },
@@ -161602,7 +161602,7 @@
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
-      "source_file": "docs/runbooks/first-setup.md",
+      "source_file": "docs/runbooks/setup-cloudflare.md",
       "source_location": "L47",
       "weight": 1.0
     },
@@ -161613,7 +161613,7 @@
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
-      "source_file": "docs/runbooks/first-setup.md",
+      "source_file": "docs/runbooks/setup-cloudflare.md",
       "source_location": "L5",
       "weight": 1.0
     },
@@ -161624,7 +161624,7 @@
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
-      "source_file": "docs/runbooks/first-setup.md",
+      "source_file": "docs/runbooks/setup-cloudflare.md",
       "source_location": "L56",
       "weight": 1.0
     },
@@ -203026,7 +203026,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.95,
       "context": "google",
-      "source_file": "docs/runbooks/first-setup.md",
+      "source_file": "docs/runbooks/setup-cloudflare.md",
       "source_location": "L100",
       "weight": 1.0
     },

@@ -93,11 +93,11 @@ half.
 ### Into a new Supabase project (the old one is gone)
 
 1. Create the project, put its URL, keys and `SUPABASE_DB_URL` into the GitHub secrets, the Worker
-   secrets and `wrangler.jsonc`/`first-setup.md` as in the first setup (§1 to §4); re-enter the
+   secrets and `wrangler.jsonc`/`setup-cloudflare.md` as in the first setup (§1 to §4); re-enter the
    secrets from your password manager.
 2. Run the deploy workflow with *all apps*: it applies the migrations and creates the app schemas.
 3. In the Supabase dashboard switch the Auth hooks (custom access token, send email) and the Google
-   provider on again (`first-setup.md` §3).
+   provider on again (`setup-cloudflare.md` (section 5)).
 4. Restore as above (`--yes`). If it stops with "lacks migrations" or "lacks tables", the deploy of
    step 2 did not finish for that app; fix it and run the restore again, nothing was changed.
 5. Check the portal, then a hosted app with files.

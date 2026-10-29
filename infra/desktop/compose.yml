@@ -160,12 +160,16 @@ services:
       SUPABASE_URL: http://kong:8000
     ports:
       # Only this computer by default; the installer's --lan option opens it to the network.
-      - "${BIND_ADDRESS:-127.0.0.1}:${MININODE_PORT}:8787"
+      - "${BIND_ADDRESS:-127.0.0.1}:${HOST_PORT:-${MININODE_PORT}}:8787"
     volumes:
       - host-data:/data
       - ./hosted:/app/hosted
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8787/config.json',{headers:{host:process.env.MININODE_DOMAIN}}).then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"]
+      test:
+        - CMD
+        - node
+        - -e
+        - "require('http').get({host:'127.0.0.1',port:8787,path:'/config.json',headers:{host:process.env.MININODE_DOMAIN}},(r)=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"
       interval: 15s
       timeout: 5s
       retries: 5
