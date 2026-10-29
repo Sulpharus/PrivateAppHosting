@@ -1,4 +1,4 @@
-name: physical server deploy over SSH
+name: Physical server deploy over SSH
 description: Runs one nucbox-deploy command through Cloudflare Access (forced-command SSH).
 inputs:
   command: { description: "Arguments for nucbox-deploy", required: true }

@@ -47,14 +47,25 @@ setup.post('/', async (c) => {
   }
 
   // Two people claiming at once: the database gives the admin role to exactly one of them.
-  const { data: profile } = await db
+  // Only an account that is known to have lost is removed; an unreadable profile removes nothing.
+  const { data: profile, error: profileError } = await db
     .schema('platform')
     .from('profiles')
     .select('role')
     .eq('user_id', created.user.id)
     .maybeSingle();
-  if (profile?.role !== 'admin') {
-    await db.auth.admin.deleteUser(created.user.id);
+  if (profileError || !profile) {
+    return problem(500, 'db_error', 'Der Account wurde angelegt, die Rolle ist nicht lesbar.');
+  }
+  if (profile.role !== 'admin') {
+    const { error: removeError } = await db.auth.admin.deleteUser(created.user.id);
+    if (removeError) {
+      return problem(
+        500,
+        'auth_error',
+        'Die Einrichtung war schon abgeschlossen; Aufräumen schlug fehl.',
+      );
+    }
     return closed();
   }
   await db

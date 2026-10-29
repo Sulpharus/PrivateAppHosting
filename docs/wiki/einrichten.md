@@ -39,7 +39,7 @@ Die Varianten sind **getrennte Installationen**: die Desktop-Version ist kein Ab
 
 1. Variante 1 fertig einrichten.
 2. Auf dem Heimserver `infra/cloudflare/bootstrap.sh` laufen lassen (Tunnel, Access, R2).
-3. Den Heimserver nach `nucbox-install.md` aufsetzen: **„Plain Docker host“** auf beliebiger Linux-Hardware, oder Proxmox mit Windows-VM für Windows-Programme ([Server-Hardware und Hardware-Server](wiki:nucbox)).
+3. Den Heimserver nach `nucbox-install.md` aufsetzen: **„Plain Docker host“** auf beliebiger Linux-Hardware, oder Proxmox mit Windows-VM für Windows-Programme ([Server-Hardware](wiki:nucbox)).
 4. Die Variable `NUCBOX_TUNNEL_ID` und die Zugangs-Geheimnisse in GitHub eintragen und neu deployen.
 
 ## Danach

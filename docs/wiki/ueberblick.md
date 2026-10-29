@@ -36,7 +36,7 @@ Welche passt und wie du sie einrichtest: [Einrichten: drei Varianten](wiki:einri
    ├─ api.{{domain}} .... API: Einladungen, Schlüssel, Uploads, Sicherung, Löschen …
    ├─ ai.{{domain}} ..... KI-Proxy (Budget, Modelle) → Cloudflare AI Gateway
    ├─ <app>.{{domain}} .. jede gehostete App (ein Worker mit Login-Schranke, dem „Gate")
-   └─ Tunnel ───────────── dein Server („Server-Hardware"): Container, Windows-VM, Wine, Guacamole
+   └─ Tunnel ───────────── dein Server („Server-Hardware“): Container, Windows-VM, Wine, Guacamole
    ▲
    └─ Supabase: Datenbank, Login, Dateispeicher (für alles)
 ```

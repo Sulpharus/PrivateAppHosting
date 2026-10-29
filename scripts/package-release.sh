@@ -26,7 +26,7 @@ PC_ONLY=(infra/nucbox apps/nucbox-control .github/actions/nucbox-ssh)
 # What the PC/server edition needs to be installed, built and understood on its own.
 PC_FILES=(
   "${PC_ONLY[@]}"
-  infra/release/README-pc-server.md
+  LICENSE infra/release/README-pc-server.md
   packages/gate packages/config packages/manifest
   docs/runbooks/nucbox-install.md docs/runbooks/app-library.md docs/runbooks/restore.md
   docs/runbooks/key-rotation.md docs/adr/0011-app-library.md

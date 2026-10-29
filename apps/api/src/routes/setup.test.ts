@@ -28,11 +28,15 @@ interface Call {
 let calls: Call[] = [];
 let open = true;
 let role = 'admin';
+let profileFails = false;
+let deleteFails = false;
 
 beforeEach(() => {
   calls = [];
   open = true;
   role = 'admin';
+  profileFails = false;
+  deleteFails = false;
   vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
     const url = String(input instanceof Request ? input.url : input);
     const method = init?.method ?? 'GET';
@@ -47,7 +51,10 @@ beforeEach(() => {
         id: '6f1d1f0e-8c53-4a53-9c1e-3f0d2a7b9c11',
         email: 'owner@example.org',
       });
-    if (method === 'DELETE') return Response.json({});
+    if (method === 'DELETE')
+      return deleteFails ? new Response('{}', { status: 500 }) : Response.json({});
+    if (url.includes('/rest/v1/profiles') && profileFails)
+      return new Response('{}', { status: 500 });
     if (url.includes('/rest/v1/profiles')) return Response.json({ role });
     return new Response(null, { status: 201 });
   });
@@ -93,5 +100,17 @@ describe('first-run setup', () => {
     const response = await post(good);
     expect(response.status).toBe(409);
     expect(deletions()).toHaveLength(1);
+  });
+
+  it('keeps the account when its role cannot be read', async () => {
+    profileFails = true;
+    expect((await post(good)).status).toBe(500);
+    expect(deletions()).toEqual([]);
+  });
+
+  it('reports a failed clean-up of the losing account', async () => {
+    role = 'user';
+    deleteFails = true;
+    expect((await post(good)).status).toBe(500);
   });
 });

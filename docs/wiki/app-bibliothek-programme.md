@@ -5,7 +5,7 @@ order: 90
 summary: Container-Programme, Windows-Programme und Wine: was es gibt und wie man sie installiert
 ---
 
-Neben Web-Apps betreibt MiniNode **Programme auf deinem Heimserver** (der Server-Hardware, siehe [Server-Hardware](wiki:nucbox)). Sie laufen hinter dem
+Neben Web-Apps betreibt MiniNode **Programme auf deinem Heimserver** (die Server-Hardware, siehe [Server-Hardware](wiki:nucbox)). Sie laufen hinter dem
 MiniNode-Login und sind von jedem Gerät im Browser erreichbar.
 
 ## App-Bibliothek (ADR 0011)

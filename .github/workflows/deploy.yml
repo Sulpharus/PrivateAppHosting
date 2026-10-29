@@ -259,7 +259,7 @@ jobs:
           echo "list=$list" >> "$GITHUB_OUTPUT"
 
   nucbox:
-    name: physical server container ${{ matrix.slug }}
+    name: Physical server container ${{ matrix.slug }}
     needs: apps
     # Skipped until the physical server is set up (docs/runbooks/nucbox-install.md).
     if: needs.apps.outputs.containers != '[]' && vars.NUCBOX_TUNNEL_ID != ''
@@ -319,7 +319,7 @@ jobs:
           access-client-secret: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
 
   platform-images:
-    name: physical server platform image ${{ matrix.component }}
+    name: Physical server platform image ${{ matrix.component }}
     needs: database
     if: always() && vars.NUCBOX_TUNNEL_ID != '' && (needs.database.result == 'success' || needs.database.result == 'skipped')
     runs-on: ubuntu-latest

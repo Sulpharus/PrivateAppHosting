@@ -143,7 +143,7 @@ NVMe 1: Proxmox + VM disks      NVMe 2: /mnt/backup (restic, vzdump)
    scp root@10.10.0.1:/root/proxmox-ca.pem .
    echo "DOCKER_GID=$(getent group docker | cut -d: -f3)" >> platform.env
    ```
-7. First start: the control image comes from the deploy workflow (job *physical server platform image
+7. First start: the control image comes from the deploy workflow (job *Physical server platform image
    control*); put its digest into `platform.env`, then
    `docker compose --env-file platform.env up -d`. Check that the tunnel shows *Healthy* in
    Cloudflare Zero Trust → Networks → Tunnels.

@@ -84,7 +84,7 @@ Total **≈ 6 €** (budget 15 €). A Windows 11 Pro licence is a one-off cost.
 
 DNS is explicit: CI creates one record per app. There is no wildcard catch-all.
 
-### 3.2 physical server (16 GB)
+### 3.2 Physical server (16 GB)
 
 | Component | RAM | Policy |
 |---|---|---|
@@ -205,7 +205,7 @@ Everything else is derived from manifests: portal tiles, DNS, deploy, Host Manag
    - Migrations to staging, then production.
    - Deploy by target and update DNS.
    - Register the app in `platform.apps`.
-5. **physical server deploy:**
+5. **Physical server deploy:**
    - The CI job runs `cloudflared access ssh` with a service token.
    - The SSH key is `restrict,command="nucbox-deploy"`; the script accepts only a slug regex
      and a `sha256:` digest.

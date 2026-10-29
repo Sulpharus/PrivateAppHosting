@@ -1,7 +1,7 @@
 ---
 id: dienst
 title: Server-Dienst
-summary: Eigener Server-Prozess mit Weboberfläche, läuft als Container auf dem Hardware-Server
+summary: Eigener Server-Prozess mit Weboberfläche, läuft als Container auf der Server-Hardware
 accent: blue
 order: 85
 ---

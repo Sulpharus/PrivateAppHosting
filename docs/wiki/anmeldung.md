@@ -22,7 +22,7 @@ leitet die Schranke kurz zu `{{domain}}/auth/refresh` und wieder zurück.
 | **E-Mail und Passwort** | Rückfall für Geräte ohne Passkey; mindestens 12 Zeichen |
 | **Mit Google anmelden** | Optional (`setup-cloudflare.md` (section 9, Google)); die Google-Adresse muss zum Konto passen, es werden keine neuen Konten angelegt |
 
-Neue Konten entstehen **nur über Einladungen** ([Rollen](wiki:rollen-zugriff)). Das erste Konto des Projekts wird Admin.
+Neue Konten entstehen **nur über Einladungen** ([Rollen](wiki:rollen-zugriff)). Das erste Konto entsteht beim ersten Öffnen einer neuen Installation auf der Seite „Admin-Account anlegen“ und wird Admin; danach ist diese Seite geschlossen.
 
 ## Zweiter Faktor (Authenticator-App)
 

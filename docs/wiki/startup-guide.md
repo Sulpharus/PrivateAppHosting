@@ -25,7 +25,7 @@ Die Begriffe stehen in [Begriffe von A bis Z](wiki:begriffe).
 
 ## Anmelden und einen Passkey einrichten
 
-1. Öffne `https://{{domain}}/login` (Desktop-Version: `http://mininode.localhost:8787/login`) und melde dich an (das erste Konto ist Admin).
+1. Öffne `https://{{domain}}/login` (Desktop-Version: `http://mininode.localhost:8787/login`) und melde dich an (bei einer neuen Installation legst du dort zuerst das Admin-Konto an).
 2. Öffne **Dein Konto** (Menü oben rechts) und lege einen **Passkey** an (Fingerabdruck, Gesicht oder Windows Hello).
 3. Lege einen **zweiten Passkey** auf einem anderen Gerät an: so bist du nicht ausgesperrt, wenn ein Gerät verloren geht.
 4. Optional: koppel eine **Authenticator-App** als zweiten Faktor ([Anmeldung](wiki:anmeldung)).
