@@ -28,6 +28,7 @@ function fakeFetch(existing: { slug: string; manifest: unknown; status?: string 
 const env = { ...process.env };
 beforeEach(() => {
   Object.assign(process.env, {
+    MININODE_DOMAIN: 'example.org',
     SUPABASE_URL: 'https://db.example.com',
     SUPABASE_PUBLISHABLE_KEY: 'pub',
     SUPABASE_SECRET_KEY: 'secret',

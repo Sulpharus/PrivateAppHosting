@@ -34,6 +34,7 @@ beforeEach(() => {
   Object.assign(process.env, {
     CLOUDFLARE_ACCOUNT_ID: 'acc',
     CLOUDFLARE_API_TOKEN: 'token',
+    MININODE_DOMAIN: 'example.org',
     SUPABASE_URL: 'https://db.example.com',
     SUPABASE_PUBLISHABLE_KEY: 'pub',
     SUPABASE_SECRET_KEY: 'secret',
@@ -108,7 +109,7 @@ describe('registerApp', () => {
       target: 'cloudflare',
     });
     if (!parsed.ok) throw new Error(parsed.errors.join());
-    await registerApp(db, parsed.manifest, '1.0.0', ['https://Haushalt.MiniNode.app']);
+    await registerApp(db, parsed.manifest, '1.0.0', ['https://Haushalt.Example.Org']);
     const origins = calls.find((c) => c.url.includes('/app_origins'));
     expect(origins?.body).toEqual([
       { origin: 'https://haushalt.example.org', app_slug: 'haushalt' },

@@ -27,6 +27,7 @@ const manifest = parsed.manifest;
 const production = environmentSettings('production', {
   SUPABASE_URL: 'https://p.supabase.co',
   SUPABASE_PUBLISHABLE_KEY: 'pk',
+  MININODE_DOMAIN: 'example.org',
 });
 
 describe('wrangler config', () => {
