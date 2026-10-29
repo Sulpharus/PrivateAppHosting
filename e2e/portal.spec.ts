@@ -8,7 +8,7 @@ const userEmail = `${run}-user@example.com`;
 
 test.beforeAll(async () => {
   // The platform bootstraps the very first user as admin; make sure that is not us by accident.
-  const adminId = await createUser(adminEmail, 'admin', 'Wolfram');
+  const adminId = await createUser(adminEmail, 'admin', 'Walter');
   const userId = await createUser(userEmail, 'user', 'Lena');
   await createApp(`${run}-rezepte`, 'Rezepte');
   await createApp(`${run}-budget`, 'Budget', { data_mode: 'shared-account', owner_id: adminId });

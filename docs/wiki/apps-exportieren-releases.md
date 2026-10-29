@@ -17,22 +17,16 @@ Einrichtung: `EXPORT_REPO_TOKEN` (Administration + Contents: write, alle Reposit
 
 ## Releases (ADR 0016)
 
-Jede Version hat bis zu vier Pakete mit Prüfsummen (`SHA256SUMS`). Das **Starter-Paket** (`mininode-starter-<Version>.zip`) ist das, womit man ein eigenes MiniNode beginnt: die ganze Plattform ohne Apps und ohne Kennungen einer Installation (ADR 0026; Anleitung: [Einrichten](wiki:einrichten)).
-Der Paketbauer prüft vor dem Packen, dass keine Kennung dieser Installation darin steckt.
+Ein Release enthält das **Starter-Paket** (`mininode-starter-<Version>.zip`) mit Prüfsumme (`SHA256SUMS`). Damit beginnt man ein eigenes MiniNode: die ganze Plattform ohne Apps und ohne Kennungen einer Installation, mit Cloudflare-Einrichtung, Desktop-Installer für Docker, Heimserver-Teil und allen Anleitungen (ADR 0026; Anleitung: [Einrichten](wiki:einrichten)).
+Der Paketbauer prüft vor dem Packen, dass keine Kennung dieser Installation darin steckt. Andere Pakete (Cloud, PC/Server, Komplett) gibt es nicht mehr im Release, weil sie das ganze Repository samt eigenen Apps enthielten.
 
-Die Pakete:
-
-| Tag | Baut |
-| --- | --- |
-| `v1.2.0` | Starter, Cloud, PC/Server und Komplett |
-| `cloud-v1.2.0` | nur Cloud |
-| `pc-server-v1.2.0` | nur PC/Server |
+Der Titel des Releases ist die erste Zeile der Tag-Nachricht; ein Tag mit Bindestrich (`v0.1.0-test`) wird als Vorabversion markiert:
 
 ```bash
-git tag v1.2.0 && git push origin v1.2.0
+git tag -a v0.1.0-test -m "Titel des Releases" && git push origin v0.1.0-test
 ```
 
-Der Workflow *Release* baut die Pakete (`scripts/package-release.sh`) und hängt sie an das GitHub-Release. Prüfen:
+Der Workflow *Release* baut das Starter-Paket (`scripts/package-release.sh`) und hängt sie an das GitHub-Release. Prüfen:
 `sha256sum -c SHA256SUMS`. Betriebssystem für den PC/Server-Teil: Proxmox VE 9 mit Linux-VM (Docker) und optional Windows 11.
 
 ## Die Plattform teilen (Idee, nicht begonnen)

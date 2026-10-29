@@ -43,7 +43,7 @@ Die vollständige, automatisch erzeugte Liste mit Auslösern und Zweck steht unt
 | **App löschen** (`uninstall-app.yml`) | Verwaltung → Apps → Löschen |
 | **App-Bibliothek** (`library.yml`) | Installieren/Entfernen eines Programms |
 | **App als GitHub-Projekt** (`export-app.yml`) | Verwaltung → Apps → Als GitHub-Projekt |
-| **Release** (`release.yml`) | Tag `v*`, `cloud-v*` oder `pc-server-v*` |
+| **Release** (`release.yml`) | Tag `v*` (nur das Starter-Paket) |
 
 ## Wichtige Eigenheiten
 

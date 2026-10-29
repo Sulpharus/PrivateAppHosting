@@ -16,7 +16,7 @@ const tile = 'Werkzeugkasten';
 const tileUrl = 'https://tools.example.org';
 
 test.beforeAll(async () => {
-  await createUser(adminEmail, 'admin', 'Wolfram');
+  await createUser(adminEmail, 'admin', 'Walter');
   const userId = await createUser(userEmail, 'user', 'Lena');
   await createApp(`${run}-tagebuch`, older);
   await createApp(`${run}-vokabeln`, newer, {

@@ -2,7 +2,7 @@ begin;
 select plan(58);
 select tests.reset();
 
-select tests.create_user('admin@example.com', 'Wolfram') as admin_id \gset
+select tests.create_user('admin@example.com', 'Walter') as admin_id \gset
 select tests.create_user('lena@example.com', 'Lena') as lena_id \gset
 select tests.create_user('tom@example.com', 'Tom') as tom_id \gset
 update platform.profiles set role = 'admin' where user_id = :'admin_id';

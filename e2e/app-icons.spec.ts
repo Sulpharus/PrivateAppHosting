@@ -17,7 +17,7 @@ test.afterAll(async () => {
 test('an admin uploads a logo, the tile shows it, removing it brings the monogram back', async ({
   page,
 }) => {
-  const adminId = await createUser(adminEmail, 'admin', 'Wolfram');
+  const adminId = await createUser(adminEmail, 'admin', 'Walter');
   await createApp(`${run}-rezepte`, 'Rezepte');
   await grant(adminId, `${run}-rezepte`);
 
@@ -25,7 +25,7 @@ test('an admin uploads a logo, the tile shows it, removing it brings the monogra
   await page.getByLabel('E-Mail').fill(adminEmail);
   await page.getByLabel('Passwort', { exact: true }).fill(PASSWORD);
   await page.getByRole('button', { name: 'Anmelden', exact: true }).click();
-  await expect(page.getByRole('heading', { level: 1 })).toContainText('Wolfram');
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('Walter');
   await expect(
     page.locator('.tile-box', { hasText: 'Rezepte' }).locator('.monogram'),
   ).toBeVisible();
