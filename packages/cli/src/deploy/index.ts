@@ -13,10 +13,11 @@ import {
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
-import { appSchemaName, type Manifest } from '@mininode/manifest';
+import { appSchemaName, type Manifest, publicOrigin } from '@mininode/manifest';
 import { createClient } from '@supabase/supabase-js';
 import postgres from 'postgres';
 import { doctor } from '../doctor.ts';
+import { desktopDataDir, installDesktopApp } from './desktop.ts';
 import { type DeployEnv, environmentSettings } from './environment.ts';
 import { syncIcon } from './icon.ts';
 import { exposeSchemas, migrateApp, migrationFiles } from './migrate.ts';
@@ -198,7 +199,11 @@ export function checkDatabaseSettings(
     throw new Error(
       `${slug} has db/ migrations: SUPABASE_DB_URL points at the IPv6-only direct connection; use the Session pooler string (…pooler.supabase.com:5432) from Connect in the Supabase dashboard`,
     );
-  if (envName !== 'local' && (!vars.SUPABASE_PROJECT_REF || !vars.SUPABASE_ACCESS_TOKEN))
+  if (
+    envName !== 'local' &&
+    envName !== 'desktop' &&
+    (!vars.SUPABASE_PROJECT_REF || !vars.SUPABASE_ACCESS_TOKEN)
+  )
     throw new Error(
       `${slug} has db/ migrations: SUPABASE_PROJECT_REF and SUPABASE_ACCESS_TOKEN are required to expose its schema`,
     );
@@ -223,13 +228,15 @@ export async function deployApp(appDir: string, options: DeployOptions): Promise
   if (!options.dryRun && databaseUrl) {
     const applied = await migrateApp(databaseUrl, manifest.slug, appDir);
     if (applied.length > 0) log(`  migrations: ${applied.join(', ')}`);
-    if (env.name === 'local') await exposeLocally(databaseUrl, appSchemaName(manifest.slug));
+    if (env.name === 'local' || env.name === 'desktop')
+      await exposeLocally(databaseUrl, appSchemaName(manifest.slug));
   }
   const projectRef = process.env.SUPABASE_PROJECT_REF;
   const accessToken = process.env.SUPABASE_ACCESS_TOKEN;
   if (
     !options.dryRun &&
     env.name !== 'local' &&
+    env.name !== 'desktop' &&
     projectRef &&
     accessToken &&
     existsSync(join(appDir, 'db'))
@@ -237,7 +244,14 @@ export async function deployApp(appDir: string, options: DeployOptions): Promise
     await exposeSchemas({ projectRef, accessToken, schemas: [appSchemaName(manifest.slug)] });
   }
 
-  if (manifest.target === 'cloudflare' && env.name !== 'local') {
+  if (manifest.target === 'cloudflare' && env.name === 'desktop') {
+    const stage = stageAssets(appDir, manifest);
+    const assetsRoot = join(stage, 'assets-root');
+    const { vars } = appWranglerConfig({ manifest, env, assetsDir: assetsRoot });
+    if (options.dryRun) log(`  dry run: ${assetsRoot}`);
+    else installDesktopApp(assetsRoot, manifest, vars, desktopDataDir());
+    if (!options.dryRun) rmSync(stage, { recursive: true, force: true });
+  } else if (manifest.target === 'cloudflare' && env.name !== 'local') {
     const stage = stageAssets(appDir, manifest);
     const config = appWranglerConfig({ manifest, env, assetsDir: join(stage, 'assets-root') });
     const configPath = join(stage, 'wrangler.json');
@@ -258,10 +272,10 @@ export async function deployApp(appDir: string, options: DeployOptions): Promise
 
   const secret = process.env.SUPABASE_SECRET_KEY;
   if (!secret) throw new Error('SUPABASE_SECRET_KEY is required to register the app');
-  if (env.name === 'local') await waitForRest(env.supabaseUrl, secret);
+  if (env.name === 'local' || env.name === 'desktop') await waitForRest(env.supabaseUrl, secret);
   const db = createClient(env.supabaseUrl, secret, { auth: { persistSession: false } });
   const origins =
-    options.origins ?? (env.name === 'local' ? [] : [`https://${manifest.slug}.${env.domain}`]);
+    options.origins ?? (env.name === 'local' ? [] : [publicOrigin(appAddress(env), manifest.slug)]);
   await registerApp(db, manifest, options.version, origins);
   log(`  registered ${manifest.slug} (${options.version})`);
   // A logo is a nice-to-have: a failing upload must not undo a finished deploy.
@@ -297,6 +311,16 @@ export async function devApp(appDir: string, port = 8790): Promise<void> {
     ['exec', 'wrangler', 'dev', '--config', configPath, '--port', String(port)],
     REPO_ROOT,
   );
+}
+
+/** The scheme and port apps are reached by: https on 443 in the cloud, whatever .env says on a desktop. */
+function appAddress(env: { domain: string; portalUrl: string }) {
+  const portal = new URL(env.portalUrl);
+  return {
+    domain: env.domain,
+    scheme: portal.protocol === 'http:' ? ('http' as const) : ('https' as const),
+    ...(portal.port ? { port: Number(portal.port) } : {}),
+  };
 }
 
 export function readVersion(): string {

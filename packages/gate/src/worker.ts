@@ -38,8 +38,10 @@ export function publicConfig(env: AppEnv) {
     supabaseUrl: env.SUPABASE_URL,
     supabasePublishableKey: env.SUPABASE_PUBLISHABLE_KEY,
     portalUrl: portal.origin,
-    apiUrl: domain === 'localhost' ? `${portal.origin}/api` : `https://api.${domain}`,
-    aiUrl: domain === 'localhost' ? `${portal.origin}/ai` : `https://ai.${domain}`,
+    apiUrl:
+      domain === 'localhost' ? `${portal.origin}/api` : platformOrigins(env.PORTAL_URL).apiOrigin,
+    aiUrl:
+      domain === 'localhost' ? `${portal.origin}/ai` : platformOrigins(env.PORTAL_URL).aiOrigin,
     cookieDomain: domain === 'localhost' ? undefined : `.${domain}`,
   };
 }

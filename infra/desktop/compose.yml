@@ -1,0 +1,176 @@
+# MiniNode desktop edition: the whole platform on one computer.
+#   Supabase (database, sign-in, data API, files) + the MiniNode host (portal, API, AI proxy and
+#   the gates of your apps). Started and stopped by `mininode-desktop`; `.env` is made by the
+#   installer and holds this installation's secrets. Nothing here is a default password.
+name: mininode
+
+x-restart: &restart
+  restart: unless-stopped
+
+services:
+  db:
+    <<: *restart
+    image: supabase/postgres:17.6.1.167
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?run the installer first}
+      POSTGRES_DB: postgres
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - ./roles.sql:/docker-entrypoint-initdb.d/init-scripts/99-roles.sql:ro
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres", "-h", "localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  auth:
+    <<: *restart
+    image: supabase/gotrue:v2.196.0
+    depends_on:
+      db: { condition: service_healthy }
+    environment:
+      GOTRUE_API_HOST: 0.0.0.0
+      GOTRUE_API_PORT: "9999"
+      API_EXTERNAL_URL: ${SUPABASE_PUBLIC_URL}
+      GOTRUE_DB_DRIVER: postgres
+      GOTRUE_DB_DATABASE_URL: postgres://supabase_auth_admin:${POSTGRES_PASSWORD}@db:5432/postgres
+      GOTRUE_SITE_URL: ${PORTAL_PUBLIC_URL}
+      GOTRUE_URI_ALLOW_LIST: ${PORTAL_PUBLIC_URL}/**,${APPS_PUBLIC_PATTERN}
+      # Invite-only: accounts are made by the admin, never by a visitor.
+      GOTRUE_DISABLE_SIGNUP: "true"
+      GOTRUE_EXTERNAL_ANONYMOUS_USERS_ENABLED: "false"
+      GOTRUE_SECURITY_MANUAL_LINKING_ENABLED: "true"
+      GOTRUE_EXTERNAL_EMAIL_ENABLED: "true"
+      GOTRUE_MAILER_AUTOCONFIRM: "true"
+      GOTRUE_MAILER_URLPATHS_CONFIRMATION: /auth/v1/verify
+      GOTRUE_MAILER_URLPATHS_INVITE: /auth/v1/verify
+      GOTRUE_MAILER_URLPATHS_RECOVERY: /auth/v1/verify
+      GOTRUE_MAILER_URLPATHS_EMAIL_CHANGE: /auth/v1/verify
+      GOTRUE_PASSWORD_MIN_LENGTH: "12"
+      GOTRUE_SECURITY_REFRESH_TOKEN_ROTATION_ENABLED: "true"
+      GOTRUE_SECURITY_REFRESH_TOKEN_REUSE_INTERVAL: "10"
+      GOTRUE_RATE_LIMIT_OTP: "10"
+      GOTRUE_RATE_LIMIT_VERIFY: "10"
+      GOTRUE_RATE_LIMIT_TOKEN_REFRESH: "150"
+      GOTRUE_MFA_TOTP_ENROLL_ENABLED: "true"
+      GOTRUE_MFA_TOTP_VERIFY_ENABLED: "true"
+      GOTRUE_MFA_MAX_ENROLLED_FACTORS: "10"
+      GOTRUE_PASSKEY_ENABLED: "true"
+      GOTRUE_WEBAUTHN_RP_ID: ${MININODE_DOMAIN}
+      GOTRUE_WEBAUTHN_RP_DISPLAY_NAME: MiniNode
+      GOTRUE_WEBAUTHN_RP_ORIGINS: ${PORTAL_PUBLIC_URL}
+      # Signed sessions: asymmetric keys, verified by the gates through the public JWKS.
+      GOTRUE_JWT_ISSUER: ${SUPABASE_PUBLIC_URL}/auth/v1
+      GOTRUE_JWT_AUD: authenticated
+      GOTRUE_JWT_DEFAULT_GROUP_NAME: authenticated
+      GOTRUE_JWT_ADMIN_ROLES: service_role
+      GOTRUE_JWT_EXP: "3600"
+      GOTRUE_JWT_SECRET: ${JWT_SECRET}
+      GOTRUE_JWT_KEYS: ${JWT_KEYS}
+      GOTRUE_JWT_VALID_METHODS: HS256,RS256,ES256
+      GOTRUE_JWT_VALIDMETHODS: HS256,RS256,ES256
+      # Puts mn_role and the second-factor state into every token (supabase/migrations).
+      GOTRUE_HOOK_CUSTOM_ACCESS_TOKEN_ENABLED: "true"
+      GOTRUE_HOOK_CUSTOM_ACCESS_TOKEN_URI: pg-functions://postgres/platform/custom_access_token_hook
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:9999/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  rest:
+    <<: *restart
+    image: postgrest/postgrest:v16.2
+    depends_on:
+      db: { condition: service_healthy }
+    environment:
+      PGRST_DB_URI: postgres://authenticator:${POSTGRES_PASSWORD}@db:5432/postgres
+      # `mininode deploy` adds each app's schema to this list.
+      PGRST_DB_SCHEMAS: public,graphql_public,platform
+      PGRST_DB_EXTRA_SEARCH_PATH: public,extensions
+      PGRST_DB_ANON_ROLE: anon
+      PGRST_DB_MAX_ROWS: "1000"
+      PGRST_JWT_SECRET: ${JWT_JWKS}
+
+  storage:
+    <<: *restart
+    image: supabase/storage-api:v1.72.1
+    depends_on:
+      db: { condition: service_healthy }
+      rest: { condition: service_started }
+    environment:
+      PORT: "5000"
+      ANON_KEY: ${ANON_KEY}
+      SERVICE_KEY: ${SERVICE_ROLE_KEY}
+      AUTH_JWT_SECRET: ${JWT_SECRET}
+      PGRST_JWT_SECRET: ${JWT_SECRET}
+      JWT_JWKS: ${JWT_JWKS}
+      DATABASE_URL: postgres://supabase_storage_admin:${POSTGRES_PASSWORD}@db:5432/postgres
+      FILE_SIZE_LIMIT: "52428800"
+      STORAGE_BACKEND: file
+      FILE_STORAGE_BACKEND_PATH: /var/lib/storage
+      STORAGE_FILE_BACKEND_PATH: /var/lib/storage
+      TENANT_ID: mininode
+      STORAGE_S3_REGION: local
+      GLOBAL_S3_BUCKET: mininode
+      ENABLE_IMAGE_TRANSFORMATION: "false"
+      IMAGE_TRANSFORMATION_ENABLED: "false"
+      S3_PROTOCOL_ENABLED: "false"
+    volumes:
+      - storage-data:/var/lib/storage
+
+  kong:
+    <<: *restart
+    image: kong:2.8.1
+    depends_on:
+      auth: { condition: service_healthy }
+      rest: { condition: service_started }
+      storage: { condition: service_started }
+    environment:
+      KONG_DATABASE: "off"
+      KONG_DECLARATIVE_CONFIG: /home/kong/kong.yml
+      KONG_DNS_ORDER: LAST,A,CNAME
+      KONG_PLUGINS: request-transformer,cors
+      KONG_NGINX_PROXY_PROXY_BUFFER_SIZE: 160k
+      KONG_NGINX_PROXY_PROXY_BUFFERS: 64 160k
+      KONG_NGINX_WORKER_PROCESSES: "1"
+    volumes:
+      - ./kong.yml:/home/kong/kong.yml:ro
+    healthcheck:
+      test: ["CMD", "kong", "health"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+
+  host:
+    <<: *restart
+    build:
+      context: ${MININODE_SOURCE:-..}
+      dockerfile: infra/desktop/Dockerfile
+    image: mininode-desktop-host:local
+    depends_on:
+      kong: { condition: service_healthy }
+    env_file: .env
+    environment:
+      GATEWAY_URL: http://kong:8000
+      DATA_DIR: /data
+      LISTEN_PORT: "8787"
+      SUPABASE_DB_URL: postgres://postgres:${POSTGRES_PASSWORD}@db:5432/postgres
+      # The mininode command reaches Supabase inside the Docker network, not by its public address.
+      SUPABASE_URL: http://kong:8000
+    ports:
+      # Only this computer by default; the installer's --lan option opens it to the network.
+      - "${BIND_ADDRESS:-127.0.0.1}:${MININODE_PORT}:8787"
+    volumes:
+      - host-data:/data
+      - ./hosted:/app/hosted
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8787/config.json',{headers:{host:process.env.MININODE_DOMAIN}}).then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  db-data:
+  storage-data:
+  host-data:

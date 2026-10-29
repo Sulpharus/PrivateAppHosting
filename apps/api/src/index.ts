@@ -165,6 +165,8 @@ export async function maintenance(env: ApiEnv): Promise<void> {
     if (result.error) throw new Error(result.error.message);
   }
 
+  // No hardware server connected (cloud-only or desktop-only installation): nothing to tell.
+  if (!env.NUCBOX_CONTROL_URL) return;
   const activeApps = [...new Set((active.data ?? []).map((row) => row.app_slug as string))];
   const sync = await fetch(`${env.NUCBOX_CONTROL_URL}/sessions/sync`, {
     method: 'POST',

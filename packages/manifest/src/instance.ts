@@ -113,3 +113,17 @@ export function resolveEnvironment(
     mailFrom: config.mailFrom ?? `hallo@${domain}`,
   };
 }
+
+/**
+ * An address on a platform domain: `http://mininode.localhost:8787` on a desktop installation,
+ * `https://api.example.com` on Cloudflare. The port is left out when it is the scheme's default.
+ */
+export function publicOrigin(
+  where: { domain: string; scheme?: 'http' | 'https'; port?: number },
+  subdomain?: string,
+): string {
+  const scheme = where.scheme ?? 'https';
+  const defaults = { http: 80, https: 443 } as const;
+  const port = where.port && where.port !== defaults[scheme] ? `:${where.port}` : '';
+  return `${scheme}://${subdomain ? `${subdomain}.` : ''}${where.domain}${port}`;
+}

@@ -1,0 +1,163 @@
+#!/usr/bin/env bash
+# Controls a MiniNode desktop installation (Linux, macOS; Windows has mininode-desktop.ps1).
+# It lives in the installation folder next to .env and compose.yml.
+#
+#   mininode-desktop start | stop | restart | status | logs [service]
+#   mininode-desktop url | migrate
+#   mininode-desktop add <app folder | app.zip>   install or update a web app
+#   mininode-desktop admin <email>                create an account (asks for the password)
+#   mininode-desktop backup [folder]              database, files and settings into one folder
+#   mininode-desktop update <new source folder>   switch to a newer MiniNode and restart
+#   mininode-desktop uninstall                    remove containers (asks before deleting data)
+set -euo pipefail
+
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+cd "$HERE"
+IMAGE=mininode-desktop-host:local
+compose() { docker compose --project-directory "$HERE" "$@"; }
+mn() { compose exec -T -w /app host node packages/cli/src/bin.ts "$@"; }
+say() { printf '%s\n' "$*"; }
+die() { printf 'error: %s\n' "$*" >&2; exit 1; }
+
+need_installed() { [ -f "$HERE/.env" ] && [ -f "$HERE/compose.yml" ] || die "this folder has no installation (run the installer)"; }
+env_value() { sed -n "s/^$1='\(.*\)'\$/\1/p" "$HERE/.env" | head -n1; }
+
+wait_healthy() {
+  say "Waiting for MiniNode to start (the first start takes a minute)…"
+  for _ in $(seq 1 90); do
+    state=$(compose ps --format '{{.Health}}' host 2>/dev/null | head -n1 || true)
+    [ "$state" = healthy ] && return 0
+    sleep 2
+  done
+  die "MiniNode did not become healthy; see: $0 logs"
+}
+
+cmd_url() { env_value PORTAL_PUBLIC_URL; }
+
+cmd_start() {
+  need_installed
+  compose up -d
+  wait_healthy
+  say "MiniNode is running: $(cmd_url)"
+}
+
+cmd_add() {
+  need_installed
+  src=${1:?usage: add <app folder | app.zip>}
+  [ -e "$src" ] || die "$src does not exist"
+  tmp=$(mktemp -d)
+  trap 'rm -rf "$tmp"' EXIT
+  if [ -d "$src" ]; then
+    cp -R "$src" "$tmp/app"
+  else
+    mkdir "$tmp/app"
+    if command -v unzip >/dev/null 2>&1; then unzip -q "$src" -d "$tmp/app"
+    elif command -v python3 >/dev/null 2>&1; then python3 -m zipfile -e "$src" "$tmp/app"
+    elif command -v bsdtar >/dev/null 2>&1; then bsdtar -xf "$src" -C "$tmp/app"
+    else die "unzip is needed to add a ZIP (or unpack it yourself and pass the folder)"; fi
+    # A ZIP with a single top folder: use that folder.
+    if [ "$(find "$tmp/app" -mindepth 1 -maxdepth 1 | wc -l)" -eq 1 ] && [ -d "$(find "$tmp/app" -mindepth 1 -maxdepth 1)" ]; then
+      mv "$tmp/app" "$tmp/outer" && mv "$(find "$tmp/outer" -mindepth 1 -maxdepth 1)" "$tmp/app"
+    fi
+  fi
+  [ -f "$tmp/app/mininode.json" ] || die "no mininode.json in the app: it is not a MiniNode app yet (see docs/runbooks/uploads.md, or integrate it with Claude Code first)"
+  slug=$(sed -n 's/.*"slug"[[:space:]]*:[[:space:]]*"\([a-z0-9-]*\)".*/\1/p' "$tmp/app/mininode.json" | head -n1)
+  [[ "$slug" =~ ^[a-z][a-z0-9-]{0,30}[a-z0-9]$ ]] || die "the manifest has no valid slug"
+  rm -rf "${HERE:?}/hosted/$slug"
+  mkdir -p "$HERE/hosted"
+  cp -R "$tmp/app" "$HERE/hosted/$slug"
+  if [ -f "$HERE/hosted/$slug/package.json" ]; then
+    compose exec -T host sh -c "cd /app && pnpm install --no-frozen-lockfile --filter ./hosted/$slug..."
+  fi
+  mn doctor "hosted/$slug"
+  mn deploy "hosted/$slug" --env desktop
+  say "Installed $slug: $(env_value MININODE_SCHEME)://$slug.$(env_value MININODE_DOMAIN)$(port_suffix)"
+  say "Give people access under Verwaltung → Apps."
+}
+
+port_suffix() {
+  port=$(env_value MININODE_PORT); scheme=$(env_value MININODE_SCHEME)
+  if { [ "$scheme" = http ] && [ "$port" = 80 ]; } || { [ "$scheme" = https ] && [ "$port" = 443 ]; }; then :; else printf ':%s' "$port"; fi
+}
+
+read_password() {
+  if [ -n "${MININODE_ADMIN_PASSWORD:-}" ]; then return; fi
+  [ -t 0 ] || die "set MININODE_ADMIN_PASSWORD when there is no terminal"
+  while :; do
+    read -r -s -p "Password (12+ characters): " MININODE_ADMIN_PASSWORD; echo
+    [ "${#MININODE_ADMIN_PASSWORD}" -ge 12 ] || { say "Too short."; continue; }
+    read -r -s -p "Repeat: " again; echo
+    [ "$again" = "$MININODE_ADMIN_PASSWORD" ] && break
+    say "Not the same."
+  done
+  export MININODE_ADMIN_PASSWORD
+}
+
+cmd_admin() {
+  need_installed
+  email=${1:?usage: admin <email>}
+  read_password
+  # -e NAME (no value) passes it from this process's environment, never on a command line.
+  compose exec -T -e MININODE_ADMIN_PASSWORD -w /app host node packages/cli/src/bin.ts desktop admin "$email"
+}
+
+cmd_backup() {
+  need_installed
+  out=${1:-"$HERE/backups/$(date +%Y%m%d-%H%M%S)"}
+  mkdir -p "$out"
+  chmod 700 "$out"
+  say "Backing up to $out …"
+  compose exec -T db pg_dump -U postgres -Fc postgres > "$out/database.dump"
+  # Any image with tar will do; the database image is already here.
+  tar_image=$(docker inspect --format '{{.Config.Image}}' "$(compose ps -q db)")
+  for volume in storage-data host-data; do
+    docker run --rm -v "mininode_$volume:/data:ro" -v "$out:/out" --entrypoint tar "$tar_image" czf "/out/$volume.tar.gz" -C /data .
+  done
+  cp "$HERE/.env" "$out/env.backup"
+  chmod 600 "$out/env.backup"
+  say "Done. The folder holds your secrets (env.backup): keep it somewhere private."
+}
+
+cmd_update() {
+  need_installed
+  new=${1:?usage: update <folder with the new MiniNode source>}
+  [ -f "$new/infra/desktop/Dockerfile" ] || die "$new is not a MiniNode source folder"
+  say "Taking a backup first…"
+  cmd_backup
+  rm -rf "$HERE/source.old"
+  [ -d "$HERE/source" ] && mv "$HERE/source" "$HERE/source.old"
+  mkdir "$HERE/source"
+  (cd "$new" && tar --exclude=node_modules --exclude=.git --exclude=hosted -cf - .) | (cd "$HERE/source" && tar xf -)
+  cp "$HERE/source/infra/desktop/compose.yml" "$HERE/compose.yml"
+  cp "$HERE/source/infra/desktop/mininode-desktop" "$HERE/mininode-desktop.new" && chmod +x "$HERE/mininode-desktop.new"
+  compose build host
+  compose up -d
+  wait_healthy
+  mn desktop migrate
+  mv "$HERE/mininode-desktop.new" "$HERE/mininode-desktop"
+  say "Updated. Your apps need no redeploy; the previous source stays in source.old until you delete it."
+}
+
+cmd_uninstall() {
+  need_installed
+  say "This stops MiniNode and removes its containers."
+  read -r -p "Also DELETE all data (database, files, apps)? Type DELETE to do that, Enter to keep it: " answer
+  if [ "$answer" = DELETE ]; then compose down --volumes --remove-orphans; else compose down --remove-orphans; fi
+  say "Removed. The folder $HERE (settings, backups) is still there; delete it yourself when you are sure."
+}
+
+case "${1:-}" in
+  start) cmd_start ;;
+  stop) need_installed; compose stop ;;
+  restart) need_installed; compose restart; wait_healthy ;;
+  status) need_installed; compose ps ;;
+  logs) need_installed; shift; compose logs --tail 200 -f "$@" ;;
+  url) cmd_url ;;
+  migrate) need_installed; mn desktop migrate ;;
+  add) shift; cmd_add "$@" ;;
+  admin) shift; cmd_admin "$@" ;;
+  backup) shift; cmd_backup "$@" ;;
+  update) shift; cmd_update "$@" ;;
+  uninstall) cmd_uninstall ;;
+  *) sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//'; exit 2 ;;
+esac

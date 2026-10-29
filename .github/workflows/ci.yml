@@ -95,10 +95,10 @@ jobs:
         run: |
           docker run -d --name control -p 8080:8080 \
             -e CONTROL_TOKEN=$(openssl rand -hex 32) -e SUPABASE_URL=https://example.supabase.co \
-            -e SUPABASE_PUBLISHABLE_KEY=x -e PROXMOX_URL=https://127.0.0.1:8006 -e PROXMOX_TOKEN=x \
+            -e SUPABASE_PUBLISHABLE_KEY=x -e PORTAL_URL=https://example.org -e PROXMOX_URL=https://127.0.0.1:8006 -e PROXMOX_TOKEN=x \
             -e WINDOWS_RDP_PASSWORD=x mininode-nucbox-control:ci
           for i in $(seq 1 20); do curl -fsS localhost:8080/health && break; sleep 1; done
-          code=$(curl -s -o /dev/null -w '%{http_code}' -H 'X-Forwarded-Host: demo.mininode.app' \
+          code=$(curl -s -o /dev/null -w '%{http_code}' -H 'X-Forwarded-Host: demo.example.org' \
             -H 'Sec-Fetch-Mode: navigate' localhost:8080/auth)
           test "$code" = 302 || { docker logs control; exit 1; }
 

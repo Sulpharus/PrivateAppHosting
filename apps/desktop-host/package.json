@@ -1,0 +1,24 @@
+{
+  "name": "@mininode/desktop-host",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node src/main.ts",
+    "bundle": "node src/bundle.ts",
+    "typecheck": "tsc -p .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@mininode/gate": "workspace:*",
+    "@mininode/manifest": "workspace:*",
+    "esbuild": "0.28.1",
+    "miniflare": "4.20260730.0",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@mininode/config": "workspace:*",
+    "@types/node": "22.19.1",
+    "vitest": "5.0.1"
+  }
+}

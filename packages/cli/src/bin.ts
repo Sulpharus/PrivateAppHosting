@@ -10,6 +10,8 @@ import { checkLibraryInstall, installLibraryApp, removeLibraryApp } from './depl
 import { appSchemasWithTables, existingAppSchemas, exposeSchemas } from './deploy/migrate.ts';
 import { hostedTargets, pruneApps } from './deploy/prune.ts';
 import { dropExemptions, uninstallApp } from './deploy/uninstall.ts';
+import { createDesktopAccount, initDesktop, migrateDesktop } from './desktop/index.ts';
+import { readMigrations } from './desktop/migrations.ts';
 import { type DoctorReport, doctor, hostedApps } from './doctor.ts';
 import { exportApp } from './export.ts';
 import {
@@ -31,11 +33,15 @@ const USAGE = `mininode <command>
   init [--domain d --accountId id --supabaseRef ref --publishableKey key]
        [--zone z] [--repository owner/repo] [--mailFrom a@b] [--force]
                                     Write mininode.config.json (asks for what is missing), then configure
+  desktop init --out <dir> --domain d [--scheme http|https] [--port 8787] [--lan] [--force]
+                                    Desktop edition: write .env, kong.yml and roles.sql with fresh secrets
+  desktop migrate                   Desktop edition: apply the platform migrations (inside the host container)
+  desktop admin <email>             Desktop edition: create the first account (password from MININODE_ADMIN_PASSWORD)
   configure [--check]               Write the config into the wrangler files and supabase/config.toml
   config env [production|staging]   KEY=value lines for the workflows ($GITHUB_ENV)
   doctor <app-dir> | --all          Check hosted apps (manifest, secrets, SDK, RLS, CSP)
   dev <app-dir> [--port 8790]       Serve an app locally behind the gate (local Supabase)
-  deploy <app-dir> [--env staging]  Build, migrate, deploy and register one app
+  deploy <app-dir> [--env staging|desktop]  Build, migrate, deploy and register one app
   deploy --changed <base-ref>       Deploy every app changed since <base-ref>
   deploy --since-deployed           Deploy every app changed since the commit it was last deployed from
   expose [--env staging]            Expose the schema of every app with tables in the Data API (deploy)
@@ -87,9 +93,10 @@ function flag(args: string[], name: string): string | undefined {
   return index >= 0 ? args[index + 1] : undefined;
 }
 
-function envFlag(args: string[]): DeployEnv {
+function envFlag(args: string[], allowDesktop = false): DeployEnv {
   const env = flag(args, '--env') ?? 'production';
   if (env === 'production' || env === 'staging' || env === 'local') return env;
+  if (env === 'desktop' && allowDesktop) return env;
   throw new Error(`unknown --env ${env} (production, staging or local)`);
 }
 
@@ -106,6 +113,53 @@ async function main(args: string[]): Promise<number> {
       const { changed } = configureInstance(ROOT, config);
       console.log(`wrote mininode.config.json; updated ${changed.join(', ') || 'nothing else'}`);
       return 0;
+    }
+    case 'desktop': {
+      const sub = args[1];
+      if (sub === 'init') {
+        const out = flag(args, '--out');
+        const domain = flag(args, '--domain');
+        if (!out || !domain) break;
+        const scheme = flag(args, '--scheme') === 'https' ? 'https' : 'http';
+        const written = initDesktop(
+          resolve(process.cwd(), out),
+          {
+            domain,
+            scheme,
+            port: Number(flag(args, '--port') ?? 8787),
+            bind: args.includes('--lan') ? '0.0.0.0' : '127.0.0.1',
+          },
+          { force: args.includes('--force') },
+        );
+        console.log(`wrote ${written.join(', ')} to ${out}`);
+        return 0;
+      }
+      if (sub === 'migrate') {
+        const url = process.env.SUPABASE_DB_URL;
+        if (!url) throw new Error('SUPABASE_DB_URL is required');
+        const applied = await migrateDesktop(
+          url,
+          readMigrations(join(ROOT, 'supabase/migrations')),
+        );
+        console.log(
+          applied.length > 0 ? `${applied.length} migration(s) applied` : 'database is up to date',
+        );
+        return 0;
+      }
+      if (sub === 'admin') {
+        const email = args[2];
+        const password = process.env.MININODE_ADMIN_PASSWORD;
+        const key = process.env.SUPABASE_SECRET_KEY;
+        const url = process.env.SUPABASE_URL;
+        if (!email || !password || !key || !url)
+          throw new Error(
+            'needs an email argument and MININODE_ADMIN_PASSWORD, SUPABASE_SECRET_KEY, SUPABASE_URL',
+          );
+        await createDesktopAccount(url, key, email, password);
+        console.log(`account ${email} created`);
+        return 0;
+      }
+      break;
     }
     case 'configure': {
       const { changed } = configureInstance(ROOT, loadInstanceConfig(ROOT), {
@@ -347,7 +401,7 @@ async function main(args: string[]): Promise<number> {
     }
     case 'deploy': {
       if (!target) break;
-      const env = envFlag(args);
+      const env = envFlag(args, true);
       const dryRun = args.includes('--dry-run');
       const base = flag(args, '--changed');
       const sinceDeployed = args.includes('--since-deployed');
