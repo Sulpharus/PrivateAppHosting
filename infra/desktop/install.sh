@@ -4,7 +4,7 @@
 # everything else, including Node and the database, runs in containers.
 #
 #   ./infra/desktop/install.sh [--dir ~/mininode] [--domain mininode.localhost] [--port 8787]
-#                              [--lan] [--admin-email you@example.org] [--no-admin]
+#                              [--lan] [--admin-email you@example.org]
 #
 #   --dir          where the installation lives (settings, secrets, backups, your apps)
 #   --domain       the name MiniNode answers to; *.localhost needs no setup on this computer
@@ -13,8 +13,8 @@
 #   --host-port    the port this computer listens on, if it differs from --port (e.g. --port 443 --host-port 8787 behind a tunnel)
 #   --lan          reachable from other devices on your network (see docs/runbooks/setup-desktop.md:
 #                  needs a wildcard DNS name for the domain, and plain http limits passkeys)
-#   --admin-email  create the first account with this address (asks for a password)
-#   --no-admin     skip creating an account
+#   --admin-email  create the first account here instead of in the browser (password from
+#                  MININODE_ADMIN_PASSWORD, or asked); without it the first visit creates the admin
 #   --ca-file      PEM certificate of a company proxy that re-signs HTTPS (the build downloads packages)
 #
 # Running it again on an existing installation rebuilds, restarts and migrates; it keeps all data
@@ -30,7 +30,6 @@ SCHEME=http
 LAN=no
 ADMIN_EMAIL=""
 CA_FILE=""
-ASK_ADMIN=yes
 IMAGE=mininode-desktop-host:local
 
 say() { printf '%s\n' "$*"; }
@@ -45,7 +44,6 @@ while [ $# -gt 0 ]; do
     --scheme) SCHEME=${2:?--scheme needs http or https}; shift 2 ;;
     --lan) LAN=yes; shift ;;
     --admin-email) ADMIN_EMAIL=${2:?--admin-email needs an address}; shift 2 ;;
-    --no-admin) ASK_ADMIN=no; shift ;;
     --ca-file) CA_FILE=${2:?--ca-file needs a certificate file}; shift 2 ;;
     -h|--help) sed -n '2,23p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) die "unknown option $1 (try --help)" ;;
@@ -114,18 +112,15 @@ fi
 "$DIR/mininode-desktop" start
 "$DIR/mininode-desktop" migrate
 
-if [ "$fresh" = yes ] && [ "$ASK_ADMIN" = yes ]; then
-  if [ -z "$ADMIN_EMAIL" ]; then
-    [ -t 0 ] || die "no terminal to ask for the first account: pass --admin-email and set MININODE_ADMIN_PASSWORD, or --no-admin"
-    read -r -p "Email address of the first account (it becomes the admin): " ADMIN_EMAIL
-  fi
+# Without --admin-email the first visit shows the setup screen that creates the admin (ADR 0027).
+if [ "$fresh" = yes ] && [ -n "$ADMIN_EMAIL" ]; then
   "$DIR/mininode-desktop" admin "$ADMIN_EMAIL"
 fi
 
 url="$("$DIR/mininode-desktop" url)"
 say ""
 say "MiniNode is installed and running."
-say "  Open:      $url/login"
+say "  Open:      $url  (the first visit asks you to create the admin account)"
 say "  Control:   $DIR/mininode-desktop  (start, stop, status, logs, add <app>, backup, update)"
 say "  Secrets:   $DIR/.env  (private to you; back it up, losing it means losing the data)"
 say "MiniNode starts again by itself when Docker starts. Next: docs/runbooks/setup-desktop.md"

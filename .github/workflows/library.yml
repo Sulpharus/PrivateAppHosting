@@ -1,9 +1,9 @@
 name: App-Bibliothek
 
 # Installs, updates or removes a program from the App-Bibliothek (infra/nucbox/library.json) on
-# the NucBox (ADR 0011). Started by the portal (Verwaltung → App-Bibliothek) through the API, or
-# by hand under Actions. Install: check → DNS → NucBox rollout → register in platform.apps.
-# Remove: disable in platform.apps (checks the entry) → stop on the NucBox.
+# the physical server (ADR 0011). Started by the portal (Verwaltung → App-Bibliothek) through the API, or
+# by hand under Actions. Install: check → DNS → physical server rollout → register in platform.apps.
+# Remove: disable in platform.apps (checks the entry) → stop on the physical server.
 
 on:
   workflow_dispatch:
@@ -40,7 +40,7 @@ env:
 jobs:
   library:
     name: ${{ inputs.action }} ${{ inputs.entry }} → ${{ inputs.slug }}
-    # The NucBox must be set up (docs/runbooks/nucbox-install.md); the catalog is read from main.
+    # The physical server must be set up (docs/runbooks/nucbox-install.md); the catalog is read from main.
     if: vars.NUCBOX_TUNNEL_ID != '' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
@@ -69,7 +69,7 @@ jobs:
           TUNNEL_ID: ${{ vars.NUCBOX_TUNNEL_ID }}
           ZONE_NAME: ${{ env.MININODE_ZONE }}
         run: ./infra/cloudflare/dns-upsert.sh "$SLUG.$MININODE_DOMAIN" "$TUNNEL_ID.cfargotunnel.com"
-      # Remove: the registry says which program runs there; a mismatch stops before the NucBox.
+      # Remove: the registry says which program runs there; a mismatch stops before the physical server.
       - name: Disable the app
         if: inputs.action == 'remove'
         run: pnpm mininode library remove "$SLUG" "$ENTRY" --env "$DEPLOY_ENV"

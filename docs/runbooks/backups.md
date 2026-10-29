@@ -2,7 +2,7 @@
 
 A full backup of the platform from Verwaltung → Sicherung (ADR 0019): all accounts (with
 passwords and passkeys), the data of the platform and of every app, the stored files and the hosting
-settings, in one password-protected file you keep yourself. The NucBox keeps its own nightly
+settings, in one password-protected file you keep yourself. The physical server keeps its own nightly
 backups (`restore.md`); this one does not depend on it.
 
 ## One-time setup
@@ -52,7 +52,7 @@ Actions if the quota fills (a failed run says so).
 **Not inside:** the Worker and GitHub secrets (they cannot be read back; keep them in the password
 manager: `SUPABASE_SECRET_KEY`, `VAULT_KEY`, `GOOGLE_TOKEN_KEY`, `VAPID_*`, `GUACAMOLE_JSON_SECRET`,
 `NUCBOX_CONTROL_TOKEN`, …, the list in `apps/api/wrangler.jsonc` and `key-rotation.md`), the code of
-the apps (git), the NucBox and the Windows VM (`restore.md`). Keys that people stored in
+the apps (git), the physical server and the Windows VM (`restore.md`). Keys that people stored in
 Verwaltung → API-Schlüssel are in the database, encrypted with `VAULT_KEY`: **keep `VAULT_KEY` and
 `GOOGLE_TOKEN_KEY`, or those keys and Google links are unreadable after a restore.**
 

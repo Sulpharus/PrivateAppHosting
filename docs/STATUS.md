@@ -28,7 +28,7 @@ Where things are documented:
 | --- | --- |
 | Architecture, phases, data model | `PLAN.md` |
 | Decisions | `docs/adr/0001`–`0018` |
-| Operations: setup, NucBox, keys, Kalender, App-Bibliothek, app export, restore | `docs/runbooks/` (index in its README) |
+| Operations: setup, physical server, keys, Kalender, App-Bibliothek, app export, restore | `docs/runbooks/` (index in its README) |
 | Building apps with AI: spec, design system, prompt modules, playbooks | `docs/ai/` |
 | Shared data types (suite) | `docs/suite/data-types.md` |
 | Concepts, how-tos, first steps (German, for the owner) | `docs/wiki/`, shown in Verwaltung → Wissen |
@@ -44,7 +44,7 @@ Where things are documented:
 | Haushalt | Fixed costs (end date, amount changes, statement matching), "Dein Monat", statistics, PDF statement import (pdf.js vendored) | `hosted/haushalt` |
 | Kalender map | View Karte: pins, ways and travel times (OpenStreetMap routing), start point, map styles; Aether Notes shows where people live (pins, heat map, towns, who lives nearby) and hands meetups to the Kalender | `hosted/kalender/map.js`, `hosted/kalender/route.js`, `hosted/aether-notes/src/components/MapView.tsx` |
 | Kalender sources | Sportplaner sessions (`activity`) and Haushalt payments (`contract`) as suite records | `hosted/sportplaner/js/suite.js`, `hosted/haushalt/plan.js` |
-| App-Bibliothek | Jellyfin, n8n, Uptime Kuma, Stirling PDF on the NucBox with one click | ADR 0011, runbook `app-library.md` |
+| App-Bibliothek | Jellyfin, n8n, Uptime Kuma, Stirling PDF on the physical server with one click | ADR 0011, runbook `app-library.md` |
 | App export | An app as its own GitHub repository, without data or keys | ADR 0012, runbook `app-export.md` |
 | Deploys | One failing app no longer stops the others | `.github/workflows/deploy.yml`, `mininode deploy --since-deployed` (each app against its registered `deployed_version`; `--changed <ref>` stays for CI dry runs) |
 | Gaming Hub | Games show only in the hub; the start page's "Gaming Hub" button and "Spiele" tab are always there | ADR 0009, `apps/portal/src/routes/Home.tsx` |
@@ -57,7 +57,7 @@ Where things are documented:
 | Sportplaner course price | Whole course or monthly fee, split over the sessions that take place, booked per session in Statistik | `hosted/sportplaner/js/price.js`, README |
 | Medialog | "Sammlung" tab no longer shows the suggestion chips ("Vorschläge") under the search | `hosted/medialog/src/views/SammlungView.tsx` |
 | Gemeinsame Daten | One aligned table (Datentyp, App, Grund, Angefragt, Freigabe); sort by open requests first, type or app; filter "Nur noch offene"; write priority below | `apps/portal/src/admin/Suite.tsx` |
-| Verwaltung menu | "Hochladen" is a button in Apps; Apps has a switch Apps / Gaming Hub and sorts by name, category, own drawer or status; "Hardware-Server" holds Auslastung (was NucBox), Remote-Apps and App-Bibliothek (old URLs redirect) | `apps/portal/src/admin/{Apps,Hardware,AdminLayout}.tsx` |
+| Verwaltung menu | "Hochladen" is a button in Apps; Apps has a switch Apps / Gaming Hub and sorts by name, category, own drawer or status; "Hardware-Server" holds Auslastung (was physical server), Remote-Apps and App-Bibliothek (old URLs redirect) | `apps/portal/src/admin/{Apps,Hardware,AdminLayout}.tsx` |
 | KI-Werkstatt | Features in 7 collapsible groups with search; 19 new feature modules (money, dates, editor, drag sort, AI chat/vision, roles, comments, accessibility, errors, testing, migration, game save/touch/generator/kit, container, remote program, library entry) and 2 new types (Server-Dienst, Programm) | `docs/ai/prompts/`, `apps/portal/src/admin/{Workshop,prompts}.ts(x)` |
 | Language switch | Per person in Konto → "Sprache / Language" (de/en, profile + `mn-lang` cookie); every hosted app has `i18n/de.json` + `en.json`; new apps must ship both; doctor checks them; the KI-Werkstatt has a ready prompt to retrofit them (`docs/ai/RETROFIT-LANGUAGE.md`) | ADR 0017, `docs/ai/LANGUAGE-PACKAGES.md`, `packages/ui/kit/i18n.js`, `e2e/language.spec.ts` |
 | App logos | Verwaltung → Apps uploads a logo per app (bucket `app-icons`); deploy picks up `icon.svg`; prompt module "App-Logo"; tile buttons in their own row | ADR 0018, `apps/portal/src/lib/appIcon.ts`, `packages/cli/src/deploy/icon.ts`, `e2e/app-icons.spec.ts` |
@@ -111,15 +111,15 @@ since the PR #12 deploy. Earlier deploys stopped at medialog and never shipped t
 
 ## Waiting on the owner
 
-0. **Before merging the anywhere-installable work (ADR 0026), upgrade the NucBox once:**
-   - add `MININODE_OWNER=sulpharus` to `platform.env`, and `MININODE_OWNER=sulpharus`, `MININODE_REPO=Sulpharus/PrivateAppHosting`, `MININODE_DOMAIN=mininode.app` to `/etc/mininode/deploy.env` (they used to be built into the scripts; without them the NucBox deploy stops);
+0. **Before merging the anywhere-installable work (ADR 0026), upgrade the physical server once:**
+   - add `MININODE_OWNER=sulpharus` to `platform.env`, and `MININODE_OWNER=sulpharus`, `MININODE_REPO=Sulpharus/PrivateAppHosting`, `MININODE_DOMAIN=mininode.app` to `/etc/mininode/deploy.env` (they used to be built into the scripts; without them the physical server deploy stops);
    - a staging domain now lives in `mininode.config.json` (`environments.staging.domain`), no longer in the variable `STAGING_DOMAIN`;
    - sign-in limits in Supabase drop to 10 per 5 minutes per address (people behind one router share it) and passwords need 12 characters;
    - old Wine containers carry the label `app.mininode.app`: `docker rm -f` them once, new ones use `app.mininode.slug`.
 0. **Anywhere-installable work (ADR 0026), nothing merged yet:**
    - The desktop edition ran end to end on Linux in this session (installer, login in a real browser, two apps, backup, restore, password reset). **Not tested on real Windows or macOS or ARM hardware:** try `install.ps1` once on Windows and `install.sh` on a Mac.
    - Review the starter ZIP once (`scripts/package-release.sh 0.1.0 /tmp/out`, then unpack it): it is built to carry nothing of this installation, and the build stops when it finds something; but read `docs/runbooks/setup-cloudflare.md` as a stranger would.
-   - Pick a license before publishing the starter (`PLAN.md` §15.2).
+   - License is PolyForm Noncommercial 1.0.0 (`LICENSE`, "Required Notice" names `Sulpharus`): change the notice if the licensor should be named differently. Apps you export need their own license.
    - The migrations `…_app_identity` and `…_app_catalog` no longer seed an origin backfill and the "ATT" link tile (already applied here; a new installation starts empty).
 0. **Check in Verwaltung → Hochladen and Apps (nothing the code can do for you):** the page still
    says "Der automatische Einbau ist noch nicht eingerichtet" until `LIBRARY_DISPATCH_TOKEN`
@@ -156,16 +156,16 @@ since the PR #12 deploy. Earlier deploys stopped at medialog and never shipped t
    -base64 32`, keep a copy), run a deploy, then connect Google under "Dein Konto" and switch on
    "Google Kalender" in the Kalender. Until then *Dein Konto* shows the admin a card with these
    steps.
-3. NucBox setup (`nucbox-install.md`): `vars.NUCBOX_TUNNEL_ID`, deploy SSH key, Access
+3. Physical server setup (`nucbox-install.md`): `vars.NUCBOX_TUNNEL_ID`, deploy SSH key, Access
    secrets. Container apps and the App-Bibliothek need it.
 4. GitHub tokens:
    - `LIBRARY_DISPATCH_TOKEN`: Actions write, this repository. Starts the library and export
      workflows.
    - `CATALOG_TOKEN`: Contents read, this repository. Goes into `/etc/mininode/deploy.env` on
-     the NucBox.
+     the physical server.
    - `EXPORT_REPO_TOKEN`: Administration + Contents write, all repositories.
    - See `app-library.md` and `app-export.md`.
-5. Pick a license before sharing an exported app.
+5. Exported apps carry no license of their own: add one before sharing.
 
 ## Open and proposed work
 
@@ -183,7 +183,7 @@ since the PR #12 deploy. Earlier deploys stopped at medialog and never shipped t
   `mininode integrate`: it integrates by script, builds and passes doctor. It was not committed to
   `hosted/`; upload it again from Verwaltung when wanted. Its scan/OCR feature needs image support
   in the AI proxy (not there yet, see ADR 0013). The zip held one app although two were announced.
-- **Not tested on production:** the upload workflows, the R2 upload, the NucBox program install
+- **Not tested on production:** the upload workflows, the R2 upload, the physical server program install
   and the personal-key proxy path run only against unit tests and the local database. Try each once
   with a small file before relying on it. The e2e stack has no API Worker, so saving a key and
   starting an upload are not covered by Playwright.

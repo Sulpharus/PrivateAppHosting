@@ -163,6 +163,11 @@ jobs:
           code=$(curl -s -o /dev/null -w '%{http_code}' "http://supabase.mininode.localhost:8787/rest/v1/profiles?select=role" \
             -H "apikey: $key" -H 'Accept-Profile: platform')
           test "$code" != 200
+          # First-run setup is closed for good once the installer made the admin.
+          curl -fsS http://api.mininode.localhost:8787/setup | jq -e '.open == false'
+          code=$(curl -s -o /dev/null -w '%{http_code}' -X POST http://api.mininode.localhost:8787/setup \
+            -H 'Content-Type: application/json' -d '{"email":"intruder@example.org","password":"another long password"}')
+          test "$code" = 409
       - name: Containers on failure
         if: failure()
         run: |

@@ -105,7 +105,7 @@ if [ -n "$repository" ]; then
 fi
 if [ "${#sed_args[@]}" -gt 0 ]; then
   while IFS= read -r -d '' file; do sed -i "${sed_args[@]}" "$file"; done \
-    < <(find "$stage" -type f \( -name '*.md' -o -name '*.mdx' \) -not -path '*/node_modules/*' -print0)
+    < <(find "$stage" -type f \( -name '*.md' -o -name '*.mdx' -o -name LICENSE \) -not -path '*/node_modules/*' -print0)
 fi
 
 # 6. The lockfile without the apps (they are the only workspace members that left).

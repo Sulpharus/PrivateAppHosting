@@ -38,7 +38,7 @@ mitgeht) und die Liste der angewendeten App-Migrationen. Jeder Schritt lässt si
 
 - **Bibliotheks-Programme:** der Container wird gestoppt; sein Datenordner (`/srv/mininode/apps/<name>`) und der DNS-Eintrag der Adresse
   bleiben, bis du sie selbst entfernst.
-- **Andere Container-Apps** auf der NucBox laufen weiter, bis du sie dort stoppst.
+- **Andere Container-Apps** auf der Server-Hardware laufen weiter, bis du sie dort stoppst.
 - **Programme in der Windows-VM** bleiben installiert; deinstalliere sie dort.
 - **Gemeinsame Datensätze**, die die App in die Suite geschrieben hat (Termine, Verträge), bleiben erhalten.
 

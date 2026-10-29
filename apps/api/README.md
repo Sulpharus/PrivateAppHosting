@@ -18,15 +18,15 @@ Hono Worker for everything that needs the service role or a secret:
 | `PUT` / `DELETE /admin/api-keys/:service` | admin, recent sign-in | Stores (encrypted with `VAULT_KEY`) or removes the key of an API |
 | `PUT /admin/api-services/:service/mode` | admin, recent sign-in | `sitewide` or `personal` keys for an API (ADR 0014) |
 | `PUT` / `DELETE /me/api-keys/:service` | signed in | A user enters or removes their own key for a personal API |
-| `GET /admin/submissions/config`, `POST /admin/submissions` | admin (`POST`: recent) | Uploads: ZIP (web app → `integrate.yml`) or `.exe`/`.msi` (program → R2 + NucBox), ADR 0013 |
+| `GET /admin/submissions/config`, `POST /admin/submissions` | admin (`POST`: recent) | Uploads: ZIP (web app → `integrate.yml`) or `.exe`/`.msi` (program → R2 + physical server), ADR 0013 |
 | `GET /admin/submissions/:id`, `POST …/retry`, `POST …/dismiss` | admin | An upload; refreshes a running program install; try again; take it off the list |
 | `DELETE /admin/api-services/:service` | admin, recent sign-in | Removes an API entry no app declares any more |
 | `POST /remote/sessions` | signed-in user with grant | Queue or start a remote session; returns a Guacamole link |
 | `POST /remote/sessions/:id/heartbeat` | session owner | Keeps the session alive |
 | `DELETE /remote/sessions/:id` | owner or admin | Ends the session, promotes the next in queue |
-| `POST /remote/installs` | admin, recent | Starts an install of a remote app on the NucBox (snapshot → verify → install) |
+| `POST /remote/installs` | admin, recent | Starts an install of a remote app on the physical server (snapshot → verify → install) |
 | `GET /remote/installs/:id` | admin | Install job status |
-| `GET /admin/nucbox/resources` | admin | NucBox resource report from nucbox-control (Verwaltung → Hardware-Server) |
+| `GET /admin/nucbox/resources` | admin | Physical server resource report from nucbox-control (Verwaltung → Hardware-Server) |
 | `GET /admin/library` | admin | Whether App-Bibliothek installs can be started (`GITHUB_DISPATCH_TOKEN` set) |
 | `GET /admin/backups`, `POST /admin/backups`, `POST /admin/backups/:artifact/download` | admin (`POST`: recent) | Backups (ADR 0019): runs of `backup.yml` with their archives, start one, a short-lived download address |
 | `POST /admin/apps/:slug/uninstall` | admin, recent | Starts `uninstall-app.yml` (Worker, optionally data and registry entry, pull request that removes the code); takes the app offline (ADR 0020) |
@@ -34,7 +34,7 @@ Hono Worker for everything that needs the service role or a secret:
 | `POST /admin/library` | admin, recent | Starts the `library.yml` workflow: install or remove a catalog program (ADR 0011) |
 | `POST /admin/users/:id/recovery-link` | admin, recent | One-time password-reset link to share (no email needed) |
 | `DELETE /admin/users/:id` | admin, recent | Deletes a user |
-| cron `* * * * *` | — | Every minute: releases due reminders and pushes new notifications (ADR 0005). Every fifth minute also: expires idle sessions, releases stale AI reservations, syncs NucBox runtimes, keeps Supabase awake |
+| cron `* * * * *` | — | Every minute: releases due reminders and pushes new notifications (ADR 0005). Every fifth minute also: expires idle sessions, releases stale AI reservations, syncs physical server runtimes, keeps Supabase awake |
 | cron `2-59/5 * * * *` | — | Google Calendar sync of the most overdue user, with its own subrequest budget (ADR 0010) |
 
 Email is optional: without the `EMAIL` binding (Workers Paid) invites return only the link and

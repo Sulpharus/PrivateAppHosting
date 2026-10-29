@@ -103,7 +103,7 @@ describe('POST /admin/apps/:slug/uninstall', () => {
     expect(calls.some((c) => c.url.includes('/rest/v1/audit_log'))).toBe(true);
   });
 
-  it('also stops a library program on the NucBox', async () => {
+  it('also stops a library program on the physical server', async () => {
     signedIn('admin');
     row = { slug: 'kino', kind: 'container', manifest: { library: 'jellyfin' } };
     const response = await post('kino', { purge: true, confirm: 'kino' });
@@ -112,7 +112,7 @@ describe('POST /admin/apps/:slug/uninstall', () => {
       'uninstall-app.yml',
       'library.yml',
     ]);
-    expect(((await response.json()) as { manual: string }).manual).toMatch(/NucBox/);
+    expect(((await response.json()) as { manual: string }).manual).toMatch(/Server-Hardware/);
   });
 
   it('refuses the apps the platform relies on', async () => {
@@ -135,7 +135,7 @@ describe('POST /admin/apps/:slug/uninstall', () => {
     expect(dispatches()).toEqual([]);
   });
 
-  it('says when only the NucBox part could not be started', async () => {
+  it('says when only the physical server part could not be started', async () => {
     signedIn('admin');
     row = { slug: 'kino', kind: 'container', manifest: { library: 'jellyfin' } };
     vi.mocked(globalThis.fetch).mockImplementation(async (input, init) => {

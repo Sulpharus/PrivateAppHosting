@@ -34,13 +34,13 @@ deploy, warnings are shown in review:
 | `no-artifact-runtime`, `no-cdn-scripts` | no leftover `window.claude`/`window.storage`, no external scripts (CSP) |
 | `sdk-required`, `prefer-kv` | apps with login or data use the SDK; small state uses `mn.kv` |
 | `rls-required`, `use-secure-table`, `own-schema`, `no-anon-grants` | migrations stay in `app_<slug>`, enable RLS via `platform.secure_table`, never grant to `anon` |
-| `build`, `static`, `container` | target-specific: build output exists, Dockerfile + health path for NucBox apps |
+| `build`, `static`, `container` | target-specific: build output exists, Dockerfile + health path for physical server apps |
 | `readme` | every app documents what it does and its data |
 
 **deploy** (target `cloudflare`): builds, applies the app's SQL migrations (checksummed in
 `platform.app_migrations`), exposes the schema to the API, deploys a Worker with the gate and
 static assets on `<slug>.mininode.app`, and registers the app in `platform.apps`. Other targets
-are registered only; their rollout happens in the deploy workflow (NucBox) or the admin UI
+are registered only; their rollout happens in the deploy workflow (physical server) or the admin UI
 (remote installs).
 
 Deploys also register the app's origin (`https://<slug>.<domain>`, or `http://localhost:<port>`

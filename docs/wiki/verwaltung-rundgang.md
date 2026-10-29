@@ -14,7 +14,7 @@ Links in der Seitenleiste:
 | **Apps** | Alle Apps: Status, Version, Kategorie, Zugriff, Logo, Deaktivieren, Löschen, Export; Link-Kacheln anlegen; Umschalter Apps / Gaming Hub; **Hochladen** |
 | **Kategorien & Pakete** | Kategorien mit Stichwörtern pflegen; Pakete (Gruppen von Apps) für die Startseite |
 | **Nutzer & Rollen** | Einladen (Rolle, Apps, Link), Rollen ändern, Nutzer löschen |
-| **Hardware-Server** | Auslastung der NucBox (Host, VMs, Speicher, Container), **Remote-Apps** (Programme im Browser), **App-Bibliothek** (Ein-Klick-Installation) |
+| **Hardware-Server** | Auslastung der Server-Hardware (Host, VMs, Speicher, Container), **Remote-Apps** (Programme im Browser), **App-Bibliothek** (Ein-Klick-Installation) |
 | **KI-Proxy** | Kosten, Anfragen, Budgets je App, Rolle und Person |
 | **API-Schlüssel** | Schlüssel für externe APIs eintragen; Modus „für alle“ oder „persönlich“ |
 | **Gemeinsame Daten** | Welche App welche Datentypen lesen oder schreiben darf; Priorität |
@@ -25,7 +25,7 @@ Links in der Seitenleiste:
 
 Ausführlicher zu den Themen: [Apps verstehen](wiki:apps-verstehen), [Hochladen](wiki:hochladen), [App löschen](wiki:app-loeschen),
 [KI-Proxy](wiki:ki-proxy), [API-Schlüssel](wiki:api-schluessel), [Gemeinsame Daten](wiki:gemeinsame-daten),
-[KI-Werkstatt](wiki:ki-werkstatt), [Sicherung](wiki:sicherung), [NucBox](wiki:nucbox).
+[KI-Werkstatt](wiki:ki-werkstatt), [Sicherung](wiki:sicherung), [Server-Hardware](wiki:nucbox).
 
 ## Gut zu wissen
 

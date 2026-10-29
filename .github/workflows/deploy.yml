@@ -1,6 +1,6 @@
 name: Deploy
 
-# Runs after CI on main. Order: database → platform Workers → hosted apps → NucBox containers.
+# Runs after CI on main. Order: database → platform Workers → hosted apps → physical server containers.
 # Secrets and variables live in the GitHub environment (production / staging); see
 # docs/runbooks/setup-cloudflare.md for the full list.
 
@@ -259,9 +259,9 @@ jobs:
           echo "list=$list" >> "$GITHUB_OUTPUT"
 
   nucbox:
-    name: NucBox container ${{ matrix.slug }}
+    name: physical server container ${{ matrix.slug }}
     needs: apps
-    # Skipped until the NucBox is set up (docs/runbooks/nucbox-install.md).
+    # Skipped until the physical server is set up (docs/runbooks/nucbox-install.md).
     if: needs.apps.outputs.containers != '[]' && vars.NUCBOX_TUNNEL_ID != ''
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment || 'production' }}
@@ -282,7 +282,7 @@ jobs:
         id: meta
         run: |
           echo "image=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/mininode-${{ matrix.slug }}" >> "$GITHUB_OUTPUT"
-          # The NucBox reads port, memory and health path from this label (nucbox-deploy).
+          # The physical server reads port, memory and health path from this label (nucbox-deploy).
           echo "manifest=$(jq -c . "hosted/${{ matrix.slug }}/mininode.json")" >> "$GITHUB_OUTPUT"
       - uses: docker/login-action@v3
         with:
@@ -319,7 +319,7 @@ jobs:
           access-client-secret: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
 
   platform-images:
-    name: NucBox platform image ${{ matrix.component }}
+    name: physical server platform image ${{ matrix.component }}
     needs: database
     if: always() && vars.NUCBOX_TUNNEL_ID != '' && (needs.database.result == 'success' || needs.database.result == 'skipped')
     runs-on: ubuntu-latest

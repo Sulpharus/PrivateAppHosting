@@ -1,4 +1,4 @@
-// Verwaltung → NucBox resources through the API, with nucbox-control stubbed.
+// Verwaltung → physical server resources through the API, with nucbox-control stubbed.
 import { createClient } from '@supabase/supabase-js';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { ApiEnv } from './env.ts';

@@ -1,4 +1,4 @@
-# MiniNode · PC/server edition (NucBox)
+# MiniNode · PC/server edition (physical server)
 
 Everything that runs on the home server: the compose stack (Traefik, cloudflared, Guacamole,
 nucbox-control), the deploy forced command, backups, the Windows and Wine setup, and the

@@ -25,7 +25,7 @@ Alles liegt in einem Monorepo (pnpm, Turborepo): im Repository deiner Installati
 │  ├─ cli/               mininode-Befehle (doctor, deploy, integrate, backup, uninstall, …)
 │  └─ config/            gemeinsame tsconfig
 ├─ supabase/             Migrationen, Tests (pgTAP), Konfiguration
-├─ infra/                Cloudflare (Tunnel, DNS, Access), Desktop-Version (Installer, Compose) und NucBox (Compose, Backup, Windows)
+├─ infra/                Cloudflare (Tunnel, DNS, Access), Desktop-Version (Installer, Compose) und Server-Hardware (Compose, Backup, Windows)
 ├─ fixtures/             Beispiel-Exporte mit erwarteten Ergebnissen
 ├─ docs/                 ai/ (Vorgaben für KI), adr/ (Entscheidungen), runbooks/, suite/, wiki/ (dieses Wiki)
 ├─ e2e/                  Playwright-Tests

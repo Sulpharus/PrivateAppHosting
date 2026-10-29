@@ -253,7 +253,7 @@ async function uploadProgram(
     return problem(
       503,
       'not_configured',
-      'Programme brauchen die R2-Zugangsdaten der API (R2_ENDPOINT, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY) und die NucBox.',
+      'Programme brauchen die R2-Zugangsdaten der API (R2_ENDPOINT, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY) und die Server-Hardware.',
     );
   if (length > PROGRAM_MAX)
     return problem(
@@ -399,7 +399,7 @@ async function startInstall(env: ApiEnv, db: SupabaseClient, row: SubmissionRow)
       status: 'queued',
       log: busy
         ? 'Für dieses Programm läuft schon eine Installation.'
-        : 'Die NucBox ist gerade nicht erreichbar. Der Upload ist gespeichert; versuche es später erneut.',
+        : 'Die Server-Hardware ist gerade nicht erreichbar. Der Upload ist gespeichert; versuche es später erneut.',
     });
     return Response.json(
       {
@@ -432,11 +432,14 @@ async function refreshInstall(env: ApiEnv, db: SupabaseClient, row: SubmissionRo
     return (
       (await updateRow(db, row.id, {
         status: 'needs_review',
-        log: 'Die NucBox kennt die Installation nicht mehr (Neustart?). Starte sie erneut.',
+        log: 'Die Server-Hardware kennt die Installation nicht mehr (Neustart?). Starte sie erneut.',
         summary: {
           ...row.summary,
           reasons: [
-            { code: 'install_lost', message: 'Installation verloren (Neustart der NucBox).' },
+            {
+              code: 'install_lost',
+              message: 'Installation verloren (Neustart der Server-Hardware).',
+            },
           ],
         },
       })) ?? row
@@ -534,7 +537,7 @@ submissions.post(
       return startIntegration(c.env, db, row);
     }
     if (!c.env.NUCBOX_CONTROL_TOKEN)
-      return problem(503, 'not_configured', 'Die NucBox ist nicht eingerichtet.');
+      return problem(503, 'not_configured', 'Die Server-Hardware ist nicht eingerichtet.');
     const { program, silentArgs } = body.data;
     if (program !== undefined && !validProgramPath(program.trim()))
       return problem(400, 'invalid_request', 'Der Programmpfad ist ungültig.');

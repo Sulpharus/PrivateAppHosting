@@ -68,7 +68,7 @@ uninstall.post(
       return problem(500, 'audit_failed', 'Das Löschen konnte nicht protokolliert werden.');
 
     // The uninstall workflow first: it is the one that must run. A library program is stopped on the
-    // NucBox by a second workflow; if only that one fails to start, the answer says so.
+    // physical server by a second workflow; if only that one fails to start, the answer says so.
     const started = await dispatchWorkflow(c.env, 'uninstall-app.yml', {
       slug: slug.data,
       purge: String(parsed.data.purge),
@@ -86,7 +86,7 @@ uninstall.post(
         return problem(
           502,
           'library_not_started',
-          'Das Löschen läuft, aber der Container auf der NucBox wurde nicht angehalten (App-Bibliothek → Entfernen, noch einmal versuchen).',
+          'Das Löschen läuft, aber der Container auf der Server-Hardware wurde nicht angehalten (App-Bibliothek → Entfernen, noch einmal versuchen).',
         );
     }
 
@@ -107,7 +107,7 @@ uninstall.post(
           app.kind === 'remote'
             ? 'Das Programm bleibt auf der Windows-VM installiert. Deinstalliere es dort, wenn du es nicht mehr brauchst.'
             : library
-              ? 'Der Container wird auf der NucBox gestoppt; sein Datenordner dort bleibt liegen, bis du ihn selbst löschst (runbooks/uninstall.md).'
+              ? 'Der Container wird auf der Server-Hardware gestoppt; sein Datenordner dort bleibt liegen, bis du ihn selbst löschst (runbooks/uninstall.md).'
               : null,
       },
       202,

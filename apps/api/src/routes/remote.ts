@@ -119,7 +119,7 @@ remote.post('/sessions', requireUser(), async (c) => {
     console.error(
       JSON.stringify({ event: 'remote_prepare_failed', app: slug, error: String(err) }),
     );
-    return problem(502, 'host_unavailable', 'Die NucBox ist gerade nicht erreichbar.');
+    return problem(502, 'host_unavailable', 'Die Server-Hardware ist gerade nicht erreichbar.');
   }
   if (!prepared.ready) {
     return c.json({ status: 'starting', sessionId: session.id, etaSeconds: prepared.etaSeconds });
@@ -216,7 +216,8 @@ remote.post('/installs', requireUser({ role: 'admin', recentAuth: 600 }), async 
       wingetId: config.wingetId,
     }),
   }).catch(() => null);
-  if (!response) return problem(502, 'host_unavailable', 'Die NucBox ist gerade nicht erreichbar.');
+  if (!response)
+    return problem(502, 'host_unavailable', 'Die Server-Hardware ist gerade nicht erreichbar.');
   if (response.status === 409)
     return problem(409, 'busy', 'Für diese App läuft schon eine Installation.');
   if (!response.ok)
@@ -245,7 +246,8 @@ remote.get('/installs/:id', requireUser({ role: 'admin' }), async (c) => {
   const response = await fetch(`${c.env.NUCBOX_CONTROL_URL}/installers/${id}`, {
     headers: controlHeaders(c.env),
   }).catch(() => null);
-  if (!response) return problem(502, 'host_unavailable', 'Die NucBox ist gerade nicht erreichbar.');
+  if (!response)
+    return problem(502, 'host_unavailable', 'Die Server-Hardware ist gerade nicht erreichbar.');
   if (response.status === 404)
     return problem(404, 'not_found', 'Installation unbekannt (Neustart?).');
   return c.json(await response.json());

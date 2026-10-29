@@ -36,7 +36,7 @@ Welche passt und wie du sie einrichtest: [Einrichten: drei Varianten](wiki:einri
    ├─ api.{{domain}} .... API: Einladungen, Schlüssel, Uploads, Sicherung, Löschen …
    ├─ ai.{{domain}} ..... KI-Proxy (Budget, Modelle) → Cloudflare AI Gateway
    ├─ <app>.{{domain}} .. jede gehostete App (ein Worker mit Login-Schranke, dem „Gate")
-   └─ Tunnel ───────────── dein Server („NucBox"): Container, Windows-VM, Wine, Guacamole
+   └─ Tunnel ───────────── dein Server („Server-Hardware"): Container, Windows-VM, Wine, Guacamole
    ▲
    └─ Supabase: Datenbank, Login, Dateispeicher (für alles)
 ```
@@ -46,7 +46,7 @@ Welche passt und wie du sie einrichtest: [Einrichten: drei Varianten](wiki:einri
 | Portal | `apps/portal` | Startseite, Login, Konto, Verwaltung (auch dieses Wiki) |
 | API | `apps/api` | Alles, was ein Geheimnis braucht: Einladungen, API-Schlüssel, Uploads, Google, Push, Sicherung |
 | KI-Proxy | `apps/ai-proxy` | KI-Aufrufe der Apps, ohne dass ein Schlüssel im Browser landet, mit Budget |
-| NucBox-Steuerung | `apps/nucbox-control` | Schaltet VMs, vergibt Sitzungen für Remote-Apps, rollt Container aus |
+| Server-Hardware-Steuerung | `apps/nucbox-control` | Schaltet VMs, vergibt Sitzungen für Remote-Apps, rollt Container aus |
 | Gate | `packages/gate` | Die Schranke vor jeder App: prüft Anmeldung und Zugriff, setzt die Sicherheits-Header |
 | SDK | `packages/sdk` | Die eine Bibliothek, die eine App braucht (`mn.kv`, `mn.files`, `mn.ai`, …) |
 | App-Kit | `packages/ui` | Gemeinsames Design (Farben, Schriften, Komponenten) und Skripte für alle Apps |

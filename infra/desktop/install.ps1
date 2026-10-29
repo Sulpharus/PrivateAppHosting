@@ -4,7 +4,7 @@ Run it from the unpacked MiniNode folder, in PowerShell. It needs Docker Desktop
 Node, the database and everything else run in containers.
 
   .\infra\desktop\install.ps1 [-Dir $HOME\mininode] [-Domain mininode.localhost] [-Port 8787] [-Scheme http|https] [-HostPort n]
-                              [-Lan] [-AdminEmail you@example.org] [-NoAdmin]
+                              [-Lan] [-AdminEmail you@example.org]
                               [-CaFile company-proxy.pem]
 
 Running it again on an existing installation rebuilds, restarts and migrates; it keeps all data
@@ -19,7 +19,6 @@ param(
   [ValidateSet('http', 'https')][string]$Scheme = 'http',
   [switch]$Lan,
   [string]$AdminEmail = '',
-  [switch]$NoAdmin,
   [string]$CaFile = ''
 )
 $ErrorActionPreference = 'Stop'
@@ -80,14 +79,14 @@ $control = Join-Path $Dir 'mininode-desktop.ps1'
 & $control start
 & $control migrate
 
-if ($fresh -and -not $NoAdmin) {
-  if (-not $AdminEmail) { $AdminEmail = Read-Host 'Email address of the first account (it becomes the admin)' }
+# Without -AdminEmail the first visit shows the setup screen that creates the admin (ADR 0027).
+if ($fresh -and $AdminEmail) {
   & $control admin $AdminEmail
 }
 
 Write-Host ''
 Write-Host 'MiniNode is installed and running.'
-Write-Host "  Open:     $(& $control url)/login"
+Write-Host "  Open:     $(& $control url)  (the first visit asks you to create the admin account)"
 Write-Host "  Control:  $control  (start, stop, status, logs, add <app>, backup, update)"
 Write-Host "  Secrets:  $(Join-Path $Dir '.env')  (private to you; back it up, losing it means losing the data)"
 Write-Host 'MiniNode starts again by itself when Docker Desktop starts. Next: docs\runbooks\setup-desktop.md'

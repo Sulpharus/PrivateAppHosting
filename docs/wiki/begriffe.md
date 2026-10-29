@@ -29,7 +29,7 @@ Die Begriffe, die in Verwaltung, Dokumentation und Gesprächen mit Claude Code v
 | **kv** | Der einfache Schlüssel-Wert-Speicher `mn.kv` für Apps |
 | **Manifest** | Die Datei `mininode.json` einer App ([Apps verstehen](wiki:apps-verstehen)) |
 | **Migration** | Eine SQL-Datei, die die Datenbank verändert; Plattform: `supabase/migrations`, Apps: `hosted/<name>/db/` |
-| **NucBox** | Dein Heimserver (NucBox G9 mit Proxmox): Linux-VM, Windows-VM, Container ([NucBox](wiki:nucbox)) |
+| **Server-Hardware** | Dein Heimserver (Server-Hardware G9 mit Proxmox): Linux-VM, Windows-VM, Container ([Server-Hardware](wiki:nucbox)) |
 | **Passkey** | Anmelden mit Fingerabdruck, Gesicht oder Windows Hello statt Passwort |
 | **Portal** | `{{domain}}`: Startseite, Login, Konto und Verwaltung |
 | **Prune** | Aufräumen: Worker von Apps löschen, die nicht mehr im Repository liegen |

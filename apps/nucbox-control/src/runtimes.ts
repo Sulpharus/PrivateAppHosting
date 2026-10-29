@@ -103,7 +103,7 @@ export function createScheduler(options: {
 
   async function prepareWine(request: PrepareRequest): Promise<PrepareResult> {
     if (!config.WINE_ENABLED)
-      throw new RuntimeUnavailable('Wine ist auf dieser NucBox deaktiviert.');
+      throw new RuntimeUnavailable('Wine ist auf dieser Server-Hardware deaktiviert.');
     const name = wineContainer(request.app);
     let info = await docker.inspect(name);
     if (!info?.running) {

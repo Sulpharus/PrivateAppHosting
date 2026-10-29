@@ -110,10 +110,12 @@ Wrangler creates the custom domains on the way. It takes a few minutes.
 
 ## 7. First account
 
-1. Supabase → *Authentication → Users → Add user → Create new user*: your email, a password of at
-   least 12 characters, *Auto confirm*. **The first user of the project becomes the admin.**
-2. Open `https://<domain>/login`, sign in, open *Dein Konto* and add a **passkey**; add a second
-   passkey on another device.
+1. Open `https://<domain>` right after the deploy. A new installation shows **Admin-Account
+   anlegen**: enter your email and a password (12 or more characters) twice. **That account is the
+   admin**, and the page closes for good. Do this before you share the address: until it is done,
+   whoever opens the portal first can claim the admin account.
+2. You are signed in; open *Dein Konto* and add a **passkey**; add a second passkey on another
+   device.
 3. Optional: an authenticator app. From then on a password or Google sign-in asks for its code; a
    passkey sign-in does not. Keep a passkey on a second device as well. Lost the phone? A passkey
    still signs in, but removing the app needs its code: delete the factor in Supabase →

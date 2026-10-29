@@ -23,7 +23,8 @@ installation, and the two do not share accounts or data.
 
 ## What every variant has in common
 
-- **One login for everything.** The first account is the admin. Sign-ups are off: more people come
+- **One login for everything.** The first visit to a new installation creates the admin account
+  (a setup screen, ADR 0027). Sign-ups are off: more people come
   in through an invitation link (Verwaltung → Nutzer & Rollen).
 - **Passkeys.** After the first login set up a passkey under *Dein Konto*, and a second one on
   another device, so a lost device never locks you out. An authenticator app can be added as a

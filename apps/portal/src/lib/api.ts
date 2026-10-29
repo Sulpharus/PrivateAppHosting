@@ -50,6 +50,28 @@ export async function api<T>(
   return payload as T;
 }
 
+/** Calls api.<domain> without a session, for the few public routes (first-run setup). */
+export async function publicApi<T>(
+  path: string,
+  init: { method?: string; body?: unknown } = {},
+): Promise<T> {
+  const response = await fetch(`${apiUrl}${path}`, {
+    method: init.method ?? 'GET',
+    ...(init.body !== undefined
+      ? { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(init.body) }
+      : {}),
+  });
+  const payload = (await response.json().catch(() => ({}))) as { error?: string; message?: string };
+  if (!response.ok) {
+    throw new ApiError(
+      payload.message ?? 'Unbekannter Fehler.',
+      payload.error ?? 'error',
+      response.status,
+    );
+  }
+  return payload as T;
+}
+
 /** Postgres permission errors raised by step-up checks look like 42501. */
 export function isReauthError(error: unknown): boolean {
   if (error instanceof ApiError) return error.needsReauth;

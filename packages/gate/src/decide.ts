@@ -1,4 +1,4 @@
-// The gate's decision, independent of the runtime (Workers or the NucBox forward-auth server).
+// The gate's decision, independent of the runtime (Workers or the physical server forward-auth server).
 
 import { readSession, SESSION_COOKIE, type SessionClaims, type Verifier } from './session.ts';
 

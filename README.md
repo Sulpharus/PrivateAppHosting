@@ -12,7 +12,7 @@ everything and no apps: start with [docs/runbooks/getting-started.md](docs/runbo
   (apps, users & roles, remote apps, AI budget).
 - **Web apps** (`<slug>.<your domain>`): Cloudflare Workers with a gate in front that checks the
   session and the grant. Data lives in Supabase, isolated per app by row-level security.
-- **Server apps**: Docker containers on a NucBox at home, reached through a Cloudflare Tunnel,
+- **Server apps**: Docker containers on a physical server at home, reached through a Cloudflare Tunnel,
   same login via forward-auth.
 - **Native programs**: a Windows 11 VM (or Wine) streamed to the browser with Guacamole. The VM
   hibernates when nobody uses it.
@@ -21,6 +21,13 @@ everything and no apps: start with [docs/runbooks/getting-started.md](docs/runbo
 - **Adding apps**: upload the ZIP in Verwaltung → Apps → Hochladen; a script integrates what it knows
   and hands the rest to an AI review. Or drop it into `inbox/` and run `/integrate-app` in Claude
   Code; `git push` deploys it. Programs for the PC/server are uploaded the same way (`.exe`/`.msi`).
+
+## License
+
+Free to use, study and change for **non-commercial** purposes under the
+[PolyForm Noncommercial License 1.0.0](LICENSE). Commercial use needs the owner's permission.
+(This is source-available, not "open source" in the OSI sense, which does not allow a
+non-commercial restriction.)
 
 ## Start here
 
@@ -43,7 +50,7 @@ apps/       portal · api · ai-proxy · desktop-host · nucbox-control
 packages/   manifest · sdk · gate · ui · cli · config
 hosted/     one folder per app (mininode.json + code)
 supabase/   platform migrations and pgTAP tests
-infra/      Cloudflare bootstrap, desktop edition (installer, compose), NucBox stack, backups, Windows scripts
+infra/      Cloudflare bootstrap, desktop edition (installer, compose), physical server stack, backups, Windows scripts
 docs/       plan decisions, runbooks, AI specs and playbooks
 e2e/        Playwright tests (passkeys via a virtual authenticator)
 ```

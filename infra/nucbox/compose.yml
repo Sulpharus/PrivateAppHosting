@@ -1,4 +1,4 @@
-# Platform services on the NucBox Linux VM. Lives at /srv/mininode/platform on the VM.
+# Platform services on the physical server Linux VM. Lives at /srv/mininode/platform on the VM.
 #   docker compose --env-file platform.env up -d
 # platform.env holds the image digests written by nucbox-deploy; secrets.env (decrypted from
 # secrets.sops.env) holds credentials. Container apps are separate compose projects under

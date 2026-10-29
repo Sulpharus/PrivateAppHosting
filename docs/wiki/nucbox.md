@@ -1,11 +1,11 @@
 ---
-title: NucBox und Hardware-Server
+title: Der physische Server
 category: betrieb
 order: 40
 summary: Der Heimserver: was darauf läuft, wie er erreichbar ist und wie er gesichert wird
 ---
 
-Der **Heimserver** (im Beispiel eine NucBox G9, 16 GB) ist die zweite Hälfte der Variante „Beides“ ([Einrichten](wiki:einrichten)). Er kann **beliebige Linux-Hardware mit Docker** sein (Mini-PC, Raspberry Pi 5, alter Laptop, VM; Intel/AMD oder ARM):
+Der **Heimserver** (im Beispiel ein Mini-PC (G9), 16 GB) ist die zweite Hälfte der Variante „Beides“ ([Einrichten](wiki:einrichten)). Er kann **beliebige Linux-Hardware mit Docker** sein (Mini-PC, Raspberry Pi 5, alter Laptop, VM; Intel/AMD oder ARM):
 dann laufen Container-Apps, die App-Bibliothek und Wine-Sitzungen, und die Verwaltung zeigt CPU, Speicher und Platte dieses Rechners. **Windows-Programme** brauchen zusätzlich einen **Proxmox-VE-Host** mit Windows-11-VM. Ohne Proxmox lässt man alle `PROXMOX_*`- und `WINDOWS_*`-Einstellungen weg;
 die Anleitung steht im Runbook `nucbox-install.md` („Plain Docker host“). Mit Proxmox trägt der Server:
 
@@ -19,7 +19,7 @@ die Anleitung steht im Runbook `nucbox-install.md` („Plain Docker host“). Mi
 
 ## Erreichbar nur über den Tunnel
 
-Es gibt **keine offenen Ports**. Ein **Cloudflare-Tunnel** verbindet die NucBox mit Cloudflare; Verwaltungsflächen (Proxmox, SSH, Guacamole-Admin) liegen hinter
+Es gibt **keine offenen Ports**. Ein **Cloudflare-Tunnel** verbindet die Server-Hardware mit Cloudflare; Verwaltungsflächen (Proxmox, SSH, Guacamole-Admin) liegen hinter
 **Cloudflare Access** (nur du und der CI-Dienst). Container-Apps hängen hinter dem MiniNode-Login (Forward-Auth).
 
 ## Wie Dinge dorthin kommen
@@ -35,7 +35,7 @@ Hardware-Server → **Auslastung** (Prozessor, Speicher, Laufwerke, Container; a
 ## Einrichten und Sichern
 
 Einrichtung: Runbook `nucbox-install.md` (Proxmox, Linux-VM, Windows-VM, Prüfung), Tunnel/Access mit `infra/cloudflare/bootstrap.sh`; danach die GitHub-Variable `NUCBOX_TUNNEL_ID`
-setzen. **Nachts** sichert die NucBox Datenbank, Apps und Wine-Daten mit restic auf NVMe und verschlüsselt nach R2 (7 täglich, 4 wöchentlich, 6 monatlich); ein monatlicher
+setzen. **Nachts** sichert die Server-Hardware Datenbank, Apps und Wine-Daten mit restic auf NVMe und verschlüsselt nach R2 (7 täglich, 4 wöchentlich, 6 monatlich); ein monatlicher
 **Wiederherstellungstest** beweist, dass die R2-Kopie funktioniert; die Windows-VM sichert Proxmox selbst. Wiederherstellen: Runbook `restore.md`. Die Verwaltungs-Sicherung
 ([Sicherung](wiki:sicherung)) ist davon unabhängig.
 

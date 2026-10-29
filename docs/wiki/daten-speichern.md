@@ -42,7 +42,7 @@ Apps mit Datenmodus `team` (zum Beispiel ein Projektmanager) arbeiten mit kleine
 Besitzer fügen Personen hinzu (nur wer die App nutzen darf) und vergeben Rollen. Jede Zeile in den Tabellen der App trägt eine `team_id`; die
 Datenbank prüft bei jedem Lesen und Schreiben die Rolle (Ansehen liest, Bearbeiten schreibt, Verwalten verwaltet das Team). Dateien eines Teams liegen
 unter `team-<id>` und folgen derselben Regel. Wird ein Team gelöscht, gehen seine Zeilen mit. Das Team braucht immer einen Besitzer. Live-Aktualisierung
-läuft über kleine Signale (`team:<id>`), nie über Inhalte. Große Dateien (Videos, Entwürfe) kommen später auf die NucBox; bis dahin gelten
+läuft über kleine Signale (`team:<id>`), nie über Inhalte. Große Dateien (Videos, Entwürfe) kommen später auf die Server-Hardware; bis dahin gelten
 5 MB je Anhang, alles Größere wird als Link (Google Drive oder Adresse) angehängt.
 
 ## Wie die Trennung funktioniert (ADR 0002)

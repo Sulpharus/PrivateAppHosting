@@ -92,8 +92,8 @@ Für „Mit Google anmelden“, Gmail/Kalender in Apps und den Kalender-Sync: OA
 
 ## Den Heimserver anschließen (optional)
 
-Container-Programme (Jellyfin, n8n, Windows-Programme) brauchen die NucBox: Proxmox, Linux-VM, Tunnel. Danach geht die [App-Bibliothek](/admin/hardware/library) mit einem Klick
-([NucBox](wiki:nucbox), [App-Bibliothek und Programme](wiki:app-bibliothek-programme)).
+Container-Programme (Jellyfin, n8n, Windows-Programme) brauchen die Server-Hardware: Proxmox, Linux-VM, Tunnel. Danach geht die [App-Bibliothek](/admin/hardware/library) mit einem Klick
+([Server-Hardware](wiki:nucbox), [App-Bibliothek und Programme](wiki:app-bibliothek-programme)).
 
 ## Wenn etwas schiefgeht
 

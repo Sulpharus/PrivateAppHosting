@@ -5,7 +5,7 @@ Protects every hosted app behind the platform login.
 - `src/worker.ts`: default Worker entry for `target: cloudflare` apps. Serves static assets,
   gates page loads, sets security headers (strict CSP, HSTS, …) and serves
   `/_mininode/config.json` for the SDK.
-- `src/decide.ts`: runtime-independent decision logic, also used by the NucBox forward-auth:
+- `src/decide.ts`: runtime-independent decision logic, also used by the physical server forward-auth:
   - no session → redirect to `mininode.app/login?next=…`
   - expired session → redirect to `mininode.app/auth/refresh?next=…` (central refresh avoids
     refresh-token races between subdomains)

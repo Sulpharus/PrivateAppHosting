@@ -753,8 +753,8 @@ export function Apps() {
             )}
             {removeFor.library && (
               <p className="muted">
-                Programm aus der App-Bibliothek: der Container wird auf der NucBox gestoppt, sein
-                Datenordner dort bleibt liegen.
+                Programm aus der App-Bibliothek: der Container wird auf der Server-Hardware
+                gestoppt, sein Datenordner dort bleibt liegen.
               </p>
             )}
             <label className="field">

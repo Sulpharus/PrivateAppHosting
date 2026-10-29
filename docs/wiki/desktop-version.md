@@ -16,8 +16,8 @@ Läuft auf Windows, macOS und Linux, mit Intel/AMD- und ARM-Prozessoren; nötig 
 powershell -ExecutionPolicy Bypass -File .\infra\desktop\install.ps1 -AdminEmail du@example.org   # Windows
 ```
 
-Der Installer fragt nach einem Passwort (12 Zeichen oder mehr) für das erste Konto (Admin), baut das Image (beim ersten Mal einige Minuten), startet alles, richtet die Datenbank ein und nennt die Adresse:
-**`http://mininode.localhost:8787/login`**. Erneutes Ausführen ist sicher: es baut neu und startet neu, Daten und Geheimnisse bleiben. Optionen: `--dir`, `--domain`, `--port`, `--scheme`, `--host-port`, `--lan`, `--no-admin`, `--ca-file`
+Der Installer baut das Image (beim ersten Mal einige Minuten), startet alles, richtet die Datenbank ein und nennt die Adresse:
+**`http://mininode.localhost:8787`**. Beim ersten Öffnen erscheint **Admin-Account anlegen**: E-Mail und Passwort (12 Zeichen oder mehr) zweimal eingeben, fertig. Dieses Konto ist Admin; die Seite schließt sich danach für immer. Erneutes Ausführen ist sicher: es baut neu und startet neu, Daten und Geheimnisse bleiben. Optionen: `--dir`, `--domain`, `--port`, `--scheme`, `--host-port`, `--lan`, `--admin-email`, `--ca-file`
 (Firmen-Proxy mit eigenem Zertifikat).
 
 ## Alltag

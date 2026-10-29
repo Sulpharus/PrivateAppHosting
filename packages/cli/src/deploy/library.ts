@@ -1,4 +1,4 @@
-// App-Bibliothek (ADR 0011): registers a library program installed on the NucBox in
+// App-Bibliothek (ADR 0011): registers a library program installed on the physical server in
 // platform.apps, or disables it again. The container itself is rolled out by nucbox-deploy.
 
 import { slugSchema } from '@mininode/manifest';

@@ -13,7 +13,7 @@ cloud session. Read it at the start of a session, and update it before the sessi
 - `hosted/<slug>/`: user apps, each with a `mininode.json` manifest
 - `inbox/`: ZIP drop zone, git-ignored. Integrate with the `integrate-app` skill.
 - `supabase/`: migrations and pgTAP tests
-- `infra/`: Cloudflare, desktop edition (installer, compose) and NucBox configuration
+- `infra/`: Cloudflare, desktop edition (installer, compose) and physical server configuration
 - `mininode.config.json`: this installation's domain, accounts and references (public identifiers only, made by `pnpm mininode init`; never put a domain or id in code)
 - `docs/ai/`: specs and playbooks for AI-built apps
 - `docs/wiki/`: the knowledge base shown in Verwaltung → Wissen (Wiki and Startup-Guide), in German

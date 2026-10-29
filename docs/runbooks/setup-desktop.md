@@ -41,19 +41,20 @@ Unpack the starter ZIP (`mininode-starter-<version>.zip`) and open a terminal in
 powershell -ExecutionPolicy Bypass -File .\infra\desktop\install.ps1 -AdminEmail you@example.org
 ```
 
-The installer asks for a password for that first account (12 or more characters; it becomes the
-admin), then builds, starts and prepares everything. At the end it prints the address:
-**http://mininode.localhost:8787/login**. Open it in Chrome, Edge, Firefox or Safari on the same
-computer; `*.localhost` needs no setup.
+The installer builds, starts and prepares everything. At the end it prints the address:
+**http://mininode.localhost:8787**. Open it in Chrome, Edge, Firefox or Safari on the same
+computer; `*.localhost` needs no setup. The first visit shows **Admin-Account anlegen**: enter
+your email and a password (12 or more characters) twice. That account is the admin; the page
+closes for good afterwards. (`--admin-email` creates the account in the terminal instead.)
 
 Options (both installers; PowerShell spells them `-Dir`, `-Domain`, …): the installation folder
 (`--dir`, default `~/mininode`), the domain (`--domain`, default `mininode.localhost`), the port in
 the address bar (`--port`, default 8787), `--scheme https` and `--host-port` behind a tunnel,
-`--lan` (see section 4), `--no-admin`, and `--ca-file` for a company proxy that re-signs HTTPS.
+`--lan` (see section 4), and `--ca-file` for a company proxy that re-signs HTTPS.
 
 What the installer does: copies the source into the installation folder (so the ZIP folder can be
 deleted afterwards), builds one image, creates this installation's secrets (`.env`, readable only
-by you), starts the containers, applies the database migrations, and creates the first account.
+by you), starts the containers, applies the database migrations. The first account is made in the browser.
 **Running it again is safe**: it rebuilds and restarts and keeps your data and secrets.
 
 ## 2. First steps

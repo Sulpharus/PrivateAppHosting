@@ -21,6 +21,7 @@ import { AccountKeys } from './routes/AccountKeys.tsx';
 import { AuthConfirm, AuthRefresh } from './routes/AuthPages.tsx';
 import { Home } from './routes/Home.tsx';
 import { Login } from './routes/Login.tsx';
+import { Setup } from './routes/Setup.tsx';
 import { Welcome } from './routes/Welcome.tsx';
 import './styles.css';
 
@@ -107,6 +108,7 @@ function fromPlatform(referrer: string): boolean {
 const router = createBrowserRouter([
   { path: '/logout', element: <Logout /> },
   { path: '/login', element: <Login /> },
+  { path: '/setup', element: <Setup /> },
   { path: '/auth/confirm', element: <AuthConfirm /> },
   { path: '/auth/refresh', element: <AuthRefresh /> },
   {

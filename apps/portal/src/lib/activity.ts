@@ -33,7 +33,7 @@ export function describeActivity(row: AuditRow, names: Map<string, string>): str
       if (detail.is_default === false) return 'App nicht mehr für neue Nutzer freigegeben';
       return detail.disabled === false ? 'App aktiviert' : 'App geändert';
     case 'remote.install':
-      return 'Programm auf der NucBox installiert';
+      return 'Programm auf der Server-Hardware installiert';
     case 'app.whitelist_set':
       return detail.whitelist === true ? 'App nur für die Whitelist' : 'App wieder freigegeben';
     case 'app.category_set':

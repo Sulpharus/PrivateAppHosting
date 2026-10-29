@@ -5,7 +5,7 @@ order: 70
 summary: Eine vollständige, verschlüsselte Sicherung aller Daten erstellen, aufbewahren und zurückspielen
 ---
 
-Verwaltung → **Sicherung** (ADR 0019, Runbook `backups.md`). Zusätzlich sichert die NucBox nachts auf eigene Faust (restic; `restore.md`).
+Verwaltung → **Sicherung** (ADR 0019, Runbook `backups.md`). Zusätzlich sichert die Server-Hardware nachts auf eigene Faust (restic; `restore.md`).
 
 ## Was drin ist
 
@@ -14,7 +14,7 @@ Verwaltung → **Sicherung** (ADR 0019, Runbook `backups.md`). Zusätzlich siche
 - lesbare **Einstellungen** (JSON, ohne Schlüssel): Apps, Freigaben, Kategorien, API-Dienste, Budgets, Profile, Kontenliste;
 - ein **Inhaltsverzeichnis** mit Prüfsumme je Datei.
 
-**Nicht drin:** Geheimnisse der Worker und von GitHub (nicht auslesbar), der Code der Apps (liegt in Git), NucBox und Windows-VM (restic, Proxmox).
+**Nicht drin:** Geheimnisse der Worker und von GitHub (nicht auslesbar), der Code der Apps (liegt in Git), Server-Hardware und Windows-VM (restic, Proxmox).
 Hänge sicher an: `VAULT_KEY` und `GOOGLE_TOKEN_KEY` aufbewahren, sonst sind API-Schlüssel und Google-Verbindungen nach einer Wiederherstellung unlesbar.
 
 ## Einrichten (einmalig)

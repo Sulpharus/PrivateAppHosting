@@ -38,7 +38,7 @@ by side, each seen only by the 2 to 6 people in it, with different rights (someo
    blocked by the CSP) the app creates its own folder and files, and shares them with Drive's own
    sharing; any other Drive file is attached as a plain link.
 8. **Large files** (videos, design files) are not stored in Supabase's bucket (Free: 1 GB, 50 MB
-   per file). They go to the NucBox once an app has a connected server (a later ADR); until then
+   per file). They go to the physical server once an app has a connected server (a later ADR); until then
    apps limit attachments to 5 MB and link the rest.
 
 ## Consequences

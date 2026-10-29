@@ -5,8 +5,8 @@
 
 ## Context
 
-The only backup was the nightly restic job on the NucBox (`infra/nucbox/backup`), which exists
-only once the NucBox is set up and cannot be started or downloaded from the portal. The owner wants
+The only backup was the nightly restic job on the physical server (`infra/nucbox/backup`), which exists
+only once the physical server is set up and cannot be started or downloaded from the portal. The owner wants
 one place, Verwaltung, to create a full backup of everything that matters (the accounts and data of
 all users, the stored files, the hosting settings), keep it themselves and restore from it later.
 
@@ -50,7 +50,7 @@ all users, the stored files, the hosting settings), keep it themselves and resto
   it is rolled back, so a failure changes nothing. Files are uploaded again with upsert (after the
   database part).
 - **Not included**, on purpose: secrets of the Workers and GitHub (they cannot be read back and do
-  not belong in an archive), the code of the apps (git), the NucBox and Windows VM (restic and
+  not belong in an archive), the code of the apps (git), the physical server and Windows VM (restic and
   Proxmox, `restore.md`).
 
 ## Consequences

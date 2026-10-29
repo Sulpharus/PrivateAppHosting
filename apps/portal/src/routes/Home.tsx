@@ -519,7 +519,7 @@ export function Home() {
                 <h2 className="section-title">Remote-Apps</h2>
                 <span className="spacer" />
                 <span className="muted" style={{ fontSize: 13 }}>
-                  auf der NucBox
+                  auf der Server-Hardware
                 </span>
               </div>
               {remoteApps.map((app) => (

@@ -18,7 +18,7 @@ Wechselweg ist das Runbook `key-rotation.md` (einmal im Jahr wechseln, sofort be
 | `GOOGLE_TOKEN_KEY` | verschlüsselt die gespeicherten Google-Verbindungen ([Google](wiki:google)) |
 | `SUPABASE_SECRET_KEY`, `SUPABASE_DB_URL` (mit Passwort) | Zugang zu Datenbank und Speicher |
 | `VAPID_*` | Wechsel heißt: jedes Gerät schaltet Push neu ein ([Push](wiki:push-offline)) |
-| `RESTIC_PASSWORD`, SOPS-age-Schlüssel | Backups der NucBox und ihre Geheimnisse |
+| `RESTIC_PASSWORD`, SOPS-age-Schlüssel | Backups der Server-Hardware und ihre Geheimnisse |
 
 ## Desktop-Version
 
@@ -27,11 +27,11 @@ Lege eine Kopie in den Passwortmanager. Neue Schlüssel entstehen nur bei einer 
 
 ## Die wichtigsten Familien
 
-- **Cloudflare:** `CLOUDFLARE_API_TOKEN` (Deploys); Access-Token der NucBox.
+- **Cloudflare:** `CLOUDFLARE_API_TOKEN` (Deploys); Access-Token der Server-Hardware.
 - **Supabase:** Zugriffs-Token (`SUPABASE_ACCESS_TOKEN`), Secret Key, DB-URL, JWT-Signierschlüssel.
-- **GitHub-Token:** `LIBRARY_DISPATCH_TOKEN` (Workflows starten), `INTEGRATE_TOKEN` (Pull Requests für Einbau und Löschen), `EXPORT_REPO_TOKEN`, `CATALOG_TOKEN` (NucBox).
+- **GitHub-Token:** `LIBRARY_DISPATCH_TOKEN` (Workflows starten), `INTEGRATE_TOKEN` (Pull Requests für Einbau und Löschen), `EXPORT_REPO_TOKEN`, `CATALOG_TOKEN` (Server-Hardware).
 - **KI:** `GEMINI_API_KEY`, `ANTHROPIC_API_KEY`, `AI_GATEWAY_TOKEN`.
-- **NucBox:** `NUCBOX_CONTROL_TOKEN`, `GUACAMOLE_JSON_SECRET`, SSH-Deploy-Schlüssel, R2-Zugänge, Proxmox-Token, Windows-RDP-Passwort.
+- **Server-Hardware:** `NUCBOX_CONTROL_TOKEN`, `GUACAMOLE_JSON_SECRET`, SSH-Deploy-Schlüssel, R2-Zugänge, Proxmox-Token, Windows-RDP-Passwort.
 
 ## Regeln
 

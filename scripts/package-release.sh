@@ -8,7 +8,7 @@
 #   starter     the whole platform without apps and without anything of this installation
 #               (scripts/make-starter.sh checks that no identifier of it remains)
 #   cloud       platform for Cloudflare + Supabase, without the home-server parts
-#   pc-server   the NucBox side: compose stack, nucbox-control, deploy, backups, runbooks
+#   pc-server   the physical server side: compose stack, nucbox-control, deploy, backups, runbooks
 #   complete    the whole repository
 # Output: mininode-<edition>-<version>.zip per edition and SHA256SUMS.
 

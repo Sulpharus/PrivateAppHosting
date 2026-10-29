@@ -25,12 +25,12 @@ Die Varianten sind **getrennte Installationen**: die Desktop-Version ist kein Ab
    und die Worker-Konfiguration. Committen und pushen.
 5. **GitHub-Geheimnisse** in der Umgebung `production`: `CLOUDFLARE_API_TOKEN`, `SUPABASE_ACCESS_TOKEN`, `SUPABASE_SECRET_KEY`, `VAULT_KEY` und was du nutzen willst ([Geheimnisse](wiki:geheimnisse)).
 6. **Deploy** starten (Actions → Deploy). Er legt Datenbank, Anmelde-Einstellungen, Worker und Domains an.
-7. **Erstes Konto** in Supabase anlegen (Authentication → Users → Add user, *Auto confirm*, mindestens 12 Zeichen): es wird Admin. Anmelden, Passkey einrichten.
+7. **Erstes Konto**: die Adresse deiner Domain öffnen. Die Seite „Admin-Account anlegen“ fragt E-Mail und Passwort (mindestens 12 Zeichen) zweimal ab; das Konto wird Admin und die Seite schließt sich. Das am besten tun, bevor du die Adresse weitergibst. Danach Passkey einrichten.
 
 ## Variante 2: Nur Desktop
 
 1. **Docker** installieren und starten (Docker Desktop auf Windows und macOS, Docker Engine auf Linux).
-2. **Installer** im entpackten Ordner starten: `./infra/desktop/install.sh` (Linux, macOS) oder `infra\desktop\install.ps1` (Windows). Er baut alles, erzeugt die Geheimnisse auf deinem Rechner und legt das erste Konto an.
+2. **Installer** im entpackten Ordner starten: `./infra/desktop/install.sh` (Linux, macOS) oder `infra\desktop\install.ps1` (Windows). Er baut alles, erzeugt die Geheimnisse auf deinem Rechner und nennt die Adresse; beim ersten Öffnen legst du dort das Admin-Konto an.
 3. **Anmelden** unter `http://mininode.localhost:8787/login`, Passkey einrichten.
 4. **Apps** mit `mininode-desktop add <Ordner oder ZIP>` installieren, dann unter Verwaltung → Apps freigeben.
 5. Für andere Geräte oder das Internet: [Desktop-Version](wiki:desktop-version), Abschnitt „Andere Geräte und Internet“.
@@ -39,7 +39,7 @@ Die Varianten sind **getrennte Installationen**: die Desktop-Version ist kein Ab
 
 1. Variante 1 fertig einrichten.
 2. Auf dem Heimserver `infra/cloudflare/bootstrap.sh` laufen lassen (Tunnel, Access, R2).
-3. Den Heimserver nach `nucbox-install.md` aufsetzen: **„Plain Docker host“** auf beliebiger Linux-Hardware, oder Proxmox mit Windows-VM für Windows-Programme ([NucBox und Hardware-Server](wiki:nucbox)).
+3. Den Heimserver nach `nucbox-install.md` aufsetzen: **„Plain Docker host“** auf beliebiger Linux-Hardware, oder Proxmox mit Windows-VM für Windows-Programme ([Server-Hardware und Hardware-Server](wiki:nucbox)).
 4. Die Variable `NUCBOX_TUNNEL_ID` und die Zugangs-Geheimnisse in GitHub eintragen und neu deployen.
 
 ## Danach

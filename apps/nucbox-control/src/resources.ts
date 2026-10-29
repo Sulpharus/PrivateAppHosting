@@ -1,4 +1,4 @@
-// Resource report for Verwaltung → NucBox: what the Proxmox host, its VMs, its storage and the
+// Resource report for Verwaltung → physical server: what the Proxmox host, its VMs, its storage and the
 // containers on the Linux VM use, and what is left. Read-only; every source may fail on its own.
 
 import { readFileSync } from 'node:fs';

@@ -1,7 +1,7 @@
 # MiniNode · Cloud edition
 
 The platform that runs on Cloudflare Workers and Supabase: portal, API, AI proxy, the gate,
-hosted apps, the CLI and the database migrations. Everything for the home server (NucBox, the
+hosted apps, the CLI and the database migrations. Everything for the home server (physical server, the
 PC/server edition) is left out; a Cloud-only setup works without it.
 
 - Runs on: **Cloudflare** (Workers, DNS, R2) and **Supabase**. No operating system matters;
@@ -12,5 +12,5 @@ PC/server edition) is left out; a Cloud-only setup works without it.
 
 See `PLAN.md` for the architecture and `docs/STATUS.md` for where things stand.
 
-The API keeps its NucBox routes (`apps/api/src/routes/nucbox.ts`) and the install runbook is
+The API keeps its physical server routes (`apps/api/src/routes/nucbox.ts`) and the install runbook is
 included; without the PC/server edition they simply have nothing to talk to.

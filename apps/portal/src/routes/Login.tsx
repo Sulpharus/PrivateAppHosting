@@ -12,6 +12,7 @@ import { codeRequired } from '../auth/mfa.ts';
 import { passkeyErrorMessage, passkeysSupported, signInWithPasskey } from '../auth/passkeys.ts';
 import { GoogleMark, Logo } from '../components/icons.tsx';
 import { emailEnabled } from '../config.ts';
+import { publicApi } from '../lib/api.ts';
 import { goTo, safeNext } from '../lib/safe-next.ts';
 import { supabase } from '../lib/supabase.ts';
 
@@ -32,6 +33,13 @@ export function Login() {
   useEffect(() => {
     void googleEnabled().then(setGoogle);
   }, []);
+
+  // A fresh installation has no account yet: the first visit creates the admin.
+  useEffect(() => {
+    publicApi<{ open: boolean }>('/setup')
+      .then((status) => status.open && navigate('/setup', { replace: true }))
+      .catch(() => undefined);
+  }, [navigate]);
 
   // Leave only after a Google grant was taken out of the shared session cookie.
   const done = async () => {

@@ -29,7 +29,7 @@ Per-app permissions therefore first need a trustworthy app identity.
 - Every policy on app or shared data checks the user **and** `calling_app()` through
   `platform.app_access(slug)`. It covers `app_kv`, app files, app tables (`secure_table`) and
   `notify_self`, and closes the gap above (migration `20260928100740_app_identity`).
-- Server-side apps (NucBox containers) identify themselves with a per-app service token
+- Server-side apps (physical server containers) identify themselves with a per-app service token
   through the API Worker, never with the user's JWT alone.
 - Deploys only add origins; old ones (a renamed domain, earlier dev ports) stay until the app
   row is deleted. That is harmless, because they still point at the same app.

@@ -1,5 +1,5 @@
-// App-Bibliothek (ADR 0011): the admin installs curated programs on the NucBox. The API only
-// starts the GitHub workflow (library.yml); the NucBox reads the entry from main itself.
+// App-Bibliothek (ADR 0011): the admin installs curated programs on the physical server. The API only
+// starts the GitHub workflow (library.yml); the physical server reads the entry from main itself.
 //   GET  /admin/library   admin → whether installs can be started
 //   POST /admin/library   admin + recent sign-in → { action, entry, slug } starts the workflow
 

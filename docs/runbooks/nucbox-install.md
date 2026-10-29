@@ -1,4 +1,4 @@
-# NucBox install (plain Docker host, or Proxmox with Linux and Windows VMs)
+# Physical server install (plain Docker host, or Proxmox with Linux and Windows VMs)
 
 Two ways to build the home server. **Plain Docker host** works on any Linux machine and runs
 container apps, the App-Bibliothek and Wine sessions. **Proxmox** adds the Windows VM for native
@@ -31,7 +31,7 @@ if you want Windows programs.
    App-Bibliothek are.
 
 
-Target: NucBox G9 (Intel N150, 16 GB, 2× NVMe). Time: about 2 hours, most of it waiting for
+Target: mini PC G9 (Intel N150, 16 GB, 2× NVMe). Time: about 2 hours, most of it waiting for
 installers. Nothing on the box is reachable from the internet except through the Cloudflare
 Tunnel; there are no port forwards on the router.
 
@@ -143,7 +143,7 @@ NVMe 1: Proxmox + VM disks      NVMe 2: /mnt/backup (restic, vzdump)
    scp root@10.10.0.1:/root/proxmox-ca.pem .
    echo "DOCKER_GID=$(getent group docker | cut -d: -f3)" >> platform.env
    ```
-7. First start: the control image comes from the deploy workflow (job *NucBox platform image
+7. First start: the control image comes from the deploy workflow (job *physical server platform image
    control*); put its digest into `platform.env`, then
    `docker compose --env-file platform.env up -d`. Check that the tunnel shows *Healthy* in
    Cloudflare Zero Trust → Networks → Tunnels.

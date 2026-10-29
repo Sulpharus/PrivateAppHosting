@@ -1,6 +1,6 @@
 # Programs for the PC/server
 
-Programs run on the NucBox: Windows programs in the Windows 11 VM (RemoteApp over Guacamole) or
+Programs run on the physical server: Windows programs in the Windows 11 VM (RemoteApp over Guacamole) or
 `.exe` programs under Wine in a container. Background: PLAN §10, ADR 0013.
 
 ## Install from Verwaltung → Apps → Hochladen
@@ -10,7 +10,7 @@ Programs run on the NucBox: Windows programs in the Windows 11 VM (RemoteApp ove
    empty to let the script decide: the address comes from the file name, the path is searched
    after the install, `/S` (EXE) or `/qn /norestart` (MSI) is used.
 2. The API stores the file in R2 (`installers/<slug>/<file>`), registers a remote app and starts
-   the install on the NucBox: snapshot of the VM, hash check, silent install.
+   the install on the physical server: snapshot of the VM, hash check, silent install.
 3. The upload shows *Installiert* when it worked. Then grant access under *Apps*.
 4. If it fails (*Braucht Prüfung*): read the log. Typical fixes are other silent arguments (Inno
    Setup: `/VERYSILENT /NORESTART`) or the real program path; enter them on the upload and press
@@ -21,7 +21,7 @@ Programs run on the NucBox: Windows programs in the Windows 11 VM (RemoteApp ove
 
 The API needs R2 credentials with Object Read & Write on the bucket `mininode-installers`, set as
 Worker secrets: `R2_ENDPOINT` (`https://<account>.r2.cloudflarestorage.com`), `R2_ACCESS_KEY_ID`,
-`R2_SECRET_ACCESS_KEY` (optional `R2_BUCKET`). The NucBox side is `nucbox-install.md`. Without both
+`R2_SECRET_ACCESS_KEY` (optional `R2_BUCKET`). The physical server side is `nucbox-install.md`. Without both
 the page says programs are not available yet.
 
 ## Installers over 95 MB

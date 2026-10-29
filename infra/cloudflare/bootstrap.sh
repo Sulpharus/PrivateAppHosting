@@ -2,13 +2,13 @@
 # One-time, idempotent Cloudflare setup for the platform domain. Safe to re-run: existing resources are
 # detected by name and left alone.
 #
-# Creates: zone hardening, AI Gateway `mininode`, R2 buckets, the NucBox tunnel with its ingress,
+# Creates: zone hardening, AI Gateway `mininode`, R2 buckets, the physical server tunnel with its ingress,
 # DNS records for the tunnel hostnames, Access apps + service tokens for ssh/control.
 # Proxmox is never exposed; reach it over the LAN or via `cloudflared access ssh` + port forward.
 # Worker hostnames (<domain>, api., ai., <slug>.) are NOT created here: `wrangler deploy`
 # attaches them as custom domains.
 #
-# Requires: bash, curl, jq. Run it on the NucBox Linux VM (it writes the tunnel token there).
+# Requires: bash, curl, jq. Run it on the physical server Linux VM (it writes the tunnel token there).
 #   CLOUDFLARE_API_TOKEN=... CLOUDFLARE_ACCOUNT_ID=... ./infra/cloudflare/bootstrap.sh
 # Token permissions: see docs/runbooks/setup-cloudflare.md ("Cloudflare API token").
 #
