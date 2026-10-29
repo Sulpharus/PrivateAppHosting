@@ -2,11 +2,11 @@ name: Release
 # Registered with GitHub on the default branch (touched again so Actions lists it).
 
 # Builds the starter package (scripts/package-release.sh starter) and attaches it to a GitHub release.
-#   v0.1.0       the release; the title is the subject of the annotated tag
+#   v0.1.0       the release; the title is the subject of the annotated tag (or the typed title)
 #   v0.1.0-test  the same, marked as a pre-release
 # Only the starter is published: the other editions are cut from the whole repository, which
-# holds the owner's own apps and settings. Push the tag, or run this workflow by hand with an
-# existing tag.
+# holds the owner's own apps and settings. Push the tag, or run this workflow by hand (Actions →
+# Release → Run workflow): it creates the tag on the chosen branch and takes the title you type.
 
 on:
   push:
@@ -14,9 +14,13 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Existing tag to (re)build the release for
+        description: Tag of the release; created on the selected branch if it does not exist
         type: string
         required: true
+      title:
+        description: Title of the release (default: the subject of the tag)
+        type: string
+        required: false
 
 permissions:
   contents: write
@@ -31,11 +35,12 @@ jobs:
     runs-on: ubuntu-latest
     env:
       TAG: ${{ inputs.tag || github.ref_name }}
+      TITLE: ${{ inputs.title }}
       GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v5
         with:
-          ref: ${{ inputs.tag || github.ref }}
+          ref: ${{ github.ref }}
           fetch-depth: 0
       - name: Version from the tag
         id: plan
@@ -60,7 +65,8 @@ jobs:
         run: cd release-out && sha256sum -c SHA256SUMS
       - name: Publish
         run: |
-          title=$(git tag -l --format='%(contents:subject)' "$TAG")
+          title=$TITLE
+          [ -n "$title" ] || title=$(git tag -l --format='%(contents:subject)' "$TAG")
           [ -n "$title" ] || title="$TAG"
           flags=()
           case "$TAG" in *-*) flags+=(--prerelease) ;; esac
@@ -72,5 +78,5 @@ jobs:
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" release-out/* --clobber
           else
-            gh release create "$TAG" release-out/* --title "$title" --notes "$notes" "${flags[@]}" --verify-tag
+            gh release create "$TAG" release-out/* --title "$title" --notes "$notes" --target "$GITHUB_SHA" "${flags[@]}"
           fi

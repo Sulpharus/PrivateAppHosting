@@ -14,8 +14,8 @@ git tag -a v0.1.0-test -m "Title of the release" && git push origin v0.1.0-test
 
 The workflow *Release* builds the starter with `scripts/package-release.sh`, checks the checksum and
 attaches it to the GitHub release. The title is the subject of the annotated tag; a tag with a hyphen
-(`v0.1.0-test`) becomes a pre-release. For an existing tag run the workflow by hand (Actions →
-Release → *Run workflow*). Local test: `scripts/package-release.sh 0.0.0-test /tmp/out starter`.
+(`v0.1.0-test`) becomes a pre-release. Without a git push: Actions → Release → *Run workflow*, pick the branch, type the tag and the title;
+the workflow creates the tag. Local test: `scripts/package-release.sh 0.0.0-test /tmp/out starter`.
 
 ## Download
 
