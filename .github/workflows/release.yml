@@ -18,7 +18,7 @@ on:
         type: string
         required: true
       title:
-        description: Title of the release (default: the subject of the tag)
+        description: "Title of the release (default: the subject of the tag)"
         type: string
         required: false
 
