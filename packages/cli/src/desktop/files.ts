@@ -26,7 +26,7 @@ export function envFile(settings: DesktopSettings, secrets: DesktopSecrets): str
     ['HOST_PORT', String(settings.hostPort ?? settings.port)],
     ['PORTAL_PUBLIC_URL', publicOrigin(where)],
     ['SUPABASE_PUBLIC_URL', publicOrigin(where, 'supabase')],
-    ['APPS_PUBLIC_PATTERN', publicOrigin(where, '*') + '/**'],
+    ['APPS_PUBLIC_PATTERN', `${publicOrigin(where, '*')}/**`],
     ['POSTGRES_PASSWORD', secrets.postgresPassword],
     ['JWT_SECRET', secrets.jwtSecret],
     ['JWT_KEYS', JSON.stringify([secrets.signingKey])],
