@@ -102,6 +102,31 @@ jobs:
             -H 'Sec-Fetch-Mode: navigate' localhost:8080/auth)
           test "$code" = 302 || { docker logs control; exit 1; }
 
+  starter:
+    name: Starter package installs and passes its own checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Build the starter (also scans it for identifiers of this installation)
+        run: scripts/make-starter.sh ci "$RUNNER_TEMP/out"
+      - name: Unpack, set up an installation, run its checks
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP" && unzip -q out/mininode-starter-ci.zip && cd mininode-starter-ci
+          test -z "$(find hosted -mindepth 1 ! -name README.md)"
+          pnpm install --frozen-lockfile
+          pnpm mininode init --domain apps.example.org --zone example.org --accountId 0123456789abcdef0123456789abcdef \
+            --supabaseRef abcdefghijklmnopqrst --publishableKey sb_publishable_0123456789abcdef --repository me/platform
+          pnpm mininode configure --check
+          pnpm check
+          pnpm mininode doctor --all
+
   desktop:
     name: Desktop edition installs and signs in
     runs-on: ubuntu-latest

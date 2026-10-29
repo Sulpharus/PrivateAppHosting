@@ -6,7 +6,7 @@ PC/server edition) is left out; a Cloud-only setup works without it.
 
 - Runs on: **Cloudflare** (Workers, DNS, R2) and **Supabase**. No operating system matters;
   you only need a computer with Node.js 22 and pnpm to deploy it.
-- Setup: `docs/runbooks/setup-cloudflare.md`
+- Setup: `docs/runbooks/getting-started.md` (variants), `docs/runbooks/setup-cloudflare.md`; the desktop edition is in `infra/desktop`
 - Add the PC/server edition later when you want container apps, the App-Bibliothek or Windows
   programs: `mininode-pc-server-<version>.zip` of the same release.
 

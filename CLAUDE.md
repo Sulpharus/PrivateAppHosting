@@ -8,12 +8,13 @@ cloud session. Read it at the start of a session, and update it before the sessi
 
 ## Layout
 
-- `apps/`: platform deployables (`portal`, `api`, `ai-proxy`, `nucbox-control`)
+- `apps/`: platform deployables (`portal`, `api`, `ai-proxy`, `desktop-host`, `nucbox-control`)
 - `packages/`: shared libraries (`manifest`, `sdk`, `gate`, `ui`, `cli`, `config`)
 - `hosted/<slug>/`: user apps, each with a `mininode.json` manifest
 - `inbox/`: ZIP drop zone, git-ignored. Integrate with the `integrate-app` skill.
 - `supabase/`: migrations and pgTAP tests
-- `infra/`: Cloudflare and NucBox configuration
+- `infra/`: Cloudflare, desktop edition (installer, compose) and NucBox configuration
+- `mininode.config.json`: this installation's domain, accounts and references (public identifiers only, made by `pnpm mininode init`; never put a domain or id in code)
 - `docs/ai/`: specs and playbooks for AI-built apps
 - `docs/wiki/`: the knowledge base shown in Verwaltung → Wissen (Wiki and Startup-Guide), in German
 

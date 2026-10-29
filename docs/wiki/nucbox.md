@@ -5,7 +5,9 @@ order: 40
 summary: Der Heimserver: was darauf läuft, wie er erreichbar ist und wie er gesichert wird
 ---
 
-Die **NucBox** (NucBox G9, 16 GB) ist dein Heimserver. Er läuft mit **Proxmox VE** und trägt:
+Der **Heimserver** (im Beispiel eine NucBox G9, 16 GB) ist die zweite Hälfte der Variante „Beides“ ([Einrichten](wiki:einrichten)). Er kann **beliebige Linux-Hardware mit Docker** sein (Mini-PC, Raspberry Pi 5, alter Laptop, VM; Intel/AMD oder ARM):
+dann laufen Container-Apps, die App-Bibliothek und Wine-Sitzungen, und die Verwaltung zeigt CPU, Speicher und Platte dieses Rechners. **Windows-Programme** brauchen zusätzlich einen **Proxmox-VE-Host** mit Windows-11-VM. Ohne Proxmox lässt man alle `PROXMOX_*`- und `WINDOWS_*`-Einstellungen weg;
+die Anleitung steht im Runbook `nucbox-install.md` („Plain Docker host“). Mit Proxmox trägt der Server:
 
 | Teil | Speicher | Verhalten |
 | --- | --- | --- |

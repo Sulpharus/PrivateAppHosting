@@ -3,6 +3,7 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   rmSync,
   symlinkSync,
@@ -15,6 +16,13 @@ import { exportApp, instanceIdentifiers, MARKER, scanText } from './export.ts';
 import { loadInstanceConfig } from './instance/load.ts';
 
 const ROOT = resolve(import.meta.dirname, '../../..');
+// A fresh copy of the platform (the starter ZIP) has neither a git history nor apps.
+const IS_CHECKOUT = existsSync(join(ROOT, '.git'));
+const HAS_APPS =
+  existsSync(join(ROOT, 'hosted')) &&
+  readdirSync(join(ROOT, 'hosted')).some((name) =>
+    existsSync(join(ROOT, 'hosted', name, 'mininode.json')),
+  );
 const dirs: string[] = [];
 afterEach(() => {
   for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true });
@@ -205,20 +213,24 @@ describe('mininode export', () => {
     expect(readFileSync(join(other, 'keep.txt'), 'utf8')).toBe('mine');
   });
 
-  it('exports every hosted app of this repository without findings', () => {
-    const hosted = spawnSync('git', ['ls-files', 'hosted/*/mininode.json'], {
-      cwd: ROOT,
-      encoding: 'utf8',
-    })
-      .stdout.split('\n')
-      .filter(Boolean);
-    expect(hosted.length).toBeGreaterThan(0);
-    for (const file of hosted) {
-      const out = mkdtempSync(join(tmpdir(), 'mn-export-out-'));
-      dirs.push(out);
-      const result = exportApp(ROOT, join(ROOT, file, '..'), out);
-      expect(result.findings, file).toEqual([]);
-    }
-    // One export per hosted app: slow on a busy CI runner, so the default 5 s is too tight.
-  }, 60_000);
+  it.skipIf(!IS_CHECKOUT || !HAS_APPS)(
+    'exports every hosted app of this repository without findings',
+    () => {
+      const hosted = spawnSync('git', ['ls-files', 'hosted/*/mininode.json'], {
+        cwd: ROOT,
+        encoding: 'utf8',
+      })
+        .stdout.split('\n')
+        .filter(Boolean);
+      expect(hosted.length).toBeGreaterThan(0);
+      for (const file of hosted) {
+        const out = mkdtempSync(join(tmpdir(), 'mn-export-out-'));
+        dirs.push(out);
+        const result = exportApp(ROOT, join(ROOT, file, '..'), out);
+        expect(result.findings, file).toEqual([]);
+      }
+      // One export per hosted app: slow on a busy CI runner, so the default 5 s is too tight.
+    },
+    60_000,
+  );
 });

@@ -398,34 +398,27 @@ Everyday apps and platform features that grew next to the phases, each with its 
 | App logos (upload in Verwaltung, deploy picks up `icon.svg`, prompt block) | done | ADR 0018 |
 | Language switch (de/en per person) and language packages for every app | done; portal UI itself still German | ADR 0017, `docs/ai/LANGUAGE-PACKAGES.md`, `packages/ui/kit/i18n.js` |
 
-### 15.2 Sharing the platform (proposed, not started)
+### 15.2 Sharing the platform (built, ADR 0026)
 
-Goal: others can download MiniNode, run it on their own Cloudflare + Supabase (and optionally a
-PC as NucBox) and remix it, without anything private from this installation.
+Goal: others download MiniNode, run it on their own Cloudflare + Supabase, on one computer, or both,
+and remix it, without anything private from the installation that built the download.
 
-- **Already in place:**
-  - no secrets in the repository (rule + gitleaks in CI);
-  - user data only in Supabase;
-  - setup runbooks;
-  - single apps exportable (ADR 0012).
-- **Instance settings out of the code:** about 130 files name `mininode.app`. A few also name
-  the Supabase project refs, publishable keys, the Cloudflare account id or the GitHub owner.
-  They move into one `mininode.config.json` (domain, Cloudflare account, Supabase refs and
-  keys, repository). The Workers, the deploy workflow, the portal and the apps read it, and the
-  apps take the portal URL from the SDK.
-- **A clean start:** a public template repository generated from `main` (core code, docs,
-  sample app) with one fresh commit, not this repository's history. The personal apps and
-  their tests stay here. The export check of ADR 0012 runs over the whole template.
-- **First-run setup:**
-  - a `pnpm mininode init` wizard writes the config;
-  - `infra/cloudflare/bootstrap.sh` and `supabase link` already do the provider side;
-  - the first account becomes admin, as today.
+- **Instance settings out of the code:** `mininode.config.json` (domain, zone, Cloudflare account,
+  Supabase references and publishable keys, GitHub repository), written by `pnpm mininode init`,
+  rendered into the wrangler files and `supabase/config.toml` by `pnpm mininode configure`, read by
+  the workflows (`.github/actions/load-config`). Code takes addresses from its environment.
+- **A clean start:** the starter package (`scripts/make-starter.sh`): committed files only, no
+  apps, no instance file, neutral placeholders, a lockfile without the apps, and a scan for every
+  identifier of the building installation.
 - **Hosts:**
-  - Cloudflare Workers is the default.
-  - The manifest already knows `vercel`.
-  - A plain Node/Docker host (the NucBox alone, any VPS) would need the gate and the API as a
-    Node server. That is the largest piece.
-- **License:** chosen by the owner (e.g. AGPL-3.0 to keep remixes open, or MIT).
+  - Cloudflare Workers (variant 1);
+  - the desktop edition (variant 2): the same Workers in workerd through Miniflare
+    (`apps/desktop-host`) plus Supabase in Docker (`infra/desktop`), installed by
+    `install.sh`/`install.ps1` on any machine with Docker;
+  - both (variant 3): variant 1 plus the home server, which runs on any Linux machine with Docker
+    (Proxmox only for Windows programs).
+- **Still the owner's call:** a license (e.g. AGPL-3.0 to keep remixes open, or MIT), and publishing
+  the starter as its own public repository.
 
 ---
 

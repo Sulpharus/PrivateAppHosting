@@ -4,7 +4,9 @@
 #
 #   scripts/package-release.sh <version> [outdir] [edition...]
 #
-# Editions: cloud, pc-server, complete (default: all three).
+# Editions: starter, cloud, pc-server, complete (default: all four).
+#   starter     the whole platform without apps and without anything of this installation
+#               (scripts/make-starter.sh checks that no identifier of it remains)
 #   cloud       platform for Cloudflare + Supabase, without the home-server parts
 #   pc-server   the NucBox side: compose stack, nucbox-control, deploy, backups, runbooks
 #   complete    the whole repository
@@ -16,7 +18,7 @@ cd "$(dirname "$0")/.."
 version=${1:?usage: package-release.sh <version> [outdir] [edition...]}
 out=${2:-release-out}
 editions=("${@:3}")
-[ ${#editions[@]} -gt 0 ] || editions=(cloud pc-server complete)
+[ ${#editions[@]} -gt 0 ] || editions=(starter cloud pc-server complete)
 [[ "$version" =~ ^[0-9A-Za-z][0-9A-Za-z._-]*$ ]] || { echo "invalid version: $version" >&2; exit 1; }
 
 # Only the PC/server edition keeps these; the cloud edition leaves them out.
@@ -34,6 +36,10 @@ PC_FILES=(
 mkdir -p "$out"
 commit=$(git rev-parse HEAD)
 for edition in "${editions[@]}"; do
+  if [ "$edition" = starter ]; then
+    scripts/make-starter.sh "$version" "$out"
+    continue
+  fi
   name="mininode-$edition-$version"
   zip="$out/$name.zip"
   rm -f "$zip"

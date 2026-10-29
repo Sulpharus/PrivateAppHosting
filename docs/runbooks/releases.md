@@ -1,11 +1,13 @@
 # Releases and downloads
 
-Each release has up to three packages (ADR 0016): **Cloud**, **PC/server** and **Complete**,
-with `SHA256SUMS`.
+Each release has up to four packages (ADR 0016, ADR 0026): **Starter**, **Cloud**, **PC/server** and
+**Complete**, with `SHA256SUMS`. The **Starter** is the one to start a new installation with: the
+whole platform without apps and without anything of the building installation (see
+`scripts/make-starter.sh`).
 
 | Tag | Builds |
 | --- | --- |
-| `v1.2.0` | cloud, pc-server and complete, all 1.2.0 |
+| `v1.2.0` | starter, cloud, pc-server and complete, all 1.2.0 |
 | `cloud-v1.2.0` | only the Cloud edition |
 | `pc-server-v1.2.0` | only the PC/server edition |
 
@@ -23,6 +25,7 @@ checksums and attaches them to the GitHub release. For an existing tag run the w
 
 GitHub → Releases → pick the version → the package you want:
 - **PC/server only:** `mininode-pc-server-<version>.zip` (needs the Cloud edition running).
+- **Start a new installation:** `mininode-starter-<version>.zip`, then `docs/runbooks/getting-started.md`.
 - **Cloud only:** `mininode-cloud-<version>.zip`.
 - **Everything:** `mininode-complete-<version>.zip`.
 

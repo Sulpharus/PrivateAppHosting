@@ -8,6 +8,11 @@ summary: Die ersten Schritte als Checkliste
 Dieser Guide führt dich vom ersten Login bis zu deinem ersten laufenden System, Schritt für Schritt. Hake ab, was du erledigt hast; der Fortschritt bleibt in diesem Browser.
 Zu jedem Schritt gibt es im [Wiki](/admin/wiki) mehr. Du musst nicht alles an einem Tag machen: die Schritte 1 bis 5 reichen für ein sicheres Fundament.
 
+## Die Installation steht
+
+Dieser Guide beginnt nach der Einrichtung. Fehlt sie noch, richte zuerst eine der drei Varianten ein: [Einrichten: drei Varianten](wiki:einrichten) (nur Cloudflare, nur Desktop, beides). Die Schritte unten gelten für alle drei;
+wo die Desktop-Version abweicht, steht es dabei ([Desktop-Version](wiki:desktop-version)).
+
 ## Verstehen, was MiniNode ist
 
 Lies in fünf Minuten den Überblick: [Was ist MiniNode?](wiki:ueberblick). Merke dir drei Dinge:
@@ -20,7 +25,7 @@ Die Begriffe stehen in [Begriffe von A bis Z](wiki:begriffe).
 
 ## Anmelden und einen Passkey einrichten
 
-1. Öffne `https://{{domain}}/login` und melde dich an (das erste Konto des Projekts ist Admin).
+1. Öffne `https://{{domain}}/login` (Desktop-Version: `http://mininode.localhost:8787/login`) und melde dich an (das erste Konto ist Admin).
 2. Öffne **Dein Konto** (Menü oben rechts) und lege einen **Passkey** an (Fingerabdruck, Gesicht oder Windows Hello).
 3. Lege einen **zweiten Passkey** auf einem anderen Gerät an: so bist du nicht ausgesperrt, wenn ein Gerät verloren geht.
 4. Optional: koppel eine **Authenticator-App** als zweiten Faktor ([Anmeldung](wiki:anmeldung)).

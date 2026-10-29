@@ -21,6 +21,11 @@ eigenes System für dich und die Menschen, die du einlädst.
 - **Alles Wichtige** (Konten, Daten, Dateien, Einstellungen) lässt sich als verschlüsselte Datei sichern und wieder
   einspielen ([Sicherung](wiki:sicherung)).
 
+## Drei Varianten
+
+MiniNode läuft **nur in der Cloud** (Cloudflare + Supabase), **nur auf einem Computer** (die Desktop-Version, `apps/desktop-host` mit Supabase in Docker) oder **in beiden** (Cloud plus Heimserver).
+Welche passt und wie du sie einrichtest: [Einrichten: drei Varianten](wiki:einrichten) und [Desktop-Version](wiki:desktop-version).
+
 ## Die Teile im Überblick
 
 ```

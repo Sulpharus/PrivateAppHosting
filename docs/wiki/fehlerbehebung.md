@@ -20,6 +20,17 @@ Meist eine **zwischengespeicherte** PWA-Version: Seite neu laden oder die App sc
 | App mit Tabellen (Sportplaner, Haushalt, Medialog, Wunschliste) leer oder „konnten nicht geladen werden“, der Kalender zeigt die Termine aber noch | das Schema der App fehlt in der Daten-API. Die Daten sind da. Deploy starten (GitHub → Actions → *Deploy* → *Run workflow*): der Schritt *Expose the schemas* gibt alle wieder frei. Kam am 20.10. vor, weil `supabase config push` die Liste zurückgesetzt hat (behoben) |
 | App zeigt keine Daten | wird sie von ihrer eigenen Adresse aufgerufen? Daten gehen nur von dort ([App-Kit und SDK](wiki:app-kit-sdk)) |
 
+## Desktop-Version
+
+| Symptom | Ursache und Schritt |
+| --- | --- |
+| Installer: „Docker is installed but not running“ | Docker Desktop oder den Dienst starten, Installer erneut ausführen |
+| „port 8787 is already in use“ | `--port 8788` wählen oder das andere Programm beenden |
+| `mininode.localhost` lässt sich nicht öffnen | manche Systeme lösen `*.localhost` nicht auf: Chrome, Edge oder Firefox nehmen oder Einträge in die hosts-Datei schreiben (`mininode.localhost`, `api.`, `ai.`, `supabase.` und je App) |
+| Bauen bricht mit einem Zertifikatsfehler ab | Firmen-Proxy: sein Zertifikat mit `--ca-file` übergeben |
+| kurz nach dem Start Fehler 503 oder leere Daten | die Datenbank startet noch: eine Minute warten; `mininode-desktop logs rest` zeigt, wann sie bereit ist |
+| Passwort vergessen | `mininode-desktop password <E-Mail>` |
+
 ## Hochladen, Einbau, Deploy
 
 | Symptom | Ursache und Schritt |

@@ -20,6 +20,11 @@ Wechselweg ist das Runbook `key-rotation.md` (einmal im Jahr wechseln, sofort be
 | `VAPID_*` | Wechsel heißt: jedes Gerät schaltet Push neu ein ([Push](wiki:push-offline)) |
 | `RESTIC_PASSWORD`, SOPS-age-Schlüssel | Backups der NucBox und ihre Geheimnisse |
 
+## Desktop-Version
+
+Alle Geheimnisse stehen in `.env` im Installationsordner (nur für dich lesbar) und in jeder Sicherung als `env.backup`: **ohne diese Datei sind Daten und Sicherungen unbrauchbar**, mit ihr kann jeder sie lesen, der sie hat.
+Lege eine Kopie in den Passwortmanager. Neue Schlüssel entstehen nur bei einer Neuinstallation (der Installer erzeugt nie neue über vorhandene hinweg).
+
 ## Die wichtigsten Familien
 
 - **Cloudflare:** `CLOUDFLARE_API_TOKEN` (Deploys); Access-Token der NucBox.

@@ -3,7 +3,7 @@
 Where things stand, what the owner still has to do, and what a new session should know.
 Update it at the end of every working session; history belongs in git, not here.
 
-Last updated: 2026-10-21 (app schemas kept in the Data API on every deploy; Google setup card).
+Last updated: 2026-10-29 (instance config, desktop edition, starter package, login hardening; ADR 0026).
 
 ## Start here
 
@@ -75,6 +75,7 @@ Where things are documented:
 | Craft apps: light and dark | Every Craft app follows the system appearance. The patches give each app's lightest theme MiniNode's white surfaces and neutrals (DesignCraft Light, PhotoCraft Pro (Light), FilmCraft Light, LightCraft Paper); DesignCraft and LightCraft replace the grey defaults earlier builds stored once per account (`designcraft.theme-follow`, `lightcraft.theme-follow`). Checked in Chromium in light and dark for DesignCraft, PhotoCraft, FilmCraft and LightCraft (temporary spec); idle main-thread time 3–4 % each | `hosted/{designcraft,photocraft,filmcraft,lightcraft}/patches` |
 | Reiseplaner brief | Feature spec for a trip planner (reuses Kalender, Bill the Splitter, the Kalender map) | `docs/ai/briefs/reiseplaner.brief.md` |
 | Data API schemas | Every deploy's `supabase config push` reset the exposed schemas to `public, graphql_public, platform`, hiding `app_sportplaner`, `app_haushalt`, `app_medialog` and `app_wunschliste` until each app's next deploy (2026-10-20: Sportplaner empty while the Kalender still showed its sessions). `scripts/keep-app-schemas.sh` now writes the live app schemas into the pushed config, `mininode expose` re-exposes every app with tables on each deploy, and `exposeSchemas` refuses to write a list it could not read. Sportplaner shows "could not be loaded" instead of an empty library | `.github/workflows/deploy.yml`, `packages/cli/src/deploy/migrate.ts`, `hosted/sportplaner/js/boot.js` |
+| Anywhere-installable | `mininode.config.json` holds the domain, Cloudflare account, Supabase references and repository (`mininode init`, `configure`, workflows via `load-config`; CI checks `configure --check`). **Desktop edition**: `apps/desktop-host` (the platform Workers in workerd via Miniflare) + Supabase in Docker (`infra/desktop`), `install.sh`/`install.ps1`, `mininode-desktop` (start, add, backup, restore, update, password), `mininode deploy --env desktop`. Optional Proxmox in nucbox-control (plain Docker host works). **Starter package** (`scripts/make-starter.sh`, no apps, leak-checked). Three setup runbooks (`getting-started`, `setup-cloudflare`, `setup-desktop`, `setup-both`). Login hardening (AI-proxy CORS, ES256-only verification, 10 sign-ins / 5 min, 12-character passwords) | ADR 0026, `docs/runbooks/`, `apps/desktop-host`, `infra/desktop`, `scripts/make-starter.sh`, CI jobs *Starter package* and *Desktop edition* |
 | German formats | Date, month and time inputs as German parts in every browser; full dates as "01. Okt. 2026"; German numbers | `packages/ui/kit/ui.js`, `docs/ai/DESIGN-SYSTEM.md` §8 |
 
 The Sportplaner map (tab "Karte") and course mode (editor step "Zeiten" → "Kurs") are live
@@ -110,6 +111,11 @@ since the PR #12 deploy. Earlier deploys stopped at medialog and never shipped t
 
 ## Waiting on the owner
 
+0. **Anywhere-installable work (ADR 0026), nothing merged yet:**
+   - The desktop edition ran end to end on Linux in this session (installer, login in a real browser, two apps, backup, restore, password reset). **Not tested on real Windows or macOS or ARM hardware:** try `install.ps1` once on Windows and `install.sh` on a Mac.
+   - Review the starter ZIP once (`scripts/package-release.sh 0.1.0 /tmp/out`, then unpack it): it is built to carry nothing of this installation, and the build stops when it finds something; but read `docs/runbooks/setup-cloudflare.md` as a stranger would.
+   - Pick a license before publishing the starter (`PLAN.md` §15.2).
+   - The migrations `…_app_identity` and `…_app_catalog` no longer seed an origin backfill and the "ATT" link tile (already applied here; a new installation starts empty).
 0. **Check in Verwaltung → Hochladen and Apps (nothing the code can do for you):** the page still
    says "Der automatische Einbau ist noch nicht eingerichtet" until `LIBRARY_DISPATCH_TOKEN`
    (fine-grained token, Actions: read and write, secret of the GitHub environment `production`)

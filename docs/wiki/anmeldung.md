@@ -50,3 +50,14 @@ Die Seite *Dein Konto* (Menü oben rechts) bündelt:
 
 Abmelden läuft über das Portal (`/logout`) und schaltet Push auf diesem Gerät aus, damit ein geteiltes Gerät nicht Meldungen
 der falschen Person bekommt.
+
+## Das Sicherheitsmodell in Kürze
+
+Das Login ist sorgfältig gebaut, aber **kein System ist „undurchdringlich“**; das ist ehrlich, was es leistet und was nicht:
+
+- **Wer rein darf:** nur eingeladene Konten (Anmeldung für Fremde ist aus). Passwörter haben mindestens 12 Zeichen, Anmeldeversuche pro Adresse sind begrenzt; Passkeys und Authenticator-App schützen zusätzlich.
+- **Wie geprüft wird:** die Schranke jeder App und die API prüfen bei jeder Seite die Signatur der Sitzung (nur asymmetrische Verfahren), die Freigabe der App und den zweiten Faktor; die Datenbank erzwingt die Rechte selbst (Zeilen-Sicherheit).
+  Weiterleitungen nach der Anmeldung gehen nur auf die eigene Domain.
+- **Was bleibt:** die Sitzung steckt in einem Cookie, das JavaScript lesen kann (nötig, weil alle Apps auf Unterdomains sie teilen). Darum laufen Apps mit strenger Inhaltsrichtlinie (kein fremdes Skript), und nur Apps, die du prüfst, kommen auf die Plattform.
+  Eine gestohlene Sitzung gilt bis zu einer Stunde, auch nach dem Abmelden. Schütze Konten mit Passkeys, halte Geräte aktuell und lade nur Personen ein, denen du vertraust.
+- **Selbst prüfen:** `docs/runbooks/getting-started.md` hat fünf kurze Prüfungen nach jeder Installation.

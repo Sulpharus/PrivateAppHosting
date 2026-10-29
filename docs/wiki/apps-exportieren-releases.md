@@ -17,11 +17,14 @@ Einrichtung: `EXPORT_REPO_TOKEN` (Administration + Contents: write, alle Reposit
 
 ## Releases (ADR 0016)
 
-Jede Version hat bis zu drei Pakete mit Prüfsummen (`SHA256SUMS`):
+Jede Version hat bis zu vier Pakete mit Prüfsummen (`SHA256SUMS`). Das **Starter-Paket** (`mininode-starter-<Version>.zip`) ist das, womit man ein eigenes MiniNode beginnt: die ganze Plattform ohne Apps und ohne Kennungen einer Installation (ADR 0026; Anleitung: [Einrichten](wiki:einrichten)).
+Der Paketbauer prüft vor dem Packen, dass keine Kennung dieser Installation darin steckt.
+
+Die Pakete:
 
 | Tag | Baut |
 | --- | --- |
-| `v1.2.0` | Cloud, PC/Server und Komplett |
+| `v1.2.0` | Starter, Cloud, PC/Server und Komplett |
 | `cloud-v1.2.0` | nur Cloud |
 | `pc-server-v1.2.0` | nur PC/Server |
 
