@@ -96,11 +96,12 @@ node packages/cli/src/bin.ts configure --root "$stage" --config "$stage/mininode
 # (replacements come from the installation's own settings, so this script names none of them)
 sed_args=()
 for domain in $(jq -r '[.environments[].domain] | .[] | select(. != null)' mininode.config.json 2>/dev/null); do
-  sed_args+=(-e "s#hallo@$domain#hello@example.com#g" -e "s#$domain#example.com#gI")
+  pattern=${domain//./\\.}  # a dot in a domain must not match any character ("MiniNode App")
+  sed_args+=(-e "s#hallo@$pattern#hello@example.com#g" -e "s#$pattern#example.com#gI")
 done
 repository=$(jq -r '.github.repository // empty' mininode.config.json 2>/dev/null || true)
 if [ -n "$repository" ]; then
-  sed_args+=(-e "s#$repository#your-name/your-repository#g" -e "s#${repository%%/*}#your-name#gI")
+  sed_args+=(-e "s#${repository//./\\.}#your-name/your-repository#g" -e "s#${repository%%/*}#your-name#gI")
 fi
 if [ "${#sed_args[@]}" -gt 0 ]; then
   while IFS= read -r -d '' file; do sed -i "${sed_args[@]}" "$file"; done \
