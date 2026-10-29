@@ -67,7 +67,23 @@ export function originMatchesApp(origin: string | null, slug: string, portalUrl:
     const url = new URL(origin);
     const portal = new URL(portalUrl);
     if (portal.hostname === 'localhost') return url.hostname === 'localhost';
-    return url.protocol === 'https:' && url.hostname === `${slug}.${portal.hostname}`;
+    return url.protocol === portal.protocol && url.hostname === `${slug}.${portal.hostname}`;
+  } catch {
+    return false;
+  }
+}
+
+/** The portal or one of its apps: the only origins a browser may be told it can call from. */
+export function isPlatformOrigin(origin: string | null, portalUrl: string): boolean {
+  if (!origin) return false;
+  try {
+    const url = new URL(origin);
+    const portal = new URL(portalUrl);
+    if (portal.hostname === 'localhost') return url.hostname === 'localhost';
+    return (
+      url.protocol === portal.protocol &&
+      (url.hostname === portal.hostname || url.hostname.endsWith(`.${portal.hostname}`))
+    );
   } catch {
     return false;
   }
@@ -136,9 +152,11 @@ export function createApp(depsFor: (env: ProxyEnv) => Deps = defaultDeps) {
   const app = new Hono<{ Bindings: ProxyEnv }>();
 
   app.options('*', (c) => {
-    const origin = c.req.header('Origin') ?? '';
+    const origin = c.req.header('Origin') ?? null;
+    // An origin outside the platform gets no CORS headers, so its browser blocks the call.
+    if (!isPlatformOrigin(origin, c.env.PORTAL_URL)) return c.body(null, 204);
     return c.body(null, 204, {
-      'Access-Control-Allow-Origin': origin,
+      'Access-Control-Allow-Origin': origin as string,
       'Access-Control-Allow-Methods': 'POST',
       'Access-Control-Allow-Headers': 'Authorization, Content-Type',
       'Access-Control-Max-Age': '600',
@@ -152,7 +170,10 @@ export function createApp(depsFor: (env: ProxyEnv) => Deps = defaultDeps) {
     app.post(`/v1/${mode}`, async (c) => {
       const deps = depsFor(c.env);
       const origin = c.req.header('Origin') ?? null;
-      const cors = origin ? { 'Access-Control-Allow-Origin': origin, Vary: 'Origin' } : undefined;
+      const cors =
+        origin && isPlatformOrigin(origin, c.env.PORTAL_URL)
+          ? { 'Access-Control-Allow-Origin': origin, Vary: 'Origin' }
+          : undefined;
 
       const token = (c.req.header('Authorization') ?? '').replace(/^Bearer /, '');
       if (!token) return problem(401, 'unauthenticated', 'Anmeldung erforderlich.', cors);

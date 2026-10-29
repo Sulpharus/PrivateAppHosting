@@ -107,7 +107,12 @@ export function createVerifier(supabaseUrl: string, keys?: JWTVerifyGetKey): Ver
   return {
     async verify(token) {
       try {
-        const { payload } = await jwtVerify(token, jwks, { issuer, audience: 'authenticated' });
+        const { payload } = await jwtVerify(token, jwks, {
+          issuer,
+          audience: 'authenticated',
+          // Supabase signs with asymmetric keys only; never accept HMAC or "none" here.
+          algorithms: ['ES256', 'RS256', 'EdDSA'],
+        });
         if (typeof payload.sub !== 'string') return { status: 'invalid', reason: 'missing sub' };
         return { status: 'valid', claims: payload as SessionClaims };
       } catch (error) {

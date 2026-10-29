@@ -173,7 +173,7 @@ export function Account() {
           needsAal2(err) ||
           (err instanceof Error && err.message === 'Bestätigung abgebrochen.')
           ? 'Bitte bestätige kurz deine Identität und versuch es noch einmal.'
-          : 'Das Passwort ist zu schwach (mindestens 10 Zeichen, Buchstaben und Ziffern).',
+          : 'Das Passwort ist zu schwach (mindestens 12 Zeichen, Buchstaben und Ziffern).',
       );
     }
   };
@@ -396,11 +396,11 @@ export function Account() {
             }}
           >
             <label className="field" style={{ flex: 1, minWidth: 220 }}>
-              <span>Neues Passwort (mindestens 10 Zeichen)</span>
+              <span>Neues Passwort (mindestens 12 Zeichen)</span>
               <input
                 type="password"
                 autoComplete="new-password"
-                minLength={10}
+                minLength={12}
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
                 // biome-ignore lint/a11y/noAutofocus: the reset link lands here to set a password

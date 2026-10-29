@@ -19,7 +19,7 @@ leitet die Schranke kurz zu `{{domain}}/auth/refresh` und wieder zurück.
 | Weg | Hinweis |
 | --- | --- |
 | **Passkey** | Hauptweg: Fingerabdruck, Gesicht, Windows Hello. Einrichten unter *Dein Konto* |
-| **E-Mail und Passwort** | Rückfall für Geräte ohne Passkey; mindestens 10 Zeichen |
+| **E-Mail und Passwort** | Rückfall für Geräte ohne Passkey; mindestens 12 Zeichen |
 | **Mit Google anmelden** | Optional (`first-setup.md` §3.1); die Google-Adresse muss zum Konto passen, es werden keine neuen Konten angelegt |
 
 Neue Konten entstehen **nur über Einladungen** ([Rollen](wiki:rollen-zugriff)). Das erste Konto des Projekts wird Admin.

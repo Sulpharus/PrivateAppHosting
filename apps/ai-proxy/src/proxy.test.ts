@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { describe, expect, it } from 'vitest';
-import { createApp, originMatchesApp, type ProxyEnv } from './index.ts';
+import { createApp, isPlatformOrigin, originMatchesApp, type ProxyEnv } from './index.ts';
 import { catalog, costMicro, SEARCH_INPUT_ALLOWANCE, SEARCH_SURCHARGE_MICRO } from './models.ts';
 import type { Provider } from './providers.ts';
 
@@ -197,5 +197,33 @@ describe('originMatchesApp', () => {
       originMatchesApp('https://rezepte.mininode.app.evil.io', 'rezepte', 'https://mininode.app'),
     ).toBe(false);
     expect(originMatchesApp(null, 'rezepte', 'https://mininode.app')).toBe(false);
+  });
+});
+
+describe('CORS', () => {
+  const env = { PORTAL_URL: 'https://mininode.app' } as ProxyEnv;
+  const preflight = (origin: string) =>
+    createApp().request('/v1/chat', { method: 'OPTIONS', headers: { Origin: origin } }, env);
+
+  it('answers the portal and its apps, and nobody else', async () => {
+    expect(
+      (await preflight('https://rezepte.mininode.app')).headers.get('Access-Control-Allow-Origin'),
+    ).toBe('https://rezepte.mininode.app');
+    const foreign = await preflight('https://evil.example');
+    expect(foreign.status).toBe(204);
+    expect(foreign.headers.get('Access-Control-Allow-Origin')).toBeNull();
+  });
+
+  it('knows the platform origins', () => {
+    const portal = 'https://mininode.app';
+    expect(isPlatformOrigin('https://mininode.app', portal)).toBe(true);
+    expect(isPlatformOrigin('https://x.mininode.app', portal)).toBe(true);
+    expect(isPlatformOrigin('http://x.mininode.app', portal)).toBe(false);
+    expect(isPlatformOrigin('https://mininode.app.evil.io', portal)).toBe(false);
+    expect(isPlatformOrigin('https://evilmininode.app', portal)).toBe(false);
+    expect(isPlatformOrigin(null, portal)).toBe(false);
+    expect(isPlatformOrigin('http://rezepte.mininode.localhost', 'http://mininode.localhost')).toBe(
+      true,
+    );
   });
 });
