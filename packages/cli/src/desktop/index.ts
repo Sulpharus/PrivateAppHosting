@@ -105,6 +105,16 @@ export async function migrateDesktop(
   }
 }
 
+/** Waits until the data API serves the platform schema again after a migration (it answers 503 while it reloads). */
+export async function waitForDataApi(supabaseUrl: string, secretKey: string): Promise<void> {
+  await until('the data API', async () => {
+    const response = await fetch(`${supabaseUrl}/rest/v1/profiles?select=role&limit=1`, {
+      headers: { apikey: secretKey, 'Accept-Profile': 'platform' },
+    });
+    return response.status === 503 ? undefined : true;
+  });
+}
+
 /** Creates the first (admin) account, or any account, through the sign-in service's admin API. */
 export async function createDesktopAccount(
   supabaseUrl: string,

@@ -15,6 +15,7 @@ import {
   initDesktop,
   migrateDesktop,
   setDesktopPassword,
+  waitForDataApi,
 } from './desktop/index.ts';
 import { readMigrations } from './desktop/migrations.ts';
 import { type DoctorReport, doctor, hostedApps } from './doctor.ts';
@@ -157,6 +158,8 @@ async function main(args: string[]): Promise<number> {
           url,
           readMigrations(join(ROOT, 'supabase/migrations')),
         );
+        const { SUPABASE_URL: apiUrl, SUPABASE_SECRET_KEY: apiKey } = process.env;
+        if (apiUrl && apiKey) await waitForDataApi(apiUrl, apiKey);
         console.log(
           applied.length > 0 ? `${applied.length} migration(s) applied` : 'database is up to date',
         );
