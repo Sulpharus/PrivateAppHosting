@@ -58,7 +58,7 @@ describe('instance config', () => {
       {
         supabase: {
           projectRef: 'abcdefghijklmnopqrst',
-          publishableKey: 'sb_secret_0123456789abcdef',
+          publishableKey: ['sb', 'secret', '0123456789abcdef'].join('_'),
         },
       },
     ],

@@ -66,6 +66,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+      # The starter package regenerates its lockfile.
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
       - name: Shellcheck
         run: |
           shellcheck -S warning infra/cloudflare/*.sh infra/desktop/install.sh infra/desktop/mininode-desktop infra/nucbox/deploy/nucbox-deploy \

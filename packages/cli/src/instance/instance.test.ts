@@ -22,12 +22,12 @@ afterEach(() => {
 });
 
 const answers = {
-  domain: 'apps.example.org',
-  zone: 'example.org',
-  accountId: '0123456789abcdef0123456789abcdef',
-  supabaseRef: 'abcdefghijklmnopqrst',
-  publishableKey: 'sb_publishable_0123456789abcdef',
-  repository: 'someone/platform',
+  domain: 'tests.example.net',
+  zone: 'example.net',
+  accountId: 'f1e2d3c4b5a6f1e2d3c4b5a6f1e2d3c4',
+  supabaseRef: 'zyxwvutsrqponmlkjihg',
+  publishableKey: 'sb_publishable_testtesttesttest0',
+  repository: 'someone-else/other-platform',
 };
 
 /** A scratch copy of the files `configure` rewrites. */
@@ -52,20 +52,20 @@ describe('configure', () => {
     const { changed } = configureInstance(root, buildConfig(answers));
     expect(changed).toHaveLength(4);
     const portal = readFileSync(join(root, 'apps/portal/wrangler.jsonc'), 'utf8');
-    expect(portal).toContain('"pattern": "apps.example.org"');
-    expect(portal).toContain('"COOKIE_DOMAIN": ".apps.example.org"');
-    expect(portal).toContain('"API_URL": "https://api.apps.example.org"');
+    expect(portal).toContain('"pattern": "tests.example.net"');
+    expect(portal).toContain('"COOKIE_DOMAIN": ".tests.example.net"');
+    expect(portal).toContain('"API_URL": "https://api.tests.example.net"');
     const api = readFileSync(join(root, 'apps/api/wrangler.jsonc'), 'utf8');
-    expect(api).toContain('"GITHUB_REPO": "someone/platform"');
-    expect(api).toContain('"MAIL_FROM": "hallo@apps.example.org"');
-    expect(api).toContain('"NUCBOX_CONTROL_URL": "https://control.apps.example.org"');
+    expect(api).toContain('"GITHUB_REPO": "someone-else/other-platform"');
+    expect(api).toContain('"MAIL_FROM": "hallo@tests.example.net"');
+    expect(api).toContain('"NUCBOX_CONTROL_URL": "https://control.tests.example.net"');
     const ai = readFileSync(join(root, 'apps/ai-proxy/wrangler.jsonc'), 'utf8');
-    expect(ai).toContain('gateway.ai.cloudflare.com/v1/0123456789abcdef0123456789abcdef/mininode');
+    expect(ai).toContain('gateway.ai.cloudflare.com/v1/f1e2d3c4b5a6f1e2d3c4b5a6f1e2d3c4/mininode');
     const toml = readFileSync(join(root, 'supabase/config.toml'), 'utf8');
-    expect(toml).toContain('project_id = "abcdefghijklmnopqrst"');
-    expect(toml).toContain('rp_id = "apps.example.org"');
+    expect(toml).toContain('project_id = "zyxwvutsrqponmlkjihg"');
+    expect(toml).toContain('rp_id = "tests.example.net"');
     expect(toml).toContain(
-      'additional_redirect_urls = ["https://apps.example.org/**", "https://*.apps.example.org/**"]',
+      'additional_redirect_urls = ["https://tests.example.net/**", "https://*.tests.example.net/**"]',
     );
   });
 
