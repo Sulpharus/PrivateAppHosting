@@ -96,7 +96,7 @@ node packages/cli/src/bin.ts configure --root "$stage" --config "$stage/mininode
 # (replacements come from the installation's own settings, so this script names none of them)
 sed_args=()
 for domain in $(jq -r '[.environments[].domain] | .[] | select(. != null)' mininode.config.json 2>/dev/null); do
-  sed_args+=(-e "s#hallo@$domain#hello@example.com#g" -e "s#$domain#example.com#g")
+  sed_args+=(-e "s#hallo@$domain#hello@example.com#g" -e "s#$domain#example.com#gI")
 done
 repository=$(jq -r '.github.repository // empty' mininode.config.json 2>/dev/null || true)
 if [ -n "$repository" ]; then
