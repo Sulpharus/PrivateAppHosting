@@ -18,7 +18,7 @@ test.afterAll(async () => {
 });
 
 test('deleting an app needs the typed address and sends the choice', async ({ page }) => {
-  await createUser(email, 'admin', 'Wolfram');
+  await createUser(email, 'admin', 'Walter');
   await createApp(slug, 'Rezepte');
   let sent: { url: string; body: unknown } | null = null;
   await page.route('**/admin/apps/*/uninstall', async (route) => {
@@ -32,7 +32,7 @@ test('deleting an app needs the typed address and sends the choice', async ({ pa
   await page.getByLabel('E-Mail').fill(email);
   await page.getByLabel('Passwort', { exact: true }).fill(PASSWORD);
   await page.getByRole('button', { name: 'Anmelden', exact: true }).click();
-  await expect(page.getByRole('heading', { level: 1 })).toContainText('Wolfram');
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('Walter');
 
   await page.goto('/admin/apps');
   await page.getByRole('button', { name: 'Rezepte löschen' }).click();
@@ -70,7 +70,7 @@ test('the dialog closes with Escape and sends nothing', async ({ page }) => {
   await page.getByLabel('E-Mail').fill(email);
   await page.getByLabel('Passwort', { exact: true }).fill(PASSWORD);
   await page.getByRole('button', { name: 'Anmelden', exact: true }).click();
-  await expect(page.getByRole('heading', { level: 1 })).toContainText('Wolfram');
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('Walter');
   await page.goto('/admin/apps');
   await page.getByRole('button', { name: 'Zwei löschen' }).click();
   await expect(page.getByRole('dialog', { name: 'Zwei löschen' })).toBeVisible();

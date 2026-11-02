@@ -1,21 +1,26 @@
 name: Release
 # Registered with GitHub on the default branch (touched again so Actions lists it).
 
-# Packages the editions and attaches them to a GitHub release (scripts/package-release.sh).
-#   v1.2.0            all four: starter, cloud, pc-server and complete
-#   cloud-v1.2.0      only the Cloud edition (own version)
-#   pc-server-v1.2.0  only the PC/server edition (own version)
-# Push the tag, or run this workflow by hand with an existing tag.
+# Builds the starter package (scripts/package-release.sh starter) and attaches it to a GitHub release.
+#   v0.1.0       the release; the title is the subject of the annotated tag (or the typed title)
+#   v0.1.0-test  the same, marked as a pre-release
+# Only the starter is published: the other editions are cut from the whole repository, which
+# holds the owner's own apps and settings. Push the tag, or run this workflow by hand (Actions →
+# Release → Run workflow): it creates the tag on the chosen branch and takes the title you type.
 
 on:
   push:
-    tags: ["v*", "cloud-v*", "pc-server-v*"]
+    tags: ["v*"]
   workflow_dispatch:
     inputs:
       tag:
-        description: Existing tag to (re)build the release for
+        description: Tag of the release; created on the selected branch if it does not exist
         type: string
         required: true
+      title:
+        description: "Title of the release (default: the subject of the tag)"
+        type: string
+        required: false
 
 permissions:
   contents: write
@@ -30,22 +35,21 @@ jobs:
     runs-on: ubuntu-latest
     env:
       TAG: ${{ inputs.tag || github.ref_name }}
+      TITLE: ${{ inputs.title }}
       GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v5
         with:
-          ref: ${{ inputs.tag || github.ref }}
+          ref: ${{ github.ref }}
           fetch-depth: 0
-      - name: Editions and version from the tag
+      - name: Version from the tag
         id: plan
         run: |
           case "$TAG" in
-            cloud-v*)     editions="cloud";                    version="${TAG#cloud-v}" ;;
-            pc-server-v*) editions="pc-server";                version="${TAG#pc-server-v}" ;;
-            v*)           editions="starter cloud pc-server complete"; version="${TAG#v}" ;;
+            v*) ;;
             *) echo "unsupported tag: $TAG" >&2; exit 1 ;;
           esac
-          { echo "editions=$editions"; echo "version=$version"; } >> "$GITHUB_OUTPUT"
+          echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
       # The starter's lockfile is regenerated without the apps, which needs Node and pnpm.
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v5
@@ -53,26 +57,26 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - name: Build the packages
+      - name: Build the starter
         env:
           VERSION: ${{ steps.plan.outputs.version }}
-          EDITIONS: ${{ steps.plan.outputs.editions }}
-        run: |
-          # shellcheck disable=SC2086
-          scripts/package-release.sh "$VERSION" release-out $EDITIONS
+        run: scripts/package-release.sh "$VERSION" release-out starter
       - name: Check the checksums
         run: cd release-out && sha256sum -c SHA256SUMS
       - name: Publish
         run: |
-          notes="Editions of this release:
-          - **Starter** (\`mininode-starter-*.zip\`): the whole platform without apps and without anything of the installation that built it. Start here: docs/runbooks/getting-started.md.
-          - **Cloud** (\`mininode-cloud-*.zip\`): the platform for Cloudflare + Supabase.
-          - **PC/server** (\`mininode-pc-server-*.zip\`): the home-server side (Proxmox VE host, Linux VM with Docker, optional Windows 11 VM). See its README-EDITION.md for operating systems.
-          - **Complete** (\`mininode-complete-*.zip\`): the whole repository.
+          title=$TITLE
+          [ -n "$title" ] || title=$(git tag -l --format='%(contents:subject)' "$TAG")
+          [ -n "$title" ] || title="$TAG"
+          flags=()
+          case "$TAG" in *-*) flags+=(--prerelease) ;; esac
+          notes="**Starter** (\`mininode-starter-*.zip\`): the whole platform without apps and without anything of the installation that built it. It holds the Cloudflare setup, the desktop installer for Docker (Windows, macOS, Linux), the optional home-server side and every instruction.
 
-          Checksums: \`SHA256SUMS\`."
+          Start with \`docs/runbooks/getting-started.md\` after unpacking. License: PolyForm Noncommercial 1.0.0 (\`LICENSE\`).
+
+          Checksum: \`SHA256SUMS\`."
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" release-out/* --clobber
           else
-            gh release create "$TAG" release-out/* --title "$TAG" --notes "$notes" --verify-tag
+            gh release create "$TAG" release-out/* --title "$title" --notes "$notes" --target "$GITHUB_SHA" "${flags[@]}"
           fi

@@ -17,7 +17,7 @@ test.afterAll(async () => {
 });
 
 test('an admin starts a backup and downloads a finished one', async ({ page }) => {
-  await createUser(email, 'admin', 'Wolfram');
+  await createUser(email, 'admin', 'Walter');
   let started: unknown = null;
   let state: 'ready' | 'running' = 'ready';
 
@@ -79,7 +79,7 @@ test('an admin starts a backup and downloads a finished one', async ({ page }) =
   await page.getByLabel('E-Mail').fill(email);
   await page.getByLabel('Passwort', { exact: true }).fill(PASSWORD);
   await page.getByRole('button', { name: 'Anmelden', exact: true }).click();
-  await expect(page.getByRole('heading', { level: 1 })).toContainText('Wolfram');
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('Walter');
 
   await page.goto('/admin');
   await page.getByRole('link', { name: 'Sicherung', exact: true }).click();

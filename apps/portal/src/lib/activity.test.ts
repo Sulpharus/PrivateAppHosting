@@ -3,7 +3,7 @@ import { type AuditRow, describeActivity } from './activity.ts';
 
 const names = new Map([
   ['u1', 'Lena'],
-  ['u2', 'Wolfram'],
+  ['u2', 'Walter'],
 ]);
 const row = (action: string, detail: Record<string, unknown>, actor: string | null = 'u2') =>
   ({ id: 1, at: '', action, app_slug: null, actor_id: actor, detail }) satisfies AuditRow;

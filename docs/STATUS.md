@@ -53,7 +53,7 @@ Where things are documented:
 | Compat layers | `window.MiniNode` and `localStorage` apps run through `@mininode/sdk` (`installMiniNodeCompat`, `installLocalStorageSync`) | `packages/sdk/src/compat.ts` |
 | Own drawers and order | Schubladen and "Eigene Reihenfolge" per screen, on the start page and in the Gaming Hub | ADR 0015 |
 | Personal API keys | Admin switches an API to "persönlich"; the SDK popup leads to `/account/keys` | ADR 0014 |
-| Release editions | `v*` tags build cloud, PC/server and complete packages; `cloud-v*`, `pc-server-v*` one edition | ADR 0016, `docs/runbooks/releases.md` |
+| Release editions | `v*` tags build the starter package only (the other editions would carry this installation's apps) | ADR 0016, `docs/runbooks/releases.md` |
 | Sportplaner course price | Whole course or monthly fee, split over the sessions that take place, booked per session in Statistik | `hosted/sportplaner/js/price.js`, README |
 | Medialog | "Sammlung" tab no longer shows the suggestion chips ("Vorschläge") under the search | `hosted/medialog/src/views/SammlungView.tsx` |
 | Gemeinsame Daten | One aligned table (Datentyp, App, Grund, Angefragt, Freigabe); sort by open requests first, type or app; filter "Nur noch offene"; write priority below | `apps/portal/src/admin/Suite.tsx` |

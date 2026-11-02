@@ -7,7 +7,7 @@ const run = `e2el${Date.now().toString(36)}`;
 const adminEmail = `${run}-admin@example.com`;
 
 test.beforeAll(async () => {
-  await createUser(adminEmail, 'admin', 'Wolfram');
+  await createUser(adminEmail, 'admin', 'Walter');
   await createApp(`${run}-kino`, 'Jellyfin', {
     kind: 'container',
     target: 'nucbox',

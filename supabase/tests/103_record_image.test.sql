@@ -2,7 +2,7 @@ begin;
 select plan(7);
 select tests.reset();
 
-select tests.create_user('admin@example.com', 'Wolfram') as admin_id \gset
+select tests.create_user('admin@example.com', 'Walter') as admin_id \gset
 select tests.create_user('lena@example.com', 'Lena') as lena_id \gset
 update platform.profiles set role = 'admin' where user_id = :'admin_id';
 insert into platform.apps (slug, name, description, kind, target, manifest, status) values
