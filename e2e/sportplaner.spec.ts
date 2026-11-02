@@ -380,9 +380,9 @@ test('a membership with credits asks what an activity costs and counts the month
     return d.toISOString().slice(0, 10);
   };
   const enter = page.getByRole('dialog').getByRole('button', { name: 'Eintragen' });
-  const first = new Date();
-  const sameMonth = (n: number) => day(n).slice(0, 7) === first.toISOString().slice(0, 7);
-  const dates = [0, 1, 2].map(day).filter((d, i) => sameMonth(i));
+  const thisMonth = new Date().toISOString().slice(0, 7);
+  // `day` stops at the 1st, so early in the month it repeats a date: one visit per day counts once.
+  const dates = [...new Set([0, 1, 2].map(day))].filter((d) => d.startsWith(thisMonth));
   test.skip(dates.length < 3, 'needs three days in the current month');
   for (const [i, d] of dates.entries()) {
     await today.fill(d);
