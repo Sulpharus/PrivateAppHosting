@@ -14,6 +14,7 @@
     "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_jv1tZqYWg51sNxJ5-GjMMw_tZqa1s1C",
     "MAIL_FROM": "hallo@mininode.app",
     "GITHUB_REPO": "Sulpharus/PrivateAppHosting",
+    "UPDATES_SOURCE": "Sulpharus/PrivateAppHosting",
     "DEPLOY_ENVIRONMENT": "production",
     "GUACAMOLE_URL": "https://remote.mininode.app",
     "NUCBOX_CONTROL_URL": "https://control.mininode.app"

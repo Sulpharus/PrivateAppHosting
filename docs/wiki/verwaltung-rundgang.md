@@ -20,6 +20,8 @@ Links in der Seitenleiste:
 | **Gemeinsame Daten** | Welche App welche Datentypen lesen oder schreiben darf; Priorität |
 | **KI-Werkstatt** | Prompt-Ersteller und Vorgaben zum Bauen neuer Apps |
 | **Sicherung** | Vollständige Sicherung erstellen und herunterladen |
+| **Updates** | MiniNode und Apps mit GitHub-Repository mit einem Klick aktualisieren ([Aktualisieren](wiki:aktualisieren)) |
+| **Updates** | MiniNode und Apps mit GitHub-Repository mit einem Klick aktualisieren ([Aktualisieren](wiki:aktualisieren)) |
 | **Wissen: Wiki, Startup-Guide** | Dieses Wissen und die erste-Schritte-Liste |
 | **Weitere Dashboards** | Links zu Cloudflare (Deploys, DNS, Logs), Supabase (Datenbank) und GitHub Actions |
 

@@ -156,3 +156,28 @@ export async function artifactDownloadUrl(
     return problem(502, 'github_error', 'GitHub hat eine unerwartete Adresse geliefert.');
   return target.toString();
 }
+
+/**
+ * A read from any repository's API (`owner/repo`, `/releases?per_page=1`), or null when it
+ * cannot be had: a missing repository, a token that cannot read it, GitHub down. The dispatch
+ * token is sent when there is one (it lifts the rate limit for public data too).
+ */
+export async function githubReadRepo<T>(
+  env: ApiEnv,
+  repo: string,
+  path: string,
+): Promise<T | null> {
+  if (!/^[\w.-]+\/[\w.-]+$/.test(repo)) return null;
+  const headers: Record<string, string> = {
+    Accept: 'application/vnd.github+json',
+    'X-GitHub-Api-Version': '2022-11-28',
+    'User-Agent': 'mininode-api',
+  };
+  if (env.GITHUB_DISPATCH_TOKEN) headers.Authorization = `Bearer ${env.GITHUB_DISPATCH_TOKEN}`;
+  const response = await fetch(`https://api.github.com/repos/${repo}${path}`, {
+    headers,
+    signal: AbortSignal.timeout(10_000),
+  }).catch(() => null);
+  if (!response?.ok) return null;
+  return (await response.json().catch(() => null)) as T | null;
+}

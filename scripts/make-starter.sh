@@ -121,6 +121,16 @@ for id in "${identifiers[@]}"; do
 done
 [ "$leaks" -eq 0 ] || { echo "the starter still contains identifiers of this installation; nothing was written" >&2; exit 1; }
 
+# 7b. Where updates come from (ADR 0028): the project that published this package. This is public
+# on purpose, so it is added after the leak check; `mininode init` copies it into the new
+# installation's config, and the file list tells the first update which files the platform owns.
+if [ -n "$repository" ]; then
+  tmp_example=$(mktemp)
+  jq --arg r "$repository" '. + {updates: {source: $r}}' "$stage/mininode.config.example.json" > "$tmp_example"
+  mv "$tmp_example" "$stage/mininode.config.example.json"
+  node packages/cli/src/bin.ts update list --from "$stage" --source "$repository"
+fi
+
 # 8. Pack. Fixed timestamps would make it reproducible; the commit id in VERSION identifies it.
 rm -f "$out/$name.zip"
 (cd "$work" && zip -qr -X "$out/$name.zip" "$name")

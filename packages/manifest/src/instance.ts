@@ -50,6 +50,13 @@ export const instanceConfigSchema = z
       })
       .strict()
       .optional(),
+    updates: z
+      .object({
+        /** `owner/repo` whose releases carry newer versions of the platform (ADR 0028). */
+        source: z.string().regex(/^[\w.-]+\/[\w.-]+$/, 'owner/repo'),
+      })
+      .strict()
+      .optional(),
     environments: z
       .object({ production: environmentSchema, staging: stagingSchema.optional() })
       .strict(),

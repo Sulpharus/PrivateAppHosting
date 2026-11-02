@@ -389,6 +389,14 @@ export const manifestSchema = z
     remote: remoteSchema.optional(),
     /** Set by the App-Bibliothek for installed library apps (ADR 0011); hosted apps leave it out. */
     library: slugSchema.optional(),
+    /**
+     * `owner/repo` of the app's own GitHub project. With it Verwaltung → Updates can bring the
+     * newest version of the app in with one click (ADR 0028). Data is not in the repository.
+     */
+    repository: z
+      .string()
+      .regex(/^[\w.-]+\/[\w.-]+$/, 'owner/repo')
+      .optional(),
   })
   .strict()
   .superRefine((m, ctx) => {

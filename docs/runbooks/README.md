@@ -13,8 +13,9 @@
 7. [app-library.md](app-library.md): App-Bibliothek setup, installing Jellyfin, n8n and others, adding programs
 9. [uploads.md](uploads.md): upload web apps from Verwaltung, script-first integration, AI review queue
 10. [programs.md](programs.md): install programs on the PC/server from Verwaltung, large installers
-11. [releases.md](releases.md): starter, cloud, PC/server and complete packages per version
+11. [releases.md](releases.md): the starter package per version
 12. [backups.md](backups.md): full backup from Verwaltung, password-protected, and how to restore it
-13. [uninstall.md](uninstall.md): delete an app with its data from Verwaltung, programs, by hand
+13. [updates.md](updates.md): one-click updates of MiniNode and of apps with a GitHub repository
+14. [uninstall.md](uninstall.md): delete an app with its data from Verwaltung, programs, by hand
 
 The knowledge base (concepts, how-tos, Startup-Guide) is the wiki in Verwaltung → Wissen, source `docs/wiki/`; runbooks are the operating procedures it links to.
