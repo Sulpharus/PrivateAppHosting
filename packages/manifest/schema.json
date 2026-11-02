@@ -528,7 +528,7 @@
     },
     "repository": {
       "type": "string",
-      "pattern": "^[\\w.-]+\\/[\\w.-]+$"
+      "pattern": "^(?!\\.+\\/)[\\w.-]+\\/(?!\\.+$)[\\w.-]+$"
     }
   },
   "required": [

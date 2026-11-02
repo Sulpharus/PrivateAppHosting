@@ -14,15 +14,15 @@
 import { createHash } from 'node:crypto';
 import {
   existsSync,
+  lstatSync,
   mkdirSync,
   readdirSync,
   readFileSync,
   rmSync,
-  statSync,
   writeFileSync,
 } from 'node:fs';
-import { dirname, join, relative, sep } from 'node:path';
-import { parseManifest } from '@mininode/manifest';
+import { dirname, join, posix, relative, resolve, sep } from 'node:path';
+import { parseManifest, slugSchema } from '@mininode/manifest';
 
 /** Which files the platform owns, as they were when this copy was installed (path → sha256). */
 export const PLATFORM_FILES = '.mininode/platform-files.json';
@@ -39,6 +39,9 @@ const PLATFORM_KEEP = [
   '.mininode/',
   'mininode.config.json',
   'docs/STATUS.md',
+  // The owner's own news log and first steps.
+  'docs/wiki/neuigkeiten.md',
+  'docs/wiki/startup-guide.md',
   // Holds one exemption per integrated app; a copy from the starter would drop them.
   'biome.json',
   '.gitleaksignore',
@@ -55,16 +58,35 @@ const sha = (data: Buffer): string => createHash('sha256').update(data).digest('
 const startsWithAny = (path: string, prefixes: string[]): boolean =>
   prefixes.some((prefix) => (prefix.endsWith('/') ? path.startsWith(prefix) : path === prefix));
 
-/** All files below `root` as posix paths relative to it, with their hashes. */
+/** True for a path that stays inside its folder: relative, normalised, no `..` segment. */
+export function isSafePath(path: string): boolean {
+  return (
+    path.length > 0 &&
+    !path.startsWith('/') &&
+    !path.includes('\\') &&
+    posix.normalize(path) === path &&
+    !path.split('/').includes('..')
+  );
+}
+
+/**
+ * All regular files below `root` as posix paths relative to it, with their hashes. A symbolic
+ * link (or anything else that is not a plain file or folder) stops the update: a package or a
+ * repository from outside must not make this code read files elsewhere on the machine.
+ */
 function snapshot(root: string, skip: string[]): Map<string, string> {
   const files = new Map<string, string>();
   const walk = (dir: string): void => {
     for (const name of readdirSync(dir)) {
       const full = join(dir, name);
       const rel = relative(root, full).split(sep).join('/');
-      const isDir = statSync(full).isDirectory();
-      if (startsWithAny(isDir ? `${rel}/` : rel, skip)) continue;
-      if (isDir) walk(full);
+      const info = lstatSync(full);
+      if (!info.isDirectory() && !info.isFile()) {
+        if (startsWithAny(rel, skip)) continue;
+        throw new Error(`refused: ${rel} is a link or special file, not a plain file`);
+      }
+      if (startsWithAny(info.isDirectory() ? `${rel}/` : rel, skip)) continue;
+      if (info.isDirectory()) walk(full);
       else files.set(rel, sha(readFileSync(full)));
     }
   };
@@ -117,13 +139,25 @@ function plan(
   return result;
 }
 
+function inside(root: string, path: string): string {
+  const full = resolve(root, path);
+  if (!isSafePath(path) || !full.startsWith(`${resolve(root)}${sep}`))
+    throw new Error(`refused: ${path} is outside the folder`);
+  return full;
+}
+
 function writeFiles(plan: UpdatePlan, from: string, to: string): void {
   for (const path of [...plan.add, ...plan.change]) {
-    const target = join(to, path);
+    const source = inside(from, path);
+    if (!lstatSync(source).isFile()) throw new Error(`refused: ${path} is not a plain file`);
+    const target = inside(to, path);
+    // Never write through a link that is already there.
+    if (existsSync(target) && !lstatSync(target).isFile())
+      throw new Error(`refused: ${path} is not a plain file here`);
     mkdirSync(dirname(target), { recursive: true });
-    writeFileSync(target, readFileSync(join(from, path)));
+    writeFileSync(target, readFileSync(source));
   }
-  for (const path of plan.remove) rmSync(join(to, path), { force: true });
+  for (const path of plan.remove) rmSync(inside(to, path), { force: true });
 }
 
 function readJson(path: string): unknown {
@@ -173,7 +207,10 @@ export function planPlatformUpdate(options: PlatformOptions): UpdatePlan {
   const previous = readJson(join(options.root, PLATFORM_FILES)) as {
     files?: Record<string, string>;
   } | null;
-  const removable = previous?.files ? new Set(Object.keys(previous.files)) : null;
+  // The list is a file of this repository: a path that is not plainly inside it is ignored.
+  const removable = previous?.files
+    ? new Set(Object.keys(previous.files).filter(isSafePath))
+    : null;
   if (removable) {
     for (const path of removable) {
       const file = join(options.root, path);
@@ -198,14 +235,18 @@ export function applyPlatformUpdate(
     throw new Error(`refused: ${updatePlan.conflicts.length} applied migration(s) would change`);
   writeFiles(updatePlan, options.from, options.root);
   const list = join(options.root, PLATFORM_FILES);
+  const files = Object.fromEntries(updatePlan.incoming);
+  if (options.skipWorkflows) {
+    // Workflow files were left alone: remember them as they were, so a later update with a token
+    // that may change workflows still updates and removes them.
+    const previous = readJson(list) as { files?: Record<string, string> } | null;
+    for (const [path, hash] of Object.entries(previous?.files ?? {}))
+      if (path.startsWith(WORKFLOWS) && isSafePath(path)) files[path] = hash;
+  }
   mkdirSync(dirname(list), { recursive: true });
   writeFileSync(
     list,
-    `${JSON.stringify(
-      { version: updatePlan.version, source, files: Object.fromEntries(updatePlan.incoming) },
-      null,
-      2,
-    )}\n`,
+    `${JSON.stringify({ version: updatePlan.version, source, files }, null, 2)}\n`,
   );
 }
 
@@ -221,6 +262,8 @@ export interface AppOptions {
 
 /** What an app update would do. Reads only. Throws when the new copy is not this app. */
 export function planAppUpdate(options: AppOptions): UpdatePlan {
+  if (!slugSchema.safeParse(options.slug).success)
+    throw new Error(`invalid app address: ${options.slug}`);
   const parsed = parseManifest(readJson(join(options.from, 'mininode.json')));
   if (!parsed.ok) throw new Error(`mininode.json of the repository: ${parsed.errors.join('; ')}`);
   if (parsed.manifest.slug !== options.slug)

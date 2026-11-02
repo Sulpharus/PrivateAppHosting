@@ -36,6 +36,15 @@ records the commit in `.mininode-source.json`.
 that stops the update before anything is written, and a migration is never deleted. New migrations
 run through the existing deploy, which has its own checksum guard.
 
+**Trust and limits.** A release is trusted because it comes from `updates.source`, which only the
+owner sets; its checksum file proves the download is intact, not who made it. The new code runs in
+a job that holds no token (tokens go to the download and pull request steps only), nothing from the
+release or a cloned app repository is executed before the pull request, and links or special files
+in either are refused. Update pull requests of apps are never merged automatically; the platform
+one only when `INTEGRATE_TOKEN` lets the checks run. Only `hosted/`, `mininode.config.json`,
+`docs/STATUS.md`, `biome.json`, `neuigkeiten.md` and `startup-guide.md` are protected from the
+overlay; other platform files, wiki articles included, are replaced and shown in the diff.
+
 ## Consequences
 
 An update is as safe as the checks of the pull request: the pgTAP and integration jobs run on the

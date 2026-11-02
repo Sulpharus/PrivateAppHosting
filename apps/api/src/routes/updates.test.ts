@@ -136,6 +136,11 @@ describe('GET /admin/updates', () => {
     expect(body.platform.upToDate).toBe(true);
     expect(body.apps[0]?.upToDate).toBe(true);
 
+    // The tag of a release carries a v; the version in the file may or may not.
+    installedVersion = 'v0.2.0';
+    body = (await (await request('/admin/updates')).json()) as typeof body;
+    expect(body.platform.upToDate).toBe(true);
+
     installedVersion = null;
     appCommit = null;
     body = (await (await request('/admin/updates')).json()) as typeof body;
@@ -177,6 +182,10 @@ describe('POST /admin/updates/platform', () => {
         .status,
     ).toBe(400);
     const noSource = { ...env, UPDATES_SOURCE: '' } as ApiEnv;
+    const dotted = { ...env, UPDATES_SOURCE: '../..' } as ApiEnv;
+    expect(
+      (await request('/admin/updates/platform', { method: 'POST', body: {} }, dotted)).status,
+    ).toBe(503);
     expect(
       (await request('/admin/updates/platform', { method: 'POST', body: {} }, noSource)).status,
     ).toBe(503);

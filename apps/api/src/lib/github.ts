@@ -1,13 +1,12 @@
 // Starts this repository's GitHub workflows (App-Bibliothek, app export) with the dispatch token.
 
+import { GITHUB_REPO } from '@mininode/manifest';
 import type { ApiEnv } from '../env.ts';
 import { problem } from './auth.ts';
 
 /** owner/repo whose workflows the API starts (`github.repository` in mininode.config.json). */
 function workflowRepo(env: ApiEnv): string | undefined {
-  return env.GITHUB_REPO && /^[\w.-]+\/[\w.-]+$/.test(env.GITHUB_REPO)
-    ? env.GITHUB_REPO
-    : undefined;
+  return env.GITHUB_REPO && GITHUB_REPO.test(env.GITHUB_REPO) ? env.GITHUB_REPO : undefined;
 }
 
 function notConfigured(token: string | undefined): Response {
@@ -167,7 +166,7 @@ export async function githubReadRepo<T>(
   repo: string,
   path: string,
 ): Promise<T | null> {
-  if (!/^[\w.-]+\/[\w.-]+$/.test(repo)) return null;
+  if (!GITHUB_REPO.test(repo)) return null;
   const headers: Record<string, string> = {
     Accept: 'application/vnd.github+json',
     'X-GitHub-Api-Version': '2022-11-28',

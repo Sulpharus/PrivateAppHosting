@@ -168,6 +168,7 @@ create index on app_<slug_with_underscores>.recipes (cooked_on);
   "target": "cloudflare",
   "i18n": { "languages": ["de", "en"], "default": "de" },   // language packages i18n/de.json, i18n/en.json
   "access": { "default": true },            // true: every user gets it; false: admin grants it
+  "repository": "name/rezepte",              // optional: the app's own GitHub project; Verwaltung → Updates can then update it
   "data": { "mode": "private" },            // none | private | shared-account | group | readonly | team
   "ai": { "models": ["gemini-flash"], "monthlyBudgetEur": 2, "maxOutputTokens": 1500, "search": false },
   "google": { "gmail": "write", "calendar": "read" },   // only if the app uses Gmail/Calendar

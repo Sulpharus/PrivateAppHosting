@@ -7,8 +7,10 @@ name: App aktualisieren
 # `mininode update app` copies the repository's files over hosted/<slug>. The data of the app is
 # in Supabase and is not touched; an already applied migration in db/ is never changed (such a
 # repository stops here). The result is a pull request (branch auto/update-<slug>-…): the normal
-# checks run on it, and merging it deploys the app. With the repository variable
-# INTEGRATE_AUTOMERGE=true it merges itself once the checks pass.
+# checks run on it, and merging it deploys the app. It is never merged automatically: the app
+# brings code and manifest from outside this repository, so a person reads it first. The checks
+# start by themselves only when the secret INTEGRATE_TOKEN is set (pushes with the default token
+# do not start workflows).
 
 on:
   workflow_dispatch:
@@ -37,10 +39,8 @@ jobs:
       pull-requests: write
     env:
       SLUG: ${{ inputs.slug }}
-      AUTOMERGE: ${{ vars.INTEGRATE_AUTOMERGE }}
-      GH_TOKEN: ${{ secrets.INTEGRATE_TOKEN || github.token }}
-      # A private app repository needs a key that can read it.
-      CLONE_TOKEN: ${{ secrets.EXPORT_REPO_TOKEN || secrets.INTEGRATE_TOKEN || github.token }}
+      # Whether the pull request can start the checks (a push with the default token cannot).
+      HAS_TOKEN: ${{ secrets.INTEGRATE_TOKEN != '' }}
     steps:
       - name: Check the address
         run: |
@@ -57,11 +57,14 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Fetch the app's repository
         id: source
+        env:
+          # A private app repository needs a key that can read it.
+          CLONE_TOKEN: ${{ secrets.EXPORT_REPO_TOKEN || secrets.INTEGRATE_TOKEN || github.token }}
         run: |
           set -euo pipefail
           [ -f "hosted/$SLUG/mininode.json" ] || { echo "::error::hosted/$SLUG does not exist"; exit 1; }
           repository=$(jq -r '.repository // empty' "hosted/$SLUG/mininode.json")
-          [[ "$repository" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]] || {
+          [[ "$repository" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ && ! "$repository" =~ (^|/)\.+(/|$) ]] || {
             echo "::error::hosted/$SLUG/mininode.json has no \"repository\" (owner/repo)"; exit 1; }
           git clone -q --depth 1 "https://x-access-token:${CLONE_TOKEN}@github.com/${repository}.git" "$RUNNER_TEMP/clone"
           commit=$(git -C "$RUNNER_TEMP/clone" rev-parse HEAD)
@@ -92,11 +95,12 @@ jobs:
       - name: Open the pull request
         if: steps.apply.outputs.changed == 'true'
         env:
+          GH_TOKEN: ${{ secrets.INTEGRATE_TOKEN || github.token }}
           REPOSITORY: ${{ steps.source.outputs.repository }}
           COMMIT: ${{ steps.source.outputs.commit }}
         run: |
           set -euo pipefail
-          open=$(gh pr list --state open --search "chore($SLUG): update in:title" --json number --jq length)
+          open=$(gh pr list --state open --json headRefName --jq "[.[] | select(.headRefName | startswith(\"auto/update-$SLUG-\"))] | length")
           if [ "$open" != "0" ]; then
             echo "An update pull request for $SLUG is already open: merge or close it first." | tee -a "$GITHUB_STEP_SUMMARY"
             exit 0
@@ -116,9 +120,9 @@ jobs:
 
           $(cat "$RUNNER_TEMP/plan.txt")
 
-          Die Daten der App liegen in Supabase und bleiben unverändert. Bereits angewendete Migrationen in \`db/\` werden nie geändert, nur neue kommen dazu. Mergen, wenn die Prüfungen grün sind; danach deployt der normale Ablauf die App."
+          Die Daten der App liegen in Supabase und bleiben unverändert. Bereits angewendete Migrationen in \`db/\` werden nie geändert, nur neue kommen dazu. Die Änderungen (auch an der \`mininode.json\`: Rechte, Domains) bitte lesen und erst mergen, wenn die Prüfungen grün sind; danach deployt der normale Ablauf die App. Dieser Pull Request wird nie automatisch gemergt."
           pr=$(gh pr create --base main --head "$branch" --title "chore($SLUG): update to ${COMMIT:0:7}" --body "$body")
-          if [ "$AUTOMERGE" = "true" ]; then
-            gh pr merge "$pr" --auto --merge || echo "auto-merge is not available; the pull request stays open"
-          fi
+          # Never merged by itself: the app brings code and a manifest (permissions, domains) from
+          # outside this repository, so a person reads the diff first.
+          [ "$HAS_TOKEN" = "true" ] || echo "::warning::INTEGRATE_TOKEN is not set: the pull request gets no checks. Do not merge it unchecked."
           echo "Pull request: $pr" >> "$GITHUB_STEP_SUMMARY"

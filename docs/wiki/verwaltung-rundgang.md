@@ -21,7 +21,6 @@ Links in der Seitenleiste:
 | **KI-Werkstatt** | Prompt-Ersteller und Vorgaben zum Bauen neuer Apps |
 | **Sicherung** | Vollständige Sicherung erstellen und herunterladen |
 | **Updates** | MiniNode und Apps mit GitHub-Repository mit einem Klick aktualisieren ([Aktualisieren](wiki:aktualisieren)) |
-| **Updates** | MiniNode und Apps mit GitHub-Repository mit einem Klick aktualisieren ([Aktualisieren](wiki:aktualisieren)) |
 | **Wissen: Wiki, Startup-Guide** | Dieses Wissen und die erste-Schritte-Liste |
 | **Weitere Dashboards** | Links zu Cloudflare (Deploys, DNS, Logs), Supabase (Datenbank) und GitHub Actions |
 

@@ -1,5 +1,6 @@
 import { type Manifest, manifestSchema } from './schema.ts';
 
+export * from './github.ts';
 export * from './i18n.ts';
 export * from './instance.ts';
 export * from './schema.ts';

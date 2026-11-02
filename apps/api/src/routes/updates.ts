@@ -6,7 +6,7 @@
 //   POST /admin/updates/platform         admin + recent sign-in; { version? } → 202
 //   POST /admin/updates/apps/:slug       admin + recent sign-in → 202
 
-import { slugSchema } from '@mininode/manifest';
+import { GITHUB_REPO, slugSchema } from '@mininode/manifest';
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { type AppContext, problem, requireUser } from '../lib/auth.ts';
@@ -15,7 +15,7 @@ import { adminClient } from '../lib/supabase.ts';
 
 export const updates = new Hono<AppContext>();
 
-const REPO = /^[\w.-]+\/[\w.-]+$/;
+const REPO = GITHUB_REPO;
 const versionSchema = z.string().regex(/^v[0-9A-Za-z._-]{1,40}$/);
 const platformRequest = z.object({ version: versionSchema.optional() }).strict();
 

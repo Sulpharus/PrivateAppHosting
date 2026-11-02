@@ -10,6 +10,7 @@ mininode changed <base-ref>                List hosted apps changed since <base-
 mininode prune [--env staging] [--dry-run] Delete Workers of apps gone from hosted/ (--force if empty)
 mininode expose [--env staging]            Expose the schema of every app with tables in the Data API
 mininode export <app-dir> --out <dir>      One app as a shareable folder; stops on keys and private data (ADR 0012)
+mininode update platform|app|list ...      Bring a newer platform release, or an app from its GitHub repository, into this repository; list writes the platform file list of a package (ADR 0028)
 mininode integrate <zip|dir> [--slug x] [--build] [--tidy] [--json f] [--report f]  Export → hosted/<slug> by script; exit 2 = needs review (ADR 0013)
 mininode uninstall <slug> [--purge] [--env]  Take an app offline, with --purge delete its data, files and registry entry (ADR 0020)
 mininode backup create --out <dir> | verify <dir> | restore <dir> [--yes]  Full backup folder and restore (ADR 0019)

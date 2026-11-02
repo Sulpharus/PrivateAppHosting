@@ -9,11 +9,14 @@ this installation with one click (ADR 0028). Cloud edition; the desktop edition 
 1. `LIBRARY_DISPATCH_TOKEN` is set (`app-library.md`, step 1): it starts the workflows.
 2. `updates.source` is in `mininode.config.json` (`owner/repo` of the project that publishes
    releases). The starter package has it; run `pnpm mininode configure` after changing it.
-3. Optional: repository variable `INTEGRATE_AUTOMERGE=true`, so the pull request merges itself
-   when the checks are green.
-4. Optional: secret `INTEGRATE_TOKEN` (fine-grained, this repository: Contents, Pull requests,
-   **Workflows**: read and write). Without it the files in `.github/workflows` are not updated
-   (the pull request says so).
+3. Optional: repository variable `INTEGRATE_AUTOMERGE=true`, so the *platform* pull request merges
+   itself when the checks are green (needs the token below). App updates are never merged
+   automatically: they bring code and permissions from outside, so you read them first.
+4. Strongly recommended: secret `INTEGRATE_TOKEN` (fine-grained, this repository: Contents, Pull
+   requests, **Workflows**: read and write). Without it a pull request made by the workflow gets **no
+   checks** (pushes with the default token start no workflows), the files in `.github/workflows` are
+   not updated, and the platform pull request is not auto-merged. The pull request carries a warning;
+   do not merge it unchecked (close and reopen it to start the checks).
 5. Private app repositories: `EXPORT_REPO_TOKEN` or `INTEGRATE_TOKEN` must be able to read them.
 
 ## Update MiniNode

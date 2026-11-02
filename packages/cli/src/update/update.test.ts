@@ -1,4 +1,12 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -7,9 +15,11 @@ import {
   applyAppUpdate,
   applyPlatformUpdate,
   describePlan,
+  isSafePath,
   PLATFORM_FILES,
   planAppUpdate,
   planPlatformUpdate,
+  writePlatformList,
 } from './index.ts';
 
 let dir: string;
@@ -196,5 +206,126 @@ describe('app update', () => {
     const from = put(join(dir, 'clone'), { 'mininode.json': manifest('notes') });
     const result = planAppUpdate({ appDir, slug: 'notes', from, repository: 'me/n', commit: 'c' });
     expect(result.remove).toEqual([]);
+  });
+});
+
+describe('files from outside', () => {
+  it('refuses a link in a release package or an app repository', () => {
+    const secret = put(join(dir, 'secret'), { 'token.txt': 'do not copy' });
+    const from = put(join(dir, 'new'), { VERSION: '0.2.0\n', 'apps/a.ts': 'a' });
+    symlinkSync(join(secret, 'token.txt'), join(from, 'apps/leak.txt'));
+    const root = put(join(dir, 'repo'), {});
+    expect(() => planPlatformUpdate({ root, from })).toThrow('link or special file');
+
+    const clone = put(join(dir, 'clone'), { 'mininode.json': manifest('notes') });
+    symlinkSync(secret, join(clone, 'folder'));
+    const appDir = put(join(dir, 'hosted/notes'), { 'mininode.json': manifest('notes') });
+    expect(() =>
+      planAppUpdate({ appDir, slug: 'notes', from: clone, repository: 'a/b', commit: 'c' }),
+    ).toThrow('link or special file');
+  });
+
+  it('refuses a link that loops', () => {
+    const from = put(join(dir, 'new'), { VERSION: '0.2.0\n' });
+    symlinkSync(from, join(from, 'again'));
+    expect(() => planPlatformUpdate({ root: join(dir, 'repo'), from })).toThrow('link');
+  });
+
+  it('does not write through a link that is already in the repository', () => {
+    const outside = put(join(dir, 'outside'), { 'target.txt': 'outside' });
+    const root = put(join(dir, 'repo'), { 'apps/a.ts': 'old' });
+    rmSync(join(root, 'apps/a.ts'));
+    symlinkSync(join(outside, 'target.txt'), join(root, 'apps/a.ts'));
+    const from = put(join(dir, 'new'), { VERSION: '0.2.0\n', 'apps/a.ts': 'new' });
+    const result = planPlatformUpdate({ root, from });
+    expect(() => applyPlatformUpdate({ root, from }, result, 'o/s')).toThrow('not a plain file');
+    expect(read(outside, 'target.txt')).toBe('outside');
+  });
+
+  it('ignores paths of a tampered file list that leave the repository or dodge a protected folder', () => {
+    const root = put(join(dir, 'repo'), {
+      'hosted/notes/index.html': 'mine',
+      'mininode.config.json': '{"mine":true}',
+      ...migration('001', 'create table a();'),
+      [PLATFORM_FILES]: JSON.stringify({
+        files: {
+          '../outside.txt': 'x',
+          'docs/../mininode.config.json': 'x',
+          'docs/../hosted/notes/index.html': 'x',
+          'supabase/./migrations/001.sql': 'x',
+          'supabase/migrations/../migrations/001.sql': 'x',
+          '/etc/passwd': 'x',
+        },
+      }),
+    });
+    put(dir, { 'outside.txt': 'keep' });
+    const from = put(join(dir, 'new'), { VERSION: '0.2.0\n', 'apps/a.ts': 'a' });
+    const result = planPlatformUpdate({ root, from });
+    expect(result.remove).toEqual([]);
+    applyPlatformUpdate({ root, from }, result, 'o/s');
+    expect(read(root, 'hosted/notes/index.html')).toBe('mine');
+    expect(read(root, 'mininode.config.json')).toBe('{"mine":true}');
+    expect(existsSync(join(root, 'supabase/migrations/001.sql'))).toBe(true);
+    expect(read(dir, 'outside.txt')).toBe('keep');
+  });
+});
+
+describe('isSafePath', () => {
+  it('accepts plain relative paths only', () => {
+    for (const ok of ['a', 'a/b.ts', '.github/workflows/ci.yml'])
+      expect(isSafePath(ok), ok).toBe(true);
+    for (const bad of ['', '/a', '../a', 'a/../b', 'a/./b', 'a//b', 'a\\b', 'a/..'])
+      expect(isSafePath(bad), bad).toBe(false);
+  });
+});
+
+describe('workflow files', () => {
+  it('keeps their entries in the list while they are skipped, so a later update still owns them', () => {
+    const root = put(join(dir, 'repo'), {
+      '.github/workflows/old.yml': 'old',
+      [PLATFORM_FILES]: JSON.stringify({ files: { '.github/workflows/old.yml': 'h' } }),
+    });
+    const from = put(join(dir, 'new'), { VERSION: '0.2.0\n', 'apps/a.ts': 'a' });
+    const options = { root, from, skipWorkflows: true };
+    applyPlatformUpdate(options, planPlatformUpdate(options), 'o/s');
+    const list = JSON.parse(read(root, PLATFORM_FILES)) as { files: Record<string, string> };
+    expect(Object.keys(list.files).sort()).toEqual(['.github/workflows/old.yml', 'apps/a.ts']);
+    expect(read(root, '.github/workflows/old.yml')).toBe('old');
+  });
+});
+
+describe('writePlatformList', () => {
+  it('lists the platform files with hashes and leaves the installation out', () => {
+    const pkg = put(join(dir, 'pkg'), {
+      VERSION: '0.9.0\nedition: starter\n',
+      'apps/a.ts': 'a',
+      'hosted/README.md': 'x',
+      'biome.json': '{}',
+      'README-EDITION.md': 'x',
+    });
+    writePlatformList(pkg, 'o/s');
+    const list = JSON.parse(read(pkg, PLATFORM_FILES)) as {
+      version: string;
+      source: string;
+      files: Record<string, string>;
+    };
+    expect(list).toMatchObject({ version: '0.9.0', source: 'o/s' });
+    expect(Object.keys(list.files)).toEqual(['apps/a.ts']);
+    expect(list.files['apps/a.ts']).toMatch(/^[0-9a-f]{64}$/);
+  });
+});
+
+describe('app address', () => {
+  it('is checked before any path is built from it', () => {
+    const clone = put(join(dir, 'clone'), { 'mininode.json': manifest('notes') });
+    expect(() =>
+      planAppUpdate({
+        appDir: join(dir, 'x'),
+        slug: '../..',
+        from: clone,
+        repository: 'a/b',
+        commit: 'c',
+      }),
+    ).toThrow('invalid app address');
   });
 });

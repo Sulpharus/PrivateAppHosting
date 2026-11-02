@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { GITHUB_REPO } from './github.ts';
 import { parseInstanceConfig, resolveEnvironment } from './instance.ts';
 
 const valid = {
@@ -17,6 +18,23 @@ const valid = {
 
 // Built at run time: a literal would look like a leaked key to the secret scan.
 const wrongKind = ['sb', 'secret', 'x'.repeat(16)].join('_');
+
+describe('github repository names', () => {
+  it.each(['me/platform', 'a.b/c-d_e', 'owner/repo.js'])('accepts %s', (name) => {
+    expect(GITHUB_REPO.test(name)).toBe(true);
+  });
+  it.each(['..', '../..', './x', 'x/..', 'x/.', 'a/b/c', 'a', '', 'a b/c'])(
+    'rejects %s',
+    (name) => {
+      expect(GITHUB_REPO.test(name)).toBe(false);
+    },
+  );
+  it('is used for updates.source and for the app repository', () => {
+    const base = parseInstanceConfig({ ...valid, updates: { source: 'up/stream' } });
+    expect(base.ok).toBe(true);
+    expect(parseInstanceConfig({ ...valid, updates: { source: '../..' } }).ok).toBe(false);
+  });
+});
 
 describe('instance config', () => {
   it('accepts a minimal valid file', () => {

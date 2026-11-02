@@ -40,8 +40,9 @@ jobs:
     env:
       WANTED: ${{ inputs.version }}
       AUTOMERGE: ${{ vars.INTEGRATE_AUTOMERGE }}
-      GH_TOKEN: ${{ secrets.INTEGRATE_TOKEN || github.token }}
-      HAS_WORKFLOW_TOKEN: ${{ secrets.INTEGRATE_TOKEN != '' }}
+      # Whether the pull request can start the checks (a push with the default token cannot) and
+      # may change workflow files. The token itself is given to the two steps that need it only.
+      HAS_TOKEN: ${{ secrets.INTEGRATE_TOKEN != '' }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -55,10 +56,12 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Find and download the release
         id: release
+        env:
+          GH_TOKEN: ${{ secrets.INTEGRATE_TOKEN || github.token }}
         run: |
           set -euo pipefail
           source=$(jq -r '.updates.source // empty' mininode.config.json)
-          [[ "$source" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]] || {
+          [[ "$source" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ && ! "$source" =~ (^|/)\.+(/|$) ]] || {
             echo "::error::updates.source is missing in mininode.config.json (owner/repo of the project that publishes releases)"; exit 1; }
           tag=$WANTED
           if [ -z "$tag" ]; then
@@ -72,7 +75,7 @@ jobs:
           unzip -q "$RUNNER_TEMP"/release/mininode-starter-*.zip -d "$RUNNER_TEMP/unpacked"
           from=$(find "$RUNNER_TEMP/unpacked" -mindepth 1 -maxdepth 1 -type d | head -n1)
           { echo "source=$source"; echo "tag=$tag"; echo "from=$from"; } >> "$GITHUB_OUTPUT"
-      - name: Already up to date?
+      - name: Check what would change (stops on a changed applied migration)
         id: check
         env:
           SOURCE: ${{ steps.release.outputs.source }}
@@ -80,7 +83,7 @@ jobs:
         run: |
           set -euo pipefail
           flags=()
-          [ "$HAS_WORKFLOW_TOKEN" = "true" ] || flags+=(--skip-workflows)
+          [ "$HAS_TOKEN" = "true" ] || flags+=(--skip-workflows)
           # A dry run: shows the plan, stops with exit code 2 on an applied migration that changed.
           pnpm mininode update platform --from "$FROM" --source "$SOURCE" --dry-run "${flags[@]}" | tee "$RUNNER_TEMP/plan.txt"
       - name: Apply the update
@@ -90,13 +93,14 @@ jobs:
         run: |
           set -euo pipefail
           flags=()
-          [ "$HAS_WORKFLOW_TOKEN" = "true" ] || flags+=(--skip-workflows)
+          [ "$HAS_TOKEN" = "true" ] || flags+=(--skip-workflows)
           pnpm mininode update platform --from "$FROM" --source "$SOURCE" "${flags[@]}" >/dev/null
           pnpm install --lockfile-only --ignore-scripts
           # The new files carry neutral placeholders: render this installation's settings again.
           pnpm mininode configure
       - name: Open the pull request
         env:
+          GH_TOKEN: ${{ secrets.INTEGRATE_TOKEN || github.token }}
           TAG: ${{ steps.release.outputs.tag }}
           SOURCE: ${{ steps.release.outputs.source }}
         run: |
@@ -105,7 +109,7 @@ jobs:
             echo "Already up to date ($TAG)." | tee -a "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
-          open=$(gh pr list --state open --search "chore(platform): update in:title" --json number --jq length)
+          open=$(gh pr list --state open --json headRefName --jq '[.[] | select(.headRefName | startswith("auto/update-platform-"))] | length')
           if [ "$open" != "0" ]; then
             echo "A platform update pull request is already open: merge or close it first." | tee -a "$GITHUB_STEP_SUMMARY"
             exit 0
@@ -120,14 +124,18 @@ jobs:
             -m "Brought in from the release $TAG of $SOURCE with mininode update platform. Your apps, mininode.config.json and docs/STATUS.md are untouched."
           git push -q origin "$branch"
           note=""
-          [ "$HAS_WORKFLOW_TOKEN" = "true" ] || note=$'\n\nDie Workflow-Dateien (`.github/workflows`) wurden nicht aktualisiert: dafür fehlt das Secret `INTEGRATE_TOKEN` mit „Workflows: Read and write“.'
+          if [ "$HAS_TOKEN" != "true" ]; then
+            note=$'\n\n**Achtung:** Ohne das Secret `INTEGRATE_TOKEN` starten die Prüfungen auf diesem Pull Request nicht von selbst, und die Workflow-Dateien (`.github/workflows`) wurden nicht aktualisiert. Nicht mergen, bevor die Prüfungen gelaufen und grün sind (Pull Request schließen und wieder öffnen startet sie).'
+            echo "::warning::INTEGRATE_TOKEN is not set: the pull request gets no checks. Do not merge it unchecked."
+          fi
           body="Aktualisiert die Plattform auf **$TAG** (Quelle: \`$SOURCE\`).
 
           $(cat "$RUNNER_TEMP/plan.txt")
 
           Deine Apps, \`mininode.config.json\` und \`docs/STATUS.md\` bleiben unverändert. Bereits angewendete Datenbank-Migrationen werden nie geändert, nur neue kommen dazu. Mergen, wenn die Prüfungen grün sind; danach deployt der normale Ablauf.$note"
           pr=$(gh pr create --base main --head "$branch" --title "chore(platform): update to $TAG" --body "$body")
-          if [ "$AUTOMERGE" = "true" ]; then
+          # Auto-merge only when the checks can run: without them it would merge unchecked code.
+          if [ "$AUTOMERGE" = "true" ] && [ "$HAS_TOKEN" = "true" ]; then
             gh pr merge "$pr" --auto --merge || echo "auto-merge is not available; the pull request stays open"
           fi
           echo "Pull request: $pr" >> "$GITHUB_STEP_SUMMARY"
