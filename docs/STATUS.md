@@ -188,22 +188,27 @@ since the PR #12 deploy. Earlier deploys stopped at medialog and never shipped t
     settings snapshot across browsers, ZIP export/import, keyboard focus back in the editor after the
     page's dialogs (Ctrl+O did nothing after the save dialog), anything against the real Supabase.
   - **Next:** the checks above, focus fix, Web MIDI (task), size work (85 MB module, 22.6 MB as .br;
-    `-Oz`, module list, unused qrc images), reviewer subagent, wiki (`neuigkeiten.md` and an article)
-    once it is deployable, PR out of draft.
+    `-Oz`, module list, unused qrc images). Merged to `main` with PR 57 on 2026-11-03; wiki article
+    `docs/wiki/musescore.md` and a `neuigkeiten.md` line exist.
   - **Local build:** Qt 6.10.2 for WebAssembly in `~/build_tools/Qt/6.10.2` (from
     `toolchain/build-qt.sh`), MuseScore tree `~/src/musescore` with the patch applied; helper scripts
     `hosted/musescore/test/ms-ninja.sh` (incremental build) and `ms-test.sh` (build, package with
     `MUSESCORE_PREBUILT` and `MUSESCORE_PLAIN_WASM`, smoke test). Qt and the built tree live outside
-    the repo; a new container must rebuild Qt (about 2 hours) or use CI's cache. To let CI fill that
-    cache once, do not push for about 2 hours after a push (each push cancels the running job). `download.qt.io`, `musescore.org` and
+    the repo; a new container must rebuild Qt (about 2 hours). CI's build artifact cannot be
+    downloaded here (blob storage is blocked by the network policy). `download.qt.io`, `musescore.org` and
     `michaelnorris.info` are blocked by the cloud network policy; Emscripten's zlib port download is
     blocked too (seed `emsdk/upstream/emscripten/cache/ports/zlib` from a git clone).
   - **Patch workflow:** work in a clone of the tag (`git apply patches/mininode.patch`), then
     `git add -N <new files> && git diff > hosted/musescore/patches/mininode.patch`.
-  - **CI:** every push cancels the running CI, so the first `musescore.yml` run (Qt about 2 h,
-    MuseScore about 2 h) has never finished; push in batches. Tell the owner about the Actions time.
-  - **Owner to do:** download the MN Better Notation plugins from the author's site and upload them
-    (the curated pack of 14 other plugins was handed over in the chat as a ZIP).
+  - **CI:** `musescore.yml` builds end to end since 2026-11-03 (Qt about 1.5 h, MuseScore about 30 min
+    on a cold compiler cache). Caches are per branch: a PR reads `main`'s cache, not the reverse, so
+    the first run on `main` after the merge built Qt again. A push cancels the running build of its
+    branch; the compiler cache is saved even when the build fails.
+  - **Owner to do:** upload the plugin pack handed over in the chat on 2026-11-03 (13 ZIPs, one per
+    plugin, through the Plugins panel). MN Better Notation is on GitHub
+    (`mnorrisvuw/MN-Better-Notation-Plugins-for-MuseScore`); its `getAssetPath` needs
+    `Qt.platform.os === "wasm"` next to `"linux"` (the pack's copy has that), and its two layout
+    plugins need fonts the browser cannot install.
   - **Known limits:** JSPI needs Chrome/Edge 137+; no MIDI keyboards yet; device files in the recent
     list cannot be reopened after a reload; only English and German UI; no VST, Muse Sounds or Muse
     Hub content; anyone with the app can add or remove shared plugins and sounds.
