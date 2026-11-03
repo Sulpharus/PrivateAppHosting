@@ -240,6 +240,46 @@ index 32d743d8..0766a6a3 100644
              ]
  
              currentIndex: 0
+diff --git a/src/appshell/qml/MuseScore/AppShell/HomePage/PluginsPage.qml b/src/appshell/qml/MuseScore/AppShell/HomePage/PluginsPage.qml
+index 3db2c243..d6b80e36 100644
+--- a/src/appshell/qml/MuseScore/AppShell/HomePage/PluginsPage.qml
++++ b/src/appshell/qml/MuseScore/AppShell/HomePage/PluginsPage.qml
+@@ -145,6 +145,26 @@ FocusScope {
+             }
+         }
+ 
++        FlatButton {
++            id: manageButton
++
++            anchors.right: reloadButton.left
++            anchors.rightMargin: 12
++
++            //! MiniNode: the page's Plugins panel (add plugins for everyone, AI porting prompt).
++            text: qsTrc("action", "Manage plugins…")
++            icon: IconCode.PLUGIN
++            orientation: Qt.Horizontal
++
++            navigation.name: "PluginsManageButton"
++            navigation.panel: navTopPanel
++            navigation.order: 3
++
++            onClicked: {
++                Qt.openUrlExternally("mininode:plugins")
++            }
++        }
++
+         FlatButton {
+             id: reloadButton
+ 
+@@ -156,7 +176,7 @@ FocusScope {
+ 
+             navigation.name: "PluginsReloadButton"
+             navigation.panel: navTopPanel
+-            navigation.order: 3
++            navigation.order: 4
+ 
+             onClicked: {
+                 pluginsPage.reloadPlugins()
 diff --git a/src/appshell/qml/MuseScore/AppShell/PublishPage/publishtoolbarmodel.cpp b/src/appshell/qml/MuseScore/AppShell/PublishPage/publishtoolbarmodel.cpp
 index d29381c3..59036d09 100644
 --- a/src/appshell/qml/MuseScore/AppShell/PublishPage/publishtoolbarmodel.cpp
@@ -591,6 +631,32 @@ index 1d3657f0..87d8a0cb 100644
  #cmakedefine MUSE_THREADS_SUPPORT 1
  #cmakedefine MUSE_MULTICONTEXT_WIP 1
  
+diff --git a/src/framework/extensions/internal/extensionsconfiguration.cpp b/src/framework/extensions/internal/extensionsconfiguration.cpp
+index 2a09f9c1..807b0ff3 100644
+--- a/src/framework/extensions/internal/extensionsconfiguration.cpp
++++ b/src/framework/extensions/internal/extensionsconfiguration.cpp
+@@ -21,6 +21,8 @@
+  */
+ #include "extensionsconfiguration.h"
+ 
++#include "muse_framework_config.h"
++
+ #include "global/settings.h"
+ #include "global/serialization/json.h"
+ #include "global/io/file.h"
+@@ -39,7 +41,12 @@ static const std::string EXTENSIONS_RESOURCE_NAME("EXTENSIONS");
+ 
+ void ExtensionsConfiguration::init()
+ {
++#ifdef MUSE_WEB_DESKTOP
++    //! In the browser the page puts the plugins everyone shares here before the editor starts.
++    settings()->setDefaultValue(USER_PLUGINS_PATH, Val(std::string("/files/plugins")));
++#else
+     settings()->setDefaultValue(USER_PLUGINS_PATH, Val(globalConfiguration()->userDataPath() + "/Plugins"));
++#endif
+     settings()->valueChanged(USER_PLUGINS_PATH).onReceive(nullptr, [this](const Val& val) {
+         m_pluginsUserPathChanged.send(val.toString());
+     });
 diff --git a/src/framework/global/CMakeLists.txt b/src/framework/global/CMakeLists.txt
 index 4b5dc769..52451a14 100644
 --- a/src/framework/global/CMakeLists.txt

@@ -12,6 +12,7 @@ import { createAudioDriver } from './mn-audio.js';
 // Names and sizes of this build's files, written by build.mjs.
 import build from './mn-build.js';
 import { installDataMenu } from './mn-data.js';
+import { installPluginsPanel, installSharedPlugins } from './mn-plugins.js';
 import { unpackShare } from './mn-share.js';
 import { soundFontUrl } from './mn-soundfont.js';
 import { createAccountSync, restoreFromAccount } from './mn-sync.js';
@@ -400,6 +401,14 @@ async function start() {
           })
           .catch(fail)
           .finally(() => instance.removeRunDependency('mn-share'));
+        // Plugins shared by everyone; without the network the editor starts without them.
+        instance.addRunDependency('mn-plugins');
+        Promise.race([
+          installSharedPlugins(mn, instance.FS),
+          new Promise((resolve) => setTimeout(resolve, 10000)),
+        ])
+          .catch((error) => console.warn('musescore: plugins not loaded', error))
+          .finally(() => instance.removeRunDependency('mn-plugins'));
       },
     ],
     onStartApp: async () => {
@@ -434,6 +443,7 @@ async function start() {
   const instance = await qtLoad(Module);
   const dataChanged = createAccountSync(mn, instance.FS, DATA_DIR);
   installWriteHook(instance, dataChanged);
+  installPluginsPanel({ mn, Module: instance });
   installDataMenu({
     mn,
     Module: instance,

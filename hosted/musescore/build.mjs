@@ -233,22 +233,29 @@ cpSync(join(bin, 'MuseScoreStudio.js'), join(dist, 'MuseScoreStudio.js'));
 // The editor's module, named after its content and Brotli-compressed (kept in .cache by content).
 const wasm = readFileSync(join(bin, 'MuseScoreStudio.wasm'));
 const wasmName = `MuseScoreStudio-${hash(wasm).slice(0, 16)}.wasm`;
-const packed = join(cache, `${wasmName}.br`);
-if (!existsSync(packed)) {
-  const compressed = brotliCompressSync(wasm, {
-    params: {
-      [constants.BROTLI_PARAM_QUALITY]: 11,
-      [constants.BROTLI_PARAM_LGWIN]: 24,
-      [constants.BROTLI_PARAM_SIZE_HINT]: wasm.length,
-    },
-  });
-  writeFileSync(`${packed}.part`, compressed);
-  renameSync(`${packed}.part`, packed);
+// MUSESCORE_PLAIN_WASM=1 (local tests only): the module as it is, without the minutes Brotli takes.
+const plainWasm = process.env.MUSESCORE_PLAIN_WASM === '1';
+if (plainWasm) {
+  writeFileSync(join(dist, wasmName), wasm);
+  console.log(`${wasmName}: ${(wasm.length / 2 ** 20).toFixed(1)} MiB, uncompressed (local test)`);
+} else {
+  const packed = join(cache, `${wasmName}.br`);
+  if (!existsSync(packed)) {
+    const compressed = brotliCompressSync(wasm, {
+      params: {
+        [constants.BROTLI_PARAM_QUALITY]: 11,
+        [constants.BROTLI_PARAM_LGWIN]: 24,
+        [constants.BROTLI_PARAM_SIZE_HINT]: wasm.length,
+      },
+    });
+    writeFileSync(`${packed}.part`, compressed);
+    renameSync(`${packed}.part`, packed);
+  }
+  cpSync(packed, join(dist, `${wasmName}.br`));
+  console.log(
+    `${wasmName}: ${(wasm.length / 2 ** 20).toFixed(1)} MiB, ${(statSync(packed).size / 2 ** 20).toFixed(1)} MiB as .br`,
+  );
 }
-cpSync(packed, join(dist, `${wasmName}.br`));
-console.log(
-  `${wasmName}: ${(wasm.length / 2 ** 20).toFixed(1)} MiB, ${(statSync(packed).size / 2 ** 20).toFixed(1)} MiB as .br`,
-);
 
 // The audio engine and its worklet glue in one file (the CSP allows no blob: scripts).
 const worklet = Buffer.concat([
@@ -311,6 +318,7 @@ writeFileSync(
 );
 
 for (const file of files(dist)) {
+  if (plainWasm && file.endsWith('.wasm')) continue;
   if (statSync(file).size > MAX_ASSET)
     throw new Error(`${relative(dist, file)} is larger than the 25 MiB asset limit`);
 }

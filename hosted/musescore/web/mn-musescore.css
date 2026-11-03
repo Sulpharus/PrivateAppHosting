@@ -130,3 +130,53 @@ body {
   flex-wrap: wrap;
   gap: var(--mn-s2, 8px);
 }
+
+.mn-plugins-list {
+  display: grid;
+  gap: var(--mn-s1, 4px);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mn-plugins-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--mn-s2, 8px);
+  min-height: 44px;
+  padding: 0 var(--mn-s2, 8px);
+  border-radius: var(--mn-r-sm, 8px);
+  background: var(--mn-surface-2, #eef0ec);
+  color: var(--mn-ink, #15191c);
+  font-family: var(--mn-font-mono, ui-monospace, monospace);
+  font-size: var(--mn-fs-sm, 14px);
+}
+
+.mn-plugins-prompt summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  color: var(--mn-ink, #15191c);
+  font-weight: 600;
+}
+
+.mn-plugins-prompt summary:focus-visible {
+  outline: 2px solid var(--mn-accent, #1c6a4f);
+  outline-offset: 2px;
+}
+
+.mn-plugins-prompt textarea {
+  box-sizing: border-box;
+  width: 100%;
+  margin-top: var(--mn-s2, 8px);
+  padding: var(--mn-s2, 8px);
+  border: 1px solid var(--mn-line, #dde1db);
+  border-radius: var(--mn-r-sm, 8px);
+  background: var(--mn-surface, #fff);
+  color: var(--mn-ink, #15191c);
+  font-family: var(--mn-font-mono, ui-monospace, monospace);
+  font-size: var(--mn-fs-xs, 12px);
+  resize: vertical;
+}
