@@ -476,6 +476,21 @@ index f228a29c..e7b039ff 100644
  {
  public:
      void loadSoundFonts(const std::vector<SoundFontUri>& uris) override;
+diff --git a/src/framework/audio/engine/platform/web/networksfloader.cpp b/src/framework/audio/engine/platform/web/networksfloader.cpp
+index 642da164..c3c8af19 100644
+--- a/src/framework/audio/engine/platform/web/networksfloader.cpp
++++ b/src/framework/audio/engine/platform/web/networksfloader.cpp
+@@ -73,7 +73,9 @@ async::Promise<RetVal<ByteArray> > NetworkSFLoader::load(const Uri& uri)
+             delete h;
+         };
+ 
+-        std::string str = h->uri.toString();
++        //! A blob: address (the SoundFont the page assembled from its parts) comes as
++        //! "blob://http://…", as Uri knows only scheme://path; the browser needs "blob:http://…".
++        std::string str = h->uri.scheme() == "blob" ? "blob:" + h->uri.path() : h->uri.toString();
+         emscripten_fetch(&attr, str.c_str());
+         LOGDA() << "start download sf: " << h->uri;
+ 
 diff --git a/src/framework/audio/main/audiomodule.cpp b/src/framework/audio/main/audiomodule.cpp
 index 3469ed4f..17bfa285 100644
 --- a/src/framework/audio/main/audiomodule.cpp

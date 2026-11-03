@@ -398,8 +398,9 @@ async function start() {
       await driver.setup(Module);
       soundFontUrl(build.soundFont)
         .then((url) => {
-          Module.soundFont = url;
-          if (driver.inited) Module.ccall('addSoundFont', '', ['string'], [url]);
+          // MuseScore's Uri keeps only scheme://path; its web loader turns this back into blob:.
+          Module.soundFont = url.replace(/^blob:/, 'blob://');
+          if (driver.inited) Module.ccall('addSoundFont', '', ['string'], [Module.soundFont]);
         })
         .catch((error) => console.warn('musescore: SoundFont not loaded', error));
     },
