@@ -1163,3 +1163,25 @@ index 00000000..b0294a5c
 +    muse::Ret printNotation(notation::INotationPtr notation) override;
 +};
 +}
+diff --git a/src/web/audioengine/CMakeLists.txt b/src/web/audioengine/CMakeLists.txt
+index 6a32d6ce..266687be 100644
+--- a/src/web/audioengine/CMakeLists.txt
++++ b/src/web/audioengine/CMakeLists.txt
+@@ -66,8 +66,6 @@ add_subdirectory(${AUDIO_ROOT}/common common)
+ set(WEBWORKER_FACADE_MODE OFF)
+ add_subdirectory(${AUDIO_ROOT}/engine engine)
+ 
+-target_link_libraries(MuseAudio PRIVATE muse_audio_common muse_audio_engine)
+-
+ add_executable(MuseAudio
+     ${CMAKE_CURRENT_LIST_DIR}/engine_export.cpp
+     ${CMAKE_CURRENT_LIST_DIR}/webaudioengine.cpp
+@@ -77,6 +75,8 @@ add_executable(MuseAudio
+     ${AUDIO_ROOT}/driver/platform/web/webaudiochannel.h
+ )
+ 
++target_link_libraries(MuseAudio PRIVATE muse_audio_common muse_audio_engine)
++
+ target_include_directories(MuseAudio PRIVATE
+     ${PROJECT_BINARY_DIR}
+     ${CMAKE_CURRENT_BINARY_DIR}

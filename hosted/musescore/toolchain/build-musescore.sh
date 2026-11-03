@@ -41,9 +41,9 @@ cmake -S "$SRC/src/web/audioengine" -B "$SRC/build.audio" -GNinja "${launcher[@]
   -DCMAKE_BUILD_TYPE=Release
 cmake --build "$SRC/build.audio" -j"$JOBS"
 
+# Both builds write into build.artifacts/ (MuseScore's runtime output folder).
 mkdir -p "$OUT"
-bin="$SRC/build.web/src/app"
-cp "$bin/MuseScoreStudio.js" "$bin/MuseScoreStudio.wasm" "$OUT/"
-cp "$SRC/build.artifacts/MuseAudio.js" "$OUT/"
+bin="$SRC/build.artifacts"
+cp "$bin/MuseScoreStudio.js" "$bin/MuseScoreStudio.wasm" "$bin/MuseAudio.js" "$OUT/"
 cp "$SRC/src/web/appjs/distr/qtloader.js" "$OUT/"
 ls -la "$OUT"
