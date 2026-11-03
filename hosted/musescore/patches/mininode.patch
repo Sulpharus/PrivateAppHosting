@@ -77,7 +77,7 @@ index 501d10e8..958978d2 100644
  # CONFIGURE: VTest
  ###########################################
 diff --git a/buildscripts/cmake/SetupQt6.cmake b/buildscripts/cmake/SetupQt6.cmake
-index b4aa8aaa..b98f825a 100644
+index b4aa8aaa..4ed35d8c 100644
 --- a/buildscripts/cmake/SetupQt6.cmake
 +++ b/buildscripts/cmake/SetupQt6.cmake
 @@ -82,7 +82,11 @@ if(QT_ADD_WEBSOCKET)
@@ -86,7 +86,7 @@ index b4aa8aaa..b98f825a 100644
  if (OS_IS_WASM)
 -    set(QT_WASM_EXTRA_EXPORTED_METHODS ccall)
 +    if (MUSE_WEB_DESKTOP)
-+        set(QT_WASM_EXTRA_EXPORTED_METHODS "ccall,IDBFS,ENV")
++        set(QT_WASM_EXTRA_EXPORTED_METHODS "ccall,IDBFS,ENV,addRunDependency,removeRunDependency")
 +    else()
 +        set(QT_WASM_EXTRA_EXPORTED_METHODS ccall)
 +    endif()
@@ -107,15 +107,17 @@ index f23ea28e..ffa72f71 100644
      else()
          add_subdirectory(appshell)
 diff --git a/src/app/CMakeLists.txt b/src/app/CMakeLists.txt
-index 169be219..7332d973 100644
+index 169be219..7fa30c74 100644
 --- a/src/app/CMakeLists.txt
 +++ b/src/app/CMakeLists.txt
-@@ -304,6 +304,10 @@ if (CC_IS_EMCC)
+@@ -304,6 +304,12 @@ if (CC_IS_EMCC)
      include(exported_functions.cmake)
      target_link_options(MuseScoreStudio PRIVATE ${EMCC_LINKER_FLAGS})
      target_link_options(MuseScoreStudio PRIVATE ${EXPORTED_FUNCTIONS})
 +    if (MUSE_WEB_DESKTOP)
 +        target_link_options(MuseScoreStudio PRIVATE "-lidbfs.js")
++        # The gate's CSP allows no JavaScript eval: embind must not build functions from strings.
++        target_link_options(MuseScoreStudio PRIVATE "SHELL:-s DYNAMIC_EXECUTION=0")
 +        set_target_properties(MuseScoreStudio PROPERTIES QT_WASM_INITIAL_MEMORY "256MB")
 +    endif()
  endif()
@@ -221,10 +223,10 @@ index d29381c3..59036d09 100644
  
      setItems(items);
 diff --git a/src/appshell/qml/MuseScore/AppShell/appmenumodel.cpp b/src/appshell/qml/MuseScore/AppShell/appmenumodel.cpp
-index 939c8162..725cfcb7 100644
+index 939c8162..35377611 100644
 --- a/src/appshell/qml/MuseScore/AppShell/appmenumodel.cpp
 +++ b/src/appshell/qml/MuseScore/AppShell/appmenumodel.cpp
-@@ -204,9 +204,13 @@ MenuItem* AppMenuModel::makeFileMenu()
+@@ -204,11 +204,17 @@ MenuItem* AppMenuModel::makeFileMenu()
          makeSeparator(),
          makeMenuItem("file-save"),
          makeMenuItem("file-save-as"),
@@ -236,8 +238,12 @@ index 939c8162..725cfcb7 100644
          makeMenu(TranslatableString("appshell/menu/file", "Pu&blish online"), makePublishOnlineSubItems()),
 +#endif
          makeSeparator(),
++#ifndef MUSE_WEB_DESKTOP
          makeMenuItem("file-convert-to-score"),
++#endif
          makeMenuItem("file-export"),
+         makeSeparator(),
+         makeMenuItem("project-properties"),
 diff --git a/src/braille/thirdparty/liblouis/liblouis/internal.h b/src/braille/thirdparty/liblouis/liblouis/internal.h
 index fb5b73fb..bc0d9434 100644
 --- a/src/braille/thirdparty/liblouis/liblouis/internal.h
@@ -578,6 +584,19 @@ index 27688432..8d3b9ef8 100644
      ioc()->registerExport<IFileSystem>(moduleName(), new MemFileSystem());
  #else
      ioc()->registerExport<IFileSystem>(moduleName(), new FileSystem());
+diff --git a/src/framework/global/internal/globalconfiguration.cpp b/src/framework/global/internal/globalconfiguration.cpp
+index 20440fe7..ae165d4d 100644
+--- a/src/framework/global/internal/globalconfiguration.cpp
++++ b/src/framework/global/internal/globalconfiguration.cpp
+@@ -75,7 +75,7 @@ QString GlobalConfiguration::resolveAppDataPath() const
+     QDir dir(QCoreApplication::applicationDirPath() + QString("/../Resources"));
+     return dir.absolutePath() + "/";
+ #elif defined(Q_OS_WASM)
+-    return "/files/share";
++    return "/files/share/"; // with a slash, like the other platforms (callers append "tables" etc.)
+ #else
+     // Try relative path (needed for portable AppImage and non-standard installations)
+     QDir dir(QCoreApplication::applicationDirPath() + QString("/../share/" MUSE_APP_INSTALL_NAME));
 diff --git a/src/framework/global/internal/platform/web/webfiles.h b/src/framework/global/internal/platform/web/webfiles.h
 new file mode 100644
 index 00000000..dbf381f1
@@ -900,6 +919,22 @@ index a84e33ae..349aef34 100644
      interactive()->info("", muse::trc("notation", "Sorry, instrument change on the web is not supported at this time."));
      return false;
  #else
+diff --git a/src/project/internal/convertfiletoscoreservice.cpp b/src/project/internal/convertfiletoscoreservice.cpp
+index 6aec3ed8..4c408531 100644
+--- a/src/project/internal/convertfiletoscoreservice.cpp
++++ b/src/project/internal/convertfiletoscoreservice.cpp
+@@ -120,6 +120,11 @@ void ConvertFileToScoreService::init()
+ {
+     TRACEFUNC;
+ 
++    //! Converting files to scores is a MuseScore.com service; without the cloud module there is none.
++    if (!museScoreComService()) {
++        return;
++    }
++
+     m_timer.setInterval(MIN_RETRY_INTERVAL_MS); // poll once a minute
+ 
+     QObject::connect(&m_timer, &QTimer::timeout, [this]() { poll(); });
 diff --git a/src/project/internal/projectactionscontroller.cpp b/src/project/internal/projectactionscontroller.cpp
 index 4eb13888..06d53bfb 100644
 --- a/src/project/internal/projectactionscontroller.cpp

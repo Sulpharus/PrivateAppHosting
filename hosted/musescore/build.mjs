@@ -79,7 +79,8 @@ function lrelease() {
 /** The program zip built from the patched source; cached under its key. */
 function programZip() {
   const built = join(cache, `source-${sourceKey()}.zip`);
-  if (existsSync(built)) return built;
+  // A prebuilt tree (below) changes without the key changing, so it is packaged every time.
+  if (existsSync(built) && !process.env.MUSESCORE_PREBUILT) return built;
   // In CI only the MuseScore workflow builds the program (hours); a deploy job without its
   // artifact stops here for this app alone.
   if (process.env.CI && !process.env.MUSESCORE_BUILD)
@@ -153,6 +154,15 @@ function programZip() {
       filter: (path) => basename(path) !== 'CMakeLists.txt',
     });
   }
+  // Braille tables, as the desktop installs them (the list in liblouis' tables/CMakeLists.txt).
+  const tablesDir = join(src, 'src', 'braille', 'thirdparty', 'liblouis', 'tables');
+  const installed = readFileSync(join(tablesDir, 'CMakeLists.txt'), 'utf8')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => /^[\w.@-]+\.(ctb|utb|uti|cti|dis|tbl|dic)$/.test(line));
+  mkdirSync(join(stage, 'share', 'tables'), { recursive: true });
+  for (const name of installed) cpSync(join(tablesDir, name), join(stage, 'share', 'tables', name));
+
   // Translations: English is the program's own language; the others are compiled here.
   const locale = join(stage, 'share', 'locale');
   mkdirSync(locale, { recursive: true });
