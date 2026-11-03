@@ -214,6 +214,22 @@ index 939c8162..725cfcb7 100644
          makeSeparator(),
          makeMenuItem("file-convert-to-score"),
          makeMenuItem("file-export"),
+diff --git a/src/braille/thirdparty/liblouis/liblouis/internal.h b/src/braille/thirdparty/liblouis/liblouis/internal.h
+index fb5b73fb..bc0d9434 100644
+--- a/src/braille/thirdparty/liblouis/liblouis/internal.h
++++ b/src/braille/thirdparty/liblouis/liblouis/internal.h
+@@ -32,6 +32,11 @@
+ #ifndef __LOUIS_H_
+ #define __LOUIS_H_
+ 
++#ifdef __EMSCRIPTEN__
++/* Before extern "C" (liblouis.h includes it there): it declares C++ templates. */
++#include <emscripten.h>
++#endif
++
+ #ifdef __cplusplus
+ extern "C" {
+ #endif /* __cplusplus */
 diff --git a/src/engraving/api/v1/util.cpp b/src/engraving/api/v1/util.cpp
 index a1135ad8..af2b7f83 100644
 --- a/src/engraving/api/v1/util.cpp
