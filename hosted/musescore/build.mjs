@@ -203,6 +203,9 @@ function programZip() {
 }
 
 mkdirSync(cache, { recursive: true });
+// MuseScore's build runs its own CommonJS scripts (src/web/appjs/install.js) from the source
+// tree in .cache; without this they would inherit "type": "module" from this app.
+writeFileSync(join(cache, 'package.json'), '{ "type": "commonjs" }\n');
 if (process.argv.includes('--key')) {
   console.log(sourceKey());
   process.exit(0);

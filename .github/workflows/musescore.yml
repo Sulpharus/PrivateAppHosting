@@ -76,9 +76,11 @@ jobs:
             ~/qt-wasm/wasm_singlethread
           key: ${{ needs.qt.outputs.key }}
           fail-on-cache-miss: true
+      # Restored and saved separately: the save also runs when the build fails, so the next run
+      # does not compile everything again.
       - name: Compiler cache
         if: steps.cache.outputs.cache-hit != 'true'
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
         with:
           path: ~/.cache/ccache
           key: musescore-ccache-${{ github.run_id }}
@@ -90,6 +92,12 @@ jobs:
         run: |
           export MUSESCORE_QT_PREFIX="$HOME/qt-wasm" CCACHE_DIR="$HOME/.cache/ccache" MUSESCORE_BUILD=1
           node hosted/musescore/build.mjs --source
+      - name: Save the compiler cache
+        if: always() && steps.cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.cache/ccache
+          key: musescore-ccache-${{ github.run_id }}-${{ github.run_attempt }}
       - uses: actions/upload-artifact@v4
         with:
           name: craft-musescore
