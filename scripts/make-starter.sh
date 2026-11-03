@@ -66,9 +66,12 @@ drop_job() { # <workflow file> <job id>
     !skip { print }' "$1" > "$1.tmp" && mv "$1.tmp" "$1"
 }
 if [ "$edition" = cloudflare ]; then
+  # packages/manifest reads the App-Bibliothek catalog from this one file.
+  cp "$stage/infra/nucbox/library.json" "$work/library.json"
   rm -rf "$stage/apps/desktop-host" "$stage/apps/nucbox-control" "$stage/infra/desktop" \
     "$stage/infra/nucbox" "$stage/.github/actions/nucbox-ssh" "$stage/.sops.yaml" \
     "$stage/.github/workflows/library.yml"
+  mkdir -p "$stage/infra/nucbox" && mv "$work/library.json" "$stage/infra/nucbox/library.json"
   drop_job "$stage/.github/workflows/ci.yml" infra
   drop_job "$stage/.github/workflows/ci.yml" desktop
   # Packaging belongs to the project that publishes releases, not to an installation of one.
