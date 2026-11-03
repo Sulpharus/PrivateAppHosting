@@ -196,8 +196,10 @@ export function buildSoundFont(name, sounds) {
     shdr.bytes(ascii(s.name, 20));
     shdr.u32(s.start);
     shdr.u32(s.end);
-    shdr.u32(s.start);
-    shdr.u32(s.end);
+    // Not looped (sampleModes 0), but loop points inside the sample as the format expects.
+    const roomy = s.end - s.start > 32;
+    shdr.u32(roomy ? s.start + 8 : s.start);
+    shdr.u32(roomy ? s.end - 8 : s.end);
     shdr.u32(s.rate);
     shdr.u8(s.key, 0);
     shdr.u16(s.link);

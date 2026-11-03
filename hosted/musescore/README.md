@@ -86,11 +86,47 @@ two, MuseScore about one and a half on four cores); `ccache` shortens later ones
   language: English is MuseScore's own, German is compiled from `musescore_de.ts` and
   `instruments_de.ts`. Other languages: add their code to `languages` in `source.json`.
 
+## Plugins
+
+MuseScore plugins are QML files run by the editor's plugin engine, so they work unchanged when
+they are written for MuseScore 4.4+ (Qt 6). They are shared by everyone who has the app: each is a
+ZIP in the app's shared files (`plugins/<id>@<hash>.zip`), unpacked into `/files/plugins` (the
+editor's plugin folder in this build) before the editor starts and cached in Cache Storage.
+
+- **Plugins panel** (`mn-plugins.js`; "Plugins" in the MiniNode strip, and "Manage plugins…" on
+  MuseScore's Plugins page, which opens `mininode:plugins`): add a `.qml` file or a zipped plugin
+  folder, remove one (for everyone). After adding, "Reload plugins" in MuseScore picks it up; each
+  person enables plugins for themselves (they start disabled, as on the desktop).
+- **AI prompt** (`mn-plugin-prompt.js`, German and English): for a plugin written for Qt 5 or for
+  the desktop (external programs, files on the computer, other websites). Copy it into any AI tool
+  with the plugin's files; it answers with corrected files and how to install them.
+- Anyone with the app can add and remove plugins, and a plugin is code that runs in the editor of
+  whoever enables it. Restricting this to admins would need a storage rule.
+
+## Sound library
+
+`mn-sounds.js` ("Klänge" in the MiniNode strip): folders of sounds in the person's files
+(`sounds/<folder>/…`, private) or the shared ones (everyone), created and deleted in the panel.
+
+- **SoundFonts** (`.sf2`, `.sf3`) are added to MuseScore as they are (`addSoundFont`) and appear in
+  the mixer's sound list. Files above 45 MB are stored as `.part0`, `.part1`, … (the storage takes
+  at most 50 MB per file) and joined in the browser.
+- **Sound effects** (WAV, MP3, OGG, FLAC, M4A …): the audio files of a folder become one SoundFont
+  named after the folder, built in the browser (`mn-sf2.js`: decoded to 44.1 kHz, stereo as a
+  linked pair, one key per sound from C4 in alphabetical order, no loop). The panel shows each
+  sound's key. In the mixer, set a staff's sound to it and write notes on those keys.
+- **Per person:** which folders load is a setting (`mn.kv` key `sounds`: `{ off: ["shared:Name"] }`).
+  Switching a folder on loads it at once; switching it off or deleting files takes effect at the
+  next start (MuseScore cannot unload a SoundFont).
+- Effects in the mixer: MuseScore's own reverb and equaliser. VST effects and instruments, Muse
+  Sounds and other Muse Hub content cannot run in a browser.
+
 ## Data
 
 `data.mode: private`: scores and exports are files in the person's own folder of this app
-(`mn.files`), with the hidden settings snapshot `.musescore-data.zip`; `mn.kv` holds one setting
-(`dataStamp`). Nothing in tables.
+(`mn.files`), with the hidden settings snapshot `.musescore-data.zip`, and the private sound
+folders (`sounds/`). Shared files: `plugins/` and the shared `sounds/` folders. `mn.kv` holds two
+settings (`dataStamp`, `sounds`). Nothing in tables.
 
 ## Requirements
 

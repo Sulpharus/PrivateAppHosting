@@ -174,29 +174,38 @@ since the PR #12 deploy. Earlier deploys stopped at medialog and never shipped t
 - **MuseScore Studio (`hosted/musescore`), in progress since 2026-11-03.** The owner wants the full
   desktop editor in the browser (Chrome/Edge desktop, as an installed app window; no mobile),
   original name, MS Basic SoundFont, scores private per person in Supabase (`mn.files`) with
-  export/import, no ads or paywalls, German and English. Read `hosted/musescore/README.md` first.
-  - **Done (committed, not yet compiled end to end):** configuration `app-mininode` in
-    `patches/mininode.patch` (desktop shell + dock windows + all imports/exports on WebAssembly,
-    online services and promotions off, real file system, sync file dialogs via the page, browser
-    print, one window replaces the score, recent MiniNode scores fetched); Qt 6.10.2 from source
-    with JSPI (`toolchain/build-qt.sh`; `download.qt.io` is blocked by the cloud network policy);
-    the page `web/` (MiniNode files for open/save/export, IDBFS user data plus account snapshot,
-    ZIP export/import, audio worklet without `blob:` scripts, SoundFont parts in Cache Storage);
-    `build.mjs`; CI workflow `musescore.yml` (cached, `continue-on-error`, cannot block other apps).
-  - **Next:** build Qt for WebAssembly (`~/build_tools/build-qt.sh` was running; repo copy is
-    `toolchain/build-qt.sh <prefix>`), then `MUSESCORE_QT_PREFIX=<prefix> node hosted/musescore/build.mjs`,
-    fix compile/link errors in the patch, run it in Chromium (a temporary e2e spec), check start,
-    new score, palettes, playback, save to MiniNode, reopen, export PDF/MusicXML/MIDI/audio,
-    print, German UI. Then size work (module list, `-Oz`, `wasm-opt`, qrc images of removed
-    pages), reviewer subagent, wiki (`neuigkeiten.md`, an app article), push and draft PR.
+  export/import, no ads or paywalls, German and English, plugins shared by everyone, and a sound
+  library (SoundFonts and sound effects) with private and shared folders. Read
+  `hosted/musescore/README.md` first.
+  - **Runs locally (headless Chromium with SwiftShader WebGL, test server with the gate's CSP and a
+    stand-in SDK in the session scratchpad):** start in about 5 s, German UI, WebGL rendering, home
+    page without online parts, new score dialog and score view (palettes, toolbars), Ctrl+S → MiniNode
+    save dialog → file in storage, File → Open lists MiniNode files, Plugins page shows MuseScore's
+    and shared plugins (14 open-source ones tested), Klänge panel lists folders and effect keys; the
+    generated effects SoundFont parses with an independent SF2 parser.
+  - **Not yet checked:** playback (audio worklet + MS Basic + library SoundFonts reaching the engine),
+    opening a chosen file and reopening after a reload, exports (PDF, MusicXML, MIDI, audio), print,
+    settings snapshot across browsers, ZIP export/import, keyboard focus back in the editor after the
+    page's dialogs (Ctrl+O did nothing after the save dialog), anything against the real Supabase.
+  - **Next:** the checks above, focus fix, Web MIDI (task), size work (85 MB module, 22.6 MB as .br;
+    `-Oz`, module list, unused qrc images), reviewer subagent, wiki (`neuigkeiten.md` and an article)
+    once it is deployable, PR out of draft.
+  - **Local build:** Qt 6.10.2 for WebAssembly in `~/build_tools/Qt/6.10.2` (from
+    `toolchain/build-qt.sh`), MuseScore tree `~/src/musescore` with the patch applied; helper scripts
+    `~/build_tools/ms-ninja.sh` (incremental build) and `ms-test.sh` (build, package with
+    `MUSESCORE_PREBUILT` and `MUSESCORE_PLAIN_WASM`, smoke test). These live outside the repo; a new
+    container must rebuild Qt (about 2 hours) or use CI's cache. `download.qt.io`, `musescore.org` and
+    `michaelnorris.info` are blocked by the cloud network policy; Emscripten's zlib port download is
+    blocked too (seed `emsdk/upstream/emscripten/cache/ports/zlib` from a git clone).
   - **Patch workflow:** work in a clone of the tag (`git apply patches/mininode.patch`), then
     `git add -N <new files> && git diff > hosted/musescore/patches/mininode.patch`.
-  - **Costs to tell the owner:** the first CI build takes about 4–5 hours of Actions time (Qt about
-    2, MuseScore about 2); later runs restore both from the cache unless the patch or toolchain
-    changes (then MuseScore again, shortened by ccache).
-  - **Known limits:** JSPI needs Chrome/Edge 137+; no MIDI keyboards yet (Web MIDI driver not
-    written); device files in the recent list cannot be reopened after a reload; only English and
-    German UI (add codes to `source.json` `languages`).
+  - **CI:** every push cancels the running CI, so the first `musescore.yml` run (Qt about 2 h,
+    MuseScore about 2 h) has never finished; push in batches. Tell the owner about the Actions time.
+  - **Owner to do:** download the MN Better Notation plugins from the author's site and upload them
+    (the curated pack of 14 other plugins was handed over in the chat as a ZIP).
+  - **Known limits:** JSPI needs Chrome/Edge 137+; no MIDI keyboards yet; device files in the recent
+    list cannot be reopened after a reload; only English and German UI; no VST, Muse Sounds or Muse
+    Hub content; anyone with the app can add or remove shared plugins and sounds.
 
 - **Contract step of the table move (ADR 0022):** Sportplaner and Haushalt still carry their old kv
   entries (`act:`, `plan:`, `tx:`, `rec:`, `profile:`, `settings`) as a backup, and the copy code
