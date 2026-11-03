@@ -243,6 +243,15 @@ function installFileDialogs(Module) {
   };
   // The editor reports each saved project too; the file hook below already handles it.
   Module.onProjectSaved = () => {};
+  // A restart (graphics fallback, factory settings) is a reload once the user data is stored.
+  Module.mnRestart = () => {
+    const reload = () => location.reload();
+    try {
+      Module.FS.syncfs(false, reload);
+    } catch {
+      reload();
+    }
+  };
   // File → Print: the editor hands over the score as PDF; the browser's PDF viewer prints it.
   Module.mnPrintPdf = (bytes) => {
     const url = URL.createObjectURL(new Blob([bytes.slice()], { type: 'application/pdf' }));

@@ -599,6 +599,33 @@ index 27688432..8d3b9ef8 100644
      ioc()->registerExport<IFileSystem>(moduleName(), new MemFileSystem());
  #else
      ioc()->registerExport<IFileSystem>(moduleName(), new FileSystem());
+diff --git a/src/framework/global/internal/baseapplication.cpp b/src/framework/global/internal/baseapplication.cpp
+index a8b4110d..79b55ff8 100644
+--- a/src/framework/global/internal/baseapplication.cpp
++++ b/src/framework/global/internal/baseapplication.cpp
+@@ -19,6 +19,10 @@
+  * You should have received a copy of the GNU General Public License
+  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+  */
++#include "muse_framework_config.h"
++#ifdef MUSE_WEB_DESKTOP
++#include <emscripten/val.h>
++#endif
+ #include "baseapplication.h"
+ 
+ #include "types/version.h"
+@@ -159,6 +163,11 @@ Qt::KeyboardModifiers BaseApplication::keyboardModifiers() const
+ 
+ void BaseApplication::restart()
+ {
++#ifdef MUSE_WEB_DESKTOP
++    //! In the browser a restart is a reload: the page stores the user data, then reloads.
++    emscripten::val::module_property("mnRestart")();
++    return;
++#endif
+     m_finishMode = FinishMode::Restart;
+     QCoreApplication::exit();
+ }
 diff --git a/src/framework/global/internal/globalconfiguration.cpp b/src/framework/global/internal/globalconfiguration.cpp
 index 20440fe7..ae165d4d 100644
 --- a/src/framework/global/internal/globalconfiguration.cpp
