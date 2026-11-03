@@ -180,3 +180,77 @@ body {
   font-size: var(--mn-fs-xs, 12px);
   resize: vertical;
 }
+
+.mn-sounds-body {
+  display: grid;
+  gap: var(--mn-s4, 16px);
+}
+
+.mn-sounds-scope {
+  display: grid;
+  gap: var(--mn-s2, 8px);
+}
+
+.mn-sounds-scope h3,
+.mn-sounds-scope p {
+  margin: 0;
+}
+
+.mn-sounds-hint {
+  color: var(--mn-ink-2, #4a524c);
+  font-size: var(--mn-fs-sm, 14px);
+}
+
+.mn-sounds-folder {
+  display: grid;
+  gap: var(--mn-s2, 8px);
+  padding: var(--mn-s2, 8px) var(--mn-s3, 12px);
+  border: 1px solid var(--mn-line, #dde1db);
+  border-radius: var(--mn-r-sm, 8px);
+}
+
+.mn-sounds-folder summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--mn-ink, #15191c);
+}
+
+.mn-sounds-folder summary:focus-visible,
+.mn-sounds-toggle input:focus-visible {
+  outline: 2px solid var(--mn-accent, #1c6a4f);
+  outline-offset: 2px;
+}
+
+.mn-sounds-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--mn-s2, 8px);
+  min-height: 44px;
+}
+
+.mn-sounds-toggle input {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--mn-accent, #1c6a4f);
+}
+
+.mn-sounds-create {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mn-s2, 8px);
+}
+
+.mn-sounds-create input {
+  flex: 1;
+  min-width: 12rem;
+  min-height: 44px;
+  padding: 0 var(--mn-s2, 8px);
+  border: 1px solid var(--mn-line, #dde1db);
+  border-radius: var(--mn-r-sm, 8px);
+  background: var(--mn-surface, #fff);
+  color: var(--mn-ink, #15191c);
+  font: inherit;
+}

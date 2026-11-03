@@ -25,6 +25,7 @@ export function createAudioDriver(options) {
           driver.inited = true;
           if (Module.isNeedStartAudio) Module._startAudioProcessing();
           if (Module.soundFont) Module.ccall('addSoundFont', '', ['string'], [Module.soundFont]);
+          Module.mnFlushSoundFonts?.();
         } else if (event.data?.type === 'debug') {
           console.debug('[musescore audio]', event.data.msg);
         }

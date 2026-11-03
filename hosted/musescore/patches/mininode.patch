@@ -241,46 +241,63 @@ index 32d743d8..0766a6a3 100644
  
              currentIndex: 0
 diff --git a/src/appshell/qml/MuseScore/AppShell/HomePage/PluginsPage.qml b/src/appshell/qml/MuseScore/AppShell/HomePage/PluginsPage.qml
-index 3db2c243..fc9824fc 100644
+index 3db2c243..08724b69 100644
 --- a/src/appshell/qml/MuseScore/AppShell/HomePage/PluginsPage.qml
 +++ b/src/appshell/qml/MuseScore/AppShell/HomePage/PluginsPage.qml
-@@ -145,6 +145,27 @@ FocusScope {
+@@ -145,21 +145,42 @@ FocusScope {
              }
          }
  
-+        FlatButton {
-+            id: manageButton
+-        FlatButton {
+-            id: reloadButton
+-
++        //! MiniNode: "Manage plugins…" (the page's Plugins panel) next to "Reload plugins".
++        Row {
+             anchors.right: parent.right
++            spacing: 12
 +
-+            anchors.right: reloadButton.left
-+            anchors.rightMargin: 12
-+            anchors.verticalCenter: reloadButton.verticalCenter
++            FlatButton {
++                id: manageButton
 +
-+            //! MiniNode: the page's Plugins panel (add plugins for everyone, AI porting prompt).
-+            text: qsTrc("action", "Manage plugins…")
-+            icon: IconCode.PLUGIN
-+            orientation: Qt.Horizontal
++                //! MiniNode: the page's Plugins panel (add plugins for everyone, AI porting prompt).
++                text: qsTrc("action", "Manage plugins…")
++                icon: IconCode.PLUGIN
++                orientation: Qt.Horizontal
 +
-+            navigation.name: "PluginsManageButton"
-+            navigation.panel: navTopPanel
-+            navigation.order: 3
-+
-+            onClicked: {
-+                Qt.openUrlExternally("mininode:plugins")
++                navigation.name: "PluginsManageButton"
++                navigation.panel: navTopPanel
++                navigation.order: 3
+ 
+-            text: qsTrc("extensions", "Reload plugins")
+-            icon: IconCode.UPDATE
+-            orientation: Qt.Horizontal
++                onClicked: {
++                    Qt.openUrlExternally("mininode:plugins")
++                }
 +            }
-+        }
 +
-         FlatButton {
-             id: reloadButton
++            FlatButton {
++                id: reloadButton
  
-@@ -156,7 +177,7 @@ FocusScope {
- 
-             navigation.name: "PluginsReloadButton"
-             navigation.panel: navTopPanel
+-            navigation.name: "PluginsReloadButton"
+-            navigation.panel: navTopPanel
 -            navigation.order: 3
-+            navigation.order: 4
++                text: qsTrc("extensions", "Reload plugins")
++                icon: IconCode.UPDATE
++                orientation: Qt.Horizontal
  
-             onClicked: {
-                 pluginsPage.reloadPlugins()
+-            onClicked: {
+-                pluginsPage.reloadPlugins()
++                navigation.name: "PluginsReloadButton"
++                navigation.panel: navTopPanel
++                navigation.order: 4
++
++                onClicked: {
++                    pluginsPage.reloadPlugins()
++                }
+             }
+         }
+     }
 diff --git a/src/appshell/qml/MuseScore/AppShell/PublishPage/publishtoolbarmodel.cpp b/src/appshell/qml/MuseScore/AppShell/PublishPage/publishtoolbarmodel.cpp
 index d29381c3..59036d09 100644
 --- a/src/appshell/qml/MuseScore/AppShell/PublishPage/publishtoolbarmodel.cpp

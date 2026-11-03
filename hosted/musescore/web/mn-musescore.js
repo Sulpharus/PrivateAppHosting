@@ -15,6 +15,7 @@ import { installDataMenu } from './mn-data.js';
 import { installPluginsPanel, installSharedPlugins } from './mn-plugins.js';
 import { unpackShare } from './mn-share.js';
 import { soundFontUrl } from './mn-soundfont.js';
+import { installSoundsPanel, loadSoundLibrary } from './mn-sounds.js';
 import { createAccountSync, restoreFromAccount } from './mn-sync.js';
 import qtLoad from './qtloader.js';
 
@@ -455,6 +456,22 @@ async function start() {
   const dataChanged = createAccountSync(mn, instance.FS, DATA_DIR);
   installWriteHook(instance, dataChanged);
   installPluginsPanel({ mn, Module: instance });
+  // The sound library: SoundFonts and sound effects from the person's and the shared folders.
+  const pendingFonts = [];
+  const addSoundFont = (url) => {
+    // MuseScore's Uri keeps only scheme://path; its web loader turns this back into blob:.
+    const uri = url.replace(/^blob:/, 'blob://');
+    if (driver.inited) instance.ccall('addSoundFont', '', ['string'], [uri]);
+    else pendingFonts.push(uri);
+  };
+  instance.mnFlushSoundFonts = () => {
+    for (const uri of pendingFonts.splice(0)) instance.ccall('addSoundFont', '', ['string'], [uri]);
+  };
+  if (driver.inited) instance.mnFlushSoundFonts();
+  installSoundsPanel({ mn, addSoundFont });
+  loadSoundLibrary(mn, addSoundFont).catch((error) =>
+    console.warn('musescore: sound library not loaded', error),
+  );
   installDataMenu({
     mn,
     Module: instance,
