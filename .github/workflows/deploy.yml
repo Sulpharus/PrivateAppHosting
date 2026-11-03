@@ -188,9 +188,12 @@ jobs:
   crafts:
     uses: ./.github/workflows/crafts.yml
 
+  musescore:
+    uses: ./.github/workflows/musescore.yml
+
   apps:
     name: Hosted apps
-    needs: [platform, crafts]
+    needs: [platform, crafts, musescore]
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment || 'production' }}
     outputs:

@@ -1,0 +1,1678 @@
+diff --git a/SetupConfigure.cmake b/SetupConfigure.cmake
+index 501d10e8..958978d2 100644
+--- a/SetupConfigure.cmake
++++ b/SetupConfigure.cmake
+@@ -192,6 +192,73 @@ if(BUILD_CONFIGURATION STREQUAL "APP-WEB")
+ 
+ endif()
+ 
++###########################################
++# CONFIGURE: Web App, desktop edition (MiniNode)
++###########################################
++# The desktop application (appshell, dock windows, workspaces, every import and export) built
++# for WebAssembly. It reuses the web pieces of app-web (JS bridge, web audio driver, web
++# interactive) and needs Qt for WebAssembly with JSPI, so modal dialogs work (Chrome, Edge).
++# Online services are left out: MuseScore.com, MuseHub, Muse Sounds, Learn, updates, crash reports.
++if(BUILD_CONFIGURATION STREQUAL "APP-MININODE")
++    set(MUE_CONFIGURATION_IS_APPWEB ON)
++    set(MUE_CONFIGURATION_IS_APPMININODE ON)
++    set(MUSE_CONFIGURATION_IS_WEB ON)
++    set(MUSE_WEB_DESKTOP ON)
++    # Qt is built with wasm exceptions (needed for JSPI); every library must use the same
++    # setjmp/longjmp model, or the link fails (FreeType: emscripten_longjmp). Targets that use Qt
++    # get -fwasm-exceptions from it; libraries built with -fno-exceptions (fdk-aac) keep that.
++    string(APPEND CMAKE_C_FLAGS " -sSUPPORT_LONGJMP=wasm")
++    string(APPEND CMAKE_CXX_FLAGS " -sSUPPORT_LONGJMP=wasm")
++
++    set(QT_ADD_LINGUISTTOOLS OFF)
++    set(QT_ADD_CONCURRENT OFF)
++    set(QT_QPROCESS_SUPPORTED OFF)
++    set(QT_CONCURRENT_SUPPORTED OFF)
++    set(MUSE_THREADS_SUPPORT OFF)
++
++    set(MUSE_MODULE_UI_SYSTEMDRAG_SUPPORTED OFF)
++    set(MUSE_MODULE_UI_SYNCINTERACTIVE_SUPPORTED ON)
++
++    set(MUE_GENERAL_APP ON)
++    set(MUSE_MODULE_AUDIO_WORKMODE 2) # driver callback
++    set(MUSE_ENABLE_UNIT_TESTS OFF)
++
++    # Desktop features
++    set(MUSE_MODULE_DOCKWINDOW ON)
++    set(MUSE_MODULE_WORKSPACE ON)
++    set(MUSE_MODULE_SHORTCUTS ON)
++    set(MUSE_MODULE_ACCESSIBILITY ON)
++    set(MUSE_MODULE_LANGUAGES ON)
++    set(MUSE_MODULE_TOURS OFF)
++    set(MUSE_MODULE_EXTENSIONS ON)
++    set(MUSE_MODULE_AUDIO_EXPORT ON)
++    set(MUE_BUILD_BRAILLE_MODULE ON)
++
++    # Not possible in a browser tab
++    set(MUSE_MODULE_AUDIOPLUGINS OFF)
++    set(MUSE_MODULE_VST OFF)
++    set(MUSE_MODULE_MIDI OFF)
++    set(MUSE_MODULE_MIDIREMOTE OFF)
++    set(MUSE_MODULE_MULTIWINDOWS OFF)
++    set(MUSE_MODULE_AUTOBOT OFF)
++    set(MUE_BUILD_PRINT_MODULE OFF)
++    set(MUE_BUILD_CONVERTER_MODULE OFF)
++    set(MUE_ENABLE_CONSOLEAPP OFF)
++    set(MUE_ENABLE_SPLASHSCREEN OFF)
++    set(MUE_BUILD_IMPEXP_VIDEOEXPORT_MODULE OFF)
++
++    # Online services and promotions
++    set(MUSE_MODULE_NETWORK OFF)
++    set(MUSE_MODULE_CLOUD OFF)
++    set(MUSE_MODULE_LEARN OFF)
++    set(MUSE_MODULE_UPDATE OFF)
++    set(MUSE_MODULE_MUSESAMPLER OFF)
++    set(MUE_BUILD_MUSESOUNDS_MODULE OFF)
++    set(MUSE_MODULE_DIAGNOSTICS_CRASHPAD_CLIENT OFF)
++
++    set(MUE_INSTALL_SOUNDFONT OFF)
++endif()
++
+ ###########################################
+ # CONFIGURE: VTest
+ ###########################################
+diff --git a/buildscripts/cmake/SetupQt6.cmake b/buildscripts/cmake/SetupQt6.cmake
+index b4aa8aaa..4ed35d8c 100644
+--- a/buildscripts/cmake/SetupQt6.cmake
++++ b/buildscripts/cmake/SetupQt6.cmake
+@@ -82,7 +82,11 @@ if(QT_ADD_WEBSOCKET)
+ endif()
+ 
+ if (OS_IS_WASM)
+-    set(QT_WASM_EXTRA_EXPORTED_METHODS ccall)
++    if (MUSE_WEB_DESKTOP)
++        set(QT_WASM_EXTRA_EXPORTED_METHODS "ccall,IDBFS,ENV,addRunDependency,removeRunDependency")
++    else()
++        set(QT_WASM_EXTRA_EXPORTED_METHODS ccall)
++    endif()
+ endif()
+ 
+ find_package(Qt6 6.8 REQUIRED COMPONENTS ${qt_components})
+diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
+index f23ea28e..ffa72f71 100644
+--- a/src/CMakeLists.txt
++++ b/src/CMakeLists.txt
+@@ -93,7 +93,7 @@ if (MUE_BUILD_PROJECT_MODULE)
+ endif()
+ 
+ if (MUE_BUILD_APPSHELL_MODULE)
+-    if (MUE_CONFIGURATION_IS_APPWEB)
++    if (MUE_CONFIGURATION_IS_APPWEB AND NOT MUE_CONFIGURATION_IS_APPMININODE)
+         add_subdirectory(web/appshell)
+     else()
+         add_subdirectory(appshell)
+diff --git a/src/app/CMakeLists.txt b/src/app/CMakeLists.txt
+index 169be219..7fa30c74 100644
+--- a/src/app/CMakeLists.txt
++++ b/src/app/CMakeLists.txt
+@@ -304,6 +304,12 @@ if (CC_IS_EMCC)
+     include(exported_functions.cmake)
+     target_link_options(MuseScoreStudio PRIVATE ${EMCC_LINKER_FLAGS})
+     target_link_options(MuseScoreStudio PRIVATE ${EXPORTED_FUNCTIONS})
++    if (MUSE_WEB_DESKTOP)
++        target_link_options(MuseScoreStudio PRIVATE "-lidbfs.js")
++        # The gate's CSP allows no JavaScript eval: embind must not build functions from strings.
++        target_link_options(MuseScoreStudio PRIVATE "SHELL:-s DYNAMIC_EXECUTION=0")
++        set_target_properties(MuseScoreStudio PROPERTIES QT_WASM_INITIAL_MEMORY "256MB")
++    endif()
+ endif()
+ 
+ 
+diff --git a/src/app/app_config.h.in b/src/app/app_config.h.in
+index 3772a83f..019db3fc 100644
+--- a/src/app/app_config.h.in
++++ b/src/app/app_config.h.in
+@@ -5,6 +5,7 @@
+ #cmakedefine MUE_CONFIGURATION_IS_APPPORTABLE 1
+ #cmakedefine WIN_PORTABLE 1
+ #cmakedefine MUE_CONFIGURATION_IS_APPWEB 1
++#cmakedefine MUE_CONFIGURATION_IS_APPMININODE 1
+ #cmakedefine MUE_CONFIGURATION_IS_VTEST 1
+ #cmakedefine MUE_CONFIGURATION_IS_UTEST 1
+ 
+diff --git a/src/app/internal/guiapp.cpp b/src/app/internal/guiapp.cpp
+index a16388a7..dac0ac1c 100644
+--- a/src/app/internal/guiapp.cpp
++++ b/src/app/internal/guiapp.cpp
+@@ -405,7 +405,13 @@ muse::modularity::ContextPtr GuiApp::setupNewContext()
+     // Transparency will be removed after the page loads.
+     m_window = dynamic_cast<QQuickWindow*>(obj);
+     m_window->setOpacity(0.01);
++#ifdef MUSE_WEB_DESKTOP
++    //! In the browser the editor fills the page's area, without a window frame of its own.
++    m_window->setFlags(m_window->flags() | Qt::FramelessWindowHint);
++    m_window->showFullScreen();
++#else
+     m_window->setVisible(true);
++#endif
+ 
+     startupScenario()->runAfterSplashScreen();
+ 
+diff --git a/src/app/main.cpp b/src/app/main.cpp
+index 2ac78a89..6f35c38e 100644
+--- a/src/app/main.cpp
++++ b/src/app/main.cpp
+@@ -182,12 +182,14 @@ int main(int argc, char** argv)
+ 
+     app->setupNewContext();
+ 
++#if QT_CONFIG(ssl)
+     LOGI() << QString("SSL Info: supported: %1, build: %2, runtime: %3, active backend: %4, available backends: %5")
+         .arg(QSslSocket::supportsSsl())
+         .arg(QSslSocket::sslLibraryBuildVersionString())
+         .arg(QSslSocket::sslLibraryVersionString())
+         .arg(QSslSocket::activeBackend())
+         .arg(QSslSocket::availableBackends().join(", "));
++#endif
+ 
+     // ====================================================
+     // Run main loop
+diff --git a/src/appshell/internal/startupscenario.cpp b/src/appshell/internal/startupscenario.cpp
+index fad6a767..2b590cf9 100644
+--- a/src/appshell/internal/startupscenario.cpp
++++ b/src/appshell/internal/startupscenario.cpp
+@@ -297,6 +297,10 @@ void StartupScenario::showStartupDialogsIfNeed(StartupModeType modeType)
+ 
+ bool StartupScenario::shouldShowWelcomeDialog(StartupModeType modeType) const
+ {
++#ifdef MUSE_WEB_DESKTOP
++    UNUSED(modeType);
++    return false;
++#endif
+     if (!configuration()->welcomeDialogShowOnStartup()) {
+         return false;
+     }
+diff --git a/src/appshell/qml/MuseScore/AppShell/CMakeLists.txt b/src/appshell/qml/MuseScore/AppShell/CMakeLists.txt
+index 84f19f06..2f6dad64 100644
+--- a/src/appshell/qml/MuseScore/AppShell/CMakeLists.txt
++++ b/src/appshell/qml/MuseScore/AppShell/CMakeLists.txt
+@@ -123,7 +123,8 @@ elseif(OS_IS_WIN)
+             platform/win/AppTitleBar.qml
+             platform/win/Main.qml
+     )
+-elseif(OS_IS_LIN OR OS_IS_FREEBSD)
++elseif(OS_IS_LIN OR OS_IS_FREEBSD OR OS_IS_WASM)
++    # The browser build uses the Linux window (QML menu bar; guiapp.cpp loads "linux" there too).
+     qt_target_qml_sources(appshell_qml 
+         QML_FILES
+             platform/linux/Main.qml
+diff --git a/src/appshell/qml/MuseScore/AppShell/HomePage/HomeMenu.qml b/src/appshell/qml/MuseScore/AppShell/HomePage/HomeMenu.qml
+index 32d743d8..0766a6a3 100644
+--- a/src/appshell/qml/MuseScore/AppShell/HomePage/HomeMenu.qml
++++ b/src/appshell/qml/MuseScore/AppShell/HomePage/HomeMenu.qml
+@@ -61,23 +61,6 @@ Item {
+ 
+         spacing: 0
+ 
+-        AccountInfoButton {
+-            Layout.fillWidth: true
+-            Layout.preferredHeight: 60
+-            Layout.topMargin: 20
+-
+-            navigation.name: "AccountInfo"
+-            navigation.panel: navPanel
+-            navigation.row: 1
+-
+-            checked: root.currentPageName === "account"
+-            iconOnly: root.iconsOnly
+-
+-            onToggled: {
+-                root.selected("account")
+-            }
+-        }
+-
+         RadioButtonGroup {
+             id: radioButtonList
+ 
+@@ -89,9 +72,7 @@ Item {
+ 
+             model: [
+                 { "name": "scores", "title": qsTrc("appshell", "Scores"), "iconCode": IconCode.MUSIC_NOTES },
+-                { "name": "extensions", "title": qsTrc("appshell", "Plugins"), "iconCode":  IconCode.PLUGIN },
+-                { "name": "musesounds", "title": qsTrc("appshell", "MuseSounds"), "iconCode": IconCode.PLAY },
+-                { "name": "learn", "title": qsTrc("appshell", "Learn"), "iconCode":  IconCode.MORTAR_BOARD }
++                { "name": "extensions", "title": qsTrc("appshell", "Plugins"), "iconCode":  IconCode.PLUGIN }
+             ]
+ 
+             currentIndex: 0
+diff --git a/src/appshell/qml/MuseScore/AppShell/HomePage/PluginsPage.qml b/src/appshell/qml/MuseScore/AppShell/HomePage/PluginsPage.qml
+index 3db2c243..08724b69 100644
+--- a/src/appshell/qml/MuseScore/AppShell/HomePage/PluginsPage.qml
++++ b/src/appshell/qml/MuseScore/AppShell/HomePage/PluginsPage.qml
+@@ -145,21 +145,42 @@ FocusScope {
+             }
+         }
+ 
+-        FlatButton {
+-            id: reloadButton
+-
++        //! MiniNode: "Manage plugins…" (the page's Plugins panel) next to "Reload plugins".
++        Row {
+             anchors.right: parent.right
++            spacing: 12
++
++            FlatButton {
++                id: manageButton
++
++                //! MiniNode: the page's Plugins panel (add plugins for everyone, AI porting prompt).
++                text: qsTrc("action", "Manage plugins…")
++                icon: IconCode.PLUGIN
++                orientation: Qt.Horizontal
++
++                navigation.name: "PluginsManageButton"
++                navigation.panel: navTopPanel
++                navigation.order: 3
+ 
+-            text: qsTrc("extensions", "Reload plugins")
+-            icon: IconCode.UPDATE
+-            orientation: Qt.Horizontal
++                onClicked: {
++                    Qt.openUrlExternally("mininode:plugins")
++                }
++            }
++
++            FlatButton {
++                id: reloadButton
+ 
+-            navigation.name: "PluginsReloadButton"
+-            navigation.panel: navTopPanel
+-            navigation.order: 3
++                text: qsTrc("extensions", "Reload plugins")
++                icon: IconCode.UPDATE
++                orientation: Qt.Horizontal
+ 
+-            onClicked: {
+-                pluginsPage.reloadPlugins()
++                navigation.name: "PluginsReloadButton"
++                navigation.panel: navTopPanel
++                navigation.order: 4
++
++                onClicked: {
++                    pluginsPage.reloadPlugins()
++                }
+             }
+         }
+     }
+diff --git a/src/appshell/qml/MuseScore/AppShell/PublishPage/publishtoolbarmodel.cpp b/src/appshell/qml/MuseScore/AppShell/PublishPage/publishtoolbarmodel.cpp
+index d29381c3..59036d09 100644
+--- a/src/appshell/qml/MuseScore/AppShell/PublishPage/publishtoolbarmodel.cpp
++++ b/src/appshell/qml/MuseScore/AppShell/PublishPage/publishtoolbarmodel.cpp
+@@ -22,6 +22,8 @@
+ 
+ #include "publishtoolbarmodel.h"
+ 
++#include "muse_framework_config.h"
++
+ #include "uicomponents/qml/Muse/UiComponents/toolbaritem.h"
+ 
+ using namespace mu::appshell;
+@@ -45,8 +47,10 @@ void PublishToolBarModel::load()
+     };
+ 
+     addItem("print");
++#ifndef MUSE_WEB_DESKTOP
+     addItem("file-publish", muse::TranslatableString("project/save", "Share this score and its audio on MuseScore.com"));
+     addItem("file-share-audio", muse::TranslatableString("project/save", "Share the audio from this score on Audio.com"));
++#endif
+     addItem("file-export");
+ 
+     setItems(items);
+diff --git a/src/appshell/qml/MuseScore/AppShell/appmenumodel.cpp b/src/appshell/qml/MuseScore/AppShell/appmenumodel.cpp
+index 939c8162..1d44a144 100644
+--- a/src/appshell/qml/MuseScore/AppShell/appmenumodel.cpp
++++ b/src/appshell/qml/MuseScore/AppShell/appmenumodel.cpp
+@@ -204,19 +204,28 @@ MenuItem* AppMenuModel::makeFileMenu()
+         makeSeparator(),
+         makeMenuItem("file-save"),
+         makeMenuItem("file-save-as"),
++#ifndef MUSE_WEB_DESKTOP
+         makeMenuItem("file-save-to-cloud"),
++#endif
+         makeMenu(TranslatableString("appshell/menu/file", "Save o&ther"), makeSaveOtherSubItems()),
++#ifndef MUSE_WEB_DESKTOP
+         makeMenu(TranslatableString("appshell/menu/file", "Pu&blish online"), makePublishOnlineSubItems()),
++#endif
+         makeSeparator(),
++#ifndef MUSE_WEB_DESKTOP
+         makeMenuItem("file-convert-to-score"),
++#endif
+         makeMenuItem("file-export"),
+         makeSeparator(),
+         makeMenuItem("project-properties"),
+         makeMenuItem("parts", TranslatableString("action", "Parts…")),
+         makeSeparator(),
+         makeMenuItem("print"),
++#ifndef MUSE_WEB_DESKTOP
++        //! A browser tab is closed by the browser; quitting would only leave an empty page.
+         makeSeparator(),
+         makeMenuItem("quit", MenuItemRole::QuitRole)
++#endif
+     };
+ 
+     return makeMenu(TranslatableString("appshell/menu/file", "&File"), fileItems, "menu-file");
+diff --git a/src/braille/thirdparty/liblouis/liblouis/internal.h b/src/braille/thirdparty/liblouis/liblouis/internal.h
+index fb5b73fb..bc0d9434 100644
+--- a/src/braille/thirdparty/liblouis/liblouis/internal.h
++++ b/src/braille/thirdparty/liblouis/liblouis/internal.h
+@@ -32,6 +32,11 @@
+ #ifndef __LOUIS_H_
+ #define __LOUIS_H_
+ 
++#ifdef __EMSCRIPTEN__
++/* Before extern "C" (liblouis.h includes it there): it declares C++ templates. */
++#include <emscripten.h>
++#endif
++
+ #ifdef __cplusplus
+ extern "C" {
+ #endif /* __cplusplus */
+diff --git a/src/engraving/api/v1/util.cpp b/src/engraving/api/v1/util.cpp
+index a1135ad8..af2b7f83 100644
+--- a/src/engraving/api/v1/util.cpp
++++ b/src/engraving/api/v1/util.cpp
+@@ -270,6 +270,7 @@ int FileIO::modifiedTime()
+     return fileInfo.lastModified().toSecsSinceEpoch();
+ }
+ 
++#if QT_CONFIG(process)
+ void MsProcess::start(const QString& command)
+ {
+     QT_WARNING_PUSH;
+@@ -283,4 +284,5 @@ void MsProcess::startWithArgs(const QString& program, const QStringList& args)
+ {
+     QProcess::start(program, args, ReadWrite);
+ }
++#endif
+ }
+diff --git a/src/engraving/api/v1/util.h b/src/engraving/api/v1/util.h
+index 982d3d61..3f07c8fa 100644
+--- a/src/engraving/api/v1/util.h
++++ b/src/engraving/api/v1/util.h
+@@ -124,6 +124,7 @@ private:
+ ///   plugin to be platform dependant. \since MuseScore 3.2
+ //---------------------------------------------------------
+ 
++#if QT_CONFIG(process)
+ class MsProcess : public QProcess
+ {
+     Q_OBJECT
+@@ -147,4 +148,21 @@ public slots:
+     /// --
+     Q_INVOKABLE QByteArray readAllStandardOutput() { return QProcess::readAllStandardOutput(); }
+ };
++#else
++//! Without processes (WebAssembly): plugins see the same object, which never starts anything.
++class MsProcess : public QObject
++{
++    Q_OBJECT
++
++public:
++    MsProcess(QObject* parent = 0)
++        : QObject(parent) {}
++
++public slots:
++    Q_INVOKABLE void start(const QString&) {}
++    Q_INVOKABLE void startWithArgs(const QString&, const QStringList&) {}
++    Q_INVOKABLE bool waitForFinished(int = 30000) { return false; }
++    Q_INVOKABLE QByteArray readAllStandardOutput() { return QByteArray(); }
++};
++#endif
+ }
+diff --git a/src/framework/audio/common/audiotypes.h b/src/framework/audio/common/audiotypes.h
+index 1ba7d772..d286a27a 100644
+--- a/src/framework/audio/common/audiotypes.h
++++ b/src/framework/audio/common/audiotypes.h
+@@ -182,12 +182,12 @@ enum class AudioResourceType {
+     AudioUnit,
+ };
+ 
+-static const std::map<AudioResourceType, QString> RESOURCE_TYPE_MAP = {
+-    { AudioResourceType::Undefined, "undefined" },
+-    { AudioResourceType::MuseSamplerSoundPack, "muse_sampler_sound_pack" },
+-    { AudioResourceType::FluidSoundfont, "fluid_soundfont" },
+-    { AudioResourceType::VstPlugin, "vst_plugin" },
+-    { AudioResourceType::MusePlugin, "muse_plugin" },
++static const std::map<AudioResourceType, String> RESOURCE_TYPE_MAP = {
++    { AudioResourceType::Undefined, u"undefined" },
++    { AudioResourceType::MuseSamplerSoundPack, u"muse_sampler_sound_pack" },
++    { AudioResourceType::FluidSoundfont, u"fluid_soundfont" },
++    { AudioResourceType::VstPlugin, u"vst_plugin" },
++    { AudioResourceType::MusePlugin, u"muse_plugin" },
+ };
+ 
+ struct AudioResourceMeta {
+diff --git a/src/framework/audio/driver/platform/web/webaudiodriver.cpp b/src/framework/audio/driver/platform/web/webaudiodriver.cpp
+index be6fc8db..4c3f6bbd 100644
+--- a/src/framework/audio/driver/platform/web/webaudiodriver.cpp
++++ b/src/framework/audio/driver/platform/web/webaudiodriver.cpp
+@@ -94,72 +94,27 @@ async::Channel<WebAudioDriver::Spec> WebAudioDriver::activeSpecChanged() const
+     return m_activeSpecChanged;
+ }
+ 
+-bool WebAudioDriver::setOutputDeviceBufferSize(unsigned int)
++std::vector<samples_t> WebAudioDriver::availableOutputDeviceBufferSizes() const
+ {
+-    NOT_SUPPORTED;
+-    return false;
++    return { static_cast<samples_t>(m_activeSpec.output.samplesPerChannel) };
+ }
+ 
+-async::Notification WebAudioDriver::outputDeviceBufferSizeChanged() const
++std::vector<sample_rate_t> WebAudioDriver::availableOutputDeviceSampleRates() const
+ {
+-    static async::Notification n;
+-    return n;
+-}
+-
+-bool WebAudioDriver::setOutputDeviceSampleRate(unsigned int)
+-{
+-    NOT_SUPPORTED;
+-    return false;
+-}
+-
+-async::Notification WebAudioDriver::outputDeviceSampleRateChanged() const
+-{
+-    static async::Notification n;
+-    return n;
+-}
+-
+-std::vector<unsigned int> WebAudioDriver::availableOutputDeviceBufferSizes() const
+-{
+-    std::vector<unsigned int> sizes;
+-    sizes.push_back(m_activeSpec.output.samplesPerChannel);
+-    return sizes;
+-}
+-
+-std::vector<unsigned int> WebAudioDriver::availableOutputDeviceSampleRates() const
+-{
+-    std::vector<unsigned int> sizes;
+-    sizes.push_back(m_activeSpec.output.sampleRate);
+-    return sizes;
++    return { static_cast<sample_rate_t>(m_activeSpec.output.sampleRate) };
+ }
+ 
+-AudioDeviceID WebAudioDriver::outputDevice() const
++AudioDeviceID WebAudioDriver::defaultDevice() const
+ {
+-    static AudioDeviceID id("default");
++    static const AudioDeviceID id("default");
+     return id;
+ }
+ 
+-bool WebAudioDriver::selectOutputDevice(const AudioDeviceID&)
+-{
+-    NOT_SUPPORTED;
+-    return false;
+-}
+-
+-bool WebAudioDriver::resetToDefaultOutputDevice()
+-{
+-    return true;
+-}
+-
+-async::Notification WebAudioDriver::outputDeviceChanged() const
+-{
+-    static async::Notification n;
+-    return n;
+-}
+-
+ AudioDeviceList WebAudioDriver::availableOutputDevices() const
+ {
+     AudioDeviceList list;
+     AudioDevice d;
+-    d.id = outputDevice();
++    d.id = defaultDevice();
+     d.name = d.id;
+     list.push_back(d);
+     return list;
+diff --git a/src/framework/audio/driver/platform/web/webaudiodriver.h b/src/framework/audio/driver/platform/web/webaudiodriver.h
+index e05cfa22..f2874a9a 100644
+--- a/src/framework/audio/driver/platform/web/webaudiodriver.h
++++ b/src/framework/audio/driver/platform/web/webaudiodriver.h
+@@ -35,6 +35,7 @@ public:
+     void init() override;
+ 
+     std::string name() const override;
++    AudioDeviceID defaultDevice() const override;
+     bool open(const Spec& spec, Spec* activeSpec) override;
+     void close() override;
+     bool isOpened() const override;
+@@ -42,23 +43,14 @@ public:
+     const Spec& activeSpec() const override;
+     async::Channel<Spec> activeSpecChanged() const override;
+ 
+-    bool setOutputDeviceBufferSize(unsigned int bufferSize) override;
+-    async::Notification outputDeviceBufferSizeChanged() const override;
+-    bool setOutputDeviceSampleRate(unsigned int sampleRate) override;
+-    async::Notification outputDeviceSampleRateChanged() const override;
+-    std::vector<unsigned int> availableOutputDeviceBufferSizes() const override;
+-    std::vector<unsigned int> availableOutputDeviceSampleRates() const override;
+-
+-    AudioDeviceID outputDevice() const override;
+-    bool selectOutputDevice(const AudioDeviceID& id) override;
+-    bool resetToDefaultOutputDevice() override;
+-    async::Notification outputDeviceChanged() const override;
++    std::vector<samples_t> availableOutputDeviceBufferSizes() const override;
++    std::vector<sample_rate_t> availableOutputDeviceSampleRates() const override;
+ 
+     AudioDeviceList availableOutputDevices() const override;
+     async::Notification availableOutputDevicesChanged() const override;
+ 
+-    void resume() override;
+-    void suspend() override;
++    void resume();
++    void suspend();
+ 
+ private:
+ 
+diff --git a/src/framework/audio/engine/internal/synthesizers/soundfontrepository.h b/src/framework/audio/engine/internal/synthesizers/soundfontrepository.h
+index f228a29c..e7b039ff 100644
+--- a/src/framework/audio/engine/internal/synthesizers/soundfontrepository.h
++++ b/src/framework/audio/engine/internal/synthesizers/soundfontrepository.h
+@@ -22,10 +22,11 @@
+ 
+ #pragma once
+ 
++#include "global/async/asyncable.h"
+ #include "audio/engine/isoundfontrepository.h"
+ 
+ namespace muse::audio::synth {
+-class SoundFontRepository : public ISoundFontRepository
++class SoundFontRepository : public ISoundFontRepository, public async::Asyncable
+ {
+ public:
+     void loadSoundFonts(const std::vector<SoundFontUri>& uris) override;
+diff --git a/src/framework/audio/engine/platform/web/networksfloader.cpp b/src/framework/audio/engine/platform/web/networksfloader.cpp
+index 642da164..c3c8af19 100644
+--- a/src/framework/audio/engine/platform/web/networksfloader.cpp
++++ b/src/framework/audio/engine/platform/web/networksfloader.cpp
+@@ -73,7 +73,9 @@ async::Promise<RetVal<ByteArray> > NetworkSFLoader::load(const Uri& uri)
+             delete h;
+         };
+ 
+-        std::string str = h->uri.toString();
++        //! A blob: address (the SoundFont the page assembled from its parts) comes as
++        //! "blob://http://…", as Uri knows only scheme://path; the browser needs "blob:http://…".
++        std::string str = h->uri.scheme() == "blob" ? "blob:" + h->uri.path() : h->uri.toString();
+         emscripten_fetch(&attr, str.c_str());
+         LOGDA() << "start download sf: " << h->uri;
+ 
+diff --git a/src/framework/audio/main/audiomodule.cpp b/src/framework/audio/main/audiomodule.cpp
+index 3469ed4f..17bfa285 100644
+--- a/src/framework/audio/main/audiomodule.cpp
++++ b/src/framework/audio/main/audiomodule.cpp
+@@ -71,7 +71,7 @@ void AudioModule::registerExports()
+ 
+ #ifdef Q_OS_WASM
+     m_rpcChannel = std::make_shared<rpc::WebRpcChannel>();
+-    m_soundFontController = std::make_shared<WebSoundFontController>();
++    m_soundFontController = std::make_shared<WebSoundFontController>(iocContext());
+ #else
+     m_rpcChannel = std::make_shared<rpc::GeneralRpcChannel>();
+     m_soundFontController = std::make_shared<GeneralSoundFontController>(iocContext());
+diff --git a/src/framework/audio/main/platform/web/websoundfontcontroller.h b/src/framework/audio/main/platform/web/websoundfontcontroller.h
+index 6a90a080..975124a2 100644
+--- a/src/framework/audio/main/platform/web/websoundfontcontroller.h
++++ b/src/framework/audio/main/platform/web/websoundfontcontroller.h
+@@ -29,12 +29,13 @@
+ #include "audio/common/rpc/irpcchannel.h"
+ 
+ namespace muse::audio {
+-class WebSoundFontController : public ISoundFontController, public async::Asyncable
++class WebSoundFontController : public ISoundFontController, public async::Asyncable, public Contextable
+ {
+-    ContextInject<rpc::IRpcChannel> channel;
++    ContextInject<rpc::IRpcChannel> channel = { this };
+ 
+ public:
+-    WebSoundFontController() = default;
++    WebSoundFontController(const modularity::ContextPtr& iocCtx)
++        : Contextable(iocCtx) {}
+ 
+     void loadSoundFonts() override;
+ 
+diff --git a/src/framework/cmake/MuseDeclareOptions.cmake b/src/framework/cmake/MuseDeclareOptions.cmake
+index 960935ed..03ab9613 100644
+--- a/src/framework/cmake/MuseDeclareOptions.cmake
++++ b/src/framework/cmake/MuseDeclareOptions.cmake
+@@ -96,6 +96,7 @@ declare_muse_module_opt(WORKSPACE ON)
+ option(MUSE_QT_SUPPORT "Build with Qt support" ON)
+ option(MUSE_THREADS_SUPPORT "Build with threads support" ON)
+ option(MUSE_CONFIGURATION_IS_WEB "Configuration is web" OFF)
++option(MUSE_WEB_DESKTOP "Web build of the desktop application: real file system, persisted user data" OFF)
+ option(MUSE_COMPILE_BUILD_64 "Build 64 bit version" ON)
+ option(MUSE_COMPILE_ASAN "Enable Address Sanitizer" OFF)
+ option(MUSE_COMPILE_USE_PCH "Use precompiled headers." ON)
+diff --git a/src/framework/cmake/muse_framework_config.h.in b/src/framework/cmake/muse_framework_config.h.in
+index 1d3657f0..87d8a0cb 100644
+--- a/src/framework/cmake/muse_framework_config.h.in
++++ b/src/framework/cmake/muse_framework_config.h.in
+@@ -39,6 +39,7 @@
+ /* Enviropment                                    */
+ /* ============================================== */
+ #cmakedefine MUSE_CONFIGURATION_IS_WEB 1
++#cmakedefine MUSE_WEB_DESKTOP 1
+ #cmakedefine MUSE_THREADS_SUPPORT 1
+ #cmakedefine MUSE_MULTICONTEXT_WIP 1
+ 
+diff --git a/src/framework/extensions/internal/extensionsconfiguration.cpp b/src/framework/extensions/internal/extensionsconfiguration.cpp
+index 2a09f9c1..807b0ff3 100644
+--- a/src/framework/extensions/internal/extensionsconfiguration.cpp
++++ b/src/framework/extensions/internal/extensionsconfiguration.cpp
+@@ -21,6 +21,8 @@
+  */
+ #include "extensionsconfiguration.h"
+ 
++#include "muse_framework_config.h"
++
+ #include "global/settings.h"
+ #include "global/serialization/json.h"
+ #include "global/io/file.h"
+@@ -39,7 +41,12 @@ static const std::string EXTENSIONS_RESOURCE_NAME("EXTENSIONS");
+ 
+ void ExtensionsConfiguration::init()
+ {
++#ifdef MUSE_WEB_DESKTOP
++    //! In the browser the page puts the plugins everyone shares here before the editor starts.
++    settings()->setDefaultValue(USER_PLUGINS_PATH, Val(std::string("/files/plugins")));
++#else
+     settings()->setDefaultValue(USER_PLUGINS_PATH, Val(globalConfiguration()->userDataPath() + "/Plugins"));
++#endif
+     settings()->valueChanged(USER_PLUGINS_PATH).onReceive(nullptr, [this](const Val& val) {
+         m_pluginsUserPathChanged.send(val.toString());
+     });
+diff --git a/src/framework/global/CMakeLists.txt b/src/framework/global/CMakeLists.txt
+index 4b5dc769..52451a14 100644
+--- a/src/framework/global/CMakeLists.txt
++++ b/src/framework/global/CMakeLists.txt
+@@ -235,13 +235,22 @@ else()
+ 
+     include(GetPlatformInfo)
+ 
+-    if (OS_IS_WASM)
++    if (OS_IS_WASM AND NOT MUSE_WEB_DESKTOP)
+         target_sources(muse_global PRIVATE
+             io/internal/memfilesystem.cpp
+             io/internal/memfilesystem.h
+             internal/platform/web/webinteractive.cpp
+             internal/platform/web/webinteractive.h
+         )
++    elseif (OS_IS_WASM)
++        # Desktop edition: the Emscripten file system, persisted by the page (IDBFS).
++        target_sources(muse_global PRIVATE
++            io/internal/filesystem.cpp
++            io/internal/filesystem.h
++            internal/platform/web/webinteractive.cpp
++            internal/platform/web/webinteractive.h
++            internal/platform/web/webfiles.h
++        )
+     else()
+         target_sources(muse_global PRIVATE
+             io/internal/filesystem.cpp
+diff --git a/src/framework/global/globalmodule.cpp b/src/framework/global/globalmodule.cpp
+index 27688432..8d3b9ef8 100644
+--- a/src/framework/global/globalmodule.cpp
++++ b/src/framework/global/globalmodule.cpp
+@@ -61,7 +61,7 @@
+ #endif
+ #endif
+ 
+-#ifdef Q_OS_WASM
++#if defined(Q_OS_WASM) && !defined(MUSE_WEB_DESKTOP)
+ #include "io/internal/memfilesystem.h"
+ #else
+ #include "io/internal/filesystem.h"
+@@ -119,7 +119,7 @@ void GlobalModule::registerExports()
+     ioc()->registerExport<ITickerProvider>(moduleName(), m_tickerProvider);
+     ioc()->registerExport<api::IApiRegister>(moduleName(), new api::ApiRegister());
+ 
+-#ifdef Q_OS_WASM
++#if defined(Q_OS_WASM) && !defined(MUSE_WEB_DESKTOP)
+     ioc()->registerExport<IFileSystem>(moduleName(), new MemFileSystem());
+ #else
+     ioc()->registerExport<IFileSystem>(moduleName(), new FileSystem());
+diff --git a/src/framework/global/internal/baseapplication.cpp b/src/framework/global/internal/baseapplication.cpp
+index a8b4110d..79b55ff8 100644
+--- a/src/framework/global/internal/baseapplication.cpp
++++ b/src/framework/global/internal/baseapplication.cpp
+@@ -19,6 +19,10 @@
+  * You should have received a copy of the GNU General Public License
+  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+  */
++#include "muse_framework_config.h"
++#ifdef MUSE_WEB_DESKTOP
++#include <emscripten/val.h>
++#endif
+ #include "baseapplication.h"
+ 
+ #include "types/version.h"
+@@ -159,6 +163,11 @@ Qt::KeyboardModifiers BaseApplication::keyboardModifiers() const
+ 
+ void BaseApplication::restart()
+ {
++#ifdef MUSE_WEB_DESKTOP
++    //! In the browser a restart is a reload: the page stores the user data, then reloads.
++    emscripten::val::module_property("mnRestart")();
++    return;
++#endif
+     m_finishMode = FinishMode::Restart;
+     QCoreApplication::exit();
+ }
+diff --git a/src/framework/global/internal/globalconfiguration.cpp b/src/framework/global/internal/globalconfiguration.cpp
+index 20440fe7..ae165d4d 100644
+--- a/src/framework/global/internal/globalconfiguration.cpp
++++ b/src/framework/global/internal/globalconfiguration.cpp
+@@ -75,7 +75,7 @@ QString GlobalConfiguration::resolveAppDataPath() const
+     QDir dir(QCoreApplication::applicationDirPath() + QString("/../Resources"));
+     return dir.absolutePath() + "/";
+ #elif defined(Q_OS_WASM)
+-    return "/files/share";
++    return "/files/share/"; // with a slash, like the other platforms (callers append "tables" etc.)
+ #else
+     // Try relative path (needed for portable AppImage and non-standard installations)
+     QDir dir(QCoreApplication::applicationDirPath() + QString("/../share/" MUSE_APP_INSTALL_NAME));
+diff --git a/src/framework/global/internal/platform/web/webfiles.h b/src/framework/global/internal/platform/web/webfiles.h
+new file mode 100644
+index 00000000..dbf381f1
+--- /dev/null
++++ b/src/framework/global/internal/platform/web/webfiles.h
+@@ -0,0 +1,31 @@
++/*
++ * SPDX-License-Identifier: GPL-3.0-only
++ * MuseScore-Studio-CLA-applies
++ *
++ * MuseScore Studio
++ * Music Composition & Notation
++ *
++ * Copyright (C) 2026 MuseScore Limited and others
++ *
++ * This program is free software: you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 3 as
++ * published by the Free Software Foundation.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
++ */
++#pragma once
++
++#include "global/io/path.h"
++
++namespace muse::web {
++//! Desktop edition in the browser: asks the page to put a file the person keeps outside the
++//! editor (e.g. a score in their MiniNode files, from the recent list) at `path`, and waits.
++//! Returns whether the file is there now.
++bool fetchFile(const io::path_t& path);
++}
+diff --git a/src/framework/global/internal/platform/web/webinteractive.cpp b/src/framework/global/internal/platform/web/webinteractive.cpp
+index e77e195f..74a880f5 100644
+--- a/src/framework/global/internal/platform/web/webinteractive.cpp
++++ b/src/framework/global/internal/platform/web/webinteractive.cpp
+@@ -25,7 +25,15 @@
+ #include <emscripten/bind.h>
+ #endif
+ 
++#include "muse_framework_config.h"
++
++#if defined(Q_OS_WASM) && defined(MUSE_WEB_DESKTOP)
++#include <QEventLoop>
++#include <emscripten/val.h>
++#endif
++
+ #include "global/io/file.h"
++#include "webfiles.h"
+ 
+ #include "log.h"
+ 
+@@ -85,6 +93,90 @@ EMSCRIPTEN_BINDINGS(WebInteractive) {
+ }
+ #endif
+ 
++#if defined(Q_OS_WASM) && defined(MUSE_WEB_DESKTOP)
++//! Desktop edition: the page shows the file dialogs (the person's MiniNode files or the device,
++//! see Module.mnFileDialog in the page) and answers with paths in the Emscripten file system.
++//! A file to open is already written there; a path to save to is watched by the page, which hands
++//! every file written below it to the chosen place. A nested event loop waits for the answer (JSPI).
++namespace {
++struct SyncDialog {
++    QEventLoop* loop = nullptr;
++    bool done = false;
++    std::vector<std::string> paths;
++};
++
++SyncDialog* g_syncDialog = nullptr;
++
++void onSyncDialogDone(emscripten::val paths)
++{
++    if (!g_syncDialog) {
++        return;
++    }
++
++    if (paths.isArray()) {
++        const unsigned count = paths["length"].as<unsigned>();
++        for (unsigned i = 0; i < count; ++i) {
++            g_syncDialog->paths.push_back(paths[i].as<std::string>());
++        }
++    }
++
++    g_syncDialog->done = true;
++    if (g_syncDialog->loop) {
++        g_syncDialog->loop->quit();
++    }
++}
++
++emscripten::val toJsArray(const std::vector<std::string>& list)
++{
++    emscripten::val array = emscripten::val::array();
++    for (const std::string& item : list) {
++        array.call<void>("push", item);
++    }
++    return array;
++}
++
++std::vector<std::string> runSyncDialog(const std::string& kind, const std::string& title, const io::path_t& path,
++                                       const std::vector<std::string>& filter, bool multiple)
++{
++    IF_ASSERT_FAILED(!g_syncDialog) {
++        LOGE() << "a file dialog is already open";
++        return {};
++    }
++
++    SyncDialog dialog;
++    QEventLoop loop;
++    dialog.loop = &loop;
++    g_syncDialog = &dialog;
++
++    emscripten::val options = emscripten::val::object();
++    options.set("kind", kind);
++    options.set("title", title);
++    options.set("path", path.toStdString());
++    options.set("filter", toJsArray(filter));
++    options.set("multiple", multiple);
++
++    emscripten::val::module_property("mnFileDialog")(options, emscripten::val::module_property("onSyncDialogDone"));
++
++    if (!dialog.done) {
++        loop.exec();
++    }
++
++    g_syncDialog = nullptr;
++    return dialog.paths;
++}
++}
++
++EMSCRIPTEN_BINDINGS(WebInteractiveSync) {
++    emscripten::function("onSyncDialogDone", &onSyncDialogDone);
++}
++
++bool muse::web::fetchFile(const io::path_t& path)
++{
++    std::vector<std::string> paths = runSyncDialog("fetch", std::string(), path, {}, false);
++    return !paths.empty() && io::File::exists(path);
++}
++#endif
++
+ WebInteractive::WebInteractive(std::shared_ptr<muse::IInteractive> origin)
+     : m_origin(origin)
+ {
+@@ -159,7 +251,15 @@ void WebInteractive::showProgress(const std::string& title, Progress progress)
+ async::Promise<io::path_t> WebInteractive::selectOpeningFile(const std::string& title, const io::path_t& dir,
+                                                              const std::vector<std::string>& filter)
+ {
+-#ifdef Q_OS_WASM
++#if defined(Q_OS_WASM) && defined(MUSE_WEB_DESKTOP)
++    return async::make_promise<io::path_t>([this, title, dir, filter](auto resolve, auto reject) {
++        io::path_t path = selectOpeningFileSync(title, dir, filter);
++        if (path.empty()) {
++            return reject((int)Ret::Code::Cancel, "Cancel");
++        }
++        return resolve(path);
++    }, async::PromiseType::AsyncByBody);
++#elif defined(Q_OS_WASM)
+     return async::make_promise<io::path_t>([title, dir, filter](auto resolve, auto reject) {
+         IF_ASSERT_FAILED(!g_fileOpenData.callback) {
+             LOGE() << "Opening file already open";
+@@ -201,7 +301,11 @@ async::Promise<io::path_t> WebInteractive::selectOpeningFile(const std::string&
+ io::path_t WebInteractive::selectOpeningFileSync(const std::string& title, const io::path_t& dir, const std::vector<std::string>& filter,
+                                                  const int options)
+ {
+-#ifdef Q_OS_WASM
++#if defined(Q_OS_WASM) && defined(MUSE_WEB_DESKTOP)
++    UNUSED(options);
++    std::vector<std::string> paths = runSyncDialog("open", title, dir, filter, false);
++    return paths.empty() ? io::path_t() : io::path_t(paths.front());
++#elif defined(Q_OS_WASM)
+     UNUSED(title);
+     UNUSED(dir);
+     UNUSED(filter);
+@@ -216,7 +320,14 @@ io::path_t WebInteractive::selectOpeningFileSync(const std::string& title, const
+ io::paths_t WebInteractive::selectOpeningFilesSync(const std::string& title, const io::path_t& dir, const std::vector<std::string>& filter,
+                                                    const int options)
+ {
+-#ifdef Q_OS_WASM
++#if defined(Q_OS_WASM) && defined(MUSE_WEB_DESKTOP)
++    UNUSED(options);
++    io::paths_t result;
++    for (const std::string& path : runSyncDialog("open", title, dir, filter, true)) {
++        result.push_back(io::path_t(path));
++    }
++    return result;
++#elif defined(Q_OS_WASM)
+     UNUSED(title);
+     UNUSED(dir);
+     UNUSED(filter);
+@@ -231,7 +342,11 @@ io::paths_t WebInteractive::selectOpeningFilesSync(const std::string& title, con
+ io::path_t WebInteractive::selectSavingFileSync(const std::string& title, const io::path_t& dir, const std::vector<std::string>& filter,
+                                                 bool confirmOverwrite)
+ {
+-#ifdef Q_OS_WASM
++#if defined(Q_OS_WASM) && defined(MUSE_WEB_DESKTOP)
++    UNUSED(confirmOverwrite); // the page's dialog asks before it replaces a file
++    std::vector<std::string> paths = runSyncDialog("save", title, dir, filter, false);
++    return paths.empty() ? io::path_t() : io::path_t(paths.front());
++#elif defined(Q_OS_WASM)
+     UNUSED(title);
+     UNUSED(dir);
+     UNUSED(filter);
+@@ -309,19 +424,24 @@ void WebInteractive::raise(const UriQuery& uri)
+     m_origin->raise(uri);
+ }
+ 
+-void WebInteractive::close(const UriQuery& uri)
++async::Promise<Ret> WebInteractive::close(const UriQuery& uri)
++{
++    return m_origin->close(uri);
++}
++
++async::Promise<Ret> WebInteractive::close(const Uri& uri)
+ {
+-    m_origin->close(uri);
++    return m_origin->close(uri);
+ }
+ 
+-void WebInteractive::close(const Uri& uri)
++Ret WebInteractive::closeSync(const UriQuery& uri)
+ {
+-    m_origin->close(uri);
++    return m_origin->closeSync(uri);
+ }
+ 
+-void WebInteractive::closeAllDialogs()
++Ret WebInteractive::closeAllDialogsSync()
+ {
+-    m_origin->closeAllDialogs();
++    return m_origin->closeAllDialogsSync();
+ }
+ 
+ ValCh<Uri> WebInteractive::currentUri() const
+diff --git a/src/framework/global/internal/platform/web/webinteractive.h b/src/framework/global/internal/platform/web/webinteractive.h
+index 25f0be37..cbe4da85 100644
+--- a/src/framework/global/internal/platform/web/webinteractive.h
++++ b/src/framework/global/internal/platform/web/webinteractive.h
+@@ -96,9 +96,10 @@ public:
+ 
+     void raise(const muse::UriQuery& uri) override;
+ 
+-    void close(const muse::UriQuery& uri) override;
+-    void close(const muse::Uri& uri) override;
+-    void closeAllDialogs() override;
++    muse::async::Promise<muse::Ret> close(const muse::UriQuery& uri) override;
++    muse::async::Promise<muse::Ret> close(const muse::Uri& uri) override;
++    muse::Ret closeSync(const muse::UriQuery& uri) override;
++    muse::Ret closeAllDialogsSync() override;
+ 
+     muse::ValCh<muse::Uri> currentUri() const override;
+     muse::RetVal<bool> isCurrentUriDialog() const override;
+diff --git a/src/framework/global/settings.cpp b/src/framework/global/settings.cpp
+index 9aaded3d..0a1f8eb9 100644
+--- a/src/framework/global/settings.cpp
++++ b/src/framework/global/settings.cpp
+@@ -51,6 +51,10 @@ Settings::Settings()
+ #ifdef WIN_PORTABLE
+     QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, dataPath());
+     QSettings::setPath(QSettings::IniFormat, QSettings::SystemScope, dataPath());
++#elif defined(MUSE_WEB_DESKTOP)
++    //! In the browser the settings live with the rest of the person's data, which the page keeps
++    //! (IndexedDB) and takes to their other browsers.
++    QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, QStringLiteral("/files/data/settings"));
+ #endif
+ 
+ #ifndef Q_OS_MAC
+diff --git a/src/framework/global/settings.h b/src/framework/global/settings.h
+index cee128fc..6b5ce848 100644
+--- a/src/framework/global/settings.h
++++ b/src/framework/global/settings.h
+@@ -122,7 +122,9 @@ private:
+     Items readItems() const;
+     void writeValue(const Key& key, const Val& value);
+ 
++#ifndef NO_QT_SUPPORT
+     QString dataPath() const;
++#endif
+ 
+     QSettings* m_settings = nullptr;
+     mutable Items m_items;
+diff --git a/src/framework/languages/internal/languagesservice.cpp b/src/framework/languages/internal/languagesservice.cpp
+index 14cbf53f..8c6f292c 100644
+--- a/src/framework/languages/internal/languagesservice.cpp
++++ b/src/framework/languages/internal/languagesservice.cpp
+@@ -32,6 +32,7 @@
+ #include <QTranslator>
+ 
+ #include "languageserrors.h"
++#include "muse_framework_config.h"
+ 
+ #include "multiwindows/resourcelockguard.h"
+ 
+@@ -240,7 +241,17 @@ QString LanguagesService::effectiveLanguageCode(QString languageCode) const
+     };
+ 
+     if (languageCode.isEmpty() || languageCode == SYSTEM_LANGUAGE_CODE) {
++#ifdef MUSE_WEB_DESKTOP
++        //! The page passes the language the person chose in their MiniNode account; it comes
++        //! before the browser's languages.
++        QStringList systemLanguages = QLocale::system().uiLanguages();
++        const QString pageLanguage = qEnvironmentVariable("MININODE_LANGUAGE");
++        if (!pageLanguage.isEmpty()) {
++            systemLanguages.prepend(pageLanguage);
++        }
++#else
+         const QStringList systemLanguages = QLocale::system().uiLanguages();
++#endif
+         LOGI() << "System languages: " << systemLanguages;
+ 
+         for (QString code : systemLanguages) {
+diff --git a/src/framework/uicomponents/qml/Muse/GraphicalEffects/CMakeLists.txt b/src/framework/uicomponents/qml/Muse/GraphicalEffects/CMakeLists.txt
+index 8a579c71..c5b0433b 100644
+--- a/src/framework/uicomponents/qml/Muse/GraphicalEffects/CMakeLists.txt
++++ b/src/framework/uicomponents/qml/Muse/GraphicalEffects/CMakeLists.txt
+@@ -36,6 +36,9 @@ fixup_qml_module_dependencies(muse_graphicaleffects_qml)
+ qt_add_shaders(muse_graphicaleffects_qml muse_graphicaleffects_qml_shaders
+     PREFIX
+         "/qt/qml/Muse/GraphicalEffects"
++    # 300 es as well: WebGL 2 links Qt's 300 es vertex shaders with this fragment shader.
++    GLSL
++        "100es,120,150,300es"
+     FILES
+         "shaders/roundcorners.frag"
+ )
+diff --git a/src/notation/internal/notationinteraction.cpp b/src/notation/internal/notationinteraction.cpp
+index a84e33ae..349aef34 100644
+--- a/src/notation/internal/notationinteraction.cpp
++++ b/src/notation/internal/notationinteraction.cpp
+@@ -21,6 +21,8 @@
+  */
+ #include "notationinteraction.h"
+ 
++#include "muse_framework_config.h"
++
+ #include "log.h"
+ 
+ #include <memory>
+@@ -2249,7 +2251,7 @@ bool NotationInteraction::selectInstrument(mu::engraving::InstrumentChange* inst
+         return false;
+     }
+ 
+-#ifdef MUE_CONFIGURATION_IS_APPWEB
++#if defined(MUE_CONFIGURATION_IS_APPWEB) && !defined(MUSE_WEB_DESKTOP)
+     interactive()->info("", muse::trc("notation", "Sorry, instrument change on the web is not supported at this time."));
+     return false;
+ #else
+diff --git a/src/project/internal/convertfiletoscoreservice.cpp b/src/project/internal/convertfiletoscoreservice.cpp
+index 6aec3ed8..4c408531 100644
+--- a/src/project/internal/convertfiletoscoreservice.cpp
++++ b/src/project/internal/convertfiletoscoreservice.cpp
+@@ -120,6 +120,11 @@ void ConvertFileToScoreService::init()
+ {
+     TRACEFUNC;
+ 
++    //! Converting files to scores is a MuseScore.com service; without the cloud module there is none.
++    if (!museScoreComService()) {
++        return;
++    }
++
+     m_timer.setInterval(MIN_RETRY_INTERVAL_MS); // poll once a minute
+ 
+     QObject::connect(&m_timer, &QTimer::timeout, [this]() { poll(); });
+diff --git a/src/project/internal/opensaveprojectscenario.cpp b/src/project/internal/opensaveprojectscenario.cpp
+index ec9a1a79..e97d030f 100644
+--- a/src/project/internal/opensaveprojectscenario.cpp
++++ b/src/project/internal/opensaveprojectscenario.cpp
+@@ -22,6 +22,8 @@
+ 
+ #include "opensaveprojectscenario.h"
+ 
++#include "muse_framework_config.h"
++
+ #include "cloud/clouderrors.h"
+ #include "cloud/qml/Muse/Cloud/enums.h"
+ #include "engraving/infrastructure/mscio.h"
+@@ -140,6 +142,11 @@ RetVal<muse::io::path_t> OpenSaveProjectScenario::askLocalPath(INotationProjectP
+ 
+ RetVal<SaveLocationType> OpenSaveProjectScenario::saveLocationType() const
+ {
++#ifdef MUSE_WEB_DESKTOP
++    //! No MuseScore.com cloud here: never ask "cloud or this computer"; the page's own dialog
++    //! offers the person's MiniNode files or the device.
++    return RetVal<SaveLocationType>::make_ok(SaveLocationType::Local);
++#endif
+     bool shouldAsk = configuration()->shouldAskSaveLocationType();
+     SaveLocationType lastUsed = configuration()->lastUsedSaveLocationType();
+     if (!shouldAsk && lastUsed != SaveLocationType::Undefined) {
+diff --git a/src/project/internal/projectactionscontroller.cpp b/src/project/internal/projectactionscontroller.cpp
+index 4eb13888..06d53bfb 100644
+--- a/src/project/internal/projectactionscontroller.cpp
++++ b/src/project/internal/projectactionscontroller.cpp
+@@ -21,6 +21,12 @@
+  */
+ #include "projectactionscontroller.h"
+ 
++#include "muse_framework_config.h"
++
++#ifdef MUSE_WEB_DESKTOP
++#include "global/internal/platform/web/webfiles.h"
++#endif
++
+ #include <QBuffer>
+ #include <QEventLoop>
+ #include <QFileInfo>
+@@ -251,6 +257,14 @@ Ret ProjectActionsController::openProject(const muse::io::path_t& givenPath, con
+         return make_ret(Ret::Code::UnknownError);
+     }
+ 
++#ifdef MUSE_WEB_DESKTOP
++    //! A score kept in the person's MiniNode files (the recent list after a reload) is fetched by
++    //! the page first.
++    if (!fileSystem()->exists(actualPath)) {
++        muse::web::fetchFile(actualPath);
++    }
++#endif
++
+     //! Step 2. If the project is already open in the current window, then just switch to showing the notation
+     if (isProjectOpened(actualPath)) {
+         return doFinishOpenProject();
+@@ -264,6 +278,13 @@ Ret ProjectActionsController::openProject(const muse::io::path_t& givenPath, con
+ 
+     //! Step 4. Check, if a any project is already open in the current window,
+     //! then create a new instance
++#ifdef MUSE_WEB_DESKTOP
++    //! In the browser there is one window: the open score is closed first (the editor asks
++    //! whether to save it), then the other one opens in its place.
++    if (globalContext()->currentProject() && !closeOpenedProject(false)) {
++        return make_ret(Ret::Code::Cancel);
++    }
++#endif
+     if (globalContext()->currentProject()) {
+         QStringList args;
+         args << actualPath.toQString();
+@@ -692,6 +713,12 @@ void ProjectActionsController::newProject()
+         m_isProjectProcessing = false;
+     };
+ 
++#ifdef MUSE_WEB_DESKTOP
++    //! One window in the browser: close the open score first (asking to save it).
++    if (globalContext()->currentProject() && !closeOpenedProject(false)) {
++        return;
++    }
++#endif
+     if (globalContext()->currentProject()) {
+         if (multiwindowsProvider()->isHasWindowWithoutProject()) {
+             multiwindowsProvider()->activateWindowWithoutProject({ "file-new" });
+diff --git a/src/project/internal/projectaudiosettings.cpp b/src/project/internal/projectaudiosettings.cpp
+index 3249b2b3..50c2f95b 100644
+--- a/src/project/internal/projectaudiosettings.cpp
++++ b/src/project/internal/projectaudiosettings.cpp
+@@ -576,7 +576,7 @@ AudioSourceType ProjectAudioSettings::sourceTypeFromString(const QString& string
+ AudioResourceType ProjectAudioSettings::resourceTypeFromString(const QString& string) const
+ {
+     for (const auto& pair : RESOURCE_TYPE_MAP) {
+-        if (pair.second == string) {
++        if (pair.second.toQString() == string) {
+             return pair.first;
+         }
+     }
+diff --git a/src/project/qml/MuseScore/Project/ScoresPage.qml b/src/project/qml/MuseScore/Project/ScoresPage.qml
+index 26b6428a..ea4f8193 100644
+--- a/src/project/qml/MuseScore/Project/ScoresPage.qml
++++ b/src/project/qml/MuseScore/Project/ScoresPage.qml
+@@ -174,13 +174,6 @@ FocusScope {
+                 navigation.column: 1
+             }
+ 
+-            StyledTabButton {
+-                text: qsTrc("project", "My online scores")
+-
+-                navigation.name: "MyOnlineScores"
+-                navigation.panel: navTabPanel
+-                navigation.column: 2
+-            }
+         }
+ 
+         NavigationPanel {
+@@ -254,7 +247,7 @@ FocusScope {
+                 return null
+             }
+ 
+-            return [newAndRecentComp, onlineScoresComp][tabBar.currentIndex]
++            return newAndRecentComp
+         }
+     }
+ 
+@@ -295,51 +288,6 @@ FocusScope {
+         }
+     }
+ 
+-    Component {
+-        id: onlineScoresComp
+-
+-        CloudScoresView {
+-            id: cloudScoresView
+-            anchors.fill: parent
+-
+-            viewType: scoresPageModel.viewType
+-            searchText: searchField.searchText
+-
+-            backgroundColor: background.color
+-            sideMargin: prv.sideMargin
+-
+-            navigationSection: navSec
+-            navigationOrder: 4
+-
+-            onCreateNewScoreRequested: {
+-                scoresPageModel.createNewScore()
+-            }
+-
+-            onOpenScoreRequested: function(scorePath, displayName) {
+-                Qt.callLater(scoresPageModel.openScore, scorePath, displayName)
+-            }
+-
+-            onRevealInFileBrowserRequested: function(scorePath) {
+-                Qt.callLater(scoresPageModel.revealInFileBrowser, scorePath)
+-            }
+-
+-            onViewOnlineRequested: function(scoreId) {
+-                Qt.callLater(scoresPageModel.viewOnline, scoreId)
+-            }
+-
+-            onDeleteScoreRequested: function(scoreId, scoreName) {
+-                Qt.callLater(scoresPageModel.deleteScore, scoreId, scoreName)
+-            }
+-
+-            Connections {
+-                target: refreshButton
+-
+-                function onClicked() {
+-                    cloudScoresView.refresh()
+-                }
+-            }
+-        }
+-    }
+ 
+     Rectangle {
+         id: buttonsPanel
+@@ -362,23 +310,6 @@ FocusScope {
+             accessible.name: qsTrc("project", "Scores actions")
+         }
+ 
+-        FlatButton {
+-            anchors.left: parent.left
+-            anchors.leftMargin: prv.sideMargin
+-            anchors.verticalCenter: parent.verticalCenter
+-
+-            navigation.name: "ScoreManager"
+-            navigation.panel: navBottomPanel
+-            navigation.column: 1
+-
+-            minWidth: 216
+-            text: qsTrc("project", "Score manager (online)")
+-
+-            onClicked: {
+-                scoresPageModel.openScoreManager()
+-            }
+-        }
+-
+         Row {
+             anchors.right : parent.right
+             anchors.rightMargin: prv.sideMargin
+@@ -399,18 +330,6 @@ FocusScope {
+                 }
+             }
+ 
+-            FlatButton {
+-                navigation.name: "ConvertFileToScore"
+-                navigation.panel: navBottomPanel
+-                navigation.column: 3
+-
+-                text: qsTrc("project", "Convert…")
+-
+-                onClicked: {
+-                    scoresPageModel.convertFileToScore()
+-                }
+-            }
+-
+             FlatButton {
+                 navigation.name: "Open other Score"
+                 navigation.panel: navBottomPanel
+diff --git a/src/web/appjs/CMakeLists.txt b/src/web/appjs/CMakeLists.txt
+index e0b960ac..80945cb9 100644
+--- a/src/web/appjs/CMakeLists.txt
++++ b/src/web/appjs/CMakeLists.txt
+@@ -25,4 +25,6 @@ target_sources(appjs PRIVATE
+     appjsmodule.h
+     webapi.cpp
+     webapi.h
++    webprintprovider.cpp
++    webprintprovider.h
+ )
+diff --git a/src/web/appjs/appjsmodule.cpp b/src/web/appjs/appjsmodule.cpp
+index f4028bb8..4596e5d4 100644
+--- a/src/web/appjs/appjsmodule.cpp
++++ b/src/web/appjs/appjsmodule.cpp
+@@ -24,6 +24,10 @@
+ #include <emscripten/val.h>
+ 
+ #include "webapi.h"
++#include "webprintprovider.h"
++
++#include "modularity/ioc.h"
++#include "app_config.h"
+ 
+ using namespace muse;
+ using namespace mu::appjs;
+@@ -33,9 +37,16 @@ std::string AppJsModule::moduleName() const
+     return "appjs";
+ }
+ 
++void AppJsModule::registerExports()
++{
++#ifndef MUE_BUILD_PRINT_MODULE
++    ioc()->registerExport<mu::print::IPrintProvider>(moduleName(), std::make_shared<WebPrintProvider>(iocContext()));
++#endif
++}
++
+ void AppJsModule::onInit(const muse::IApplication::RunMode&)
+ {
+-    WebApi::instance()->init();
++    WebApi::instance()->init(iocContext());
+ }
+ 
+ void AppJsModule::onDeinit()
+diff --git a/src/web/appjs/appjsmodule.h b/src/web/appjs/appjsmodule.h
+index 7035b680..ce6e5b71 100644
+--- a/src/web/appjs/appjsmodule.h
++++ b/src/web/appjs/appjsmodule.h
+@@ -29,6 +29,7 @@ class AppJsModule : public muse::modularity::IModuleSetup
+ public:
+ 
+     std::string moduleName() const override;
++    void registerExports() override;
+ 
+     void onInit(const muse::IApplication::RunMode& mode) override;
+     void onDeinit() override;
+diff --git a/src/web/appjs/webapi.cpp b/src/web/appjs/webapi.cpp
+index 7479f3ad..d3ad6d1d 100644
+--- a/src/web/appjs/webapi.cpp
++++ b/src/web/appjs/webapi.cpp
+@@ -59,11 +59,13 @@ WebApi* WebApi::instance()
+     return &a;
+ }
+ 
+-void WebApi::init()
++void WebApi::init(const muse::modularity::ContextPtr& ctx)
+ {
++    s_ctx = ctx;
++
+     auto onProjectChanged = [this]() {
+         if (m_currentProject) {
+-            m_currentProject->saveComplited().resetOnReceive(this);
++            m_currentProject->saveComplited().disconnect(this);
+         }
+ 
+         m_currentProject = globalContext()->currentProject();
+@@ -83,7 +85,7 @@ void WebApi::init()
+ void WebApi::deinit()
+ {
+     if (m_currentProject) {
+-        m_currentProject->saveComplited().resetOnReceive(this);
++        m_currentProject->saveComplited().disconnect(this);
+     }
+ }
+ 
+diff --git a/src/web/appjs/webapi.h b/src/web/appjs/webapi.h
+index e4df15ad..e10ade6d 100644
+--- a/src/web/appjs/webapi.h
++++ b/src/web/appjs/webapi.h
+@@ -31,19 +31,20 @@
+ #include "audio/main/isoundfontcontroller.h"
+ 
+ namespace mu::appjs {
+-class WebApi : public muse::async::Asyncable
++class WebApi : public muse::async::Asyncable, public muse::Contextable
+ {
+-    inline static muse::GlobalInject<muse::IInteractive> interactive;
+-    inline static muse::GlobalInject<muse::actions::IActionsDispatcher> dispatcher;
+-    inline static muse::GlobalInject<mu::context::IGlobalContext> globalContext;
+-    inline static muse::GlobalInject<muse::audio::IStartAudioController> startAudioController;
+-    inline static muse::GlobalInject<muse::audio::ISoundFontController> soundFontController;
++    muse::ContextInject<muse::IInteractive> interactive = { this };
++    muse::ContextInject<muse::actions::IActionsDispatcher> dispatcher = { this };
++    muse::ContextInject<mu::context::IGlobalContext> globalContext = { this };
++    muse::ContextInject<muse::audio::IStartAudioController> startAudioController = { this };
++    muse::ContextInject<muse::audio::ISoundFontController> soundFontController = { this };
+ 
+ public:
+ 
+     static WebApi* instance();
+ 
+-    void init();
++    //! The services are per context (window); the web app has one, set here.
++    void init(const muse::modularity::ContextPtr& ctx);
+     void deinit();
+ 
+     void load(const void* source, unsigned int len);
+@@ -52,7 +53,10 @@ public:
+ 
+ private:
+ 
+-    WebApi() = default;
++    WebApi()
++        : muse::Contextable(muse::Contextable::GetContext([]() { return s_ctx; })) {}
++
++    inline static muse::modularity::ContextPtr s_ctx;
+ 
+     void onProjectSaved(const muse::io::path_t& path, mu::project::SaveMode mode);
+ 
+diff --git a/src/web/appjs/webprintprovider.cpp b/src/web/appjs/webprintprovider.cpp
+new file mode 100644
+index 00000000..aeaee70f
+--- /dev/null
++++ b/src/web/appjs/webprintprovider.cpp
+@@ -0,0 +1,58 @@
++/*
++ * SPDX-License-Identifier: GPL-3.0-only
++ * MuseScore-Studio-CLA-applies
++ *
++ * MuseScore Studio
++ * Music Composition & Notation
++ *
++ * Copyright (C) 2026 MuseScore Limited and others
++ *
++ * This program is free software: you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 3 as
++ * published by the Free Software Foundation.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
++ */
++#include "webprintprovider.h"
++
++#include <emscripten/val.h>
++
++#include "global/io/buffer.h"
++
++#include "log.h"
++
++using namespace muse;
++using namespace mu::appjs;
++
++Ret WebPrintProvider::printNotation(notation::INotationPtr notation)
++{
++    IF_ASSERT_FAILED(notation) {
++        return make_ret(Ret::Code::InternalError);
++    }
++
++    project::INotationWriterPtr writer = writers() ? writers()->writer("pdf") : nullptr;
++    if (!writer) {
++        LOGE() << "no PDF writer";
++        return make_ret(Ret::Code::NotSupported);
++    }
++
++    io::Buffer buffer;
++    buffer.open(io::IODevice::WriteOnly);
++    Ret ret = writer->write(notation, buffer);
++    buffer.close();
++    if (!ret) {
++        return ret;
++    }
++
++    const ByteArray& data = buffer.data();
++    emscripten::val bytes = emscripten::val::global("Uint8Array").new_(
++        emscripten::typed_memory_view(data.size(), data.constData()));
++    emscripten::val::module_property("mnPrintPdf")(bytes);
++    return make_ok();
++}
+diff --git a/src/web/appjs/webprintprovider.h b/src/web/appjs/webprintprovider.h
+new file mode 100644
+index 00000000..b0294a5c
+--- /dev/null
++++ b/src/web/appjs/webprintprovider.h
+@@ -0,0 +1,41 @@
++/*
++ * SPDX-License-Identifier: GPL-3.0-only
++ * MuseScore-Studio-CLA-applies
++ *
++ * MuseScore Studio
++ * Music Composition & Notation
++ *
++ * Copyright (C) 2026 MuseScore Limited and others
++ *
++ * This program is free software: you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 3 as
++ * published by the Free Software Foundation.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
++ */
++#pragma once
++
++#include "print/iprintprovider.h"
++#include "project/inotationwritersregister.h"
++#include "global/modularity/ioc.h"
++
++namespace mu::appjs {
++//! Printing in the browser: the score is written as PDF and handed to the page
++//! (Module.mnPrintPdf), which opens it in the browser's PDF viewer to print from there.
++class WebPrintProvider : public print::IPrintProvider, public muse::Contextable
++{
++    muse::ContextInject<project::INotationWritersRegister> writers = { this };
++
++public:
++    WebPrintProvider(const muse::modularity::ContextPtr& iocCtx)
++        : muse::Contextable(iocCtx) {}
++
++    muse::Ret printNotation(notation::INotationPtr notation) override;
++};
++}
+diff --git a/src/web/audioengine/CMakeLists.txt b/src/web/audioengine/CMakeLists.txt
+index 6a32d6ce..b2cdb1ad 100644
+--- a/src/web/audioengine/CMakeLists.txt
++++ b/src/web/audioengine/CMakeLists.txt
+@@ -61,13 +61,21 @@ else()
+     set(EMCC_LINKER_FLAGS -Os)
+ endif()
+ 
++# Before the subdirectories: add_definitions only reaches targets created after it, and the
++# audio libraries must also be built without Qt.
++include(GetPlatformInfo) # OS_IS_WASM: the engine's web sources, not the threaded worker
++set(MUSE_MODULE_AUDIO_WORKMODE 2) # driver callback, as the editor (muse_framework_config.h)
++add_definitions(-DNO_QT_SUPPORT)
++add_definitions(-DQ_OS_WASM)
++set(GLOBAL_NO_INTERNAL ON)
++
++configure_file(${MU_ROOT}/src/framework/cmake/muse_framework_config.h.in muse_framework_config.h )
++
+ set(AUDIO_ROOT ${MU_ROOT}/src/framework/audio)
+ add_subdirectory(${AUDIO_ROOT}/common common)
+ set(WEBWORKER_FACADE_MODE OFF)
+ add_subdirectory(${AUDIO_ROOT}/engine engine)
+ 
+-target_link_libraries(MuseAudio PRIVATE muse_audio_common muse_audio_engine)
+-
+ add_executable(MuseAudio
+     ${CMAKE_CURRENT_LIST_DIR}/engine_export.cpp
+     ${CMAKE_CURRENT_LIST_DIR}/webaudioengine.cpp
+@@ -77,6 +85,8 @@ add_executable(MuseAudio
+     ${AUDIO_ROOT}/driver/platform/web/webaudiochannel.h
+ )
+ 
++target_link_libraries(MuseAudio PRIVATE muse_audio_common muse_audio_engine)
++
+ target_include_directories(MuseAudio PRIVATE
+     ${PROJECT_BINARY_DIR}
+     ${CMAKE_CURRENT_BINARY_DIR}
+@@ -96,11 +106,6 @@ target_include_directories(MuseAudio PRIVATE
+     # end compat
+ )
+ 
+-add_definitions(-DNO_QT_SUPPORT)
+-add_definitions(-DQ_OS_WASM)
+-set(GLOBAL_NO_INTERNAL ON)
+-
+-configure_file(${MU_ROOT}/src/framework/cmake/muse_framework_config.h.in muse_framework_config.h )
+ 
+ add_subdirectory(${MU_ROOT}/src/framework/global global)
+ 
+@@ -118,6 +123,8 @@ target_link_options(MuseAudio PRIVATE "SHELL:-s FETCH=1")
+ target_link_options(MuseAudio PRIVATE "SHELL:-s INITIAL_MEMORY=50MB")
+ target_link_options(MuseAudio PRIVATE "SHELL:-s ALLOW_MEMORY_GROWTH=1")
+ target_link_options(MuseAudio PRIVATE "SHELL:-s EXPORTED_RUNTIME_METHODS=ccall,cwrap")
++# The page's CSP allows no JavaScript eval (embind would build functions from strings).
++target_link_options(MuseAudio PRIVATE "SHELL:-s DYNAMIC_EXECUTION=0")
+ target_link_options(MuseAudio PRIVATE "SHELL:-s EXPORTED_FUNCTIONS=[_main,_malloc,_free,_Init,_process]")
+ 
+ if (MUSE_MODULE_AUDIO_WORKER)
+diff --git a/src/web/audioengine/webaudioengine.cpp b/src/web/audioengine/webaudioengine.cpp
+index b26af415..eece4015 100644
+--- a/src/web/audioengine/webaudioengine.cpp
++++ b/src/web/audioengine/webaudioengine.cpp
+@@ -81,7 +81,10 @@ void WebAudioEngine::init()
+     m_rpcChannel->setupOnEngine();
+     ioc()->registerExport<IRpcChannel>(moduleName(), m_rpcChannel);
+ 
+-    m_controller = std::make_shared<EngineController>(m_rpcChannel);
++    //! The engine in the worklet has one global context (as the app's main window).
++    modularity::ContextPtr ctx = std::make_shared<modularity::Context>();
++    ctx->id = -1;
++    m_controller = std::make_shared<EngineController>(m_rpcChannel, ctx);
+     m_controller->registerExports();
+     m_controller->onStartRunning();
+ 

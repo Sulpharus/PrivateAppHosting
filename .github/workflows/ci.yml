@@ -16,9 +16,12 @@ jobs:
   crafts:
     uses: ./.github/workflows/crafts.yml
 
+  musescore:
+    uses: ./.github/workflows/musescore.yml
+
   check:
     name: Lint, typecheck, test
-    needs: crafts
+    needs: [crafts, musescore]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5

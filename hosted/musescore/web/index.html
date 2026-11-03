@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title data-i18n="app.title">MuseScore Studio</title>
+  <link rel="stylesheet" href="/_mininode/ui.css">
+  <link rel="stylesheet" href="./mn-musescore.css">
+  <script src="/_mininode/i18n.js"></script>
+  <script src="/_mininode/ui.js"></script>
+  <script src="/_mininode/sdk.js" defer></script>
+  <script src="/_mininode/files.js" defer></script>
+  <script src="./MuseScoreStudio.js" defer></script>
+  <script type="module" src="./mn-musescore.js"></script>
+</head>
+<body>
+  <nav class="mn-bar" aria-label="MiniNode">
+    <a class="mn-home" href="https://mininode.app" data-i18n="nav.allAppsBack">← Alle Apps</a>
+    <span class="mn-bar-name" data-i18n="app.title">MuseScore Studio</span>
+    <span class="mn-grow"></span>
+    <button type="button" class="mn-bar-button" id="mn-sounds" hidden data-i18n="sounds.menu">Klänge</button>
+    <button type="button" class="mn-bar-button" id="mn-plugins" hidden data-i18n="plugins.menu">Plugins</button>
+    <button type="button" class="mn-bar-button" id="mn-data" hidden data-i18n="data.menu">Daten</button>
+  </nav>
+  <main id="screen" aria-label="MuseScore Studio"></main>
+  <div id="mn-status" role="status" aria-live="polite">
+    <p class="mn-status-name" data-i18n="app.title">MuseScore Studio</p>
+    <p data-step data-i18n="app.loading">MuseScore Studio wird geladen …</p>
+    <progress id="mn-progress" max="1"></progress>
+  </div>
+</body>
+</html>
