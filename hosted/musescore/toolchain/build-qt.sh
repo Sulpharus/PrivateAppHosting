@@ -45,8 +45,26 @@ if [ ! -f "$HOST_PREFIX/.done" ]; then
   touch "$HOST_PREFIX/.done"
 fi
 
+# Qt5Compat's graphical effects (MuseScore's shadows, masks) ship prebuilt shaders with GLSL ES
+# 1.00 only, while Qt builds its own shaders for WebAssembly with 1.00 and 3.00. WebGL 2 then links
+# a 3.00 vertex shader with a 1.00 fragment shader and fails ("Fragment shader version does not
+# match"), and MuseScore falls back to software rendering. Regenerate them for the web (GLSL ES
+# only), with the flags of the module's own compile.bat.
+regenerate_qt5compat_shaders() {
+  local dir="$SRC/qt5compat/src/imports/graphicaleffects5/shaders_ng"
+  grep -E '^qsb ' "$dir/compile.bat" | while read -r line; do
+    local batch="" out input
+    [[ " $line " == *" -b "* ]] && batch="-b"
+    out="$(sed -E 's/.* -o ([^ ]+) ([^ ]+)\r?$/\1/' <<<"$line")"
+    input="$(sed -E 's/.* -o ([^ ]+) ([^ ]+)\r?$/\2/' <<<"$line" | tr -d '\r')"
+    out="$(tr -d '\r' <<<"$out")"
+    "$HOST_PREFIX/bin/qsb" $batch --glsl "100es,300es" -o "$dir/$out" "$dir/$input"
+  done
+}
+
 emsdk_activate
 if [ ! -f "$WASM_PREFIX/.done" ]; then
+  regenerate_qt5compat_shaders
   echo "=== wasm qtbase"
   mkdir -p "$BUILD/wasm-qtbase"
   (cd "$BUILD/wasm-qtbase" &&
