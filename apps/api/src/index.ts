@@ -18,6 +18,7 @@ import { controlHeaders, remote } from './routes/remote.ts';
 import { setup } from './routes/setup.ts';
 import { submissions } from './routes/submissions.ts';
 import { uninstall } from './routes/uninstall.ts';
+import { updates } from './routes/updates.ts';
 
 export const app = new Hono<AppContext>();
 
@@ -63,6 +64,7 @@ app.route('/', library);
 app.route('/', appExports);
 app.route('/', backups);
 app.route('/', uninstall);
+app.route('/', updates);
 app.route('/', submissions);
 app.route('/google/calendar', gcal);
 app.route('/google', google);

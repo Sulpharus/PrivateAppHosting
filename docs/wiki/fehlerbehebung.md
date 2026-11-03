@@ -9,6 +9,14 @@ summary: Typische Probleme und die schnellste Prüfung dafür
 
 Meist eine **zwischengespeicherte** PWA-Version: Seite neu laden oder die App schließen und neu öffnen. Prüfe sonst im Deploy-Lauf (GitHub → Actions → *Deploy*), ob die App an der Reihe war.
 
+## Updates
+
+| Symptom | Ursache und Schritt |
+| --- | --- |
+| „CONFLICT (applied migration changed)“ | Die neue Version ändert eine Migration, die schon gelaufen ist. Es wurde nichts verändert. Das Projekt soll eine neue Migration schreiben ([Aktualisieren](wiki:aktualisieren)) |
+| Der Pull Request hat keine Prüfungen | Das Secret `INTEGRATE_TOKEN` fehlt: Pull Request schließen und wieder öffnen startet sie, nicht ungeprüft mergen |
+| „updates.source is missing“ | `updates.source` in `mininode.config.json` eintragen |
+
 ## Anmelden, Zugriff
 
 | Symptom | Ursache und Schritt |

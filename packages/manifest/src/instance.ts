@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { githubRepoSchema } from './github.ts';
 
 /**
  * `mininode.config.json`: everything that makes one installation different from another. The
@@ -46,7 +47,14 @@ export const instanceConfigSchema = z
     github: z
       .object({
         /** `owner/repo` of this installation: workflows, links in the admin area. */
-        repository: z.string().regex(/^[\w.-]+\/[\w.-]+$/, 'owner/repo'),
+        repository: githubRepoSchema,
+      })
+      .strict()
+      .optional(),
+    updates: z
+      .object({
+        /** `owner/repo` whose releases carry newer versions of the platform (ADR 0028). */
+        source: githubRepoSchema,
       })
       .strict()
       .optional(),

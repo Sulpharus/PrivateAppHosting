@@ -261,3 +261,19 @@ describe('api docs links', () => {
     );
   });
 });
+
+describe('repository', () => {
+  const base = {
+    specVersion: 1,
+    slug: 'notes',
+    name: 'Notes',
+    description: 'Notes',
+    kind: 'static',
+    target: 'cloudflare',
+  };
+  it('takes owner/repo and nothing else', () => {
+    expect(parseManifest({ ...base, repository: 'me/notes' }).ok).toBe(true);
+    for (const bad of ['notes', '../x', 'https://github.com/me/notes', 'me/notes/extra'])
+      expect(parseManifest({ ...base, repository: bad }).ok, bad).toBe(false);
+  });
+});

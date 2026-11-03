@@ -1,0 +1,149 @@
+name: Plattform aktualisieren
+
+# Brings a newer version of MiniNode into this repository (ADR 0028). Started from Verwaltung →
+# Updates through the API, or by hand under Actions.
+#
+# The new version is the starter package of a release of `updates.source` (mininode.config.json).
+# `mininode update platform` overlays its platform files and leaves this installation's own
+# files alone (hosted apps, mininode.config.json, docs/STATUS.md, biome.json). An already
+# applied database migration is never changed: a release that would do that stops here.
+# The result is a pull request (branch auto/update-platform-…): the normal checks run on it, and
+# merging it deploys. With the repository variable INTEGRATE_AUTOMERGE=true it merges itself
+# once the checks pass. Workflow files are updated only when the secret INTEGRATE_TOKEN is set
+# (a token with "Workflows: write"); without it they are left as they are.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Release tag to install (empty = the newest release with a package of your edition)
+        type: string
+        required: false
+
+run-name: Plattform aktualisieren ${{ inputs.version || '(neueste)' }}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: update-platform
+  cancel-in-progress: false
+
+jobs:
+  update:
+    name: Update the platform
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    env:
+      WANTED: ${{ inputs.version }}
+      AUTOMERGE: ${{ vars.INTEGRATE_AUTOMERGE }}
+      # Whether the pull request can start the checks (a push with the default token cannot) and
+      # may change workflow files. The token itself is given to the two steps that need it only.
+      HAS_TOKEN: ${{ secrets.INTEGRATE_TOKEN != '' }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Find and download the release
+        id: release
+        env:
+          GH_TOKEN: ${{ secrets.INTEGRATE_TOKEN || github.token }}
+        run: |
+          set -euo pipefail
+          source=$(jq -r '.updates.source // empty' mininode.config.json)
+          [[ "$source" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ && ! "$source" =~ (^|/)\.+(/|$) ]] || {
+            echo "::error::updates.source is missing in mininode.config.json (owner/repo of the project that publishes releases)"; exit 1; }
+          # The package this installation came from decides which asset to take.
+          edition=$(jq -r '.edition // "starter"' .mininode/platform-files.json 2>/dev/null || echo starter)
+          [[ "$edition" =~ ^(starter|cloudflare)$ ]] || edition=starter
+          tag=$WANTED
+          if [ -z "$tag" ]; then
+            # The newest release that carries a package of this edition.
+            for candidate in $(gh release list --repo "$source" --limit 20 --json tagName --jq '.[].tagName'); do
+              if gh release view "$candidate" --repo "$source" --json assets --jq '.assets[].name' | grep -q "^mininode-$edition-"; then
+                tag=$candidate; break
+              fi
+            done
+          fi
+          [[ "$tag" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]] || { echo "::error::no release with a $edition package found in $source"; exit 1; }
+          mkdir -p "$RUNNER_TEMP/release"
+          gh release download "$tag" --repo "$source" --dir "$RUNNER_TEMP/release" \
+            --pattern "mininode-$edition-*.zip" --pattern SHA256SUMS
+          (cd "$RUNNER_TEMP/release" && sha256sum --ignore-missing -c SHA256SUMS)
+          unzip -q "$RUNNER_TEMP"/release/mininode-"$edition"-*.zip -d "$RUNNER_TEMP/unpacked"
+          from=$(find "$RUNNER_TEMP/unpacked" -mindepth 1 -maxdepth 1 -type d | head -n1)
+          { echo "source=$source"; echo "tag=$tag"; echo "from=$from"; } >> "$GITHUB_OUTPUT"
+      - name: Check what would change (stops on a changed applied migration)
+        id: check
+        env:
+          SOURCE: ${{ steps.release.outputs.source }}
+          FROM: ${{ steps.release.outputs.from }}
+        run: |
+          set -euo pipefail
+          flags=()
+          [ "$HAS_TOKEN" = "true" ] || flags+=(--skip-workflows)
+          # A dry run: shows the plan, stops with exit code 2 on an applied migration that changed.
+          pnpm mininode update platform --from "$FROM" --source "$SOURCE" --dry-run "${flags[@]}" | tee "$RUNNER_TEMP/plan.txt"
+      - name: Apply the update
+        env:
+          SOURCE: ${{ steps.release.outputs.source }}
+          FROM: ${{ steps.release.outputs.from }}
+        run: |
+          set -euo pipefail
+          flags=()
+          [ "$HAS_TOKEN" = "true" ] || flags+=(--skip-workflows)
+          pnpm mininode update platform --from "$FROM" --source "$SOURCE" "${flags[@]}" >/dev/null
+          pnpm install --lockfile-only --ignore-scripts
+          # The new files carry neutral placeholders: render this installation's settings again.
+          pnpm mininode configure
+      - name: Open the pull request
+        env:
+          GH_TOKEN: ${{ secrets.INTEGRATE_TOKEN || github.token }}
+          TAG: ${{ steps.release.outputs.tag }}
+          SOURCE: ${{ steps.release.outputs.source }}
+        run: |
+          set -euo pipefail
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "Already up to date ($TAG)." | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          open=$(gh pr list --state open --json headRefName --jq '[.[] | select(.headRefName | startswith("auto/update-platform-"))] | length')
+          if [ "$open" != "0" ]; then
+            echo "A platform update pull request is already open: merge or close it first." | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git config user.name "mininode-update"
+          git config user.email "update@users.noreply.github.com"
+          branch="auto/update-platform-${TAG}-${GITHUB_RUN_ID}"
+          git checkout -b "$branch"
+          git add -A
+          git commit -q -m "chore(platform): update to $TAG" \
+            -m "Brought in from the release $TAG of $SOURCE with mininode update platform. Your apps, mininode.config.json and docs/STATUS.md are untouched."
+          git push -q origin "$branch"
+          note=""
+          if [ "$HAS_TOKEN" != "true" ]; then
+            note=$'\n\n**Achtung:** Ohne das Secret `INTEGRATE_TOKEN` starten die Prüfungen auf diesem Pull Request nicht von selbst, und die Workflow-Dateien (`.github/workflows`) wurden nicht aktualisiert. Nicht mergen, bevor die Prüfungen gelaufen und grün sind (Pull Request schließen und wieder öffnen startet sie).'
+            echo "::warning::INTEGRATE_TOKEN is not set: the pull request gets no checks. Do not merge it unchecked."
+          fi
+          body="Aktualisiert die Plattform auf **$TAG** (Quelle: \`$SOURCE\`).
+
+          $(cat "$RUNNER_TEMP/plan.txt")
+
+          Deine Apps, \`mininode.config.json\` und \`docs/STATUS.md\` bleiben unverändert. Bereits angewendete Datenbank-Migrationen werden nie geändert, nur neue kommen dazu. Mergen, wenn die Prüfungen grün sind; danach deployt der normale Ablauf.$note"
+          pr=$(gh pr create --base main --head "$branch" --title "chore(platform): update to $TAG" --body "$body")
+          # Auto-merge only when the checks can run: without them it would merge unchecked code.
+          if [ "$AUTOMERGE" = "true" ] && [ "$HAS_TOKEN" = "true" ]; then
+            gh pr merge "$pr" --auto --merge || echo "auto-merge is not available; the pull request stays open"
+          fi
+          echo "Pull request: $pr" >> "$GITHUB_STEP_SUMMARY"

@@ -4,7 +4,8 @@
 #
 #   scripts/package-release.sh <version> [outdir] [edition...]
 #
-# Editions: starter, cloud, pc-server, complete (default: all four).
+# Editions: starter, cloudflare, cloud, pc-server, complete (default: starter, cloud, pc-server, complete).
+#   cloudflare  like the starter, without the desktop installer and the home-server parts
 #   starter     the whole platform without apps and without anything of this installation
 #               (scripts/make-starter.sh checks that no identifier of it remains)
 #   cloud       platform for Cloudflare + Supabase, without the home-server parts
@@ -36,8 +37,8 @@ PC_FILES=(
 mkdir -p "$out"
 commit=$(git rev-parse HEAD)
 for edition in "${editions[@]}"; do
-  if [ "$edition" = starter ]; then
-    scripts/make-starter.sh "$version" "$out"
+  if [ "$edition" = starter ] || [ "$edition" = cloudflare ]; then
+    scripts/make-starter.sh "$version" "$out" "$edition"
     continue
   fi
   name="mininode-$edition-$version"

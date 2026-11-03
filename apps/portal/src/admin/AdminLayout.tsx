@@ -16,6 +16,7 @@ const LINKS: [string, string][] = [
   ['/admin/suite', 'Gemeinsame Daten'],
   ['/admin/workshop', 'KI-Werkstatt'],
   ['/admin/backups', 'Sicherung'],
+  ['/admin/updates', 'Updates'],
 ];
 
 const KNOWLEDGE: [string, string][] = [

@@ -17,7 +17,7 @@ Einrichtung: `EXPORT_REPO_TOKEN` (Administration + Contents: write, alle Reposit
 
 ## Releases (ADR 0016)
 
-Ein Release enthält das **Starter-Paket** (`mininode-starter-<Version>.zip`) mit Prüfsumme (`SHA256SUMS`). Damit beginnt man ein eigenes MiniNode: die ganze Plattform ohne Apps und ohne Kennungen einer Installation, mit Cloudflare-Einrichtung, Desktop-Installer für Docker, Heimserver-Teil und allen Anleitungen (ADR 0026; Anleitung: [Einrichten](wiki:einrichten)).
+Ein Release enthält das **Starter-Paket** (Tag `vX.Y.Z`) oder die **Cloudflare-Ausgabe** (Tag `cloudflare-vX.Y.Z`, `mininode-cloudflare-<Version>.zip`: dasselbe ohne Desktop-Installer und Heimserver-Teil, nur Cloudflare und Supabase). Das **Starter-Paket** (`mininode-starter-<Version>.zip`) mit Prüfsumme (`SHA256SUMS`). Damit beginnt man ein eigenes MiniNode: die ganze Plattform ohne Apps und ohne Kennungen einer Installation, mit Cloudflare-Einrichtung, Desktop-Installer für Docker, Heimserver-Teil und allen Anleitungen (ADR 0026; Anleitung: [Einrichten](wiki:einrichten)).
 Der Paketbauer prüft vor dem Packen, dass keine Kennung dieser Installation darin steckt. Andere Pakete (Cloud, PC/Server, Komplett) gibt es nicht mehr im Release, weil sie das ganze Repository samt eigenen Apps enthielten.
 
 Der Titel des Releases ist die erste Zeile der Tag-Nachricht; ein Tag mit Bindestrich (`v0.1.0-test`) wird als Vorabversion markiert:

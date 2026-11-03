@@ -53,6 +53,7 @@ Where things are documented:
 | Compat layers | `window.MiniNode` and `localStorage` apps run through `@mininode/sdk` (`installMiniNodeCompat`, `installLocalStorageSync`) | `packages/sdk/src/compat.ts` |
 | Own drawers and order | Schubladen and "Eigene Reihenfolge" per screen, on the start page and in the Gaming Hub | ADR 0015 |
 | Personal API keys | Admin switches an API to "persönlich"; the SDK popup leads to `/account/keys` | ADR 0014 |
+| One-click updates | Verwaltung → Updates: MiniNode (from the newest release of `updates.source`) and apps with a `repository` in their mininode.json, each as a pull request; applied migrations are never changed | ADR 0028, `docs/runbooks/updates.md`, `.github/workflows/update-*.yml` |
 | Release editions | `v*` tags build the starter package only (the other editions would carry this installation's apps) | ADR 0016, `docs/runbooks/releases.md` |
 | Sportplaner course price | Whole course or monthly fee, split over the sessions that take place, booked per session in Statistik | `hosted/sportplaner/js/price.js`, README |
 | Medialog | "Sammlung" tab no longer shows the suggestion chips ("Vorschläge") under the search | `hosted/medialog/src/views/SammlungView.tsx` |
@@ -111,6 +112,7 @@ since the PR #12 deploy. Earlier deploys stopped at medialog and never shipped t
 
 ## Waiting on the owner
 
+00. **Updates (ADR 0028) were never run against GitHub from here.** Try them once: Verwaltung → Updates → MiniNode (needs `LIBRARY_DISPATCH_TOKEN` and a release newer than the installed one), and with an app that has `"repository"` in its mininode.json. Optional: secret `INTEGRATE_TOKEN` with *Workflows: read and write* so workflow files update too (otherwise the pull request says they were skipped). The first platform update on an installation made before this change has no file list yet, so it removes nothing; later ones do.
 0. **Before merging the anywhere-installable work (ADR 0026), upgrade the physical server once:**
    - add `MININODE_OWNER=sulpharus` to `platform.env`, and `MININODE_OWNER=sulpharus`, `MININODE_REPO=Sulpharus/PrivateAppHosting`, `MININODE_DOMAIN=mininode.app` to `/etc/mininode/deploy.env` (they used to be built into the scripts; without them the physical server deploy stops);
    - a staging domain now lives in `mininode.config.json` (`environments.staging.domain`), no longer in the variable `STAGING_DOMAIN`;

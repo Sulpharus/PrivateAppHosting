@@ -1,4 +1,5 @@
-import { existsSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { createInterface } from 'node:readline/promises';
 import { type InstanceConfig, parseInstanceConfig } from '@mininode/manifest';
 import { instanceConfigPath } from './load.ts';
@@ -11,6 +12,8 @@ export interface InitAnswers {
   publishableKey?: string;
   repository?: string;
   mailFrom?: string;
+  /** `owner/repo` that publishes the releases to update from (ADR 0028). */
+  updatesSource?: string;
 }
 
 const QUESTIONS: { key: keyof InitAnswers; prompt: string; required: boolean }[] = [
@@ -54,6 +57,7 @@ export function buildConfig(answers: InitAnswers): InstanceConfig {
     cloudflare: { accountId: answers.accountId },
     ...(answers.mailFrom ? { mailFrom: answers.mailFrom } : {}),
     ...(answers.repository ? { github: { repository: answers.repository } } : {}),
+    ...(answers.updatesSource ? { updates: { source: answers.updatesSource } } : {}),
     environments: {
       production: {
         domain: answers.domain,
@@ -82,6 +86,18 @@ async function ask(answers: InitAnswers): Promise<InitAnswers> {
   }
 }
 
+/** `updates.source` of the example config that ships with the starter package, if it names one. */
+function exampleUpdatesSource(root: string): string | undefined {
+  const example = join(root, 'mininode.config.example.json');
+  if (!existsSync(example)) return undefined;
+  try {
+    const parsed = JSON.parse(readFileSync(example, 'utf8')) as { updates?: { source?: unknown } };
+    return typeof parsed.updates?.source === 'string' ? parsed.updates.source : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 /** Writes `mininode.config.json`. Without all answers on the command line it asks for them. */
 export async function initInstance(
   root: string,
@@ -96,7 +112,10 @@ export async function initInstance(
   if (missing.length > 0 && !process.stdin.isTTY) {
     throw new Error(`missing: ${missing.map((q) => `--${q.key}`).join(', ')}`);
   }
-  const answers = missing.length > 0 ? await ask(flags) : flags;
+  const asked = missing.length > 0 ? await ask(flags) : flags;
+  // The package this installation came from names where its updates come from.
+  const updatesSource = asked.updatesSource ?? exampleUpdatesSource(root);
+  const answers = updatesSource ? { ...asked, updatesSource } : asked;
   const config = buildConfig(answers);
   writeFileSync(path, `${JSON.stringify(config, null, 2)}\n`);
   return config;

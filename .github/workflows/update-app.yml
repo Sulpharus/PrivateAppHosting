@@ -1,0 +1,128 @@
+name: App aktualisieren
+
+# Brings the newest version of one hosted app from its own GitHub repository (the `repository`
+# field of its mininode.json) into this repository (ADR 0028). Started from Verwaltung →
+# Updates through the API, or by hand under Actions.
+#
+# `mininode update app` copies the repository's files over hosted/<slug>. The data of the app is
+# in Supabase and is not touched; an already applied migration in db/ is never changed (such a
+# repository stops here). The result is a pull request (branch auto/update-<slug>-…): the normal
+# checks run on it, and merging it deploys the app. It is never merged automatically: the app
+# brings code and manifest from outside this repository, so a person reads it first. The checks
+# start by themselves only when the secret INTEGRATE_TOKEN is set (pushes with the default token
+# do not start workflows).
+
+on:
+  workflow_dispatch:
+    inputs:
+      slug:
+        description: App (hosted/<slug>)
+        type: string
+        required: true
+
+run-name: App aktualisieren ${{ inputs.slug }}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: update-app-${{ inputs.slug }}
+  cancel-in-progress: false
+
+jobs:
+  update:
+    name: Update ${{ inputs.slug }}
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    env:
+      SLUG: ${{ inputs.slug }}
+      # Whether the pull request can start the checks (a push with the default token cannot).
+      HAS_TOKEN: ${{ secrets.INTEGRATE_TOKEN != '' }}
+    steps:
+      - name: Check the address
+        run: |
+          [[ "$SLUG" =~ ^[a-z][a-z0-9-]{0,30}[a-z0-9]$ ]] || { echo "::error::invalid slug"; exit 1; }
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Fetch the app's repository
+        id: source
+        env:
+          # A private app repository needs a key that can read it.
+          CLONE_TOKEN: ${{ secrets.EXPORT_REPO_TOKEN || secrets.INTEGRATE_TOKEN || github.token }}
+        run: |
+          set -euo pipefail
+          [ -f "hosted/$SLUG/mininode.json" ] || { echo "::error::hosted/$SLUG does not exist"; exit 1; }
+          repository=$(jq -r '.repository // empty' "hosted/$SLUG/mininode.json")
+          [[ "$repository" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ && ! "$repository" =~ (^|/)\.+(/|$) ]] || {
+            echo "::error::hosted/$SLUG/mininode.json has no \"repository\" (owner/repo)"; exit 1; }
+          git clone -q --depth 1 "https://x-access-token:${CLONE_TOKEN}@github.com/${repository}.git" "$RUNNER_TEMP/clone"
+          commit=$(git -C "$RUNNER_TEMP/clone" rev-parse HEAD)
+          rm -rf "$RUNNER_TEMP/clone/.git"
+          known=$(jq -r '.commit // empty' "hosted/$SLUG/.mininode-source.json" 2>/dev/null || true)
+          { echo "repository=$repository"; echo "commit=$commit"; echo "known=$known"; } >> "$GITHUB_OUTPUT"
+      - name: Apply the update
+        id: apply
+        env:
+          REPOSITORY: ${{ steps.source.outputs.repository }}
+          COMMIT: ${{ steps.source.outputs.commit }}
+          KNOWN: ${{ steps.source.outputs.known }}
+        run: |
+          set -euo pipefail
+          if [ "$COMMIT" = "$KNOWN" ]; then
+            echo "$SLUG is already at ${COMMIT:0:7}." | tee -a "$GITHUB_STEP_SUMMARY"
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          pnpm mininode update app "$SLUG" --from "$RUNNER_TEMP/clone" --repository "$REPOSITORY" --commit "$COMMIT" | tee "$RUNNER_TEMP/plan.txt"
+          # The repository's manifest is kept as it is, plus the link back to the repository.
+          jq --arg r "$REPOSITORY" '.repository = $r' "hosted/$SLUG/mininode.json" > "$RUNNER_TEMP/mininode.json"
+          mv "$RUNNER_TEMP/mininode.json" "hosted/$SLUG/mininode.json"
+          pnpm exec biome format --write "hosted/$SLUG/mininode.json"
+          pnpm install --lockfile-only --ignore-scripts
+          pnpm mininode doctor "hosted/$SLUG"
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+      - name: Open the pull request
+        if: steps.apply.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.INTEGRATE_TOKEN || github.token }}
+          REPOSITORY: ${{ steps.source.outputs.repository }}
+          COMMIT: ${{ steps.source.outputs.commit }}
+        run: |
+          set -euo pipefail
+          open=$(gh pr list --state open --json headRefName --jq "[.[] | select(.headRefName | startswith(\"auto/update-$SLUG-\"))] | length")
+          if [ "$open" != "0" ]; then
+            echo "An update pull request for $SLUG is already open: merge or close it first." | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git config user.name "mininode-update"
+          git config user.email "update@users.noreply.github.com"
+          branch="auto/update-$SLUG-${COMMIT:0:7}-$GITHUB_RUN_ID"
+          git checkout -b "$branch"
+          git add -A
+          bad=$(git diff --cached --name-only | grep -vE "^(hosted/$SLUG/|pnpm-lock\.yaml$)" || true)
+          [ -z "$bad" ] || { echo "unexpected files: $bad" >&2; exit 1; }
+          git commit -q -m "chore($SLUG): update to ${COMMIT:0:7}" \
+            -m "Brought in from $REPOSITORY with mininode update app."
+          git push -q origin "$branch"
+          body="Aktualisiert die App \`$SLUG\` auf den Stand \`${COMMIT:0:7}\` von \`$REPOSITORY\`.
+
+          $(cat "$RUNNER_TEMP/plan.txt")
+
+          Die Daten der App liegen in Supabase und bleiben unverändert. Bereits angewendete Migrationen in \`db/\` werden nie geändert, nur neue kommen dazu. Die Änderungen (auch an der \`mininode.json\`: Rechte, Domains) bitte lesen und erst mergen, wenn die Prüfungen grün sind; danach deployt der normale Ablauf die App. Dieser Pull Request wird nie automatisch gemergt."
+          pr=$(gh pr create --base main --head "$branch" --title "chore($SLUG): update to ${COMMIT:0:7}" --body "$body")
+          # Never merged by itself: the app brings code and a manifest (permissions, domains) from
+          # outside this repository, so a person reads the diff first.
+          [ "$HAS_TOKEN" = "true" ] || echo "::warning::INTEGRATE_TOKEN is not set: the pull request gets no checks. Do not merge it unchecked."
+          echo "Pull request: $pr" >> "$GITHUB_STEP_SUMMARY"

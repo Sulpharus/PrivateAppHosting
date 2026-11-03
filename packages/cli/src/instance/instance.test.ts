@@ -49,7 +49,10 @@ function scratch(): string {
 describe('configure', () => {
   it('writes the domain, project and account into every file that cannot read the config', () => {
     const root = scratch();
-    const { changed } = configureInstance(root, buildConfig(answers));
+    const { changed } = configureInstance(
+      root,
+      buildConfig({ ...answers, updatesSource: 'upstream/mininode' }),
+    );
     expect(changed).toHaveLength(4);
     const portal = readFileSync(join(root, 'apps/portal/wrangler.jsonc'), 'utf8');
     expect(portal).toContain('"pattern": "tests.example.net"');
@@ -57,6 +60,7 @@ describe('configure', () => {
     expect(portal).toContain('"API_URL": "https://api.tests.example.net"');
     const api = readFileSync(join(root, 'apps/api/wrangler.jsonc'), 'utf8');
     expect(api).toContain('"GITHUB_REPO": "someone-else/other-platform"');
+    expect(api).toContain('"UPDATES_SOURCE": "upstream/mininode"');
     expect(api).toContain('"MAIL_FROM": "hallo@tests.example.net"');
     expect(api).toContain('"NUCBOX_CONTROL_URL": "https://control.tests.example.net"');
     const ai = readFileSync(join(root, 'apps/ai-proxy/wrangler.jsonc'), 'utf8');

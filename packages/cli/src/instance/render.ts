@@ -54,7 +54,12 @@ function renderPortal(text: string, env: ResolvedEnvironment): string {
   });
 }
 
-function renderApi(text: string, env: ResolvedEnvironment, repository = ''): string {
+function renderApi(
+  text: string,
+  env: ResolvedEnvironment,
+  repository = '',
+  updatesSource = '',
+): string {
   return renderWorker(text, env, {
     pattern: `api.${env.domain}`,
     PORTAL_URL: env.portalUrl,
@@ -62,6 +67,7 @@ function renderApi(text: string, env: ResolvedEnvironment, repository = ''): str
     SUPABASE_PUBLISHABLE_KEY: env.supabasePublishableKey,
     MAIL_FROM: env.mailFrom,
     GITHUB_REPO: repository,
+    UPDATES_SOURCE: updatesSource,
     GUACAMOLE_URL: `https://remote.${env.domain}`,
     NUCBOX_CONTROL_URL: `https://control.${env.domain}`,
   });
@@ -117,7 +123,7 @@ const TARGETS: Target[] = [
   { path: 'apps/portal/wrangler.jsonc', render: (t, c) => renderPortal(t, resolveEnvironment(c)) },
   {
     path: 'apps/api/wrangler.jsonc',
-    render: (t, c) => renderApi(t, resolveEnvironment(c), c.github?.repository),
+    render: (t, c) => renderApi(t, resolveEnvironment(c), c.github?.repository, c.updates?.source),
   },
   {
     path: 'apps/ai-proxy/wrangler.jsonc',

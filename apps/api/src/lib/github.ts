@@ -1,13 +1,12 @@
 // Starts this repository's GitHub workflows (App-Bibliothek, app export) with the dispatch token.
 
+import { GITHUB_REPO } from '@mininode/manifest';
 import type { ApiEnv } from '../env.ts';
 import { problem } from './auth.ts';
 
 /** owner/repo whose workflows the API starts (`github.repository` in mininode.config.json). */
 function workflowRepo(env: ApiEnv): string | undefined {
-  return env.GITHUB_REPO && /^[\w.-]+\/[\w.-]+$/.test(env.GITHUB_REPO)
-    ? env.GITHUB_REPO
-    : undefined;
+  return env.GITHUB_REPO && GITHUB_REPO.test(env.GITHUB_REPO) ? env.GITHUB_REPO : undefined;
 }
 
 function notConfigured(token: string | undefined): Response {
@@ -155,4 +154,29 @@ export async function artifactDownloadUrl(
   if (target.protocol !== 'https:' || !trusted.some((suffix) => target.hostname.endsWith(suffix)))
     return problem(502, 'github_error', 'GitHub hat eine unerwartete Adresse geliefert.');
   return target.toString();
+}
+
+/**
+ * A read from any repository's API (`owner/repo`, `/releases?per_page=1`), or null when it
+ * cannot be had: a missing repository, a token that cannot read it, GitHub down. The dispatch
+ * token is sent when there is one (it lifts the rate limit for public data too).
+ */
+export async function githubReadRepo<T>(
+  env: ApiEnv,
+  repo: string,
+  path: string,
+): Promise<T | null> {
+  if (!GITHUB_REPO.test(repo)) return null;
+  const headers: Record<string, string> = {
+    Accept: 'application/vnd.github+json',
+    'X-GitHub-Api-Version': '2022-11-28',
+    'User-Agent': 'mininode-api',
+  };
+  if (env.GITHUB_DISPATCH_TOKEN) headers.Authorization = `Bearer ${env.GITHUB_DISPATCH_TOKEN}`;
+  const response = await fetch(`https://api.github.com/repos/${repo}${path}`, {
+    headers,
+    signal: AbortSignal.timeout(10_000),
+  }).catch(() => null);
+  if (!response?.ok) return null;
+  return (await response.json().catch(() => null)) as T | null;
 }

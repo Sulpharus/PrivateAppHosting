@@ -133,6 +133,17 @@ jobs:
           pnpm mininode configure --check
           pnpm check
           pnpm mininode doctor --all
+      - name: The Cloudflare edition does the same without the desktop and home-server parts
+        run: |
+          set -euo pipefail
+          scripts/make-starter.sh ci "$RUNNER_TEMP/out" cloudflare
+          cd "$RUNNER_TEMP" && unzip -q out/mininode-cloudflare-ci.zip && cd mininode-cloudflare-ci
+          test ! -e infra/desktop && test ! -e apps/desktop-host && test ! -e apps/nucbox-control
+          pnpm install --frozen-lockfile
+          pnpm mininode init --domain apps.example.org --zone example.org --accountId 0123456789abcdef0123456789abcdef \
+            --supabaseRef abcdefghijklmnopqrst --publishableKey sb_publishable_0123456789abcdef --repository me/platform
+          pnpm mininode configure --check
+          pnpm check
 
   desktop:
     name: Desktop edition installs and signs in

@@ -525,6 +525,10 @@
     "library": {
       "type": "string",
       "pattern": "^[a-z][a-z0-9-]{0,30}[a-z0-9]$"
+    },
+    "repository": {
+      "type": "string",
+      "pattern": "^(?!\\.+\\/)[\\w.-]+\\/(?!\\.+$)[\\w.-]+$"
     }
   },
   "required": [

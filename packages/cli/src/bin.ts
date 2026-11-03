@@ -31,6 +31,14 @@ import { integrate, reportMarkdown } from './integrate/index.ts';
 import type { IntegrateResult } from './integrate/types.ts';
 import { biomeSkip, lintExemption, tidy, verifyBuild } from './integrate/verify.ts';
 import { fetchSubmission, type SubmissionStatus, setSubmissionStatus } from './submissions.ts';
+import {
+  applyAppUpdate,
+  applyPlatformUpdate,
+  describePlan,
+  planAppUpdate,
+  planPlatformUpdate,
+  writePlatformList,
+} from './update/index.ts';
 
 const ROOT = resolve(import.meta.dirname, '../../..');
 
@@ -68,6 +76,12 @@ const USAGE = `mininode <command>
   backup restore <dir> [--yes] [--confirm <db host>] [--no-database] [--no-storage] [--force]
                                     Put a backup back (without --yes: show what would change;
                                     a remote database also needs --confirm <its host>)
+  update platform --from <dir> --source <owner/repo> [--skip-workflows] [--dry-run]
+                                    Bring a newer starter package (unpacked in <dir>) into this repository
+  update list --from <dir> --source <owner/repo> [--edition starter|cloudflare]
+                                    Write .mininode/platform-files.json for a package being built
+  update app <slug> --from <dir> --repository <owner/repo> --commit <sha> [--dry-run]
+                                    Bring the newest version of an app from its own repository (checked out in <dir>)
   library check <entry> <slug>      App-Bibliothek: check an install before the rollout
   library install <entry> <slug>    App-Bibliothek: register an installed program
   library remove <slug> <entry>     App-Bibliothek: disable a removed program
@@ -355,6 +369,54 @@ async function main(args: string[]): Promise<number> {
       }
       console.log(`exported ${result.slug} (${result.files.length} files) to ${out}`);
       return 0;
+    }
+    case 'update': {
+      const from = flag(args, '--from');
+      const dry = args.includes('--dry-run');
+      if (!from) break;
+      if (target === 'list') {
+        const source = flag(args, '--source');
+        if (!source) break;
+        writePlatformList(
+          resolve(process.cwd(), from),
+          source,
+          flag(args, '--edition') ?? 'starter',
+        );
+        return 0;
+      }
+      if (target === 'platform') {
+        const source = flag(args, '--source');
+        if (!source) break;
+        const options = {
+          root: ROOT,
+          from: resolve(process.cwd(), from),
+          skipWorkflows: args.includes('--skip-workflows'),
+        };
+        const result = planPlatformUpdate(options);
+        console.log(describePlan(result));
+        if (result.conflicts.length > 0) return 2;
+        if (!dry) applyPlatformUpdate(options, result, source);
+        return 0;
+      }
+      if (target === 'app') {
+        const slug = args[2];
+        const repository = flag(args, '--repository');
+        const commit = flag(args, '--commit');
+        if (!slug || !repository || !commit) break;
+        const options = {
+          appDir: join(ROOT, 'hosted', slug),
+          slug,
+          from: resolve(process.cwd(), from),
+          repository,
+          commit,
+        };
+        const result = planAppUpdate(options);
+        console.log(describePlan(result));
+        if (result.conflicts.length > 0) return 2;
+        if (!dry) applyAppUpdate(options, result);
+        return 0;
+      }
+      break;
     }
     case 'backup': {
       const [, , folder] = args;

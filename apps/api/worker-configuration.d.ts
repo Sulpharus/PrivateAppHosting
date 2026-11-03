@@ -7,6 +7,7 @@ interface __BaseEnv_Env {
 	SUPABASE_PUBLISHABLE_KEY: string;
 	MAIL_FROM: string;
 	GITHUB_REPO: string;
+	UPDATES_SOURCE: string;
 	DEPLOY_ENVIRONMENT: string;
 	GUACAMOLE_URL: string;
 	NUCBOX_CONTROL_URL: string;
@@ -22,7 +23,7 @@ type StringifyValues<EnvType extends Record<string, unknown>> = {
 	[Binding in keyof EnvType]: EnvType[Binding] extends string ? EnvType[Binding] : string;
 };
 declare namespace NodeJS {
-	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "PORTAL_URL" | "SUPABASE_URL" | "SUPABASE_PUBLISHABLE_KEY" | "MAIL_FROM" | "GITHUB_REPO" | "DEPLOY_ENVIRONMENT" | "GUACAMOLE_URL" | "NUCBOX_CONTROL_URL">> {}
+	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "PORTAL_URL" | "SUPABASE_URL" | "SUPABASE_PUBLISHABLE_KEY" | "MAIL_FROM" | "GITHUB_REPO" | "UPDATES_SOURCE" | "DEPLOY_ENVIRONMENT" | "GUACAMOLE_URL" | "NUCBOX_CONTROL_URL">> {}
 }
 
 // Begin runtime types

@@ -5,6 +5,9 @@
   "github": {
     "repository": "Sulpharus/PrivateAppHosting"
   },
+  "updates": {
+    "source": "Sulpharus/PrivateAppHosting"
+  },
   "environments": {
     "production": {
       "domain": "mininode.app",
