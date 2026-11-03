@@ -6,6 +6,7 @@
   "app.step.program": "Loading the program …",
   "app.step.start": "Starting MuseScore Studio …",
   "app.failed": "MuseScore Studio could not start. Please reload the page.",
+  "print.blocked": "The browser blocked the print window. Allow pop-ups for this site and print again.",
   "data.menu": "Data",
   "data.title": "Your MuseScore data",
   "data.intro": "Export saves your scores from MiniNode and your MuseScore settings (workspaces, palettes, plugins) as one ZIP file. Import brings such a file back, on this or another device; scores with the same name are replaced.",

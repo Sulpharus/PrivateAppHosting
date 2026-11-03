@@ -224,6 +224,34 @@ index 1d3657f0..87d8a0cb 100644
  #cmakedefine MUSE_THREADS_SUPPORT 1
  #cmakedefine MUSE_MULTICONTEXT_WIP 1
  
+diff --git a/src/framework/global/CMakeLists.txt b/src/framework/global/CMakeLists.txt
+index 4b5dc769..52451a14 100644
+--- a/src/framework/global/CMakeLists.txt
++++ b/src/framework/global/CMakeLists.txt
+@@ -235,13 +235,22 @@ else()
+ 
+     include(GetPlatformInfo)
+ 
+-    if (OS_IS_WASM)
++    if (OS_IS_WASM AND NOT MUSE_WEB_DESKTOP)
+         target_sources(muse_global PRIVATE
+             io/internal/memfilesystem.cpp
+             io/internal/memfilesystem.h
+             internal/platform/web/webinteractive.cpp
+             internal/platform/web/webinteractive.h
+         )
++    elseif (OS_IS_WASM)
++        # Desktop edition: the Emscripten file system, persisted by the page (IDBFS).
++        target_sources(muse_global PRIVATE
++            io/internal/filesystem.cpp
++            io/internal/filesystem.h
++            internal/platform/web/webinteractive.cpp
++            internal/platform/web/webinteractive.h
++            internal/platform/web/webfiles.h
++        )
+     else()
+         target_sources(muse_global PRIVATE
+             io/internal/filesystem.cpp
 diff --git a/src/framework/global/globalmodule.cpp b/src/framework/global/globalmodule.cpp
 index 27688432..8d3b9ef8 100644
 --- a/src/framework/global/globalmodule.cpp
@@ -246,11 +274,48 @@ index 27688432..8d3b9ef8 100644
      ioc()->registerExport<IFileSystem>(moduleName(), new MemFileSystem());
  #else
      ioc()->registerExport<IFileSystem>(moduleName(), new FileSystem());
+diff --git a/src/framework/global/internal/platform/web/webfiles.h b/src/framework/global/internal/platform/web/webfiles.h
+new file mode 100644
+index 00000000..dbf381f1
+--- /dev/null
++++ b/src/framework/global/internal/platform/web/webfiles.h
+@@ -0,0 +1,31 @@
++/*
++ * SPDX-License-Identifier: GPL-3.0-only
++ * MuseScore-Studio-CLA-applies
++ *
++ * MuseScore Studio
++ * Music Composition & Notation
++ *
++ * Copyright (C) 2026 MuseScore Limited and others
++ *
++ * This program is free software: you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 3 as
++ * published by the Free Software Foundation.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
++ */
++#pragma once
++
++#include "global/io/path.h"
++
++namespace muse::web {
++//! Desktop edition in the browser: asks the page to put a file the person keeps outside the
++//! editor (e.g. a score in their MiniNode files, from the recent list) at `path`, and waits.
++//! Returns whether the file is there now.
++bool fetchFile(const io::path_t& path);
++}
 diff --git a/src/framework/global/internal/platform/web/webinteractive.cpp b/src/framework/global/internal/platform/web/webinteractive.cpp
-index e77e195f..da0203ea 100644
+index e77e195f..a63fd0ea 100644
 --- a/src/framework/global/internal/platform/web/webinteractive.cpp
 +++ b/src/framework/global/internal/platform/web/webinteractive.cpp
-@@ -25,6 +25,13 @@
+@@ -25,7 +25,15 @@
  #include <emscripten/bind.h>
  #endif
  
@@ -262,9 +327,11 @@ index e77e195f..da0203ea 100644
 +#endif
 +
  #include "global/io/file.h"
++#include "webfiles.h"
  
  #include "log.h"
-@@ -85,6 +92,84 @@ EMSCRIPTEN_BINDINGS(WebInteractive) {
+ 
+@@ -85,6 +93,90 @@ EMSCRIPTEN_BINDINGS(WebInteractive) {
  }
  #endif
  
@@ -344,12 +411,18 @@ index e77e195f..da0203ea 100644
 +EMSCRIPTEN_BINDINGS(WebInteractiveSync) {
 +    emscripten::function("onSyncDialogDone", &onSyncDialogDone);
 +}
++
++bool muse::web::fetchFile(const io::path_t& path)
++{
++    std::vector<std::string> paths = runSyncDialog("fetch", std::string(), path, {}, false);
++    return !paths.empty() && io::File::exists(path);
++}
 +#endif
 +
  WebInteractive::WebInteractive(std::shared_ptr<muse::IInteractive> origin)
      : m_origin(origin)
  {
-@@ -159,7 +244,15 @@ void WebInteractive::showProgress(const std::string& title, Progress progress)
+@@ -159,7 +251,15 @@ void WebInteractive::showProgress(const std::string& title, Progress progress)
  async::Promise<io::path_t> WebInteractive::selectOpeningFile(const std::string& title, const io::path_t& dir,
                                                               const std::vector<std::string>& filter)
  {
@@ -366,7 +439,7 @@ index e77e195f..da0203ea 100644
      return async::make_promise<io::path_t>([title, dir, filter](auto resolve, auto reject) {
          IF_ASSERT_FAILED(!g_fileOpenData.callback) {
              LOGE() << "Opening file already open";
-@@ -201,7 +294,11 @@ async::Promise<io::path_t> WebInteractive::selectOpeningFile(const std::string&
+@@ -201,7 +301,11 @@ async::Promise<io::path_t> WebInteractive::selectOpeningFile(const std::string&
  io::path_t WebInteractive::selectOpeningFileSync(const std::string& title, const io::path_t& dir, const std::vector<std::string>& filter,
                                                   const int options)
  {
@@ -379,7 +452,7 @@ index e77e195f..da0203ea 100644
      UNUSED(title);
      UNUSED(dir);
      UNUSED(filter);
-@@ -216,7 +313,14 @@ io::path_t WebInteractive::selectOpeningFileSync(const std::string& title, const
+@@ -216,7 +320,14 @@ io::path_t WebInteractive::selectOpeningFileSync(const std::string& title, const
  io::paths_t WebInteractive::selectOpeningFilesSync(const std::string& title, const io::path_t& dir, const std::vector<std::string>& filter,
                                                     const int options)
  {
@@ -395,7 +468,7 @@ index e77e195f..da0203ea 100644
      UNUSED(title);
      UNUSED(dir);
      UNUSED(filter);
-@@ -231,7 +335,11 @@ io::paths_t WebInteractive::selectOpeningFilesSync(const std::string& title, con
+@@ -231,7 +342,11 @@ io::paths_t WebInteractive::selectOpeningFilesSync(const std::string& title, con
  io::path_t WebInteractive::selectSavingFileSync(const std::string& title, const io::path_t& dir, const std::vector<std::string>& filter,
                                                  bool confirmOverwrite)
  {
@@ -460,6 +533,65 @@ index a84e33ae..349aef34 100644
      interactive()->info("", muse::trc("notation", "Sorry, instrument change on the web is not supported at this time."));
      return false;
  #else
+diff --git a/src/project/internal/projectactionscontroller.cpp b/src/project/internal/projectactionscontroller.cpp
+index 4eb13888..06d53bfb 100644
+--- a/src/project/internal/projectactionscontroller.cpp
++++ b/src/project/internal/projectactionscontroller.cpp
+@@ -21,6 +21,12 @@
+  */
+ #include "projectactionscontroller.h"
+ 
++#include "muse_framework_config.h"
++
++#ifdef MUSE_WEB_DESKTOP
++#include "global/internal/platform/web/webfiles.h"
++#endif
++
+ #include <QBuffer>
+ #include <QEventLoop>
+ #include <QFileInfo>
+@@ -251,6 +257,14 @@ Ret ProjectActionsController::openProject(const muse::io::path_t& givenPath, con
+         return make_ret(Ret::Code::UnknownError);
+     }
+ 
++#ifdef MUSE_WEB_DESKTOP
++    //! A score kept in the person's MiniNode files (the recent list after a reload) is fetched by
++    //! the page first.
++    if (!fileSystem()->exists(actualPath)) {
++        muse::web::fetchFile(actualPath);
++    }
++#endif
++
+     //! Step 2. If the project is already open in the current window, then just switch to showing the notation
+     if (isProjectOpened(actualPath)) {
+         return doFinishOpenProject();
+@@ -264,6 +278,13 @@ Ret ProjectActionsController::openProject(const muse::io::path_t& givenPath, con
+ 
+     //! Step 4. Check, if a any project is already open in the current window,
+     //! then create a new instance
++#ifdef MUSE_WEB_DESKTOP
++    //! In the browser there is one window: the open score is closed first (the editor asks
++    //! whether to save it), then the other one opens in its place.
++    if (globalContext()->currentProject() && !closeOpenedProject(false)) {
++        return make_ret(Ret::Code::Cancel);
++    }
++#endif
+     if (globalContext()->currentProject()) {
+         QStringList args;
+         args << actualPath.toQString();
+@@ -692,6 +713,12 @@ void ProjectActionsController::newProject()
+         m_isProjectProcessing = false;
+     };
+ 
++#ifdef MUSE_WEB_DESKTOP
++    //! One window in the browser: close the open score first (asking to save it).
++    if (globalContext()->currentProject() && !closeOpenedProject(false)) {
++        return;
++    }
++#endif
+     if (globalContext()->currentProject()) {
+         if (multiwindowsProvider()->isHasWindowWithoutProject()) {
+             multiwindowsProvider()->activateWindowWithoutProject({ "file-new" });
 diff --git a/src/project/qml/MuseScore/Project/ScoresPage.qml b/src/project/qml/MuseScore/Project/ScoresPage.qml
 index 26b6428a..6f12b737 100644
 --- a/src/project/qml/MuseScore/Project/ScoresPage.qml
@@ -478,3 +610,166 @@ index 26b6428a..6f12b737 100644
          }
  
          NavigationPanel {
+diff --git a/src/web/appjs/CMakeLists.txt b/src/web/appjs/CMakeLists.txt
+index e0b960ac..80945cb9 100644
+--- a/src/web/appjs/CMakeLists.txt
++++ b/src/web/appjs/CMakeLists.txt
+@@ -25,4 +25,6 @@ target_sources(appjs PRIVATE
+     appjsmodule.h
+     webapi.cpp
+     webapi.h
++    webprintprovider.cpp
++    webprintprovider.h
+ )
+diff --git a/src/web/appjs/appjsmodule.cpp b/src/web/appjs/appjsmodule.cpp
+index f4028bb8..d6687d23 100644
+--- a/src/web/appjs/appjsmodule.cpp
++++ b/src/web/appjs/appjsmodule.cpp
+@@ -24,6 +24,10 @@
+ #include <emscripten/val.h>
+ 
+ #include "webapi.h"
++#include "webprintprovider.h"
++
++#include "modularity/ioc.h"
++#include "app_config.h"
+ 
+ using namespace muse;
+ using namespace mu::appjs;
+@@ -33,6 +37,13 @@ std::string AppJsModule::moduleName() const
+     return "appjs";
+ }
+ 
++void AppJsModule::registerExports()
++{
++#ifndef MUE_BUILD_PRINT_MODULE
++    ioc()->registerExport<mu::print::IPrintProvider>(moduleName(), std::make_shared<WebPrintProvider>(iocContext()));
++#endif
++}
++
+ void AppJsModule::onInit(const muse::IApplication::RunMode&)
+ {
+     WebApi::instance()->init();
+diff --git a/src/web/appjs/appjsmodule.h b/src/web/appjs/appjsmodule.h
+index 7035b680..ce6e5b71 100644
+--- a/src/web/appjs/appjsmodule.h
++++ b/src/web/appjs/appjsmodule.h
+@@ -29,6 +29,7 @@ class AppJsModule : public muse::modularity::IModuleSetup
+ public:
+ 
+     std::string moduleName() const override;
++    void registerExports() override;
+ 
+     void onInit(const muse::IApplication::RunMode& mode) override;
+     void onDeinit() override;
+diff --git a/src/web/appjs/webprintprovider.cpp b/src/web/appjs/webprintprovider.cpp
+new file mode 100644
+index 00000000..aeaee70f
+--- /dev/null
++++ b/src/web/appjs/webprintprovider.cpp
+@@ -0,0 +1,58 @@
++/*
++ * SPDX-License-Identifier: GPL-3.0-only
++ * MuseScore-Studio-CLA-applies
++ *
++ * MuseScore Studio
++ * Music Composition & Notation
++ *
++ * Copyright (C) 2026 MuseScore Limited and others
++ *
++ * This program is free software: you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 3 as
++ * published by the Free Software Foundation.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
++ */
++#include "webprintprovider.h"
++
++#include <emscripten/val.h>
++
++#include "global/io/buffer.h"
++
++#include "log.h"
++
++using namespace muse;
++using namespace mu::appjs;
++
++Ret WebPrintProvider::printNotation(notation::INotationPtr notation)
++{
++    IF_ASSERT_FAILED(notation) {
++        return make_ret(Ret::Code::InternalError);
++    }
++
++    project::INotationWriterPtr writer = writers() ? writers()->writer("pdf") : nullptr;
++    if (!writer) {
++        LOGE() << "no PDF writer";
++        return make_ret(Ret::Code::NotSupported);
++    }
++
++    io::Buffer buffer;
++    buffer.open(io::IODevice::WriteOnly);
++    Ret ret = writer->write(notation, buffer);
++    buffer.close();
++    if (!ret) {
++        return ret;
++    }
++
++    const ByteArray& data = buffer.data();
++    emscripten::val bytes = emscripten::val::global("Uint8Array").new_(
++        emscripten::typed_memory_view(data.size(), data.constData()));
++    emscripten::val::module_property("mnPrintPdf")(bytes);
++    return make_ok();
++}
+diff --git a/src/web/appjs/webprintprovider.h b/src/web/appjs/webprintprovider.h
+new file mode 100644
+index 00000000..b0294a5c
+--- /dev/null
++++ b/src/web/appjs/webprintprovider.h
+@@ -0,0 +1,41 @@
++/*
++ * SPDX-License-Identifier: GPL-3.0-only
++ * MuseScore-Studio-CLA-applies
++ *
++ * MuseScore Studio
++ * Music Composition & Notation
++ *
++ * Copyright (C) 2026 MuseScore Limited and others
++ *
++ * This program is free software: you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 3 as
++ * published by the Free Software Foundation.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
++ */
++#pragma once
++
++#include "print/iprintprovider.h"
++#include "project/inotationwritersregister.h"
++#include "global/modularity/ioc.h"
++
++namespace mu::appjs {
++//! Printing in the browser: the score is written as PDF and handed to the page
++//! (Module.mnPrintPdf), which opens it in the browser's PDF viewer to print from there.
++class WebPrintProvider : public print::IPrintProvider, public muse::Contextable
++{
++    muse::ContextInject<project::INotationWritersRegister> writers = { this };
++
++public:
++    WebPrintProvider(const muse::modularity::ContextPtr& iocCtx)
++        : muse::Contextable(iocCtx) {}
++
++    muse::Ret printNotation(notation::INotationPtr notation) override;
++};
++}

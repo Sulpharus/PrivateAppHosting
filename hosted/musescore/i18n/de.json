@@ -6,6 +6,7 @@
   "app.step.program": "Das Programm wird geladen …",
   "app.step.start": "MuseScore Studio startet …",
   "app.failed": "MuseScore Studio konnte nicht starten. Bitte lade die Seite neu.",
+  "print.blocked": "Der Browser hat das Druckfenster blockiert. Erlaube Pop-ups für diese Seite und drucke noch einmal.",
   "data.menu": "Daten",
   "data.title": "Deine MuseScore-Daten",
   "data.intro": "Exportieren speichert deine Partituren aus MiniNode und deine MuseScore-Einstellungen (Arbeitsbereiche, Paletten, Plugins) als eine ZIP-Datei. Importieren holt eine solche Datei zurück, auf diesem oder einem anderen Gerät; Partituren mit gleichem Namen werden ersetzt.",

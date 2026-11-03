@@ -59,16 +59,26 @@ two, MuseScore about one and a half on four cores); `ccache` shortens later ones
 ## The page (`web/`)
 
 - `mn-musescore.js`: login, language, start (Qt's loader), file dialogs, saving, user data.
-- **Open**: MiniNode's dialog (kit `files.js`): the person's files in MiniNode or the device. The
-  file is written to `/interactive/` and opened.
-- **Save, Save as, Export**: the editor asks for a path; the page shows MiniNode's save dialog and
-  answers with `/mn-save/<n>/<name>`. Each file the editor finishes there (hooked `FS.close`) goes
-  to the chosen place: MiniNode or the device. Further files of one export (parts) go to the same
-  place under their own names. Saving again writes to the same place without asking.
-- **User data**: `/files/data` (settings `.ini`, workspaces, palettes, plugins, recent files) is
-  IndexedDB (IDBFS), written back a moment after each change and when the tab is hidden. It stays
-  in this browser; **Daten** in the MiniNode strip exports it with all scores from MiniNode as
-  one ZIP and imports such a ZIP (`mn-data.js`).
+- **Open**: MiniNode's dialog (kit `files.js`): the person's files in MiniNode or the device. A
+  file from MiniNode is placed at `/mininode/<name>`, one from the device below `/mn-save/<n>/`
+  with its file handle, so **Save** goes back to where the score came from, like on a desktop.
+- **Save as, Export**: the editor asks for a path; the page shows MiniNode's save dialog and
+  answers with `/mininode/<name>` (MiniNode) or `/mn-save/<n>/<name>` (device). Each file the
+  editor finishes there (hooked `FS.close`) goes to that place: uploaded to the person's MiniNode
+  files (Supabase Storage) or written to the device file. MuseScore's temporary `…_saving` file and
+  its hidden `.mscbackup` folder stay in the editor. Further files of one export (parts) go to the
+  same place under their own names (on the device: as downloads).
+- **Open recent** after a reload: a score at `/mininode/<name>` that is not in the editor yet is
+  fetched from MiniNode first (`muse::web::fetchFile`). Device files in the recent list cannot be
+  reopened after a reload (no lasting handle); open them again from the device.
+- **Print**: File → Print writes the score as PDF and opens it in the browser's PDF viewer.
+- **User data**: `/files/data` (settings `.ini`, workspaces, palettes, plugins, recent list) lives
+  in IndexedDB (IDBFS), written back a moment after each change and when the tab is hidden, and
+  follows the person to other browsers (`mn-sync.js`): a snapshot `.musescore-data.zip` in their
+  MiniNode files and its stamp in `mn.kv` (`dataStamp`). A newer snapshot from another device
+  replaces this browser's copy before the editor starts; a change is stored 15 seconds later.
+- **Daten** in the MiniNode strip exports all scores from MiniNode and the user data as one ZIP
+  and imports such a ZIP (`mn-data.js`).
 - **Audio** (`mn-audio.js`): the engine runs in an AudioWorklet; it starts with the first click
   (browsers allow sound only after a user gesture). The SoundFont loads in the background after
   the editor is up (`mn-soundfont.js`) and stays in Cache Storage.
@@ -78,7 +88,9 @@ two, MuseScore about one and a half on four cores); `ccache` shortens later ones
 
 ## Data
 
-`data.mode: private`: files in the person's own folder of this app (`mn.files`); nothing in tables.
+`data.mode: private`: scores and exports are files in the person's own folder of this app
+(`mn.files`), with the hidden settings snapshot `.musescore-data.zip`; `mn.kv` holds one setting
+(`dataStamp`). Nothing in tables.
 
 ## Requirements
 

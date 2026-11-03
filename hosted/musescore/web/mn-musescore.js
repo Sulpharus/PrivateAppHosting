@@ -14,12 +14,13 @@ import build from './mn-build.js';
 import { installDataMenu } from './mn-data.js';
 import { unpackShare } from './mn-share.js';
 import { soundFontUrl } from './mn-soundfont.js';
+import { createAccountSync, restoreFromAccount } from './mn-sync.js';
 import qtLoad from './qtloader.js';
 
 const DATA_DIR = '/files/data';
 const SHARE_DIR = '/files/share';
 const SAVE_DIR = '/mn-save';
-const OPEN_DIR = '/interactive';
+const MININODE_DIR = '/mininode';
 
 const t = (key, params = {}) => {
   const text = window.mnI18n?.t(key, params);
@@ -51,13 +52,24 @@ async function account() {
 // ---- user data: /files/data in IndexedDB --------------------------------------------------------
 
 /** Mounts the person's MuseScore data and fills it from this browser's IndexedDB. */
-function mountData(Module) {
+function mountData(Module, mn) {
   const { FS, IDBFS } = Module;
   FS.mkdirTree(DATA_DIR);
   FS.mount(IDBFS, {}, DATA_DIR);
   Module.addRunDependency('mn-data');
-  FS.syncfs(true, (error) => {
+  FS.syncfs(true, async (error) => {
     if (error) console.warn('musescore: stored data could not be read', error);
+    try {
+      // Settings from another device win over this browser's older copy; offline or slow, the
+      // editor starts with what this browser has.
+      const restored = await Promise.race([
+        restoreFromAccount(mn, FS, DATA_DIR),
+        new Promise((resolve) => setTimeout(() => resolve(false), 8000)),
+      ]);
+      if (restored) persistData(Module, 0);
+    } catch (problem) {
+      console.warn('musescore: settings from the account not loaded', problem);
+    }
     Module.removeRunDependency('mn-data');
   });
 }
@@ -103,9 +115,27 @@ const extensionOf = (name) => {
   return dot > 0 ? name.slice(dot).toLowerCase() : '';
 };
 
-/** A save target per folder below /mn-save: the handle the person chose and its folder. */
+/**
+ * Where the files the editor writes go, by folder:
+ *   /mininode     the person's MiniNode files, under the same name (scores opened from or saved
+ *                 to MiniNode live here, so "Save" writes them back and "Open recent" finds them)
+ *   /mn-save/<n>  a file on the device the person picked (its handle), or a download
+ */
 const saveTargets = new Map();
 let nextSaveFolder = 1;
+
+const isNativeHandle = (handle) =>
+  typeof FileSystemHandle !== 'undefined' && handle instanceof FileSystemHandle;
+/** files.js hands out plain objects for MiniNode files; device files are real handles. */
+const isMiniNodeHandle = (handle) =>
+  !isNativeHandle(handle) && typeof handle.getFile === 'function';
+
+function deviceFolder(Module, target) {
+  const folder = `${SAVE_DIR}/${nextSaveFolder++}`;
+  Module.FS.mkdirTree(folder);
+  saveTargets.set(folder, target);
+  return folder;
+}
 
 async function openFiles(Module, options) {
   const filters = options.filter.map(parseFilter).filter((f) => f.extensions.length);
@@ -113,12 +143,12 @@ async function openFiles(Module, options) {
   const types = accept.length
     ? [{ description: filters[0].description, accept: { 'application/octet-stream': accept } }]
     : undefined;
-  let files;
+  const chosen = [];
   if (window.showOpenFilePicker) {
     const handles = await window.showOpenFilePicker({ multiple: options.multiple, types });
-    files = await Promise.all(handles.map((handle) => handle.getFile()));
+    for (const handle of handles) chosen.push({ handle, file: await handle.getFile() });
   } else {
-    files = await new Promise((resolve) => {
+    const files = await new Promise((resolve) => {
       const input = Object.assign(document.createElement('input'), {
         type: 'file',
         multiple: options.multiple,
@@ -128,12 +158,17 @@ async function openFiles(Module, options) {
       input.addEventListener('cancel', () => resolve([]), { once: true });
       input.click();
     });
+    for (const file of files) chosen.push({ handle: null, file });
   }
   const paths = [];
-  for (const file of files) {
-    const path = `${OPEN_DIR}/${file.name}`;
-    Module.FS.mkdirTree(OPEN_DIR);
-    Module.FS.writeFile(path, new Uint8Array(await file.arrayBuffer()));
+  for (const { handle, file } of chosen) {
+    let folder;
+    if (handle && isMiniNodeHandle(handle)) folder = MININODE_DIR;
+    // A device file is saved back into it; without a handle "Save" becomes a download.
+    else folder = deviceFolder(Module, { handle, name: file.name });
+    Module.FS.mkdirTree(folder);
+    const path = `${folder}/${file.name}`;
+    writeOwnFile(Module, path, new Uint8Array(await file.arrayBuffer()));
     paths.push(path);
   }
   return paths;
@@ -153,10 +188,25 @@ async function chooseSaveTarget(Module, options) {
       accept: { 'application/octet-stream': f.extensions },
     })),
   });
-  const folder = `${SAVE_DIR}/${nextSaveFolder++}`;
-  Module.FS.mkdirTree(folder);
-  saveTargets.set(folder, { handle, name: handle.name || name });
-  return `${folder}/${handle.name || name}`;
+  const chosen = handle.name || name;
+  if (isMiniNodeHandle(handle)) {
+    Module.FS.mkdirTree(MININODE_DIR);
+    return `${MININODE_DIR}/${chosen}`;
+  }
+  return `${deviceFolder(Module, { handle, name: chosen })}/${chosen}`;
+}
+
+/** A score from the person's MiniNode files, put where the editor expects it (recent list). */
+async function fetchFromMiniNode(Module, path) {
+  if (!path.startsWith(`${MININODE_DIR}/`)) return [];
+  const name = path.slice(MININODE_DIR.length + 1);
+  if (!name || name.includes('/')) return [];
+  const mn = await window.mininode.mininode();
+  const response = await fetch(await mn.files.url(name));
+  if (!response.ok) return [];
+  Module.FS.mkdirTree(MININODE_DIR);
+  writeOwnFile(Module, path, new Uint8Array(await response.arrayBuffer()));
+  return [path];
 }
 
 /** Called by the editor for every file dialog; answers with paths (none when cancelled). */
@@ -169,7 +219,12 @@ function installFileDialogs(Module) {
       filter: Array.from({ length: options.filter.length }, (_, i) => String(options.filter[i])),
       multiple: Boolean(options.multiple),
     };
-    const run = plain.kind === 'save' ? chooseSaveTarget(Module, plain) : openFiles(Module, plain);
+    const run =
+      plain.kind === 'save'
+        ? chooseSaveTarget(Module, plain)
+        : plain.kind === 'fetch'
+          ? fetchFromMiniNode(Module, plain.path)
+          : openFiles(Module, plain);
     Promise.resolve(run)
       .then((result) => done(Array.isArray(result) ? result : [result]))
       .catch((error) => {
@@ -188,60 +243,84 @@ function installFileDialogs(Module) {
   };
   // The editor reports each saved project too; the file hook below already handles it.
   Module.onProjectSaved = () => {};
+  // File → Print: the editor hands over the score as PDF; the browser's PDF viewer prints it.
+  Module.mnPrintPdf = (bytes) => {
+    const url = URL.createObjectURL(new Blob([bytes.slice()], { type: 'application/pdf' }));
+    const opened = window.open(url, '_blank');
+    if (!opened) window.mnui?.toast(t('print.blocked'));
+    setTimeout(() => URL.revokeObjectURL(url), 10 * 60_000);
+  };
 }
 
 // ---- files the editor writes ----------------------------------------------------------------
 
 const pendingSaves = new Map();
+/** Files the page itself writes (an opened score) are not handed back. */
+let ownWrites = 0;
+function writeOwnFile(Module, path, bytes) {
+  ownWrites++;
+  try {
+    Module.FS.writeFile(path, bytes);
+  } finally {
+    ownWrites--;
+  }
+}
 
-/** Hands a finished file below /mn-save to the place chosen for its folder. */
+const download = (blob, name) => {
+  const link = Object.assign(document.createElement('a'), {
+    href: URL.createObjectURL(blob),
+    download: name,
+    hidden: true,
+  });
+  link.dataset.mnNative = ''; // straight to the device, the person chose it already
+  document.body.append(link);
+  HTMLAnchorElement.prototype.click.call(link);
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(link.href), 60_000);
+};
+
+/** Hands a file the editor finished to the place chosen for its folder. */
 async function deliver(Module, path) {
-  const folder = path.slice(0, path.lastIndexOf('/'));
-  const target = saveTargets.get(folder);
-  if (!target) return;
   const name = baseName(path);
+  const folder = path.slice(0, path.lastIndexOf('/'));
+  // MuseScore writes "<name>_saving" first and keeps backups in a hidden ".mscbackup" folder;
+  // only the real file leaves the editor.
+  if (!name || name.startsWith('.') || name.endsWith('_saving')) return;
   let data;
   try {
     data = Module.FS.readFile(path);
   } catch {
-    return; // removed again (a temporary file)
+    return; // removed again
   }
   const blob = new Blob([data], { type: 'application/octet-stream' });
-  if (name === target.name) {
+  if (folder === MININODE_DIR) {
+    const mn = await window.mininode.mininode();
+    await mn.files.upload(name, blob);
+    window.mnui?.toast(t('files.save.done', { name }));
+    return;
+  }
+  const target = saveTargets.get(folder);
+  if (!target) return;
+  if (name === target.name && target.handle?.createWritable) {
     const writable = await target.handle.createWritable();
     await writable.write(blob);
     await writable.close();
     return;
   }
-  // A further file of the same export (parts, pages): same place, its own name.
-  const nativeHandle =
-    typeof FileSystemHandle !== 'undefined' && target.handle instanceof FileSystemHandle;
-  if (typeof target.handle.getFile === 'function' && !nativeHandle) {
-    const mn = await window.mininode.mininode();
-    await mn.files.upload(name, blob);
-    window.mnui?.toast(t('files.save.done', { name }));
-  } else {
-    const link = Object.assign(document.createElement('a'), {
-      href: URL.createObjectURL(blob),
-      download: name,
-      hidden: true,
-    });
-    link.dataset.mnNative = '';
-    document.body.append(link);
-    HTMLAnchorElement.prototype.click.call(link);
-    link.remove();
-  }
+  // No handle (opened without one), or a further file of one export (parts, pages).
+  download(blob, name);
 }
 
 /** Watches files the editor closes: saves and exports, and changes to the user data. */
-function installWriteHook(Module) {
+function installWriteHook(Module, dataChanged) {
   const { FS } = Module;
   const close = FS.close;
   FS.close = function closeAndDeliver(stream) {
     const path = stream?.path ?? '';
     const written = Boolean(stream && (stream.flags & 3) !== 0); // O_WRONLY | O_RDWR
     const result = close.call(this, stream);
-    if (written && path.startsWith(`${SAVE_DIR}/`)) {
+    const saved = path.startsWith(`${SAVE_DIR}/`) || path.startsWith(`${MININODE_DIR}/`);
+    if (written && saved && !ownWrites) {
       clearTimeout(pendingSaves.get(path));
       pendingSaves.set(
         path,
@@ -254,7 +333,10 @@ function installWriteHook(Module) {
         }, 150),
       );
     }
-    if (written && path.startsWith(`${DATA_DIR}/`)) persistData(Module);
+    if (written && path.startsWith(`${DATA_DIR}/`)) {
+      persistData(Module);
+      dataChanged(path);
+    }
     return result;
   };
   addEventListener('pagehide', () => persistData(Module, 0));
@@ -296,7 +378,7 @@ async function start() {
     },
     preRun: [
       (instance) => {
-        mountData(instance);
+        mountData(instance, mn);
         instance.FS.mkdirTree(SHARE_DIR);
         instance.addRunDependency('mn-share');
         share
@@ -340,12 +422,14 @@ async function start() {
   );
 
   const instance = await qtLoad(Module);
-  installWriteHook(instance);
+  const dataChanged = createAccountSync(mn, instance.FS, DATA_DIR);
+  installWriteHook(instance, dataChanged);
   installDataMenu({
     mn,
     Module: instance,
     dataDir: DATA_DIR,
     persist: () => persistData(instance, 0),
+    syncNow: () => dataChanged.now(),
   });
 }
 

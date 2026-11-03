@@ -127,7 +127,7 @@ export async function readZip(blob) {
 // ---- export and import ----------------------------------------------------------------------
 
 /** Every file below `dir` in the editor's file system, with paths relative to it. */
-function filesBelow(FS, dir, prefix = '') {
+export function filesBelow(FS, dir, prefix = '') {
   const out = [];
   for (const name of FS.readdir(dir)) {
     if (name === '.' || name === '..') continue;
@@ -139,7 +139,7 @@ function filesBelow(FS, dir, prefix = '') {
   return out;
 }
 
-const safeName = (name) =>
+export const safeName = (name) =>
   name && !name.split('/').some((part) => part === '..' || part === '') ? name : null;
 
 async function exportAll({ mn, Module, dataDir }, report) {
@@ -168,7 +168,7 @@ async function exportAll({ mn, Module, dataDir }, report) {
   return { scores: names.length };
 }
 
-async function importAll({ mn, Module, dataDir, persist }, file, report) {
+async function importAll({ mn, Module, dataDir, persist, syncNow }, file, report) {
   const files = await readZip(file);
   const scores = files.filter(([name]) => name.startsWith(SCORES));
   const data = files.filter(([name]) => name.startsWith(DATA));
@@ -182,12 +182,16 @@ async function importAll({ mn, Module, dataDir, persist }, file, report) {
   }
   for (const [name, bytes] of data) {
     const target = safeName(name.slice(DATA.length));
-    if (!target) continue;
+    // The sync stamp belongs to the browser that exported; this import is new data.
+    if (!target || target === '.mn-stamp') continue;
     const path = `${dataDir}/${target}`;
     Module.FS.mkdirTree(path.slice(0, path.lastIndexOf('/')));
     Module.FS.writeFile(path, bytes);
   }
-  if (data.length) persist();
+  if (data.length) {
+    persist();
+    await syncNow();
+  }
   return { scores: scores.length, settings: data.length > 0 };
 }
 
