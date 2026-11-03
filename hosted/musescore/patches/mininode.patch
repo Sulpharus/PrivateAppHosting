@@ -1004,6 +1004,21 @@ index 25f0be37..cbe4da85 100644
  
      muse::ValCh<muse::Uri> currentUri() const override;
      muse::RetVal<bool> isCurrentUriDialog() const override;
+diff --git a/src/framework/global/settings.cpp b/src/framework/global/settings.cpp
+index 9aaded3d..0a1f8eb9 100644
+--- a/src/framework/global/settings.cpp
++++ b/src/framework/global/settings.cpp
+@@ -51,6 +51,10 @@ Settings::Settings()
+ #ifdef WIN_PORTABLE
+     QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, dataPath());
+     QSettings::setPath(QSettings::IniFormat, QSettings::SystemScope, dataPath());
++#elif defined(MUSE_WEB_DESKTOP)
++    //! In the browser the settings live with the rest of the person's data, which the page keeps
++    //! (IndexedDB) and takes to their other browsers.
++    QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, QStringLiteral("/files/data/settings"));
+ #endif
+ 
+ #ifndef Q_OS_MAC
 diff --git a/src/framework/global/settings.h b/src/framework/global/settings.h
 index cee128fc..6b5ce848 100644
 --- a/src/framework/global/settings.h

@@ -324,13 +324,10 @@ async function deliver(Module, path) {
 /** Watches files the editor closes: saves and exports, and changes to the user data. */
 function installWriteHook(Module, dataChanged) {
   const { FS } = Module;
-  const close = FS.close;
-  FS.close = function closeAndDeliver(stream) {
-    const path = stream?.path ?? '';
-    const written = Boolean(stream && (stream.flags & 3) !== 0); // O_WRONLY | O_RDWR
-    const result = close.call(this, stream);
-    const saved = path.startsWith(`${SAVE_DIR}/`) || path.startsWith(`${MININODE_DIR}/`);
-    if (written && saved && !ownWrites) {
+  const isSaved = (path) => path.startsWith(`${SAVE_DIR}/`) || path.startsWith(`${MININODE_DIR}/`);
+  /** A file the editor finished at `path`: deliver it a moment later (the last write wins). */
+  const finished = (path) => {
+    if (isSaved(path) && !ownWrites) {
       clearTimeout(pendingSaves.get(path));
       pendingSaves.set(
         path,
@@ -343,10 +340,24 @@ function installWriteHook(Module, dataChanged) {
         }, 150),
       );
     }
-    if (written && path.startsWith(`${DATA_DIR}/`)) {
+    if (path.startsWith(`${DATA_DIR}/`)) {
       persistData(Module);
       dataChanged(path);
     }
+  };
+  const close = FS.close;
+  FS.close = function closeAndDeliver(stream) {
+    const path = stream?.path ?? '';
+    const written = Boolean(stream && (stream.flags & 3) !== 0); // O_WRONLY | O_RDWR
+    const result = close.call(this, stream);
+    if (written) finished(path);
+    return result;
+  };
+  // Qt saves atomically: it writes "<name>.XXXXXX" and renames it to "<name>" when done.
+  const rename = FS.rename;
+  FS.rename = function renameAndDeliver(oldPath, newPath) {
+    const result = rename.call(this, oldPath, newPath);
+    finished(String(newPath));
     return result;
   };
   addEventListener('pagehide', () => persistData(Module, 0));
