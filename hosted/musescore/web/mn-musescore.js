@@ -369,6 +369,14 @@ function installWriteHook(Module, dataChanged) {
 
 // ---- start ----------------------------------------------------------------------------------
 
+/**
+ * A SoundFont for the editor: MuseScore's Uri keeps only scheme://path, so blob:… is passed as
+ * blob://…; its web loader turns it back into blob: and drops the file name after the last "/".
+ * The engine names a SoundFont after that file name ("MS Basic" is the editor's default).
+ */
+const soundFontUri = (url, name) =>
+  `${url.replace(/^blob:/, 'blob://')}/${encodeURIComponent(name.replaceAll('/', '-'))}`;
+
 async function start() {
   showStep('app.step.account');
   const mn = await account();
@@ -428,8 +436,7 @@ async function start() {
       await driver.setup(Module);
       soundFontUrl(build.soundFont)
         .then((url) => {
-          // MuseScore's Uri keeps only scheme://path; its web loader turns this back into blob:.
-          Module.soundFont = url.replace(/^blob:/, 'blob://');
+          Module.soundFont = soundFontUri(url, 'MS Basic.sf3');
           if (driver.inited) Module.ccall('addSoundFont', '', ['string'], [Module.soundFont]);
         })
         .catch((error) => console.warn('musescore: SoundFont not loaded', error));
@@ -458,9 +465,8 @@ async function start() {
   installPluginsPanel({ mn, Module: instance });
   // The sound library: SoundFonts and sound effects from the person's and the shared folders.
   const pendingFonts = [];
-  const addSoundFont = (url) => {
-    // MuseScore's Uri keeps only scheme://path; its web loader turns this back into blob:.
-    const uri = url.replace(/^blob:/, 'blob://');
+  const addSoundFont = (url, name) => {
+    const uri = soundFontUri(url, name);
     if (driver.inited) instance.ccall('addSoundFont', '', ['string'], [uri]);
     else pendingFonts.push(uri);
   };

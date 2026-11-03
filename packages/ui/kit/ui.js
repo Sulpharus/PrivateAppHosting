@@ -123,7 +123,7 @@
       overlay,
       sheet,
       inerted,
-      back: document.activeElement,
+      back: deepActiveElement(),
       overflow: document.body.style.overflow,
       onClose: options.onClose,
     };
@@ -132,6 +132,13 @@
     document.addEventListener('keydown', onKey);
     sheet.focus({ preventScroll: true });
     return sheet;
+  }
+
+  /** The focused element, inside shadow roots too (Qt for WebAssembly keeps its input in one). */
+  function deepActiveElement() {
+    let el = document.activeElement;
+    while (el?.shadowRoot?.activeElement) el = el.shadowRoot.activeElement;
+    return el;
   }
 
   function closeCurrent() {

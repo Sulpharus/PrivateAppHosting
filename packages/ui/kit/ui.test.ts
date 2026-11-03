@@ -92,6 +92,17 @@ describe('mnui.sheet', () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
+  it('gives focus back inside a shadow root (Qt for WebAssembly keeps its input there)', () => {
+    const host = document.createElement('div');
+    document.body.append(host);
+    const input = document.createElement('input');
+    host.attachShadow({ mode: 'open' }).append(input);
+    input.focus();
+    mnui.sheet.open(html);
+    press('Escape');
+    expect(host.shadowRoot?.activeElement).toBe(input);
+  });
+
   it('calls onClose when used as an event handler', () => {
     const onClose = vi.fn();
     mnui.sheet.open(html, { onClose });

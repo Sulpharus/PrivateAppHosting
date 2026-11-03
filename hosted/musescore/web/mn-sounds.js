@@ -149,11 +149,11 @@ async function setFolderOn(mn, folder, on) {
 
 // ---- into MuseScore ---------------------------------------------------------------------------
 
-/** The SoundFonts of a folder as blob: addresses (its own files, and one built from its audio). */
+/** The SoundFonts of a folder: blob: addresses and file names (its own files, one built from its audio). */
 async function folderSoundFonts(mn, folder) {
-  const urls = [];
+  const fonts = [];
   for (const file of folder.files.filter((f) => f.kind === 'soundfont')) {
-    urls.push(URL.createObjectURL(await readFile(mn, folder, file)));
+    fonts.push({ url: URL.createObjectURL(await readFile(mn, folder, file)), name: file.name });
   }
   const audio = folder.files.filter((f) => f.kind === 'audio');
   if (audio.length) {
@@ -168,10 +168,13 @@ async function folderSoundFonts(mn, folder) {
     }
     if (sounds.length) {
       const font = buildSoundFont(folder.name, sounds);
-      urls.push(URL.createObjectURL(new Blob([font], { type: 'application/octet-stream' })));
+      fonts.push({
+        url: URL.createObjectURL(new Blob([font], { type: 'application/octet-stream' })),
+        name: `${folder.name}.sf2`,
+      });
     }
   }
-  return urls;
+  return fonts;
 }
 
 /** Adds every folder the person has on (private and shared) to MuseScore. */
@@ -188,8 +191,8 @@ export async function loadSoundLibrary(mn, addSoundFont) {
     for (const folder of folders) {
       if (off.has(folderId(folder))) continue;
       try {
-        for (const url of await folderSoundFonts(mn, folder)) {
-          addSoundFont(url);
+        for (const { url, name } of await folderSoundFonts(mn, folder)) {
+          addSoundFont(url, name);
           count++;
         }
       } catch (error) {
@@ -292,7 +295,7 @@ export function installSoundsPanel({ mn, addSoundFont }) {
         try {
           await setFolderOn(mn, folder, on.checked);
           if (on.checked) {
-            for (const url of await folderSoundFonts(mn, folder)) addSoundFont(url);
+            for (const { url, name } of await folderSoundFonts(mn, folder)) addSoundFont(url, name);
             report('sounds.loadedNow', { name: folder.name });
           } else report('sounds.offAfterReload', { name: folder.name });
         } catch (error) {

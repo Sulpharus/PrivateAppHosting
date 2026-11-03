@@ -588,17 +588,25 @@ index f228a29c..e7b039ff 100644
  public:
      void loadSoundFonts(const std::vector<SoundFontUri>& uris) override;
 diff --git a/src/framework/audio/engine/platform/web/networksfloader.cpp b/src/framework/audio/engine/platform/web/networksfloader.cpp
-index 642da164..c3c8af19 100644
+index 642da164..b0367f87 100644
 --- a/src/framework/audio/engine/platform/web/networksfloader.cpp
 +++ b/src/framework/audio/engine/platform/web/networksfloader.cpp
-@@ -73,7 +73,9 @@ async::Promise<RetVal<ByteArray> > NetworkSFLoader::load(const Uri& uri)
+@@ -73,7 +73,18 @@ async::Promise<RetVal<ByteArray> > NetworkSFLoader::load(const Uri& uri)
              delete h;
          };
  
--        std::string str = h->uri.toString();
 +        //! A blob: address (the SoundFont the page assembled from its parts) comes as
-+        //! "blob://http://…", as Uri knows only scheme://path; the browser needs "blob:http://…".
-+        std::string str = h->uri.scheme() == "blob" ? "blob:" + h->uri.path() : h->uri.toString();
++        //! "blob://http://…/<id>/<file name>", as Uri knows only scheme://path; the browser needs
++        //! "blob:http://…/<id>". The file name names the SoundFont (SoundFontRepository uses it).
+         std::string str = h->uri.toString();
++        if (h->uri.scheme() == "blob") {
++            std::string path = h->uri.path();
++            const size_t scheme = path.find("//");
++            const size_t hostEnd = scheme == std::string::npos ? scheme : path.find('/', scheme + 2);
++            const size_t last = path.rfind('/');
++            const bool named = hostEnd != std::string::npos && last > hostEnd;
++            str = "blob:" + (named ? path.substr(0, last) : path);
++        }
          emscripten_fetch(&attr, str.c_str());
          LOGDA() << "start download sf: " << h->uri;
  
@@ -1127,6 +1135,68 @@ index a84e33ae..349aef34 100644
      interactive()->info("", muse::trc("notation", "Sorry, instrument change on the web is not supported at this time."));
      return false;
  #else
+diff --git a/src/playback/internal/playbackcontroller.cpp b/src/playback/internal/playbackcontroller.cpp
+index 116ff8ea..934fdfbc 100644
+--- a/src/playback/internal/playbackcontroller.cpp
++++ b/src/playback/internal/playbackcontroller.cpp
+@@ -1061,6 +1061,7 @@ void PlaybackController::resetCurrentSequence()
+     m_isRangeSelection = false;
+ 
+     m_currentSequenceId = -1;
++    m_sequenceTracksSetUp = false;
+     m_currentSequenceIdChanged.notify();
+ 
+     m_player = nullptr;
+@@ -1322,10 +1323,20 @@ void PlaybackController::setupNewCurrentSequence(const TrackSequenceId sequenceI
+     m_player = playback()->player(sequenceId);
+     globalContext()->setCurrentPlayer(m_player);
+ 
+-    if (!notationPlayback()) {
++    m_sequenceTracksSetUp = false;
++    setupCurrentSequenceTracks();
++}
++
++// MiniNode: the sequence (an engine round trip) and the score can arrive in either order. In the
++// browser the sequence often comes first, so the tracks are set up once both are there.
++void PlaybackController::setupCurrentSequenceTracks()
++{
++    if (m_sequenceTracksSetUp || m_currentSequenceId == -1 || !notationPlayback()) {
+         return;
+     }
+ 
++    m_sequenceTracksSetUp = true;
++
+     const audio::AudioOutputParams& masterOutputParams = audioSettings()->masterAudioOutputParams();
+     playback()->setMasterOutputParams(masterOutputParams);
+ 
+@@ -1778,6 +1789,7 @@ void PlaybackController::setMasterNotation(notation::IMasterNotationPtr masterNo
+     m_masterNotation->playback()->loopBoundariesChanged().onNotify(this, [this]() {
+         updateLoop();
+     });
++    setupCurrentSequenceTracks();
+ }
+ 
+ void PlaybackController::setIsExportingAudio(bool exporting)
+diff --git a/src/playback/internal/playbackcontroller.h b/src/playback/internal/playbackcontroller.h
+index 2ba2692a..7e842565 100644
+--- a/src/playback/internal/playbackcontroller.h
++++ b/src/playback/internal/playbackcontroller.h
+@@ -208,6 +208,7 @@ private:
+ 
+     void resetCurrentSequence();
+     void setupNewCurrentSequence(const muse::audio::TrackSequenceId sequenceId);
++    void setupCurrentSequenceTracks();
+     void subscribeOnAudioParamsChanges();
+     void setupSequenceTracks();
+     void setupSequencePlayer();
+@@ -243,6 +244,7 @@ private:
+     muse::async::Channel<muse::actions::ActionCode> m_actionCheckedChanged;
+ 
+     muse::audio::TrackSequenceId m_currentSequenceId = -1;
++    bool m_sequenceTracksSetUp = false;
+ 
+     muse::async::Notification m_currentSequenceIdChanged;
+     muse::midi::tick_t m_currentTick = 0;
 diff --git a/src/project/internal/convertfiletoscoreservice.cpp b/src/project/internal/convertfiletoscoreservice.cpp
 index 6aec3ed8..4c408531 100644
 --- a/src/project/internal/convertfiletoscoreservice.cpp
@@ -1240,6 +1310,67 @@ index 3249b2b3..50c2f95b 100644
              return pair.first;
          }
      }
+diff --git a/src/project/internal/recentfilescontroller.cpp b/src/project/internal/recentfilescontroller.cpp
+index 9441d190..81d8daa4 100644
+--- a/src/project/internal/recentfilescontroller.cpp
++++ b/src/project/internal/recentfilescontroller.cpp
+@@ -28,6 +28,7 @@
+ #include "multiwindows/resourcelockguard.h"
+ 
+ #include "app_config.h"
++#include "muse_framework_config.h"
+ 
+ #ifdef QT_CONCURRENT_SUPPORTED
+ #include "global/concurrency/concurrent.h"
+@@ -41,6 +42,18 @@ using namespace muse::async;
+ 
+ static const std::string RECENT_FILES_RESOURCE_NAME("RECENT_FILES");
+ 
++//! MiniNode: a score in the person's MiniNode files is not in the browser's file system after a
++//! reload; opening it fetches it (ProjectActionsController::openProject), so it stays listed.
++bool RecentFilesController::isKept(const muse::io::path_t& path) const
++{
++#ifdef MUSE_WEB_DESKTOP
++    if (path.toStdString().rfind("/mininode/", 0) == 0) {
++        return true;
++    }
++#endif
++    return fileSystem()->exists(path);
++}
++
+ void RecentFilesController::init()
+ {
+     TRACEFUNC;
+@@ -95,7 +108,7 @@ void RecentFilesController::prependRecentFile(const RecentFile& newFile)
+             continue;
+         }
+ 
+-        if (fileSystem()->exists(file.path)) {
++        if (isKept(file.path)) {
+             newList.push_back(file);
+         } else {
+             nonexistentRemoved = true;
+@@ -228,7 +241,7 @@ void RecentFilesController::removeNonexistentFiles()
+     newList.reserve(m_recentFilesList.size());
+ 
+     for (const RecentFile& file : m_recentFilesList) {
+-        if (fileSystem()->exists(file.path)) {
++        if (isKept(file.path)) {
+             newList.push_back(file);
+         } else {
+             removed = true;
+diff --git a/src/project/internal/recentfilescontroller.h b/src/project/internal/recentfilescontroller.h
+index 5decf115..abe9003d 100644
+--- a/src/project/internal/recentfilescontroller.h
++++ b/src/project/internal/recentfilescontroller.h
+@@ -63,6 +63,7 @@ protected:
+ 
+ private:
+     void loadRecentFilesList();
++    bool isKept(const muse::io::path_t& path) const;
+     void removeNonexistentFiles();
+     bool setRecentFilesList(const RecentFilesList& list);
+     void setRecentFilesListAndNotify(const RecentFilesList& list, const RecentFilesChange& change);
 diff --git a/src/project/qml/MuseScore/Project/ScoresPage.qml b/src/project/qml/MuseScore/Project/ScoresPage.qml
 index 26b6428a..ea4f8193 100644
 --- a/src/project/qml/MuseScore/Project/ScoresPage.qml
@@ -1603,7 +1734,7 @@ index 00000000..b0294a5c
 +};
 +}
 diff --git a/src/web/audioengine/CMakeLists.txt b/src/web/audioengine/CMakeLists.txt
-index 6a32d6ce..b2cdb1ad 100644
+index 6a32d6ce..09bd48da 100644
 --- a/src/web/audioengine/CMakeLists.txt
 +++ b/src/web/audioengine/CMakeLists.txt
 @@ -61,13 +61,21 @@ else()
@@ -1651,20 +1782,31 @@ index 6a32d6ce..b2cdb1ad 100644
  
  add_subdirectory(${MU_ROOT}/src/framework/global global)
  
-@@ -118,6 +123,8 @@ target_link_options(MuseAudio PRIVATE "SHELL:-s FETCH=1")
+@@ -117,7 +122,10 @@ target_link_options(MuseAudio PRIVATE "SHELL:-s MODULARIZE=1")
+ target_link_options(MuseAudio PRIVATE "SHELL:-s FETCH=1")
  target_link_options(MuseAudio PRIVATE "SHELL:-s INITIAL_MEMORY=50MB")
  target_link_options(MuseAudio PRIVATE "SHELL:-s ALLOW_MEMORY_GROWTH=1")
- target_link_options(MuseAudio PRIVATE "SHELL:-s EXPORTED_RUNTIME_METHODS=ccall,cwrap")
+-target_link_options(MuseAudio PRIVATE "SHELL:-s EXPORTED_RUNTIME_METHODS=ccall,cwrap")
++# HEAPU8: the worklet glue reads the rendered samples from it (Emscripten 4 no longer exports it).
++target_link_options(MuseAudio PRIVATE "SHELL:-s EXPORTED_RUNTIME_METHODS=ccall,cwrap,HEAPU8")
 +# The page's CSP allows no JavaScript eval (embind would build functions from strings).
 +target_link_options(MuseAudio PRIVATE "SHELL:-s DYNAMIC_EXECUTION=0")
  target_link_options(MuseAudio PRIVATE "SHELL:-s EXPORTED_FUNCTIONS=[_main,_malloc,_free,_Init,_process]")
  
  if (MUSE_MODULE_AUDIO_WORKER)
 diff --git a/src/web/audioengine/webaudioengine.cpp b/src/web/audioengine/webaudioengine.cpp
-index b26af415..eece4015 100644
+index b26af415..86fc1f77 100644
 --- a/src/web/audioengine/webaudioengine.cpp
 +++ b/src/web/audioengine/webaudioengine.cpp
-@@ -81,7 +81,10 @@ void WebAudioEngine::init()
+@@ -21,6 +21,7 @@
+  */
+ #include "webaudioengine.h"
+ 
++#include "global/async/processevents.h"
+ #include "global/modularity/ioc.h"
+ 
+ #include "global/runtime.h"
+@@ -81,7 +82,10 @@ void WebAudioEngine::init()
      m_rpcChannel->setupOnEngine();
      ioc()->registerExport<IRpcChannel>(moduleName(), m_rpcChannel);
  
@@ -1676,3 +1818,13 @@ index b26af415..eece4015 100644
      m_controller->registerExports();
      m_controller->onStartRunning();
  
+@@ -90,5 +94,9 @@ void WebAudioEngine::init()
+ 
+ void WebAudioEngine::process(float* stream, unsigned samplesPerChannel)
+ {
++    //! MiniNode: the worklet is the engine's only thread. Promises and channels (e.g. the answer
++    //! to PrepareToPlay) are delivered here, as the desktop audio worker does on every tick.
++    async::processMessages();
++
+     m_controller->process(stream, samplesPerChannel);
+ }

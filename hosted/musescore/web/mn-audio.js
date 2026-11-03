@@ -20,6 +20,9 @@ export function createAudioDriver(options) {
         numberOfOutputs: 1,
         outputChannelCount: [2],
       });
+      // An exception in the engine stops the processor for good; without this it fails silently.
+      processor.onprocessorerror = (event) =>
+        console.error('[musescore audio] engine stopped', event);
       processor.port.onmessage = (event) => {
         if (event.data?.type === 'DRIVER_INITED') {
           driver.inited = true;
@@ -28,6 +31,9 @@ export function createAudioDriver(options) {
           Module.mnFlushSoundFonts?.();
         } else if (event.data?.type === 'debug') {
           console.debug('[musescore audio]', event.data.msg);
+        } else if (typeof event.data === 'string') {
+          // The engine reports start-up errors as plain strings ("MuseAudio_entry ERROR: …").
+          console.warn('[musescore audio]', event.data);
         }
       };
       const port = Module.main_worker_rpcChannel.port2;
