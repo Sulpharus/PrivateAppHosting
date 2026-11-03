@@ -109,6 +109,14 @@ since the PR #12 deploy. Earlier deploys stopped at medialog and never shipped t
   logic goes into its own file:
   - Sportplaner: `js/price.js`, tested by reading and evaluating the file in Vitest.
   - Haushalt: ES modules.
+- **CI skips what a change does not touch** (2026-11-03): `scripts/ci-changes.sh` (tested by
+  `scripts/ci-changes.test.sh`) sets flags from the PR diff; infra, desktop, database/e2e, the
+  program builds (MuseScore, Crafts) and the dry-run deploy run only when their inputs changed, and
+  a docs-only PR runs just the wiki and library e2e. A push to `main` runs everything except the
+  program builds (Deploy builds those). The required check "Lint, typecheck, test" is now a summary
+  job over changes, unit tests ("Lint, typecheck, unit tests"), dry-run deploy, infra and database,
+  so the ruleset needs no change. When adding a job or a new input to one, extend the patterns and
+  the test.
 
 ## Waiting on the owner
 

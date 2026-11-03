@@ -32,7 +32,7 @@ export default defineConfig({
         VITE_SUPABASE_PUBLISHABLE_KEY: process.env.SUPABASE_PUBLISHABLE_KEY ?? '',
       },
     },
-    ...(process.env.E2E_PORTAL_ONLY ? [] : appServers()),
+    ...(process.env.E2E_PORTAL_ONLY === '1' ? [] : appServers()),
   ],
 });
 
