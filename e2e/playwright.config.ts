@@ -21,6 +21,7 @@ export default defineConfig({
     { name: 'desktop', use: { ...devices['Desktop Chrome'] }, testIgnore: /mobile\.spec\.ts/ },
     { name: 'mobile', use: { ...devices['Pixel 7'] }, testMatch: /mobile\.spec\.ts/ },
   ],
+  // E2E_PORTAL_ONLY=1 (CI, when only the wiki changed): the portal alone, without the app servers.
   webServer: [
     {
       command: 'pnpm --filter @mininode/portal dev',
@@ -31,6 +32,12 @@ export default defineConfig({
         VITE_SUPABASE_PUBLISHABLE_KEY: process.env.SUPABASE_PUBLISHABLE_KEY ?? '',
       },
     },
+    ...(process.env.E2E_PORTAL_ONLY === '1' ? [] : appServers()),
+  ],
+});
+
+function appServers() {
+  return [
     {
       // A fixture app served through the real gate Worker (wrangler dev), registered locally.
       command: 'pnpm mininode dev fixtures/static-html/expected/hallo --port 8790',
@@ -64,5 +71,5 @@ export default defineConfig({
         reuseExistingServer: !process.env.CI,
         timeout: 120_000,
       })),
-  ],
-});
+  ];
+}

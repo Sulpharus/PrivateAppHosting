@@ -13,15 +13,45 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Jobs that test something a pull request did not touch are skipped; a push to main runs them
+  # all (a cancelled earlier push must not leave its changes untested). Lint, typecheck, unit
+  # tests, the starter and the secret scan always run. "Lint, typecheck, test" (required) passes
+  # only when every job it waits for passed or was skipped on purpose.
+  changes:
+    name: What changed
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.diff.outputs.code }}
+      docs: ${{ steps.diff.outputs.docs }}
+      infra: ${{ steps.diff.outputs.infra }}
+      desktop: ${{ steps.diff.outputs.desktop }}
+      hosted: ${{ steps.diff.outputs.hosted }}
+      musescore: ${{ steps.diff.outputs.musescore }}
+      crafts: ${{ steps.diff.outputs.crafts }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - id: diff
+        # bash gives pipefail: a failing script fails the job instead of leaving empty outputs.
+        shell: bash
+        # HEAD is the merge commit of a pull request; its first parent is the exact base.
+        run: scripts/ci-changes.sh "${{ github.event_name == 'pull_request' && 'HEAD^1' || '' }}" | tee -a "$GITHUB_OUTPUT"
+
+  # The patched program builds are only needed by the dry-run deploy of a pull request; on main
+  # the Deploy workflow builds them.
   crafts:
+    needs: changes
+    if: github.event_name == 'pull_request' && needs.changes.outputs.crafts != 'false'
     uses: ./.github/workflows/crafts.yml
 
   musescore:
+    needs: changes
+    if: github.event_name == 'pull_request' && needs.changes.outputs.musescore != 'false'
     uses: ./.github/workflows/musescore.yml
 
   check:
-    name: Lint, typecheck, test
-    needs: [crafts, musescore]
+    name: Lint, typecheck, unit tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -40,21 +70,6 @@ jobs:
         run: pnpm mininode configure --check
       - name: Doctor all hosted apps
         run: pnpm mininode doctor --all
-      - name: Patched Craft builds
-        if: github.event_name == 'pull_request'
-        uses: actions/download-artifact@v4
-        with:
-          pattern: craft-*
-          path: craft-builds
-      - name: Dry-run deploy of changed apps (build + gate config)
-        if: github.event_name == 'pull_request'
-        env:
-          SUPABASE_URL: https://example.supabase.co
-          SUPABASE_PUBLISHABLE_KEY: dry-run
-        run: |
-          scripts/craft-builds.sh craft-builds
-          pnpm --filter @mininode/sdk build
-          pnpm mininode deploy --changed "origin/${{ github.base_ref }}" --dry-run
       - name: Short app spec is up to date
         run: |
           pnpm spec:short
@@ -64,8 +79,42 @@ jobs:
           pnpm --filter @mininode/manifest build
           git diff --exit-code packages/manifest/schema.json
 
+  apps:
+    name: Dry-run deploy of changed apps
+    needs: [changes, crafts, musescore]
+    # Runs after the program builds, also when they were skipped (their app did not change).
+    if: >-
+      !cancelled() && github.event_name == 'pull_request' && needs.changes.outputs.hosted != 'false'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Patched program builds
+        if: needs.crafts.result == 'success' || needs.musescore.result == 'success'
+        uses: actions/download-artifact@v4
+        with:
+          pattern: craft-*
+          path: craft-builds
+      - name: Build and gate config of each changed app
+        env:
+          SUPABASE_URL: https://example.supabase.co
+          SUPABASE_PUBLISHABLE_KEY: dry-run
+        run: |
+          scripts/craft-builds.sh craft-builds
+          pnpm --filter @mininode/sdk build
+          pnpm mininode deploy --changed "origin/${{ github.base_ref }}" --dry-run
+
   infra:
     name: Infra scripts and images
+    needs: changes
+    if: needs.changes.outputs.infra != 'false'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -76,6 +125,8 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Change detection (which jobs a change runs)
+        run: scripts/ci-changes.test.sh
       - name: Shellcheck
         run: |
           shellcheck -S warning infra/cloudflare/*.sh infra/desktop/install.sh infra/desktop/mininode-desktop infra/nucbox/deploy/nucbox-deploy \
@@ -150,6 +201,8 @@ jobs:
 
   desktop:
     name: Desktop edition installs and signs in
+    needs: changes
+    if: needs.changes.outputs.desktop != 'false'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -189,6 +242,9 @@ jobs:
 
   database:
     name: Database, integration and e2e
+    needs: changes
+    # A change to bundled documentation alone runs only the e2e tests of the pages that show it.
+    if: needs.changes.outputs.code != 'false' || needs.changes.outputs.docs != 'false'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -205,12 +261,21 @@ jobs:
             echo "attempt $attempt failed, retrying in 30s"; sleep 30
           done
           exit 1
-      - run: pnpm db:test
-      - run: pnpm test:integration
+      - if: needs.changes.outputs.code != 'false'
+        run: pnpm db:test
+      - if: needs.changes.outputs.code != 'false'
+        run: pnpm test:integration
       - name: Backup and restore round trip (empties the database, so on its own)
+        if: needs.changes.outputs.code != 'false'
         run: pnpm test:roundtrip
       - run: pnpm exec playwright install --with-deps chromium
-      - run: pnpm e2e
+      - if: needs.changes.outputs.code != 'false'
+        run: pnpm e2e
+      - name: e2e of the documentation pages only (nothing but documentation changed)
+        if: needs.changes.outputs.code == 'false'
+        env:
+          E2E_PORTAL_ONLY: '1'
+        run: pnpm e2e wiki.spec.ts library.spec.ts
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
@@ -227,3 +292,17 @@ jobs:
       - uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # The required check: the fast unit-test job and everything that must pass before a merge.
+  # Skipped jobs (nothing they test changed) count as passed; a failed or cancelled one does not.
+  result:
+    name: Lint, typecheck, test
+    needs: [changes, check, apps, infra, database]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          RESULTS: ${{ toJSON(needs.*.result) }}
+        run: |
+          echo "$RESULTS"
+          echo "$RESULTS" | jq -e 'all(. == "success" or . == "skipped")' > /dev/null
