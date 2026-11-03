@@ -1,6 +1,8 @@
 # Releases and downloads
 
-Each release has one package, the **Starter** (ADR 0016, ADR 0026): the whole platform without
+Each release has one package: the **Starter** (tag `vX.Y.Z`) or the **Cloudflare edition** (tag
+`cloudflare-vX.Y.Z`: the same without the desktop installer and the home-server parts, for people
+who only want Cloudflare and Supabase). ADR 0016, ADR 0026: the whole platform without
 apps and without anything of the building installation (see `scripts/make-starter.sh`). It holds the
 Cloudflare setup, the desktop installer for Docker, the home-server side and every instruction.
 The other editions (Cloud, PC/server, Complete) are cut from the whole repository, which holds the
