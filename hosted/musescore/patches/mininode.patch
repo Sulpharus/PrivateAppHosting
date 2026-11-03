@@ -1,8 +1,8 @@
 diff --git a/SetupConfigure.cmake b/SetupConfigure.cmake
-index 501d10e8..c0a80a49 100644
+index 501d10e8..51441611 100644
 --- a/SetupConfigure.cmake
 +++ b/SetupConfigure.cmake
-@@ -192,6 +192,68 @@ if(BUILD_CONFIGURATION STREQUAL "APP-WEB")
+@@ -192,6 +192,72 @@ if(BUILD_CONFIGURATION STREQUAL "APP-WEB")
  
  endif()
  
@@ -18,6 +18,10 @@ index 501d10e8..c0a80a49 100644
 +    set(MUE_CONFIGURATION_IS_APPMININODE ON)
 +    set(MUSE_CONFIGURATION_IS_WEB ON)
 +    set(MUSE_WEB_DESKTOP ON)
++    # Qt is built with wasm exceptions (needed for JSPI); every C and C++ library must use the same
++    # exception and setjmp/longjmp model, or the link fails (FreeType: emscripten_longjmp).
++    string(APPEND CMAKE_C_FLAGS " -fwasm-exceptions")
++    string(APPEND CMAKE_CXX_FLAGS " -fwasm-exceptions")
 +
 +    set(QT_ADD_LINGUISTTOOLS OFF)
 +    set(QT_ADD_CONCURRENT OFF)
