@@ -1,0 +1,99 @@
+name: MuseScore build
+
+# MuseScore Studio (hosted/musescore/README.md) is compiled from the patched upstream source with
+# Qt for WebAssembly, which is itself built from source (JSPI). Both are slow, so both are cached:
+#   - Qt under the hash of the toolchain scripts (rarely changes; about two hours to build),
+#   - the program zip under `build.mjs --key` (version, commit, patches, toolchain).
+# The calling job gets the zip as the artifact craft-musescore (scripts/craft-builds.sh).
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  qt:
+    name: Qt for WebAssembly
+    runs-on: ubuntu-latest
+    # A failed MuseScore build must not hold back the other apps: their jobs still run, and
+    # hosted/musescore/build.mjs then stops with "no program build" for this app alone.
+    continue-on-error: true
+    timeout-minutes: 300
+    outputs:
+      key: ${{ steps.key.outputs.key }}
+    steps:
+      - uses: actions/checkout@v5
+      - id: key
+        run: echo "key=musescore-qt-${{ hashFiles('hosted/musescore/toolchain/build-qt.sh', 'hosted/musescore/toolchain/env.sh') }}" >> "$GITHUB_OUTPUT"
+      - id: cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/qt-wasm/gcc_64
+            ~/qt-wasm/wasm_singlethread
+          key: ${{ steps.key.outputs.key }}
+          lookup-only: true
+      - name: Build Qt
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build libgl1-mesa-dev libegl1-mesa-dev libxkbcommon-dev libfontconfig1-dev libfreetype-dev
+          bash hosted/musescore/toolchain/build-qt.sh ~/qt-wasm
+          # Only the installed Qt is kept; sources and build folders would fill the cache.
+          rm -rf ~/qt-wasm/src ~/qt-wasm/build
+
+  build:
+    name: MuseScore Studio
+    needs: qt
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          package-manager-cache: false
+      - id: key
+        run: echo "key=$(node hosted/musescore/build.mjs --key)" >> "$GITHUB_OUTPUT"
+      - id: cache
+        uses: actions/cache@v4
+        with:
+          path: hosted/musescore/.cache/source-*.zip
+          key: musescore-${{ steps.key.outputs.key }}
+      - name: Tools
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build ccache zip libgl1-mesa-dev libegl1-mesa-dev libxkbcommon-dev libfontconfig1-dev libfreetype-dev
+      - name: Qt
+        if: steps.cache.outputs.cache-hit != 'true'
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/qt-wasm/gcc_64
+            ~/qt-wasm/wasm_singlethread
+          key: ${{ needs.qt.outputs.key }}
+          fail-on-cache-miss: true
+      - name: Compiler cache
+        if: steps.cache.outputs.cache-hit != 'true'
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ccache
+          key: musescore-ccache-${{ github.run_id }}
+          restore-keys: musescore-ccache-
+      - name: Build from the patched source
+        if: steps.cache.outputs.cache-hit != 'true'
+        env:
+          CCACHE_MAXSIZE: 3G
+        run: |
+          export MUSESCORE_QT_PREFIX="$HOME/qt-wasm" CCACHE_DIR="$HOME/.cache/ccache" MUSESCORE_BUILD=1
+          node hosted/musescore/build.mjs --source
+      - uses: actions/upload-artifact@v4
+        with:
+          name: craft-musescore
+          path: hosted/musescore/.cache/source-*.zip
+          if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 1

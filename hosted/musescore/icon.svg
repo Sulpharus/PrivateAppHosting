@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <title>MuseScore Studio</title>
+  <!-- MiniNode tile for the MuseScore Studio port (original drawing: a staff with two beamed notes). -->
+  <rect width="512" height="512" rx="112" fill="#1F4E79"/>
+  <g stroke="#FFFFFF" stroke-linecap="round" opacity="0.55" stroke-width="10">
+    <path d="M96 168H416M96 212H416M96 256H416M96 300H416M96 344H416"/>
+  </g>
+  <g fill="#FFFFFF">
+    <ellipse cx="200" cy="344" rx="38" ry="28" transform="rotate(-22 200 344)"/>
+    <ellipse cx="330" cy="300" rx="38" ry="28" transform="rotate(-22 330 300)"/>
+    <rect x="224" y="140" width="14" height="206"/>
+    <rect x="354" y="104" width="14" height="198"/>
+    <path d="M224 140L368 104V138L224 174Z"/>
+  </g>
+</svg>

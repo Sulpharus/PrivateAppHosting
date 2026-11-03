@@ -1,0 +1,132 @@
+/* MuseScore Studio in MiniNode: the MiniNode strip above the editor, the editor's screen below it
+   and the start screen. Colours and fonts are the kit's tokens (light and dark). */
+:root {
+  --mn-bar-height: 44px;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: var(--mn-bg, #f6f7f5);
+}
+
+.mn-bar {
+  position: fixed;
+  inset: 0 0 auto 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: var(--mn-s3, 12px);
+  height: var(--mn-bar-height);
+  padding: 0 var(--mn-s3, 12px);
+  box-sizing: border-box;
+  background: var(--mn-surface, #fff);
+  border-bottom: 1px solid var(--mn-line, #dde1db);
+  font-family: var(--mn-font-text, system-ui, sans-serif);
+}
+
+.mn-bar .mn-home,
+.mn-bar-button {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 var(--mn-s2, 8px);
+  border: 0;
+  border-radius: var(--mn-r-sm, 8px);
+  background: transparent;
+  color: var(--mn-ink, #15191c);
+  font: inherit;
+  font-size: var(--mn-fs-sm, 14px);
+  cursor: pointer;
+}
+
+.mn-bar-button:hover {
+  background: var(--mn-surface-2, #eef0ec);
+}
+
+.mn-bar .mn-home:focus-visible,
+.mn-bar-button:focus-visible {
+  outline: 2px solid var(--mn-accent, #1c6a4f);
+  outline-offset: -2px;
+}
+
+.mn-bar-name {
+  color: var(--mn-ink, #15191c);
+  font-size: var(--mn-fs-sm, 14px);
+  font-weight: 600;
+}
+
+.mn-grow {
+  flex: 1;
+}
+
+/* Qt draws the whole editor into this element. */
+#screen {
+  position: fixed;
+  inset: var(--mn-bar-height) 0 0 0;
+}
+
+#mn-status {
+  position: fixed;
+  inset: var(--mn-bar-height) 0 0 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--mn-s2, 8px);
+  background: var(--mn-bg, #f6f7f5);
+  color: var(--mn-ink-2, #4a524c);
+  font-family: var(--mn-font-text, system-ui, sans-serif);
+}
+
+#mn-status[hidden] {
+  display: none;
+}
+
+.mn-status-name {
+  margin: 0;
+  color: var(--mn-ink, #15191c);
+  font-family: var(--mn-font-display, var(--mn-font-text, system-ui, sans-serif));
+  font-size: var(--mn-fs-xl, 24px);
+  font-weight: 600;
+}
+
+#mn-status [data-step] {
+  margin: 0;
+}
+
+#mn-status progress {
+  width: min(320px, 70vw);
+  accent-color: var(--mn-accent, #1c6a4f);
+}
+
+#mn-status.mn-failed [data-step] {
+  color: var(--mn-danger, #b42318);
+}
+
+.mn-data {
+  display: grid;
+  gap: var(--mn-s3, 12px);
+  padding: var(--mn-s4, 16px);
+}
+
+.mn-data h2 {
+  margin: 0;
+}
+
+.mn-data p {
+  margin: 0;
+}
+
+.mn-data-status:empty {
+  display: none;
+}
+
+.mn-data-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mn-s2, 8px);
+}
