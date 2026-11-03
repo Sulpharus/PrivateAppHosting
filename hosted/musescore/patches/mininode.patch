@@ -143,6 +143,20 @@ index fad6a767..2b590cf9 100644
      if (!configuration()->welcomeDialogShowOnStartup()) {
          return false;
      }
+diff --git a/src/appshell/qml/MuseScore/AppShell/CMakeLists.txt b/src/appshell/qml/MuseScore/AppShell/CMakeLists.txt
+index 84f19f06..2f6dad64 100644
+--- a/src/appshell/qml/MuseScore/AppShell/CMakeLists.txt
++++ b/src/appshell/qml/MuseScore/AppShell/CMakeLists.txt
+@@ -123,7 +123,8 @@ elseif(OS_IS_WIN)
+             platform/win/AppTitleBar.qml
+             platform/win/Main.qml
+     )
+-elseif(OS_IS_LIN OR OS_IS_FREEBSD)
++elseif(OS_IS_LIN OR OS_IS_FREEBSD OR OS_IS_WASM)
++    # The browser build uses the Linux window (QML menu bar; guiapp.cpp loads "linux" there too).
+     qt_target_qml_sources(appshell_qml 
+         QML_FILES
+             platform/linux/Main.qml
 diff --git a/src/appshell/qml/MuseScore/AppShell/HomePage/HomeMenu.qml b/src/appshell/qml/MuseScore/AppShell/HomePage/HomeMenu.qml
 index 32d743d8..f5703bdf 100644
 --- a/src/appshell/qml/MuseScore/AppShell/HomePage/HomeMenu.qml
