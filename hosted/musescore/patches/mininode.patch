@@ -214,6 +214,216 @@ index 939c8162..725cfcb7 100644
          makeSeparator(),
          makeMenuItem("file-convert-to-score"),
          makeMenuItem("file-export"),
+diff --git a/src/engraving/api/v1/util.cpp b/src/engraving/api/v1/util.cpp
+index a1135ad8..af2b7f83 100644
+--- a/src/engraving/api/v1/util.cpp
++++ b/src/engraving/api/v1/util.cpp
+@@ -270,6 +270,7 @@ int FileIO::modifiedTime()
+     return fileInfo.lastModified().toSecsSinceEpoch();
+ }
+ 
++#if QT_CONFIG(process)
+ void MsProcess::start(const QString& command)
+ {
+     QT_WARNING_PUSH;
+@@ -283,4 +284,5 @@ void MsProcess::startWithArgs(const QString& program, const QStringList& args)
+ {
+     QProcess::start(program, args, ReadWrite);
+ }
++#endif
+ }
+diff --git a/src/engraving/api/v1/util.h b/src/engraving/api/v1/util.h
+index 982d3d61..3f07c8fa 100644
+--- a/src/engraving/api/v1/util.h
++++ b/src/engraving/api/v1/util.h
+@@ -124,6 +124,7 @@ private:
+ ///   plugin to be platform dependant. \since MuseScore 3.2
+ //---------------------------------------------------------
+ 
++#if QT_CONFIG(process)
+ class MsProcess : public QProcess
+ {
+     Q_OBJECT
+@@ -147,4 +148,21 @@ public slots:
+     /// --
+     Q_INVOKABLE QByteArray readAllStandardOutput() { return QProcess::readAllStandardOutput(); }
+ };
++#else
++//! Without processes (WebAssembly): plugins see the same object, which never starts anything.
++class MsProcess : public QObject
++{
++    Q_OBJECT
++
++public:
++    MsProcess(QObject* parent = 0)
++        : QObject(parent) {}
++
++public slots:
++    Q_INVOKABLE void start(const QString&) {}
++    Q_INVOKABLE void startWithArgs(const QString&, const QStringList&) {}
++    Q_INVOKABLE bool waitForFinished(int = 30000) { return false; }
++    Q_INVOKABLE QByteArray readAllStandardOutput() { return QByteArray(); }
++};
++#endif
+ }
+diff --git a/src/framework/audio/driver/platform/web/webaudiodriver.cpp b/src/framework/audio/driver/platform/web/webaudiodriver.cpp
+index be6fc8db..4c3f6bbd 100644
+--- a/src/framework/audio/driver/platform/web/webaudiodriver.cpp
++++ b/src/framework/audio/driver/platform/web/webaudiodriver.cpp
+@@ -94,72 +94,27 @@ async::Channel<WebAudioDriver::Spec> WebAudioDriver::activeSpecChanged() const
+     return m_activeSpecChanged;
+ }
+ 
+-bool WebAudioDriver::setOutputDeviceBufferSize(unsigned int)
++std::vector<samples_t> WebAudioDriver::availableOutputDeviceBufferSizes() const
+ {
+-    NOT_SUPPORTED;
+-    return false;
++    return { static_cast<samples_t>(m_activeSpec.output.samplesPerChannel) };
+ }
+ 
+-async::Notification WebAudioDriver::outputDeviceBufferSizeChanged() const
++std::vector<sample_rate_t> WebAudioDriver::availableOutputDeviceSampleRates() const
+ {
+-    static async::Notification n;
+-    return n;
+-}
+-
+-bool WebAudioDriver::setOutputDeviceSampleRate(unsigned int)
+-{
+-    NOT_SUPPORTED;
+-    return false;
+-}
+-
+-async::Notification WebAudioDriver::outputDeviceSampleRateChanged() const
+-{
+-    static async::Notification n;
+-    return n;
+-}
+-
+-std::vector<unsigned int> WebAudioDriver::availableOutputDeviceBufferSizes() const
+-{
+-    std::vector<unsigned int> sizes;
+-    sizes.push_back(m_activeSpec.output.samplesPerChannel);
+-    return sizes;
+-}
+-
+-std::vector<unsigned int> WebAudioDriver::availableOutputDeviceSampleRates() const
+-{
+-    std::vector<unsigned int> sizes;
+-    sizes.push_back(m_activeSpec.output.sampleRate);
+-    return sizes;
++    return { static_cast<sample_rate_t>(m_activeSpec.output.sampleRate) };
+ }
+ 
+-AudioDeviceID WebAudioDriver::outputDevice() const
++AudioDeviceID WebAudioDriver::defaultDevice() const
+ {
+-    static AudioDeviceID id("default");
++    static const AudioDeviceID id("default");
+     return id;
+ }
+ 
+-bool WebAudioDriver::selectOutputDevice(const AudioDeviceID&)
+-{
+-    NOT_SUPPORTED;
+-    return false;
+-}
+-
+-bool WebAudioDriver::resetToDefaultOutputDevice()
+-{
+-    return true;
+-}
+-
+-async::Notification WebAudioDriver::outputDeviceChanged() const
+-{
+-    static async::Notification n;
+-    return n;
+-}
+-
+ AudioDeviceList WebAudioDriver::availableOutputDevices() const
+ {
+     AudioDeviceList list;
+     AudioDevice d;
+-    d.id = outputDevice();
++    d.id = defaultDevice();
+     d.name = d.id;
+     list.push_back(d);
+     return list;
+diff --git a/src/framework/audio/driver/platform/web/webaudiodriver.h b/src/framework/audio/driver/platform/web/webaudiodriver.h
+index e05cfa22..f2874a9a 100644
+--- a/src/framework/audio/driver/platform/web/webaudiodriver.h
++++ b/src/framework/audio/driver/platform/web/webaudiodriver.h
+@@ -35,6 +35,7 @@ public:
+     void init() override;
+ 
+     std::string name() const override;
++    AudioDeviceID defaultDevice() const override;
+     bool open(const Spec& spec, Spec* activeSpec) override;
+     void close() override;
+     bool isOpened() const override;
+@@ -42,23 +43,14 @@ public:
+     const Spec& activeSpec() const override;
+     async::Channel<Spec> activeSpecChanged() const override;
+ 
+-    bool setOutputDeviceBufferSize(unsigned int bufferSize) override;
+-    async::Notification outputDeviceBufferSizeChanged() const override;
+-    bool setOutputDeviceSampleRate(unsigned int sampleRate) override;
+-    async::Notification outputDeviceSampleRateChanged() const override;
+-    std::vector<unsigned int> availableOutputDeviceBufferSizes() const override;
+-    std::vector<unsigned int> availableOutputDeviceSampleRates() const override;
+-
+-    AudioDeviceID outputDevice() const override;
+-    bool selectOutputDevice(const AudioDeviceID& id) override;
+-    bool resetToDefaultOutputDevice() override;
+-    async::Notification outputDeviceChanged() const override;
++    std::vector<samples_t> availableOutputDeviceBufferSizes() const override;
++    std::vector<sample_rate_t> availableOutputDeviceSampleRates() const override;
+ 
+     AudioDeviceList availableOutputDevices() const override;
+     async::Notification availableOutputDevicesChanged() const override;
+ 
+-    void resume() override;
+-    void suspend() override;
++    void resume();
++    void suspend();
+ 
+ private:
+ 
+diff --git a/src/framework/audio/main/audiomodule.cpp b/src/framework/audio/main/audiomodule.cpp
+index 3469ed4f..17bfa285 100644
+--- a/src/framework/audio/main/audiomodule.cpp
++++ b/src/framework/audio/main/audiomodule.cpp
+@@ -71,7 +71,7 @@ void AudioModule::registerExports()
+ 
+ #ifdef Q_OS_WASM
+     m_rpcChannel = std::make_shared<rpc::WebRpcChannel>();
+-    m_soundFontController = std::make_shared<WebSoundFontController>();
++    m_soundFontController = std::make_shared<WebSoundFontController>(iocContext());
+ #else
+     m_rpcChannel = std::make_shared<rpc::GeneralRpcChannel>();
+     m_soundFontController = std::make_shared<GeneralSoundFontController>(iocContext());
+diff --git a/src/framework/audio/main/platform/web/websoundfontcontroller.h b/src/framework/audio/main/platform/web/websoundfontcontroller.h
+index 6a90a080..975124a2 100644
+--- a/src/framework/audio/main/platform/web/websoundfontcontroller.h
++++ b/src/framework/audio/main/platform/web/websoundfontcontroller.h
+@@ -29,12 +29,13 @@
+ #include "audio/common/rpc/irpcchannel.h"
+ 
+ namespace muse::audio {
+-class WebSoundFontController : public ISoundFontController, public async::Asyncable
++class WebSoundFontController : public ISoundFontController, public async::Asyncable, public Contextable
+ {
+-    ContextInject<rpc::IRpcChannel> channel;
++    ContextInject<rpc::IRpcChannel> channel = { this };
+ 
+ public:
+-    WebSoundFontController() = default;
++    WebSoundFontController(const modularity::ContextPtr& iocCtx)
++        : Contextable(iocCtx) {}
+ 
+     void loadSoundFonts() override;
+ 
 diff --git a/src/framework/cmake/MuseDeclareOptions.cmake b/src/framework/cmake/MuseDeclareOptions.cmake
 index 960935ed..03ab9613 100644
 --- a/src/framework/cmake/MuseDeclareOptions.cmake
@@ -685,7 +895,7 @@ index e0b960ac..80945cb9 100644
 +    webprintprovider.h
  )
 diff --git a/src/web/appjs/appjsmodule.cpp b/src/web/appjs/appjsmodule.cpp
-index f4028bb8..d6687d23 100644
+index f4028bb8..4596e5d4 100644
 --- a/src/web/appjs/appjsmodule.cpp
 +++ b/src/web/appjs/appjsmodule.cpp
 @@ -24,6 +24,10 @@
@@ -699,7 +909,7 @@ index f4028bb8..d6687d23 100644
  
  using namespace muse;
  using namespace mu::appjs;
-@@ -33,6 +37,13 @@ std::string AppJsModule::moduleName() const
+@@ -33,9 +37,16 @@ std::string AppJsModule::moduleName() const
      return "appjs";
  }
  
@@ -712,7 +922,11 @@ index f4028bb8..d6687d23 100644
 +
  void AppJsModule::onInit(const muse::IApplication::RunMode&)
  {
-     WebApi::instance()->init();
+-    WebApi::instance()->init();
++    WebApi::instance()->init(iocContext());
+ }
+ 
+ void AppJsModule::onDeinit()
 diff --git a/src/web/appjs/appjsmodule.h b/src/web/appjs/appjsmodule.h
 index 7035b680..ce6e5b71 100644
 --- a/src/web/appjs/appjsmodule.h
@@ -725,6 +939,79 @@ index 7035b680..ce6e5b71 100644
  
      void onInit(const muse::IApplication::RunMode& mode) override;
      void onDeinit() override;
+diff --git a/src/web/appjs/webapi.cpp b/src/web/appjs/webapi.cpp
+index 7479f3ad..d3ad6d1d 100644
+--- a/src/web/appjs/webapi.cpp
++++ b/src/web/appjs/webapi.cpp
+@@ -59,11 +59,13 @@ WebApi* WebApi::instance()
+     return &a;
+ }
+ 
+-void WebApi::init()
++void WebApi::init(const muse::modularity::ContextPtr& ctx)
+ {
++    s_ctx = ctx;
++
+     auto onProjectChanged = [this]() {
+         if (m_currentProject) {
+-            m_currentProject->saveComplited().resetOnReceive(this);
++            m_currentProject->saveComplited().disconnect(this);
+         }
+ 
+         m_currentProject = globalContext()->currentProject();
+@@ -83,7 +85,7 @@ void WebApi::init()
+ void WebApi::deinit()
+ {
+     if (m_currentProject) {
+-        m_currentProject->saveComplited().resetOnReceive(this);
++        m_currentProject->saveComplited().disconnect(this);
+     }
+ }
+ 
+diff --git a/src/web/appjs/webapi.h b/src/web/appjs/webapi.h
+index e4df15ad..e10ade6d 100644
+--- a/src/web/appjs/webapi.h
++++ b/src/web/appjs/webapi.h
+@@ -31,19 +31,20 @@
+ #include "audio/main/isoundfontcontroller.h"
+ 
+ namespace mu::appjs {
+-class WebApi : public muse::async::Asyncable
++class WebApi : public muse::async::Asyncable, public muse::Contextable
+ {
+-    inline static muse::GlobalInject<muse::IInteractive> interactive;
+-    inline static muse::GlobalInject<muse::actions::IActionsDispatcher> dispatcher;
+-    inline static muse::GlobalInject<mu::context::IGlobalContext> globalContext;
+-    inline static muse::GlobalInject<muse::audio::IStartAudioController> startAudioController;
+-    inline static muse::GlobalInject<muse::audio::ISoundFontController> soundFontController;
++    muse::ContextInject<muse::IInteractive> interactive = { this };
++    muse::ContextInject<muse::actions::IActionsDispatcher> dispatcher = { this };
++    muse::ContextInject<mu::context::IGlobalContext> globalContext = { this };
++    muse::ContextInject<muse::audio::IStartAudioController> startAudioController = { this };
++    muse::ContextInject<muse::audio::ISoundFontController> soundFontController = { this };
+ 
+ public:
+ 
+     static WebApi* instance();
+ 
+-    void init();
++    //! The services are per context (window); the web app has one, set here.
++    void init(const muse::modularity::ContextPtr& ctx);
+     void deinit();
+ 
+     void load(const void* source, unsigned int len);
+@@ -52,7 +53,10 @@ public:
+ 
+ private:
+ 
+-    WebApi() = default;
++    WebApi()
++        : muse::Contextable(muse::Contextable::GetContext([]() { return s_ctx; })) {}
++
++    inline static muse::modularity::ContextPtr s_ctx;
+ 
+     void onProjectSaved(const muse::io::path_t& path, mu::project::SaveMode mode);
+ 
 diff --git a/src/web/appjs/webprintprovider.cpp b/src/web/appjs/webprintprovider.cpp
 new file mode 100644
 index 00000000..aeaee70f
