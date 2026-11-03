@@ -306,6 +306,29 @@ index 982d3d61..3f07c8fa 100644
 +};
 +#endif
  }
+diff --git a/src/framework/audio/common/audiotypes.h b/src/framework/audio/common/audiotypes.h
+index 1ba7d772..d286a27a 100644
+--- a/src/framework/audio/common/audiotypes.h
++++ b/src/framework/audio/common/audiotypes.h
+@@ -182,12 +182,12 @@ enum class AudioResourceType {
+     AudioUnit,
+ };
+ 
+-static const std::map<AudioResourceType, QString> RESOURCE_TYPE_MAP = {
+-    { AudioResourceType::Undefined, "undefined" },
+-    { AudioResourceType::MuseSamplerSoundPack, "muse_sampler_sound_pack" },
+-    { AudioResourceType::FluidSoundfont, "fluid_soundfont" },
+-    { AudioResourceType::VstPlugin, "vst_plugin" },
+-    { AudioResourceType::MusePlugin, "muse_plugin" },
++static const std::map<AudioResourceType, String> RESOURCE_TYPE_MAP = {
++    { AudioResourceType::Undefined, u"undefined" },
++    { AudioResourceType::MuseSamplerSoundPack, u"muse_sampler_sound_pack" },
++    { AudioResourceType::FluidSoundfont, u"fluid_soundfont" },
++    { AudioResourceType::VstPlugin, u"vst_plugin" },
++    { AudioResourceType::MusePlugin, u"muse_plugin" },
+ };
+ 
+ struct AudioResourceMeta {
 diff --git a/src/framework/audio/driver/platform/web/webaudiodriver.cpp b/src/framework/audio/driver/platform/web/webaudiodriver.cpp
 index be6fc8db..4c3f6bbd 100644
 --- a/src/framework/audio/driver/platform/web/webaudiodriver.cpp
@@ -430,6 +453,23 @@ index e05cfa22..f2874a9a 100644
  
  private:
  
+diff --git a/src/framework/audio/engine/internal/synthesizers/soundfontrepository.h b/src/framework/audio/engine/internal/synthesizers/soundfontrepository.h
+index f228a29c..e7b039ff 100644
+--- a/src/framework/audio/engine/internal/synthesizers/soundfontrepository.h
++++ b/src/framework/audio/engine/internal/synthesizers/soundfontrepository.h
+@@ -22,10 +22,11 @@
+ 
+ #pragma once
+ 
++#include "global/async/asyncable.h"
+ #include "audio/engine/isoundfontrepository.h"
+ 
+ namespace muse::audio::synth {
+-class SoundFontRepository : public ISoundFontRepository
++class SoundFontRepository : public ISoundFontRepository, public async::Asyncable
+ {
+ public:
+     void loadSoundFonts(const std::vector<SoundFontUri>& uris) override;
 diff --git a/src/framework/audio/main/audiomodule.cpp b/src/framework/audio/main/audiomodule.cpp
 index 3469ed4f..17bfa285 100644
 --- a/src/framework/audio/main/audiomodule.cpp
@@ -794,6 +834,20 @@ index 25f0be37..cbe4da85 100644
  
      muse::ValCh<muse::Uri> currentUri() const override;
      muse::RetVal<bool> isCurrentUriDialog() const override;
+diff --git a/src/framework/global/settings.h b/src/framework/global/settings.h
+index cee128fc..6b5ce848 100644
+--- a/src/framework/global/settings.h
++++ b/src/framework/global/settings.h
+@@ -122,7 +122,9 @@ private:
+     Items readItems() const;
+     void writeValue(const Key& key, const Val& value);
+ 
++#ifndef NO_QT_SUPPORT
+     QString dataPath() const;
++#endif
+ 
+     QSettings* m_settings = nullptr;
+     mutable Items m_items;
 diff --git a/src/framework/languages/internal/languagesservice.cpp b/src/framework/languages/internal/languagesservice.cpp
 index 14cbf53f..8c6f292c 100644
 --- a/src/framework/languages/internal/languagesservice.cpp
@@ -905,6 +959,19 @@ index 4eb13888..06d53bfb 100644
      if (globalContext()->currentProject()) {
          if (multiwindowsProvider()->isHasWindowWithoutProject()) {
              multiwindowsProvider()->activateWindowWithoutProject({ "file-new" });
+diff --git a/src/project/internal/projectaudiosettings.cpp b/src/project/internal/projectaudiosettings.cpp
+index 3249b2b3..50c2f95b 100644
+--- a/src/project/internal/projectaudiosettings.cpp
++++ b/src/project/internal/projectaudiosettings.cpp
+@@ -576,7 +576,7 @@ AudioSourceType ProjectAudioSettings::sourceTypeFromString(const QString& string
+ AudioResourceType ProjectAudioSettings::resourceTypeFromString(const QString& string) const
+ {
+     for (const auto& pair : RESOURCE_TYPE_MAP) {
+-        if (pair.second == string) {
++        if (pair.second.toQString() == string) {
+             return pair.first;
+         }
+     }
 diff --git a/src/project/qml/MuseScore/Project/ScoresPage.qml b/src/project/qml/MuseScore/Project/ScoresPage.qml
 index 26b6428a..6f12b737 100644
 --- a/src/project/qml/MuseScore/Project/ScoresPage.qml
@@ -1164,15 +1231,17 @@ index 00000000..b0294a5c
 +};
 +}
 diff --git a/src/web/audioengine/CMakeLists.txt b/src/web/audioengine/CMakeLists.txt
-index 6a32d6ce..10a3e2a0 100644
+index 6a32d6ce..72648985 100644
 --- a/src/web/audioengine/CMakeLists.txt
 +++ b/src/web/audioengine/CMakeLists.txt
-@@ -61,13 +61,19 @@ else()
+@@ -61,13 +61,21 @@ else()
      set(EMCC_LINKER_FLAGS -Os)
  endif()
  
 +# Before the subdirectories: add_definitions only reaches targets created after it, and the
 +# audio libraries must also be built without Qt.
++include(GetPlatformInfo) # OS_IS_WASM: the engine's web sources, not the threaded worker
++set(MUSE_MODULE_AUDIO_WORKMODE 2) # driver callback, as the editor (muse_framework_config.h)
 +add_definitions(-DNO_QT_SUPPORT)
 +add_definitions(-DQ_OS_WASM)
 +set(GLOBAL_NO_INTERNAL ON)
@@ -1189,7 +1258,7 @@ index 6a32d6ce..10a3e2a0 100644
  add_executable(MuseAudio
      ${CMAKE_CURRENT_LIST_DIR}/engine_export.cpp
      ${CMAKE_CURRENT_LIST_DIR}/webaudioengine.cpp
-@@ -77,6 +83,8 @@ add_executable(MuseAudio
+@@ -77,6 +85,8 @@ add_executable(MuseAudio
      ${AUDIO_ROOT}/driver/platform/web/webaudiochannel.h
  )
  
@@ -1198,7 +1267,7 @@ index 6a32d6ce..10a3e2a0 100644
  target_include_directories(MuseAudio PRIVATE
      ${PROJECT_BINARY_DIR}
      ${CMAKE_CURRENT_BINARY_DIR}
-@@ -96,11 +104,6 @@ target_include_directories(MuseAudio PRIVATE
+@@ -96,11 +106,6 @@ target_include_directories(MuseAudio PRIVATE
      # end compat
  )
  
@@ -1209,4 +1278,20 @@ index 6a32d6ce..10a3e2a0 100644
 -configure_file(${MU_ROOT}/src/framework/cmake/muse_framework_config.h.in muse_framework_config.h )
  
  add_subdirectory(${MU_ROOT}/src/framework/global global)
+ 
+diff --git a/src/web/audioengine/webaudioengine.cpp b/src/web/audioengine/webaudioengine.cpp
+index b26af415..eece4015 100644
+--- a/src/web/audioengine/webaudioengine.cpp
++++ b/src/web/audioengine/webaudioengine.cpp
+@@ -81,7 +81,10 @@ void WebAudioEngine::init()
+     m_rpcChannel->setupOnEngine();
+     ioc()->registerExport<IRpcChannel>(moduleName(), m_rpcChannel);
+ 
+-    m_controller = std::make_shared<EngineController>(m_rpcChannel);
++    //! The engine in the worklet has one global context (as the app's main window).
++    modularity::ContextPtr ctx = std::make_shared<modularity::Context>();
++    ctx->id = -1;
++    m_controller = std::make_shared<EngineController>(m_rpcChannel, ctx);
+     m_controller->registerExports();
+     m_controller->onStartRunning();
  
