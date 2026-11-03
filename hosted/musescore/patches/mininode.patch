@@ -241,10 +241,10 @@ index 32d743d8..0766a6a3 100644
  
              currentIndex: 0
 diff --git a/src/appshell/qml/MuseScore/AppShell/HomePage/PluginsPage.qml b/src/appshell/qml/MuseScore/AppShell/HomePage/PluginsPage.qml
-index 3db2c243..d6b80e36 100644
+index 3db2c243..fc9824fc 100644
 --- a/src/appshell/qml/MuseScore/AppShell/HomePage/PluginsPage.qml
 +++ b/src/appshell/qml/MuseScore/AppShell/HomePage/PluginsPage.qml
-@@ -145,6 +145,26 @@ FocusScope {
+@@ -145,6 +145,27 @@ FocusScope {
              }
          }
  
@@ -253,6 +253,7 @@ index 3db2c243..d6b80e36 100644
 +
 +            anchors.right: reloadButton.left
 +            anchors.rightMargin: 12
++            anchors.verticalCenter: reloadButton.verticalCenter
 +
 +            //! MiniNode: the page's Plugins panel (add plugins for everyone, AI porting prompt).
 +            text: qsTrc("action", "Manage plugins…")
@@ -271,7 +272,7 @@ index 3db2c243..d6b80e36 100644
          FlatButton {
              id: reloadButton
  
-@@ -156,7 +176,7 @@ FocusScope {
+@@ -156,7 +177,7 @@ FocusScope {
  
              navigation.name: "PluginsReloadButton"
              navigation.panel: navTopPanel
@@ -1099,6 +1100,31 @@ index 6aec3ed8..4c408531 100644
      m_timer.setInterval(MIN_RETRY_INTERVAL_MS); // poll once a minute
  
      QObject::connect(&m_timer, &QTimer::timeout, [this]() { poll(); });
+diff --git a/src/project/internal/opensaveprojectscenario.cpp b/src/project/internal/opensaveprojectscenario.cpp
+index ec9a1a79..e97d030f 100644
+--- a/src/project/internal/opensaveprojectscenario.cpp
++++ b/src/project/internal/opensaveprojectscenario.cpp
+@@ -22,6 +22,8 @@
+ 
+ #include "opensaveprojectscenario.h"
+ 
++#include "muse_framework_config.h"
++
+ #include "cloud/clouderrors.h"
+ #include "cloud/qml/Muse/Cloud/enums.h"
+ #include "engraving/infrastructure/mscio.h"
+@@ -140,6 +142,11 @@ RetVal<muse::io::path_t> OpenSaveProjectScenario::askLocalPath(INotationProjectP
+ 
+ RetVal<SaveLocationType> OpenSaveProjectScenario::saveLocationType() const
+ {
++#ifdef MUSE_WEB_DESKTOP
++    //! No MuseScore.com cloud here: never ask "cloud or this computer"; the page's own dialog
++    //! offers the person's MiniNode files or the device.
++    return RetVal<SaveLocationType>::make_ok(SaveLocationType::Local);
++#endif
+     bool shouldAsk = configuration()->shouldAskSaveLocationType();
+     SaveLocationType lastUsed = configuration()->lastUsedSaveLocationType();
+     if (!shouldAsk && lastUsed != SaveLocationType::Undefined) {
 diff --git a/src/project/internal/projectactionscontroller.cpp b/src/project/internal/projectactionscontroller.cpp
 index 4eb13888..06d53bfb 100644
 --- a/src/project/internal/projectactionscontroller.cpp
