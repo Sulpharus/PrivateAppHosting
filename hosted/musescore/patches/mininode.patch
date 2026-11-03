@@ -135,6 +135,24 @@ index 3772a83f..019db3fc 100644
  #cmakedefine MUE_CONFIGURATION_IS_VTEST 1
  #cmakedefine MUE_CONFIGURATION_IS_UTEST 1
  
+diff --git a/src/app/internal/guiapp.cpp b/src/app/internal/guiapp.cpp
+index a16388a7..dac0ac1c 100644
+--- a/src/app/internal/guiapp.cpp
++++ b/src/app/internal/guiapp.cpp
+@@ -405,7 +405,13 @@ muse::modularity::ContextPtr GuiApp::setupNewContext()
+     // Transparency will be removed after the page loads.
+     m_window = dynamic_cast<QQuickWindow*>(obj);
+     m_window->setOpacity(0.01);
++#ifdef MUSE_WEB_DESKTOP
++    //! In the browser the editor fills the page's area, without a window frame of its own.
++    m_window->setFlags(m_window->flags() | Qt::FramelessWindowHint);
++    m_window->showFullScreen();
++#else
+     m_window->setVisible(true);
++#endif
+ 
+     startupScenario()->runAfterSplashScreen();
+ 
 diff --git a/src/app/main.cpp b/src/app/main.cpp
 index 2ac78a89..6f35c38e 100644
 --- a/src/app/main.cpp
@@ -184,10 +202,34 @@ index 84f19f06..2f6dad64 100644
          QML_FILES
              platform/linux/Main.qml
 diff --git a/src/appshell/qml/MuseScore/AppShell/HomePage/HomeMenu.qml b/src/appshell/qml/MuseScore/AppShell/HomePage/HomeMenu.qml
-index 32d743d8..f5703bdf 100644
+index 32d743d8..0766a6a3 100644
 --- a/src/appshell/qml/MuseScore/AppShell/HomePage/HomeMenu.qml
 +++ b/src/appshell/qml/MuseScore/AppShell/HomePage/HomeMenu.qml
-@@ -89,9 +89,7 @@ Item {
+@@ -61,23 +61,6 @@ Item {
+ 
+         spacing: 0
+ 
+-        AccountInfoButton {
+-            Layout.fillWidth: true
+-            Layout.preferredHeight: 60
+-            Layout.topMargin: 20
+-
+-            navigation.name: "AccountInfo"
+-            navigation.panel: navPanel
+-            navigation.row: 1
+-
+-            checked: root.currentPageName === "account"
+-            iconOnly: root.iconsOnly
+-
+-            onToggled: {
+-                root.selected("account")
+-            }
+-        }
+-
+         RadioButtonGroup {
+             id: radioButtonList
+ 
+@@ -89,9 +72,7 @@ Item {
  
              model: [
                  { "name": "scores", "title": qsTrc("appshell", "Scores"), "iconCode": IconCode.MUSIC_NOTES },
@@ -939,6 +981,20 @@ index 14cbf53f..8c6f292c 100644
          LOGI() << "System languages: " << systemLanguages;
  
          for (QString code : systemLanguages) {
+diff --git a/src/framework/uicomponents/qml/Muse/GraphicalEffects/CMakeLists.txt b/src/framework/uicomponents/qml/Muse/GraphicalEffects/CMakeLists.txt
+index 8a579c71..c5b0433b 100644
+--- a/src/framework/uicomponents/qml/Muse/GraphicalEffects/CMakeLists.txt
++++ b/src/framework/uicomponents/qml/Muse/GraphicalEffects/CMakeLists.txt
+@@ -36,6 +36,9 @@ fixup_qml_module_dependencies(muse_graphicaleffects_qml)
+ qt_add_shaders(muse_graphicaleffects_qml muse_graphicaleffects_qml_shaders
+     PREFIX
+         "/qt/qml/Muse/GraphicalEffects"
++    # 300 es as well: WebGL 2 links Qt's 300 es vertex shaders with this fragment shader.
++    GLSL
++        "100es,120,150,300es"
+     FILES
+         "shaders/roundcorners.frag"
+ )
 diff --git a/src/notation/internal/notationinteraction.cpp b/src/notation/internal/notationinteraction.cpp
 index a84e33ae..349aef34 100644
 --- a/src/notation/internal/notationinteraction.cpp
@@ -1050,7 +1106,7 @@ index 3249b2b3..50c2f95b 100644
          }
      }
 diff --git a/src/project/qml/MuseScore/Project/ScoresPage.qml b/src/project/qml/MuseScore/Project/ScoresPage.qml
-index 26b6428a..1620f0ff 100644
+index 26b6428a..ea4f8193 100644
 --- a/src/project/qml/MuseScore/Project/ScoresPage.qml
 +++ b/src/project/qml/MuseScore/Project/ScoresPage.qml
 @@ -174,13 +174,6 @@ FocusScope {
@@ -1128,6 +1184,49 @@ index 26b6428a..1620f0ff 100644
  
      Rectangle {
          id: buttonsPanel
+@@ -362,23 +310,6 @@ FocusScope {
+             accessible.name: qsTrc("project", "Scores actions")
+         }
+ 
+-        FlatButton {
+-            anchors.left: parent.left
+-            anchors.leftMargin: prv.sideMargin
+-            anchors.verticalCenter: parent.verticalCenter
+-
+-            navigation.name: "ScoreManager"
+-            navigation.panel: navBottomPanel
+-            navigation.column: 1
+-
+-            minWidth: 216
+-            text: qsTrc("project", "Score manager (online)")
+-
+-            onClicked: {
+-                scoresPageModel.openScoreManager()
+-            }
+-        }
+-
+         Row {
+             anchors.right : parent.right
+             anchors.rightMargin: prv.sideMargin
+@@ -399,18 +330,6 @@ FocusScope {
+                 }
+             }
+ 
+-            FlatButton {
+-                navigation.name: "ConvertFileToScore"
+-                navigation.panel: navBottomPanel
+-                navigation.column: 3
+-
+-                text: qsTrc("project", "Convert…")
+-
+-                onClicked: {
+-                    scoresPageModel.convertFileToScore()
+-                }
+-            }
+-
+             FlatButton {
+                 navigation.name: "Open other Score"
+                 navigation.panel: navBottomPanel
 diff --git a/src/web/appjs/CMakeLists.txt b/src/web/appjs/CMakeLists.txt
 index e0b960ac..80945cb9 100644
 --- a/src/web/appjs/CMakeLists.txt
