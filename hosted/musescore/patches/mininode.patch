@@ -306,10 +306,10 @@ index d29381c3..59036d09 100644
  
      setItems(items);
 diff --git a/src/appshell/qml/MuseScore/AppShell/appmenumodel.cpp b/src/appshell/qml/MuseScore/AppShell/appmenumodel.cpp
-index 939c8162..35377611 100644
+index 939c8162..1d44a144 100644
 --- a/src/appshell/qml/MuseScore/AppShell/appmenumodel.cpp
 +++ b/src/appshell/qml/MuseScore/AppShell/appmenumodel.cpp
-@@ -204,11 +204,17 @@ MenuItem* AppMenuModel::makeFileMenu()
+@@ -204,19 +204,28 @@ MenuItem* AppMenuModel::makeFileMenu()
          makeSeparator(),
          makeMenuItem("file-save"),
          makeMenuItem("file-save-as"),
@@ -327,6 +327,17 @@ index 939c8162..35377611 100644
          makeMenuItem("file-export"),
          makeSeparator(),
          makeMenuItem("project-properties"),
+         makeMenuItem("parts", TranslatableString("action", "Parts…")),
+         makeSeparator(),
+         makeMenuItem("print"),
++#ifndef MUSE_WEB_DESKTOP
++        //! A browser tab is closed by the browser; quitting would only leave an empty page.
+         makeSeparator(),
+         makeMenuItem("quit", MenuItemRole::QuitRole)
++#endif
+     };
+ 
+     return makeMenu(TranslatableString("appshell/menu/file", "&File"), fileItems, "menu-file");
 diff --git a/src/braille/thirdparty/liblouis/liblouis/internal.h b/src/braille/thirdparty/liblouis/liblouis/internal.h
 index fb5b73fb..bc0d9434 100644
 --- a/src/braille/thirdparty/liblouis/liblouis/internal.h
