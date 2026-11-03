@@ -71,6 +71,9 @@ if [ "$edition" = cloudflare ]; then
     "$stage/.github/workflows/library.yml"
   drop_job "$stage/.github/workflows/ci.yml" infra
   drop_job "$stage/.github/workflows/ci.yml" desktop
+  # Packaging belongs to the project that publishes releases, not to an installation of one.
+  drop_job "$stage/.github/workflows/ci.yml" starter
+  rm -f "$stage/.github/workflows/release.yml"
   drop_job "$stage/.github/workflows/deploy.yml" nucbox
   drop_job "$stage/.github/workflows/deploy.yml" platform-images
 fi
