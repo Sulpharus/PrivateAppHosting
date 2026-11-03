@@ -128,6 +128,25 @@ index 3772a83f..019db3fc 100644
  #cmakedefine MUE_CONFIGURATION_IS_VTEST 1
  #cmakedefine MUE_CONFIGURATION_IS_UTEST 1
  
+diff --git a/src/app/main.cpp b/src/app/main.cpp
+index 2ac78a89..6f35c38e 100644
+--- a/src/app/main.cpp
++++ b/src/app/main.cpp
+@@ -182,12 +182,14 @@ int main(int argc, char** argv)
+ 
+     app->setupNewContext();
+ 
++#if QT_CONFIG(ssl)
+     LOGI() << QString("SSL Info: supported: %1, build: %2, runtime: %3, active backend: %4, available backends: %5")
+         .arg(QSslSocket::supportsSsl())
+         .arg(QSslSocket::sslLibraryBuildVersionString())
+         .arg(QSslSocket::sslLibraryVersionString())
+         .arg(QSslSocket::activeBackend())
+         .arg(QSslSocket::availableBackends().join(", "));
++#endif
+ 
+     // ====================================================
+     // Run main loop
 diff --git a/src/appshell/internal/startupscenario.cpp b/src/appshell/internal/startupscenario.cpp
 index fad6a767..2b590cf9 100644
 --- a/src/appshell/internal/startupscenario.cpp
