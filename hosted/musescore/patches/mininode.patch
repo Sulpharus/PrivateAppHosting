@@ -326,7 +326,7 @@ index 00000000..dbf381f1
 +bool fetchFile(const io::path_t& path);
 +}
 diff --git a/src/framework/global/internal/platform/web/webinteractive.cpp b/src/framework/global/internal/platform/web/webinteractive.cpp
-index e77e195f..a63fd0ea 100644
+index e77e195f..74a880f5 100644
 --- a/src/framework/global/internal/platform/web/webinteractive.cpp
 +++ b/src/framework/global/internal/platform/web/webinteractive.cpp
 @@ -25,7 +25,15 @@
@@ -495,6 +495,55 @@ index e77e195f..a63fd0ea 100644
      UNUSED(title);
      UNUSED(dir);
      UNUSED(filter);
+@@ -309,19 +424,24 @@ void WebInteractive::raise(const UriQuery& uri)
+     m_origin->raise(uri);
+ }
+ 
+-void WebInteractive::close(const UriQuery& uri)
++async::Promise<Ret> WebInteractive::close(const UriQuery& uri)
++{
++    return m_origin->close(uri);
++}
++
++async::Promise<Ret> WebInteractive::close(const Uri& uri)
+ {
+-    m_origin->close(uri);
++    return m_origin->close(uri);
+ }
+ 
+-void WebInteractive::close(const Uri& uri)
++Ret WebInteractive::closeSync(const UriQuery& uri)
+ {
+-    m_origin->close(uri);
++    return m_origin->closeSync(uri);
+ }
+ 
+-void WebInteractive::closeAllDialogs()
++Ret WebInteractive::closeAllDialogsSync()
+ {
+-    m_origin->closeAllDialogs();
++    return m_origin->closeAllDialogsSync();
+ }
+ 
+ ValCh<Uri> WebInteractive::currentUri() const
+diff --git a/src/framework/global/internal/platform/web/webinteractive.h b/src/framework/global/internal/platform/web/webinteractive.h
+index 25f0be37..cbe4da85 100644
+--- a/src/framework/global/internal/platform/web/webinteractive.h
++++ b/src/framework/global/internal/platform/web/webinteractive.h
+@@ -96,9 +96,10 @@ public:
+ 
+     void raise(const muse::UriQuery& uri) override;
+ 
+-    void close(const muse::UriQuery& uri) override;
+-    void close(const muse::Uri& uri) override;
+-    void closeAllDialogs() override;
++    muse::async::Promise<muse::Ret> close(const muse::UriQuery& uri) override;
++    muse::async::Promise<muse::Ret> close(const muse::Uri& uri) override;
++    muse::Ret closeSync(const muse::UriQuery& uri) override;
++    muse::Ret closeAllDialogsSync() override;
+ 
+     muse::ValCh<muse::Uri> currentUri() const override;
+     muse::RetVal<bool> isCurrentUriDialog() const override;
 diff --git a/src/framework/languages/internal/languagesservice.cpp b/src/framework/languages/internal/languagesservice.cpp
 index 14cbf53f..8c6f292c 100644
 --- a/src/framework/languages/internal/languagesservice.cpp
