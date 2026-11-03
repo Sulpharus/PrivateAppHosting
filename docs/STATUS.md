@@ -171,6 +171,33 @@ since the PR #12 deploy. Earlier deploys stopped at medialog and never shipped t
 
 ## Open and proposed work
 
+- **MuseScore Studio (`hosted/musescore`), in progress since 2026-11-03.** The owner wants the full
+  desktop editor in the browser (Chrome/Edge desktop, as an installed app window; no mobile),
+  original name, MS Basic SoundFont, scores private per person in Supabase (`mn.files`) with
+  export/import, no ads or paywalls, German and English. Read `hosted/musescore/README.md` first.
+  - **Done (committed, not yet compiled end to end):** configuration `app-mininode` in
+    `patches/mininode.patch` (desktop shell + dock windows + all imports/exports on WebAssembly,
+    online services and promotions off, real file system, sync file dialogs via the page, browser
+    print, one window replaces the score, recent MiniNode scores fetched); Qt 6.10.2 from source
+    with JSPI (`toolchain/build-qt.sh`; `download.qt.io` is blocked by the cloud network policy);
+    the page `web/` (MiniNode files for open/save/export, IDBFS user data plus account snapshot,
+    ZIP export/import, audio worklet without `blob:` scripts, SoundFont parts in Cache Storage);
+    `build.mjs`; CI workflow `musescore.yml` (cached, `continue-on-error`, cannot block other apps).
+  - **Next:** build Qt for WebAssembly (`~/build_tools/build-qt.sh` was running; repo copy is
+    `toolchain/build-qt.sh <prefix>`), then `MUSESCORE_QT_PREFIX=<prefix> node hosted/musescore/build.mjs`,
+    fix compile/link errors in the patch, run it in Chromium (a temporary e2e spec), check start,
+    new score, palettes, playback, save to MiniNode, reopen, export PDF/MusicXML/MIDI/audio,
+    print, German UI. Then size work (module list, `-Oz`, `wasm-opt`, qrc images of removed
+    pages), reviewer subagent, wiki (`neuigkeiten.md`, an app article), push and draft PR.
+  - **Patch workflow:** work in a clone of the tag (`git apply patches/mininode.patch`), then
+    `git add -N <new files> && git diff > hosted/musescore/patches/mininode.patch`.
+  - **Costs to tell the owner:** the first CI build takes about 4–5 hours of Actions time (Qt about
+    2, MuseScore about 2); later runs restore both from the cache unless the patch or toolchain
+    changes (then MuseScore again, shortened by ccache).
+  - **Known limits:** JSPI needs Chrome/Edge 137+; no MIDI keyboards yet (Web MIDI driver not
+    written); device files in the recent list cannot be reopened after a reload; only English and
+    German UI (add codes to `source.json` `languages`).
+
 - **Contract step of the table move (ADR 0022):** Sportplaner and Haushalt still carry their old kv
   entries (`act:`, `plan:`, `tx:`, `rec:`, `profile:`, `settings`) as a backup, and the copy code
   (`copyFromKv`). After the owner has used both apps on the tables for a while and says so, a
