@@ -16,7 +16,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: Release tag to install (empty = the newest release)
+        description: Release tag to install (empty = the newest release with a package of your edition)
         type: string
         required: false
 
@@ -63,16 +63,24 @@ jobs:
           source=$(jq -r '.updates.source // empty' mininode.config.json)
           [[ "$source" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ && ! "$source" =~ (^|/)\.+(/|$) ]] || {
             echo "::error::updates.source is missing in mininode.config.json (owner/repo of the project that publishes releases)"; exit 1; }
+          # The package this installation came from decides which asset to take.
+          edition=$(jq -r '.edition // "starter"' .mininode/platform-files.json 2>/dev/null || echo starter)
+          [[ "$edition" =~ ^(starter|cloudflare)$ ]] || edition=starter
           tag=$WANTED
           if [ -z "$tag" ]; then
-            tag=$(gh release list --repo "$source" --limit 1 --json tagName --jq '.[0].tagName')
+            # The newest release that carries a package of this edition.
+            for candidate in $(gh release list --repo "$source" --limit 20 --json tagName --jq '.[].tagName'); do
+              if gh release view "$candidate" --repo "$source" --json assets --jq '.assets[].name' | grep -q "^mininode-$edition-"; then
+                tag=$candidate; break
+              fi
+            done
           fi
-          [[ "$tag" =~ ^v[0-9A-Za-z._-]+$ ]] || { echo "::error::no usable release found in $source"; exit 1; }
+          [[ "$tag" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]] || { echo "::error::no release with a $edition package found in $source"; exit 1; }
           mkdir -p "$RUNNER_TEMP/release"
           gh release download "$tag" --repo "$source" --dir "$RUNNER_TEMP/release" \
-            --pattern 'mininode-starter-*.zip' --pattern SHA256SUMS
+            --pattern "mininode-$edition-*.zip" --pattern SHA256SUMS
           (cd "$RUNNER_TEMP/release" && sha256sum --ignore-missing -c SHA256SUMS)
-          unzip -q "$RUNNER_TEMP"/release/mininode-starter-*.zip -d "$RUNNER_TEMP/unpacked"
+          unzip -q "$RUNNER_TEMP"/release/mininode-"$edition"-*.zip -d "$RUNNER_TEMP/unpacked"
           from=$(find "$RUNNER_TEMP/unpacked" -mindepth 1 -maxdepth 1 -type d | head -n1)
           { echo "source=$source"; echo "tag=$tag"; echo "from=$from"; } >> "$GITHUB_OUTPUT"
       - name: Check what would change (stops on a changed applied migration)

@@ -2,7 +2,10 @@
 # Builds the starter ZIP: the platform for every variant, without apps and without anything of
 # this installation (domain, accounts, keys, people). Used by scripts/package-release.sh.
 #
-#   scripts/make-starter.sh <version> <outdir>
+#   scripts/make-starter.sh <version> <outdir> [starter|cloudflare]
+#
+# The cloudflare edition leaves out the desktop installer and host and the home-server parts
+# (infra/desktop, infra/nucbox, apps/desktop-host, apps/nucbox-control): Cloudflare + Supabase only.
 #
 # Steps: export the committed files, drop the apps and personal files, write neutral placeholders
 # into the instance settings, regenerate the lockfile without the apps, then scan the result for
@@ -10,13 +13,15 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-version=${1:?usage: make-starter.sh <version> <outdir>}
-out=${2:?usage: make-starter.sh <version> <outdir>}
+version=${1:?usage: make-starter.sh <version> <outdir> [starter|cloudflare]}
+out=${2:?usage: make-starter.sh <version> <outdir> [starter|cloudflare]}
+edition=${3:-starter}
+[[ "$edition" =~ ^(starter|cloudflare)$ ]] || { echo "unknown edition: $edition (starter or cloudflare)" >&2; exit 1; }
 [[ "$version" =~ ^[0-9A-Za-z][0-9A-Za-z._-]*$ ]] || { echo "invalid version: $version" >&2; exit 1; }
 command -v zip >/dev/null || { echo "zip is required" >&2; exit 1; }
 command -v pnpm >/dev/null || { echo "pnpm is required (the lockfile is regenerated without the apps)" >&2; exit 1; }
 
-name="mininode-starter-$version"
+name="mininode-$edition-$version"
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 stage="$work/$name"
@@ -51,6 +56,24 @@ One folder per app, each with a `mininode.json`. This copy starts empty: build a
 KI-Werkstatt (Verwaltung), integrate it (`docs/runbooks/add-app.md`, `docs/runbooks/uploads.md`),
 and it appears here. The desktop edition installs apps with `mininode-desktop add <app>`.
 README
+# Cloudflare edition: no desktop installer or host, no home server. The jobs that test them go
+# too, so the new installation's CI does not look for files that are not there.
+drop_job() { # <workflow file> <job id>
+  awk -v job="$2" '
+    $0 == "  " job ":" { skip = 1; next }
+    skip && /^  [A-Za-z0-9_-]+:/ { skip = 0 }
+    skip && /^[^ ]/ { skip = 0 }
+    !skip { print }' "$1" > "$1.tmp" && mv "$1.tmp" "$1"
+}
+if [ "$edition" = cloudflare ]; then
+  rm -rf "$stage/apps/desktop-host" "$stage/apps/nucbox-control" "$stage/infra/desktop" \
+    "$stage/infra/nucbox" "$stage/.github/actions/nucbox-ssh" "$stage/.sops.yaml" \
+    "$stage/.github/workflows/library.yml"
+  drop_job "$stage/.github/workflows/ci.yml" infra
+  drop_job "$stage/.github/workflows/ci.yml" desktop
+  drop_job "$stage/.github/workflows/deploy.yml" nucbox
+  drop_job "$stage/.github/workflows/deploy.yml" platform-images
+fi
 find "$stage/inbox" -mindepth 1 ! -name '.gitkeep' ! -name 'README.md' -delete
 rm -rf "$stage/graphify-out" "$stage/.gitleaksignore" "$stage/docs/STATUS.md"
 # End-to-end specs of the apps go with the apps; the generic ones stay.
@@ -84,8 +107,8 @@ Last updated: (date)
 
 (ideas, known gaps)
 STATUS
-cp infra/release/README-starter.md "$stage/README-EDITION.md"
-printf '%s\nedition: starter\ncommit: %s\n' "$version" "$(git rev-parse HEAD)" > "$stage/VERSION"
+cp "infra/release/README-$edition.md" "$stage/README-EDITION.md"
+printf '%s\nedition: %s\ncommit: %s\n' "$version" "$edition" "$(git rev-parse HEAD)" > "$stage/VERSION"
 # The instance settings are made by `pnpm mininode init`; the example shows their shape.
 rm -f "$stage/mininode.config.json"
 
@@ -128,7 +151,7 @@ if [ -n "$repository" ]; then
   tmp_example=$(mktemp)
   jq --arg r "$repository" '. + {updates: {source: $r}}' "$stage/mininode.config.example.json" > "$tmp_example"
   mv "$tmp_example" "$stage/mininode.config.example.json"
-  node packages/cli/src/bin.ts update list --from "$stage" --source "$repository"
+  node packages/cli/src/bin.ts update list --from "$stage" --source "$repository" --edition "$edition"
 fi
 
 # 8. Pack. Fixed timestamps would make it reproducible; the commit id in VERSION identifies it.

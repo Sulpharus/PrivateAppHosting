@@ -78,7 +78,7 @@ const USAGE = `mininode <command>
                                     a remote database also needs --confirm <its host>)
   update platform --from <dir> --source <owner/repo> [--skip-workflows] [--dry-run]
                                     Bring a newer starter package (unpacked in <dir>) into this repository
-  update list --from <dir> --source <owner/repo>
+  update list --from <dir> --source <owner/repo> [--edition starter|cloudflare]
                                     Write .mininode/platform-files.json for a package being built
   update app <slug> --from <dir> --repository <owner/repo> --commit <sha> [--dry-run]
                                     Bring the newest version of an app from its own repository (checked out in <dir>)
@@ -377,7 +377,11 @@ async function main(args: string[]): Promise<number> {
       if (target === 'list') {
         const source = flag(args, '--source');
         if (!source) break;
-        writePlatformList(resolve(process.cwd(), from), source);
+        writePlatformList(
+          resolve(process.cwd(), from),
+          source,
+          flag(args, '--edition') ?? 'starter',
+        );
         return 0;
       }
       if (target === 'platform') {

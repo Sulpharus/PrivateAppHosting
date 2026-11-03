@@ -168,7 +168,7 @@ function readJson(path: string): unknown {
  * Writes the list of platform files of a directory (a starter package being built, or a
  * repository after an update), so the next update knows which files the platform owns.
  */
-export function writePlatformList(dir: string, source: string): void {
+export function writePlatformList(dir: string, source: string, edition = 'starter'): void {
   const versionFile = join(dir, 'VERSION');
   const version = existsSync(versionFile)
     ? (readFileSync(versionFile, 'utf8').split('\n')[0]?.trim() ?? 'unknown')
@@ -177,7 +177,7 @@ export function writePlatformList(dir: string, source: string): void {
   mkdirSync(join(dir, '.mininode'), { recursive: true });
   writeFileSync(
     join(dir, PLATFORM_FILES),
-    `${JSON.stringify({ version, source, files: Object.fromEntries(files) }, null, 2)}\n`,
+    `${JSON.stringify({ version, source, edition, files: Object.fromEntries(files) }, null, 2)}\n`,
   );
 }
 
@@ -236,6 +236,8 @@ export function applyPlatformUpdate(
   writeFiles(updatePlan, options.from, options.root);
   const list = join(options.root, PLATFORM_FILES);
   const files = Object.fromEntries(updatePlan.incoming);
+  // Which package this installation came from stays the same: an update never switches editions.
+  const oldEdition = (readJson(list) as { edition?: string } | null)?.edition ?? 'starter';
   if (options.skipWorkflows) {
     // Workflow files were left alone: remember them as they were, so a later update with a token
     // that may change workflows still updates and removes them.
@@ -246,7 +248,7 @@ export function applyPlatformUpdate(
   mkdirSync(dirname(list), { recursive: true });
   writeFileSync(
     list,
-    `${JSON.stringify({ version: updatePlan.version, source, files }, null, 2)}\n`,
+    `${JSON.stringify({ version: updatePlan.version, source, edition: oldEdition, files }, null, 2)}\n`,
   );
 }
 

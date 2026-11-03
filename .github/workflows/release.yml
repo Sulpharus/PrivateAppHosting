@@ -2,15 +2,17 @@ name: Release
 # Registered with GitHub on the default branch (touched again so Actions lists it).
 
 # Builds the starter package (scripts/package-release.sh starter) and attaches it to a GitHub release.
-#   v0.1.0       the release; the title is the subject of the annotated tag (or the typed title)
-#   v0.1.0-test  the same, marked as a pre-release
+#   v0.1.0                 the starter (Cloudflare, desktop installer, home server); the title is the
+#                          subject of the annotated tag (or the typed title)
+#   cloudflare-v0.1.0      the Cloudflare edition: the same without the desktop and home-server parts
+#   v0.1.0-test            a version with a hyphen is marked as a pre-release
 # Only the starter is published: the other editions are cut from the whole repository, which
 # holds the owner's own apps and settings. Push the tag, or run this workflow by hand (Actions →
 # Release → Run workflow): it creates the tag on the chosen branch and takes the title you type.
 
 on:
   push:
-    tags: ["v*"]
+    tags: ["v*", "cloudflare-v*"]
   workflow_dispatch:
     inputs:
       tag:
@@ -42,14 +44,15 @@ jobs:
         with:
           ref: ${{ github.ref }}
           fetch-depth: 0
-      - name: Version from the tag
+      - name: Edition and version from the tag
         id: plan
         run: |
           case "$TAG" in
-            v*) ;;
+            cloudflare-v*) edition=cloudflare; version="${TAG#cloudflare-v}" ;;
+            v*)            edition=starter;    version="${TAG#v}" ;;
             *) echo "unsupported tag: $TAG" >&2; exit 1 ;;
           esac
-          echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+          { echo "edition=$edition"; echo "version=$version"; } >> "$GITHUB_OUTPUT"
       # The starter's lockfile is regenerated without the apps, which needs Node and pnpm.
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v5
@@ -57,24 +60,36 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - name: Build the starter
+      - name: Build the package
         env:
           VERSION: ${{ steps.plan.outputs.version }}
-        run: scripts/package-release.sh "$VERSION" release-out starter
+          EDITION: ${{ steps.plan.outputs.edition }}
+        run: scripts/package-release.sh "$VERSION" release-out "$EDITION"
       - name: Check the checksums
         run: cd release-out && sha256sum -c SHA256SUMS
       - name: Publish
+        env:
+          EDITION: ${{ steps.plan.outputs.edition }}
+          VERSION: ${{ steps.plan.outputs.version }}
         run: |
           title=$TITLE
           [ -n "$title" ] || title=$(git tag -l --format='%(contents:subject)' "$TAG")
           [ -n "$title" ] || title="$TAG"
           flags=()
-          case "$TAG" in *-*) flags+=(--prerelease) ;; esac
-          notes="**Starter** (\`mininode-starter-*.zip\`): the whole platform without apps and without anything of the installation that built it. It holds the Cloudflare setup, the desktop installer for Docker (Windows, macOS, Linux), the optional home-server side and every instruction.
+          case "$VERSION" in *-*) flags+=(--prerelease) ;; esac
+          if [ "$EDITION" = cloudflare ]; then
+            notes="**Cloudflare edition** (\`mininode-cloudflare-*.zip\`): everything to run MiniNode on Cloudflare and Supabase, without apps and without anything of the installation that built it. The desktop installer and the home-server parts are not in it.
+
+          Start with \`docs/runbooks/setup-cloudflare.md\` after unpacking. License: PolyForm Noncommercial 1.0.0 (\`LICENSE\`).
+
+          Checksum: \`SHA256SUMS\`."
+          else
+            notes="**Starter** (\`mininode-starter-*.zip\`): the whole platform without apps and without anything of the installation that built it. It holds the Cloudflare setup, the desktop installer for Docker (Windows, macOS, Linux), the optional home-server side and every instruction.
 
           Start with \`docs/runbooks/getting-started.md\` after unpacking. License: PolyForm Noncommercial 1.0.0 (\`LICENSE\`).
 
           Checksum: \`SHA256SUMS\`."
+          fi
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" release-out/* --clobber
           else
