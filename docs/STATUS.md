@@ -178,7 +178,7 @@ since the PR #12 deploy. Earlier deploys stopped at medialog and never shipped t
   library (SoundFonts and sound effects) with private and shared folders. Read
   `hosted/musescore/README.md` first.
   - **Runs locally (headless Chromium with SwiftShader WebGL, test server with the gate's CSP and a
-    stand-in SDK in the session scratchpad):** start in about 5 s, German UI, WebGL rendering, home
+    stand-in SDK: `hosted/musescore/test/`, see its README):** start in about 5 s, German UI, WebGL rendering, home
     page without online parts, new score dialog and score view (palettes, toolbars), Ctrl+S → MiniNode
     save dialog → file in storage, File → Open lists MiniNode files, Plugins page shows MuseScore's
     and shared plugins (14 open-source ones tested), Klänge panel lists folders and effect keys; the
@@ -192,9 +192,10 @@ since the PR #12 deploy. Earlier deploys stopped at medialog and never shipped t
     once it is deployable, PR out of draft.
   - **Local build:** Qt 6.10.2 for WebAssembly in `~/build_tools/Qt/6.10.2` (from
     `toolchain/build-qt.sh`), MuseScore tree `~/src/musescore` with the patch applied; helper scripts
-    `~/build_tools/ms-ninja.sh` (incremental build) and `ms-test.sh` (build, package with
-    `MUSESCORE_PREBUILT` and `MUSESCORE_PLAIN_WASM`, smoke test). These live outside the repo; a new
-    container must rebuild Qt (about 2 hours) or use CI's cache. `download.qt.io`, `musescore.org` and
+    `hosted/musescore/test/ms-ninja.sh` (incremental build) and `ms-test.sh` (build, package with
+    `MUSESCORE_PREBUILT` and `MUSESCORE_PLAIN_WASM`, smoke test). Qt and the built tree live outside
+    the repo; a new container must rebuild Qt (about 2 hours) or use CI's cache. To let CI fill that
+    cache once, do not push for about 2 hours after a push (each push cancels the running job). `download.qt.io`, `musescore.org` and
     `michaelnorris.info` are blocked by the cloud network policy; Emscripten's zlib port download is
     blocked too (seed `emsdk/upstream/emscripten/cache/ports/zlib` from a git clone).
   - **Patch workflow:** work in a clone of the tag (`git apply patches/mininode.patch`), then
