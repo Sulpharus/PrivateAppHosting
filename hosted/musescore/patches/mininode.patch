@@ -1164,10 +1164,23 @@ index 00000000..b0294a5c
 +};
 +}
 diff --git a/src/web/audioengine/CMakeLists.txt b/src/web/audioengine/CMakeLists.txt
-index 6a32d6ce..266687be 100644
+index 6a32d6ce..10a3e2a0 100644
 --- a/src/web/audioengine/CMakeLists.txt
 +++ b/src/web/audioengine/CMakeLists.txt
-@@ -66,8 +66,6 @@ add_subdirectory(${AUDIO_ROOT}/common common)
+@@ -61,13 +61,19 @@ else()
+     set(EMCC_LINKER_FLAGS -Os)
+ endif()
+ 
++# Before the subdirectories: add_definitions only reaches targets created after it, and the
++# audio libraries must also be built without Qt.
++add_definitions(-DNO_QT_SUPPORT)
++add_definitions(-DQ_OS_WASM)
++set(GLOBAL_NO_INTERNAL ON)
++
++configure_file(${MU_ROOT}/src/framework/cmake/muse_framework_config.h.in muse_framework_config.h )
++
+ set(AUDIO_ROOT ${MU_ROOT}/src/framework/audio)
+ add_subdirectory(${AUDIO_ROOT}/common common)
  set(WEBWORKER_FACADE_MODE OFF)
  add_subdirectory(${AUDIO_ROOT}/engine engine)
  
@@ -1176,7 +1189,7 @@ index 6a32d6ce..266687be 100644
  add_executable(MuseAudio
      ${CMAKE_CURRENT_LIST_DIR}/engine_export.cpp
      ${CMAKE_CURRENT_LIST_DIR}/webaudioengine.cpp
-@@ -77,6 +75,8 @@ add_executable(MuseAudio
+@@ -77,6 +83,8 @@ add_executable(MuseAudio
      ${AUDIO_ROOT}/driver/platform/web/webaudiochannel.h
  )
  
@@ -1185,3 +1198,15 @@ index 6a32d6ce..266687be 100644
  target_include_directories(MuseAudio PRIVATE
      ${PROJECT_BINARY_DIR}
      ${CMAKE_CURRENT_BINARY_DIR}
+@@ -96,11 +104,6 @@ target_include_directories(MuseAudio PRIVATE
+     # end compat
+ )
+ 
+-add_definitions(-DNO_QT_SUPPORT)
+-add_definitions(-DQ_OS_WASM)
+-set(GLOBAL_NO_INTERNAL ON)
+-
+-configure_file(${MU_ROOT}/src/framework/cmake/muse_framework_config.h.in muse_framework_config.h )
+ 
+ add_subdirectory(${MU_ROOT}/src/framework/global global)
+ 

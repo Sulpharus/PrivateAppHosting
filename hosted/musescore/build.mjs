@@ -86,51 +86,65 @@ function programZip() {
     throw new Error(
       `musescore: no program build ${basename(built)} (see .github/workflows/musescore.yml)`,
     );
-  for (const tool of ['git', 'cmake', 'ninja', 'python3', 'zip']) {
+  // MUSESCORE_PREBUILT=<source dir>: package a tree that is already patched and built (local
+  // work on the patch: build there with toolchain/build-musescore.sh, then package it here).
+  const prebuilt = process.env.MUSESCORE_PREBUILT;
+  const tools = prebuilt ? ['python3', 'zip'] : ['git', 'cmake', 'ninja', 'python3', 'zip'];
+  for (const tool of tools) {
     if (!has(tool))
       throw new Error(`musescore: ${tool} is needed to build the program (see README)`);
   }
-  const src = join(cache, `src-${source.version}`);
-  if (!existsSync(join(src, '.git'))) {
-    rmSync(src, { recursive: true, force: true });
-    run('git', [
-      'clone',
-      '--quiet',
-      '--depth',
-      '1',
-      '--branch',
-      `v${source.version}`,
-      `${source.repository}.git`,
-      src,
-    ]);
-  }
-  const head = spawnSync('git', ['-C', src, 'rev-parse', 'HEAD'], {
-    encoding: 'utf8',
-  }).stdout.trim();
-  if (head !== source.commit)
-    throw new Error(`musescore: v${source.version} is ${head}, expected ${source.commit}`);
-  run('git', ['-C', src, 'reset', '--quiet', '--hard']);
-  // The build folders stay: ninja then compiles only what the patches changed.
-  run('git', [
-    '-C',
-    src,
-    'clean',
-    '--quiet',
-    '-fdx',
-    '-e',
-    'build.web',
-    '-e',
-    'build.audio',
-    '-e',
-    'build.artifacts',
-  ]);
-  for (const patch of source.patches) run('git', ['-C', src, 'apply', join(here, patch)]);
-
-  const qt = process.env.MUSESCORE_QT_PREFIX ?? join(cache, 'qt');
-  run('bash', [join(here, 'toolchain', 'build-qt.sh'), qt]);
+  const src = prebuilt ?? join(cache, `src-${source.version}`);
   const stage = join(cache, 'stage');
   rmSync(stage, { recursive: true, force: true });
-  run('bash', [join(here, 'toolchain', 'build-musescore.sh'), qt, src, join(stage, 'bin')]);
+  if (prebuilt) {
+    mkdirSync(join(stage, 'bin'), { recursive: true });
+    for (const name of ['MuseScoreStudio.js', 'MuseScoreStudio.wasm', 'MuseAudio.js'])
+      cpSync(join(src, 'build.artifacts', name), join(stage, 'bin', name));
+    cpSync(
+      join(src, 'src', 'web', 'appjs', 'distr', 'qtloader.js'),
+      join(stage, 'bin', 'qtloader.js'),
+    );
+  } else {
+    if (!existsSync(join(src, '.git'))) {
+      rmSync(src, { recursive: true, force: true });
+      run('git', [
+        'clone',
+        '--quiet',
+        '--depth',
+        '1',
+        '--branch',
+        `v${source.version}`,
+        `${source.repository}.git`,
+        src,
+      ]);
+    }
+    const head = spawnSync('git', ['-C', src, 'rev-parse', 'HEAD'], {
+      encoding: 'utf8',
+    }).stdout.trim();
+    if (head !== source.commit)
+      throw new Error(`musescore: v${source.version} is ${head}, expected ${source.commit}`);
+    run('git', ['-C', src, 'reset', '--quiet', '--hard']);
+    // The build folders stay: ninja then compiles only what the patches changed.
+    run('git', [
+      '-C',
+      src,
+      'clean',
+      '--quiet',
+      '-fdx',
+      '-e',
+      'build.web',
+      '-e',
+      'build.audio',
+      '-e',
+      'build.artifacts',
+    ]);
+    for (const patch of source.patches) run('git', ['-C', src, 'apply', join(here, patch)]);
+
+    const qt = process.env.MUSESCORE_QT_PREFIX ?? join(cache, 'qt');
+    run('bash', [join(here, 'toolchain', 'build-qt.sh'), qt]);
+    run('bash', [join(here, 'toolchain', 'build-musescore.sh'), qt, src, join(stage, 'bin')]);
+  }
 
   // Shared program files the editor reads from /files/share.
   for (const dir of source.share) {
