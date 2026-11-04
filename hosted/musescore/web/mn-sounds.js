@@ -8,6 +8,7 @@
 // Storage: `sounds/<folder>/<file>` in mn.files ({ shared: true } for shared folders); files over
 // 45 MB are kept as `<file>.part0`, `.part1`, … (the storage takes at most 50 MB per file).
 // Each person chooses which folders load (mn.kv setting `sounds`: { off: ["shared:Folder", …] }).
+import build from './mn-build.js';
 import { buildSoundFont, decodeAudio, FIRST_KEY, keyName } from './mn-sf2.js';
 
 const ROOT = 'sounds';
@@ -284,7 +285,58 @@ export function installSoundsPanel({ mn, addSoundFont }) {
         section.append(create);
         sections.push(section);
       }
-      body.replaceChildren(...sections);
+      const library = libraryView(await listFolders(mn, 'shared'));
+      body.replaceChildren(...(library ? [library] : []), ...sections);
+    };
+
+    /** Free SoundFonts that ship with the app (build.mjs): added for everyone with one click. */
+    const libraryView = (shared) => {
+      if (!build.library?.length) return null;
+      const section = element('section', { className: 'mn-sounds-scope' });
+      section.append(
+        element('h3', { textContent: t('sounds.library') }),
+        element('p', { className: 'mn-sounds-hint', textContent: t('sounds.library.hint') }),
+      );
+      for (const entry of build.library) {
+        if (shared.some((folder) => folder.name === entry.name)) {
+          section.append(
+            element('p', { textContent: t('sounds.library.added', { name: entry.name }) }),
+          );
+          continue;
+        }
+        const add = action(
+          t('sounds.library.add', { name: entry.name }),
+          async () => {
+            add.disabled = true;
+            try {
+              report('sounds.library.loading', { name: entry.name });
+              const parts = [];
+              for (const part of entry.parts) {
+                const response = await fetch(part);
+                if (!response.ok) throw new Error(`${part}: ${response.status}`);
+                parts.push(await response.blob());
+              }
+              const file = new File(parts, entry.file, { type: 'application/octet-stream' });
+              report('sounds.library.saving', { name: entry.name });
+              await createFolder(mn, 'shared', entry.name);
+              await uploadFile(mn, 'shared', entry.name, file);
+              const folder = (await listFolders(mn, 'shared')).find((f) => f.name === entry.name);
+              if (folder) {
+                for (const { url, name } of await folderSoundFonts(mn, folder))
+                  addSoundFont(url, name);
+              }
+              report('sounds.library.done', { name: entry.name });
+              await render();
+            } catch (error) {
+              add.disabled = false;
+              failed(error);
+            }
+          },
+          'mn-btn',
+        );
+        section.append(add);
+      }
+      return section;
     };
 
     const folderView = (folder, off) => {

@@ -254,3 +254,52 @@ body {
   color: var(--mn-ink, #15191c);
   font: inherit;
 }
+
+/* Partituren: versions and shared scores */
+.mn-scores {
+  display: grid;
+  gap: var(--mn-s3, 12px);
+  padding: var(--mn-s4, 16px);
+}
+
+.mn-scores h2,
+.mn-scores h3,
+.mn-scores p {
+  margin: 0;
+}
+
+.mn-scores-status:empty {
+  display: none;
+}
+
+.mn-scores-list,
+.mn-scores-versions {
+  display: grid;
+  gap: var(--mn-s2, 8px);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mn-scores-list > li,
+.mn-scores-versions > li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--mn-s2, 8px);
+}
+
+.mn-scores-versions {
+  flex-basis: 100%;
+  padding-inline-start: var(--mn-s4, 16px);
+}
+
+.mn-scores-name {
+  flex: 1 1 12rem;
+  overflow-wrap: anywhere;
+}
+
+.mn-scores-actions {
+  display: flex;
+  justify-content: flex-end;
+}

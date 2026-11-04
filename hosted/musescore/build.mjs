@@ -332,6 +332,37 @@ for (let offset = 0, n = 0; offset < font.length; offset += PART_SIZE, n++) {
   parts.push(name);
 }
 
+// Free SoundFonts the Klänge panel offers to add with one click (source.json soundLibrary): in
+// parts below the asset limit, fetched by the page only when someone adds one.
+const library = [];
+for (const entry of source.soundLibrary ?? []) {
+  const dir = join(cache, `library-${entry.commit.slice(0, 12)}`);
+  if (!existsSync(join(dir, entry.file))) {
+    rmSync(dir, { recursive: true, force: true });
+    run('git', ['clone', '-q', '--filter=blob:none', '--no-checkout', entry.repository, dir]);
+    run('git', ['-C', dir, 'checkout', '-q', entry.commit, '--', entry.file, entry.licence]);
+  }
+  const data = readFileSync(join(dir, entry.file));
+  const id = `${entry.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${hash(data).slice(0, 16)}`;
+  mkdirSync(join(dist, 'library'), { recursive: true });
+  const libraryParts = [];
+  for (let offset = 0, n = 0; offset < data.length; offset += PART_SIZE, n++) {
+    const name = `library/${id}.${n}`;
+    writeFileSync(join(dist, name), data.subarray(offset, offset + PART_SIZE));
+    libraryParts.push(`./${name}`);
+  }
+  const licence = `${entry.name.replace(/[^A-Za-z0-9]+/g, '-')}-LICENSE.txt`;
+  library.push({
+    name: entry.name,
+    file: entry.file,
+    parts: libraryParts,
+    size: data.length,
+    licence,
+  });
+  mkdirSync(join(dist, 'licenses'), { recursive: true });
+  cpSync(join(dir, entry.licence), join(dist, 'licenses', licence));
+}
+
 // Licences and the source of this build (GPL-3.0: the program's source and our changes).
 mkdirSync(join(dist, 'licenses'), { recursive: true });
 cpSync(join(unpacked, 'LICENSE.txt'), join(dist, 'licenses', 'MuseScore-LICENSE.txt'));
@@ -347,7 +378,7 @@ const qtPatches = readdirSync(join(here, 'toolchain'))
 for (const name of qtPatches) cpSync(join(here, 'toolchain', name), join(dist, 'licenses', name));
 writeFileSync(
   join(dist, 'licenses', 'SOURCE.md'),
-  `# Source\n\n${source.name} ${source.version} (GPL-3.0), built from ${source.repository} at commit ${source.commit}\nwith the changes in ${source.patches.map((p) => basename(p)).join(', ')} (in this folder).\nQt ${QT_VERSION} (LGPL-3.0), tag v${QT_VERSION} of https://github.com/qt/qtbase, qtshadertools, qtsvg, qtdeclarative and qt5compat${qtPatches.length ? `, with the changes in ${qtPatches.join(', ')} (in this folder)` : ''}.\nThe SoundFont "${source.soundFont}" ships with MuseScore under its own licence (in this folder).\n`,
+  `# Source\n\n${source.name} ${source.version} (GPL-3.0), built from ${source.repository} at commit ${source.commit}\nwith the changes in ${source.patches.map((p) => basename(p)).join(', ')} (in this folder).\nQt ${QT_VERSION} (LGPL-3.0), tag v${QT_VERSION} of https://github.com/qt/qtbase, qtshadertools, qtsvg, qtdeclarative and qt5compat${qtPatches.length ? `, with the changes in ${qtPatches.join(', ')} (in this folder)` : ''}.\nThe SoundFont "${source.soundFont}" ships with MuseScore under its own licence (in this folder).\n${library.map((entry) => `The SoundFont library offers "${entry.name}" (${entry.licence}, in this folder).\n`).join('')}`,
 );
 
 writeFileSync(
@@ -359,6 +390,7 @@ writeFileSync(
       audio: { worklet: `./${workletName}` },
       share: { file: `./${shareName}`, size: archive.length },
       soundFont: { parts: parts.map((name) => `./${name}`) },
+      library,
     },
     null,
     2,

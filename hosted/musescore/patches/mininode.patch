@@ -1,8 +1,8 @@
 diff --git a/SetupConfigure.cmake b/SetupConfigure.cmake
-index 501d10e8..958978d2 100644
+index 501d10e8..bc83c1a5 100644
 --- a/SetupConfigure.cmake
 +++ b/SetupConfigure.cmake
-@@ -192,6 +192,73 @@ if(BUILD_CONFIGURATION STREQUAL "APP-WEB")
+@@ -192,6 +192,74 @@ if(BUILD_CONFIGURATION STREQUAL "APP-WEB")
  
  endif()
  
@@ -47,12 +47,13 @@ index 501d10e8..958978d2 100644
 +    set(MUSE_MODULE_EXTENSIONS ON)
 +    set(MUSE_MODULE_AUDIO_EXPORT ON)
 +    set(MUE_BUILD_BRAILLE_MODULE ON)
++    # MIDI keyboards through Web MIDI (framework/midi/internal/platform/web)
++    set(MUSE_MODULE_MIDI ON)
++    set(MUSE_MODULE_MIDIREMOTE ON)
 +
 +    # Not possible in a browser tab
 +    set(MUSE_MODULE_AUDIOPLUGINS OFF)
 +    set(MUSE_MODULE_VST OFF)
-+    set(MUSE_MODULE_MIDI OFF)
-+    set(MUSE_MODULE_MIDIREMOTE OFF)
 +    set(MUSE_MODULE_MULTIWINDOWS OFF)
 +    set(MUSE_MODULE_AUTOBOT OFF)
 +    set(MUE_BUILD_PRINT_MODULE OFF)
@@ -135,6 +136,14 @@ index 3772a83f..019db3fc 100644
  #cmakedefine MUE_CONFIGURATION_IS_VTEST 1
  #cmakedefine MUE_CONFIGURATION_IS_UTEST 1
  
+diff --git a/src/app/exported_functions.cmake b/src/app/exported_functions.cmake
+index 911dba31..e0889bc7 100644
+--- a/src/app/exported_functions.cmake
++++ b/src/app/exported_functions.cmake
+@@ -1,2 +1,2 @@
+ 
+-set(EXPORTED_FUNCTIONS "SHELL:-s EXPORTED_FUNCTIONS=[_main,_malloc,_free,_load,_startAudioProcessing,_addSoundFont]")
++set(EXPORTED_FUNCTIONS "SHELL:-s EXPORTED_FUNCTIONS=[_main,_malloc,_free,_load,_startAudioProcessing,_addSoundFont,_mnMidiDevices,_mnMidiIn]")
 diff --git a/src/app/internal/guiapp.cpp b/src/app/internal/guiapp.cpp
 index a16388a7..dac0ac1c 100644
 --- a/src/app/internal/guiapp.cpp
@@ -172,6 +181,43 @@ index 2ac78a89..6f35c38e 100644
  
      // ====================================================
      // Run main loop
+diff --git a/src/appshell/CMakeLists.txt b/src/appshell/CMakeLists.txt
+index 1fadd6c3..87f838db 100644
+--- a/src/appshell/CMakeLists.txt
++++ b/src/appshell/CMakeLists.txt
+@@ -60,17 +60,26 @@ if (OS_IS_MAC)
+     )
+ endif(OS_IS_MAC)
+ 
+-qt_add_resources(appshell appshell_resources
+-    PREFIX
+-        /
+-    FILES
+-        resources/LoadingScreen.svg
++set(APPSHELL_RESOURCE_FILES
++    resources/LoadingScreen.svg
++    resources/win_opengl_buglist.json
++)
++# The web build never shows the welcome dialog (StartupScenario::shouldShowWelcomeDialog).
++if (NOT MUSE_WEB_DESKTOP)
++    list(APPEND APPSHELL_RESOURCE_FILES
+         resources/welcomedialog/ExploreTutorials.png
+         resources/welcomedialog/MuseScoreCom.png
+         resources/welcomedialog/MuseSounds.png
+         resources/welcomedialog/MuseSoundsPro.png
+         resources/welcomedialog/WhatsNew.png
+-        resources/win_opengl_buglist.json
++    )
++endif()
++
++qt_add_resources(appshell appshell_resources
++    PREFIX
++        /
++    FILES
++        ${APPSHELL_RESOURCE_FILES}
+ )
+ 
+ target_link_libraries(appshell PRIVATE
 diff --git a/src/appshell/internal/startupscenario.cpp b/src/appshell/internal/startupscenario.cpp
 index fad6a767..51cd2384 100644
 --- a/src/appshell/internal/startupscenario.cpp
@@ -1266,6 +1312,455 @@ index 14cbf53f..8c6f292c 100644
          LOGI() << "System languages: " << systemLanguages;
  
          for (QString code : systemLanguages) {
+diff --git a/src/framework/midi/CMakeLists.txt b/src/framework/midi/CMakeLists.txt
+index 8b37a140..f8b9c331 100644
+--- a/src/framework/midi/CMakeLists.txt
++++ b/src/framework/midi/CMakeLists.txt
+@@ -72,6 +72,11 @@ elseif (OS_IS_LIN OR OS_IS_FBSD)
+     find_package(ALSA REQUIRED)
+     target_include_directories(muse_midi PRIVATE ${ALSA_INCLUDE_DIRS})
+     target_link_libraries(muse_midi PRIVATE ${ALSA_LIBRARIES} pthread)
++elseif (OS_IS_WASM)
++    target_sources(muse_midi PRIVATE
++        internal/platform/web/webmidiinport.cpp
++        internal/platform/web/webmidiinport.h
++    )
+ endif()
+ 
+ if (MUSE_MODULE_MIDI_TESTS)
+diff --git a/src/framework/midi/internal/dummymidioutport.cpp b/src/framework/midi/internal/dummymidioutport.cpp
+index 0bffe86b..3a4adc68 100644
+--- a/src/framework/midi/internal/dummymidioutport.cpp
++++ b/src/framework/midi/internal/dummymidioutport.cpp
+@@ -21,6 +21,7 @@
+  */
+ #include "dummymidioutport.h"
+ 
++#include "global/translation.h"
+ #include "log.h"
+ #include "midierrors.h"
+ 
+@@ -31,12 +32,14 @@ void DummyMidiOutPort::init()
+ {
+ }
+ 
++void DummyMidiOutPort::deinit()
++{
++}
++
+ MidiDeviceList DummyMidiOutPort::availableDevices() const
+ {
+-    MidiDevice d;
+-    d.id = "dummy";
+-    d.name = "Dummy";
+-    return { d };
++    // No MIDI output on this platform (the web build sends nothing out).
++    return { { NONE_DEVICE_ID, muse::trc("midi", "No device") } };
+ }
+ 
+ async::Notification DummyMidiOutPort::availableDevicesChanged() const
+@@ -46,20 +49,20 @@ async::Notification DummyMidiOutPort::availableDevicesChanged() const
+ 
+ Ret DummyMidiOutPort::connect(const MidiDeviceID& deviceID)
+ {
+-    LOGI() << "deviceID: " << deviceID;
+     m_connectedDeviceID = deviceID;
++    m_deviceChanged.notify();
+     return Ret(true);
+ }
+ 
+ void DummyMidiOutPort::disconnect()
+ {
+-    LOGI() << "disconnect";
+     m_connectedDeviceID.clear();
++    m_deviceChanged.notify();
+ }
+ 
+ bool DummyMidiOutPort::isConnected() const
+ {
+-    return !m_connectedDeviceID.empty();
++    return false;
+ }
+ 
+ MidiDeviceID DummyMidiOutPort::deviceID() const
+@@ -67,6 +70,11 @@ MidiDeviceID DummyMidiOutPort::deviceID() const
+     return m_connectedDeviceID;
+ }
+ 
++async::Notification DummyMidiOutPort::deviceChanged() const
++{
++    return m_deviceChanged;
++}
++
+ bool DummyMidiOutPort::supportsMIDI20Output() const
+ {
+     return false;
+@@ -74,9 +82,6 @@ bool DummyMidiOutPort::supportsMIDI20Output() const
+ 
+ Ret DummyMidiOutPort::sendEvent(const Event& e)
+ {
+-    if (!isConnected()) {
+-        return make_ret(Err::MidiNotConnected);
+-    }
+-    LOGI() << e.to_string();
+-    return Ret(true);
++    UNUSED(e);
++    return make_ret(Err::MidiNotConnected);
+ }
+diff --git a/src/framework/midi/internal/dummymidioutport.h b/src/framework/midi/internal/dummymidioutport.h
+index daa43ec9..e5e8156d 100644
+--- a/src/framework/midi/internal/dummymidioutport.h
++++ b/src/framework/midi/internal/dummymidioutport.h
+@@ -30,6 +30,7 @@ class DummyMidiOutPort : public IMidiOutPort
+ public:
+ 
+     void init();
++    void deinit();
+ 
+     MidiDeviceList availableDevices() const override;
+     async::Notification availableDevicesChanged() const override;
+@@ -38,6 +39,7 @@ public:
+     void disconnect() override;
+     bool isConnected() const override;
+     MidiDeviceID deviceID() const override;
++    async::Notification deviceChanged() const override;
+ 
+     bool supportsMIDI20Output() const override;
+ 
+@@ -45,6 +47,7 @@ public:
+ 
+ private:
+     MidiDeviceID m_connectedDeviceID;
++    async::Notification m_deviceChanged;
+ };
+ }
+ 
+diff --git a/src/framework/midi/internal/platform/web/webmidiinport.cpp b/src/framework/midi/internal/platform/web/webmidiinport.cpp
+new file mode 100644
+index 00000000..7e1c2d63
+--- /dev/null
++++ b/src/framework/midi/internal/platform/web/webmidiinport.cpp
+@@ -0,0 +1,197 @@
++/*
++ * SPDX-License-Identifier: GPL-3.0-only
++ * MuseScore-CLA-applies
++ *
++ * MuseScore
++ * Music Composition & Notation
++ *
++ * Copyright (C) 2026 MuseScore Limited and others
++ *
++ * This program is free software: you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 3 as
++ * published by the Free Software Foundation.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
++ */
++#include "webmidiinport.h"
++
++#include <emscripten.h>
++
++#include "async/async.h"
++#include "global/translation.h"
++#include "midierrors.h"
++#include "log.h"
++
++using namespace muse;
++using namespace muse::midi;
++
++namespace {
++WebMidiInPort* s_port = nullptr;
++}
++
++void WebMidiInPort::init()
++{
++    s_port = this;
++    // The page reports its inputs once the port is there (now, or when it installs its hooks).
++    MAIN_THREAD_EM_ASM({
++        Module.mnMidiPortReady = true;
++        if (Module.mnMidiReady) {
++            Module.mnMidiReady();
++        }
++    });
++}
++
++void WebMidiInPort::deinit()
++{
++    disconnect();
++    s_port = nullptr;
++}
++
++void WebMidiInPort::setDevices(const std::string& list)
++{
++    // Called from a browser event: run it in the editor's own loop.
++    if (!s_port) {
++        return;
++    }
++    async::Async::call(s_port, [list]() {
++        if (s_port) {
++            s_port->updateDevices(list);
++        }
++    });
++}
++
++void WebMidiInPort::receive(uint32_t package)
++{
++    if (!s_port) {
++        return;
++    }
++    async::Async::call(s_port, [package]() {
++        if (!s_port || !s_port->isConnected()) {
++            return;
++        }
++        Event e = Event::fromMidi10Package(package).toMIDI20();
++        if (e) {
++            s_port->m_eventReceived.send(0, e);
++        }
++    });
++}
++
++void WebMidiInPort::updateDevices(const std::string& list)
++{
++    MidiDeviceList devices;
++    size_t start = 0;
++    while (start < list.size()) {
++        size_t end = list.find('\n', start);
++        if (end == std::string::npos) {
++            end = list.size();
++        }
++        const std::string line = list.substr(start, end - start);
++        const size_t tab = line.find('\t');
++        if (tab != std::string::npos && tab > 0) {
++            devices.push_back({ line.substr(0, tab), line.substr(tab + 1) });
++        }
++        start = end + 1;
++    }
++
++    m_devices = devices;
++    if (isConnected() && !deviceExists(m_deviceID)) {
++        disconnect();
++    }
++    m_availableDevicesChanged.notify();
++}
++
++MidiDeviceList WebMidiInPort::availableDevices() const
++{
++    MidiDeviceList ret;
++    ret.push_back({ NONE_DEVICE_ID, muse::trc("midi", "No device") });
++    ret.insert(ret.end(), m_devices.begin(), m_devices.end());
++    return ret;
++}
++
++async::Notification WebMidiInPort::availableDevicesChanged() const
++{
++    return m_availableDevicesChanged;
++}
++
++bool WebMidiInPort::deviceExists(const MidiDeviceID& deviceID) const
++{
++    for (const MidiDevice& device : availableDevices()) {
++        if (device.id == deviceID) {
++            return true;
++        }
++    }
++    return false;
++}
++
++Ret WebMidiInPort::connect(const MidiDeviceID& deviceID)
++{
++    if (!deviceExists(deviceID)) {
++        return make_ret(Err::MidiFailedConnect, "not found device, id: " + deviceID);
++    }
++
++    m_deviceID = deviceID;
++    const std::string listened = deviceID == NONE_DEVICE_ID ? std::string() : deviceID;
++    MAIN_THREAD_EM_ASM({
++        if (Module.mnMidiConnect) {
++            Module.mnMidiConnect(UTF8ToString($0));
++        }
++    }, listened.c_str());
++
++    m_deviceChanged.notify();
++    return make_ok();
++}
++
++void WebMidiInPort::disconnect()
++{
++    if (m_deviceID.empty()) {
++        return;
++    }
++    m_deviceID.clear();
++    MAIN_THREAD_EM_ASM({
++        if (Module.mnMidiConnect) {
++            Module.mnMidiConnect('');
++        }
++    });
++    m_deviceChanged.notify();
++}
++
++bool WebMidiInPort::isConnected() const
++{
++    return !m_deviceID.empty() && m_deviceID != NONE_DEVICE_ID;
++}
++
++MidiDeviceID WebMidiInPort::deviceID() const
++{
++    return m_deviceID;
++}
++
++async::Notification WebMidiInPort::deviceChanged() const
++{
++    return m_deviceChanged;
++}
++
++async::Channel<tick_t, Event> WebMidiInPort::eventReceived() const
++{
++    return m_eventReceived;
++}
++
++// Called by the page (web/mn-midi.js in MiniNode).
++extern "C" {
++EMSCRIPTEN_KEEPALIVE
++void mnMidiDevices(const char* list)
++{
++    WebMidiInPort::setDevices(list ? std::string(list) : std::string());
++}
++
++EMSCRIPTEN_KEEPALIVE
++void mnMidiIn(uint32_t package)
++{
++    WebMidiInPort::receive(package);
++}
++}
+diff --git a/src/framework/midi/internal/platform/web/webmidiinport.h b/src/framework/midi/internal/platform/web/webmidiinport.h
+new file mode 100644
+index 00000000..28442c1e
+--- /dev/null
++++ b/src/framework/midi/internal/platform/web/webmidiinport.h
+@@ -0,0 +1,68 @@
++/*
++ * SPDX-License-Identifier: GPL-3.0-only
++ * MuseScore-CLA-applies
++ *
++ * MuseScore
++ * Music Composition & Notation
++ *
++ * Copyright (C) 2026 MuseScore Limited and others
++ *
++ * This program is free software: you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 3 as
++ * published by the Free Software Foundation.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
++ */
++#ifndef MUSE_MIDI_WEBMIDIINPORT_H
++#define MUSE_MIDI_WEBMIDIINPORT_H
++
++#include <mutex>
++
++#include "async/asyncable.h"
++#include "imidiinport.h"
++
++namespace muse::midi {
++//! MIDI input in the browser. The page asks for Web MIDI access and reports the inputs with
++//! WebMidiInPort::setDevices; connect() asks the page to listen to one input
++//! (Module.mnMidiConnect), whose messages come back through WebMidiInPort::receive.
++class WebMidiInPort : public IMidiInPort, public async::Asyncable
++{
++public:
++    void init();
++    void deinit();
++
++    MidiDeviceList availableDevices() const override;
++    async::Notification availableDevicesChanged() const override;
++
++    Ret connect(const MidiDeviceID& deviceID) override;
++    void disconnect() override;
++    bool isConnected() const override;
++    MidiDeviceID deviceID() const override;
++    async::Notification deviceChanged() const override;
++
++    async::Channel<tick_t, Event> eventReceived() const override;
++
++    //! "id\tname\n" per input, from the page.
++    static void setDevices(const std::string& list);
++    //! One MIDI 1.0 message packed as status | data1 << 8 | data2 << 16, from the page.
++    static void receive(uint32_t package);
++
++private:
++    void updateDevices(const std::string& list);
++    bool deviceExists(const MidiDeviceID& deviceID) const;
++
++    MidiDeviceList m_devices;
++    MidiDeviceID m_deviceID;
++    async::Notification m_availableDevicesChanged;
++    async::Notification m_deviceChanged;
++    async::Channel<tick_t, Event> m_eventReceived;
++};
++}
++
++#endif // MUSE_MIDI_WEBMIDIINPORT_H
+diff --git a/src/framework/midi/midimodule.cpp b/src/framework/midi/midimodule.cpp
+index 17e28dad..318cd850 100644
+--- a/src/framework/midi/midimodule.cpp
++++ b/src/framework/midi/midimodule.cpp
+@@ -33,6 +33,9 @@
+ #elif defined(Q_OS_MACOS)
+ #include "internal/platform/osx/coremidioutport.h"
+ #include "internal/platform/osx/coremidiinport.h"
++#elif defined(Q_OS_WASM)
++#include "internal/dummymidioutport.h"
++#include "internal/platform/web/webmidiinport.h"
+ #else
+ #include "internal/dummymidioutport.h"
+ #include "internal/dummymidiinport.h"
+@@ -58,6 +61,9 @@ void MidiModule::registerExports()
+     #elif defined(Q_OS_MACOS)
+     m_midiOutPort = std::make_shared<CoreMidiOutPort>();
+     m_midiInPort = std::make_shared<CoreMidiInPort>();
++    #elif defined(Q_OS_WASM)
++    m_midiOutPort = std::make_shared<DummyMidiOutPort>();
++    m_midiInPort = std::make_shared<WebMidiInPort>();
+     #else
+     m_midiOutPort = std::make_shared<DummyMidiOutPort>();
+     m_midiInPort = std::make_shared<DummyMidiInPort>();
+diff --git a/src/framework/midi/midimodule.h b/src/framework/midi/midimodule.h
+index fd857191..3a406adb 100644
+--- a/src/framework/midi/midimodule.h
++++ b/src/framework/midi/midimodule.h
+@@ -40,6 +40,9 @@ class WinMidiInPort;
+ #elif defined(Q_OS_MACOS)
+ class CoreMidiOutPort;
+ class CoreMidiInPort;
++#elif defined(Q_OS_WASM)
++class DummyMidiOutPort;
++class WebMidiInPort;
+ #else
+ class DummyMidiOutPort;
+ class DummyMidiInPort;
+@@ -68,6 +71,10 @@ private:
+     std::shared_ptr<CoreMidiOutPort> m_midiOutPort;
+     std::shared_ptr<CoreMidiInPort> m_midiInPort;
+ 
++    #elif defined(Q_OS_WASM)
++    std::shared_ptr<DummyMidiOutPort> m_midiOutPort;
++    std::shared_ptr<WebMidiInPort> m_midiInPort;
++
+     #else
+     std::shared_ptr<DummyMidiOutPort> m_midiOutPort;
+     std::shared_ptr<DummyMidiInPort> m_midiInPort;
 diff --git a/src/framework/uicomponents/qml/Muse/GraphicalEffects/CMakeLists.txt b/src/framework/uicomponents/qml/Muse/GraphicalEffects/CMakeLists.txt
 index 8a579c71..c5b0433b 100644
 --- a/src/framework/uicomponents/qml/Muse/GraphicalEffects/CMakeLists.txt
@@ -1364,6 +1859,119 @@ index 2ba2692a..7e842565 100644
  
      muse::async::Notification m_currentSequenceIdChanged;
      muse::midi::tick_t m_currentTick = 0;
+diff --git a/src/preferences/qml/MuseScore/Preferences/GeneralPreferencesPage.qml b/src/preferences/qml/MuseScore/Preferences/GeneralPreferencesPage.qml
+index 75baa177..c6f11bfc 100644
+--- a/src/preferences/qml/MuseScore/Preferences/GeneralPreferencesPage.qml
++++ b/src/preferences/qml/MuseScore/Preferences/GeneralPreferencesPage.qml
+@@ -60,6 +60,8 @@ PreferencesPage {
+                 preferencesModel.currentLanguageCode = languageCode
+             }
+ 
++            canCheckForUpdate: !preferencesModel.isWebApp()
++
+             onCheckForUpdateRequested: {
+                 preferencesModel.checkUpdateForCurrentLanguage()
+             }
+@@ -74,9 +76,10 @@ PreferencesPage {
+             navigation.order: root.navigationOrderStart + 2
+         }
+ 
+-        SeparatorLine { }
++        SeparatorLine { visible: !preferencesModel.isWebApp() }
+ 
+         WelcomeDialogSection {
++            visible: !preferencesModel.isWebApp()
+             model: preferencesModel
+ 
+             navigation.section: root.navigationSection
+@@ -120,9 +123,10 @@ PreferencesPage {
+             }
+         }*/
+ 
+-        SeparatorLine { }
++        SeparatorLine { visible: !preferencesModel.isWebApp() }
+ 
+         AutomaticUpdateSection {
++            visible: !preferencesModel.isWebApp()
+             isAppUpdatable: preferencesModel.isAppUpdatable()
+             needCheckForNewAppVersion: preferencesModel.needCheckForNewAppVersion
+             museScorePrivacyPolicyUrl: preferencesModel.museScorePrivacyPolicyUrl()
+diff --git a/src/preferences/qml/MuseScore/Preferences/generalpreferencesmodel.cpp b/src/preferences/qml/MuseScore/Preferences/generalpreferencesmodel.cpp
+index 67171612..12411964 100644
+--- a/src/preferences/qml/MuseScore/Preferences/generalpreferencesmodel.cpp
++++ b/src/preferences/qml/MuseScore/Preferences/generalpreferencesmodel.cpp
+@@ -26,6 +26,8 @@
+ #include "log.h"
+ #include "translation.h"
+ 
++#include "muse_framework_config.h"
++
+ using namespace mu::preferences;
+ using namespace muse;
+ using namespace muse::languages;
+@@ -287,3 +289,12 @@ QString GeneralPreferencesModel::museScorePrivacyPolicyUrl() const
+ {
+     return QString::fromStdString(updateConfiguration()->museScorePrivacyPolicyUrl());
+ }
++
++bool GeneralPreferencesModel::isWebApp() const
++{
++#ifdef MUSE_WEB_DESKTOP
++    return true;
++#else
++    return false;
++#endif
++}
+diff --git a/src/preferences/qml/MuseScore/Preferences/generalpreferencesmodel.h b/src/preferences/qml/MuseScore/Preferences/generalpreferencesmodel.h
+index fb71b102..1af7d20b 100644
+--- a/src/preferences/qml/MuseScore/Preferences/generalpreferencesmodel.h
++++ b/src/preferences/qml/MuseScore/Preferences/generalpreferencesmodel.h
+@@ -97,6 +97,8 @@ public:
+ 
+     bool needCheckForNewAppVersion() const;
+     Q_INVOKABLE bool isAppUpdatable() const;
++    //! MiniNode: the browser app has no online updates and no welcome screen.
++    Q_INVOKABLE bool isWebApp() const;
+     Q_INVOKABLE QString museScorePrivacyPolicyUrl() const;
+ 
+ public slots:
+diff --git a/src/preferences/qml/MuseScore/Preferences/internal/LanguagesSection.qml b/src/preferences/qml/MuseScore/Preferences/internal/LanguagesSection.qml
+index 18f985fe..09258a18 100644
+--- a/src/preferences/qml/MuseScore/Preferences/internal/LanguagesSection.qml
++++ b/src/preferences/qml/MuseScore/Preferences/internal/LanguagesSection.qml
+@@ -37,6 +37,8 @@ BaseSection {
+     property bool restartRequired: false
+ 
+     signal languageSelected(string languageCode)
++    property bool canCheckForUpdate: true
++
+     signal checkForUpdateRequested()
+ 
+     function setUpdateProgress(current, total, status) {
+@@ -74,6 +76,8 @@ BaseSection {
+         ProgressButton {
+             id: progressBtn
+ 
++            visible: root.canCheckForUpdate
++
+             anchors.verticalCenter: parent.verticalCenter
+ 
+             text: qsTrc("preferences", "Check for language updates")
+diff --git a/src/preferences/qml/MuseScore/Preferences/preferencesmodel.cpp b/src/preferences/qml/MuseScore/Preferences/preferencesmodel.cpp
+index b0ad77d1..72580da7 100644
+--- a/src/preferences/qml/MuseScore/Preferences/preferencesmodel.cpp
++++ b/src/preferences/qml/MuseScore/Preferences/preferencesmodel.cpp
+@@ -180,8 +180,10 @@ void PreferencesModel::load(const QString& currentPageId)
+                  "Preferences/MidiDeviceMappingPreferencesPage.qml"),
+ #endif
+ 
++#ifndef MUSE_WEB_DESKTOP // no video export in the browser
+         makeItem("video", QT_TRANSLATE_NOOP("preferences", "Video"), IconCode::Code::VIDEO,
+                  "Preferences/VideoPreferencesPage.qml"),
++#endif
+ 
+         makeItem("percussion", QT_TRANSLATE_NOOP("preferences", "Percussion"), IconCode::Code::PERCUSSION,
+                  "Preferences/PercussionPreferencesPage.qml"),
 diff --git a/src/project/internal/convertfiletoscoreservice.cpp b/src/project/internal/convertfiletoscoreservice.cpp
 index 6aec3ed8..4c408531 100644
 --- a/src/project/internal/convertfiletoscoreservice.cpp
@@ -1477,19 +2085,46 @@ index 3249b2b3..50c2f95b 100644
              return pair.first;
          }
      }
+diff --git a/src/project/internal/projectconfiguration.cpp b/src/project/internal/projectconfiguration.cpp
+index c05d0722..57d598b6 100644
+--- a/src/project/internal/projectconfiguration.cpp
++++ b/src/project/internal/projectconfiguration.cpp
+@@ -32,6 +32,7 @@
+ #include "project/internal/notationproject.h"
+ 
+ #include "log.h"
++#include "muse_framework_config.h"
+ 
+ using namespace mu;
+ using namespace mu::project;
+@@ -108,7 +109,12 @@ void ProjectConfiguration::init()
+         m_autoSaveEnabledChanged.send(val.toBool());
+     });
+ 
++#ifdef MUSE_WEB_DESKTOP
++    // A browser tab can close at any moment, and each autosave is a small upload to MiniNode.
++    settings()->setDefaultValue(AUTOSAVE_INTERVAL_KEY, Val(1));
++#else
+     settings()->setDefaultValue(AUTOSAVE_INTERVAL_KEY, Val(5));
++#endif
+     settings()->valueChanged(AUTOSAVE_INTERVAL_KEY).onReceive(nullptr, [this](const Val& val) {
+         m_autoSaveIntervalChanged.send(val.toInt());
+     });
 diff --git a/src/project/internal/recentfilescontroller.cpp b/src/project/internal/recentfilescontroller.cpp
-index 9441d190..81d8daa4 100644
+index 9441d190..62dacad9 100644
 --- a/src/project/internal/recentfilescontroller.cpp
 +++ b/src/project/internal/recentfilescontroller.cpp
-@@ -28,6 +28,7 @@
+@@ -28,6 +28,9 @@
  #include "multiwindows/resourcelockguard.h"
  
  #include "app_config.h"
++#include <QPixmap>
++
 +#include "muse_framework_config.h"
  
  #ifdef QT_CONCURRENT_SUPPORTED
  #include "global/concurrency/concurrent.h"
-@@ -41,6 +42,18 @@ using namespace muse::async;
+@@ -41,6 +44,18 @@ using namespace muse::async;
  
  static const std::string RECENT_FILES_RESOURCE_NAME("RECENT_FILES");
  
@@ -1508,7 +2143,7 @@ index 9441d190..81d8daa4 100644
  void RecentFilesController::init()
  {
      TRACEFUNC;
-@@ -95,7 +108,7 @@ void RecentFilesController::prependRecentFile(const RecentFile& newFile)
+@@ -95,7 +110,7 @@ void RecentFilesController::prependRecentFile(const RecentFile& newFile)
              continue;
          }
  
@@ -1517,7 +2152,7 @@ index 9441d190..81d8daa4 100644
              newList.push_back(file);
          } else {
              nonexistentRemoved = true;
-@@ -228,7 +241,7 @@ void RecentFilesController::removeNonexistentFiles()
+@@ -228,7 +243,7 @@ void RecentFilesController::removeNonexistentFiles()
      newList.reserve(m_recentFilesList.size());
  
      for (const RecentFile& file : m_recentFilesList) {
@@ -1526,11 +2161,65 @@ index 9441d190..81d8daa4 100644
              newList.push_back(file);
          } else {
              removed = true;
+@@ -305,6 +320,29 @@ void RecentFilesController::saveRecentFilesList()
+ 
+ Promise<QPixmap> RecentFilesController::thumbnail(const muse::io::path_t& filePath) const
+ {
++#ifdef MUSE_WEB_DESKTOP
++    //! MiniNode: no threads in the browser, so the thumbnail is read here (the body runs later, as
++    //! the caller listens). A score in the person's MiniNode files that is not fetched yet shows the
++    //! thumbnail the page stored when it was saved (<user data>/thumbnails/<file name>.png).
++    return Promise<QPixmap>([this, filePath](auto resolve, auto reject) {
++        if (filePath.empty()) {
++            return reject(int(Ret::Code::UnknownError), "Invalid file specified");
++        }
++        if (fileSystem()->exists(filePath)) {
++            RetVal<ProjectMeta> rv = mscMetaReader()->readMeta(filePath);
++            if (rv.ret) {
++                return resolve(rv.val.thumbnail);
++            }
++        }
++        QPixmap stored;
++        const muse::io::path_t storedPath = globalConfiguration()->userAppDataPath() + "/thumbnails/"
++                                            + muse::io::filename(filePath) + ".png";
++        if (stored.load(storedPath.toQString())) {
++            return resolve(stored);
++        }
++        return reject(int(Ret::Code::UnknownError), "No thumbnail");
++    });
++#else
+     return Promise<QPixmap>([this, filePath](auto resolve, auto reject) {
+         if (filePath.empty()) {
+             return reject(int(Ret::Code::UnknownError), "Invalid file specified");
+@@ -340,6 +378,7 @@ Promise<QPixmap> RecentFilesController::thumbnail(const muse::io::path_t& filePa
+ 
+         return Promise<QPixmap>::Result::unchecked();
+     }, PromiseType::AsyncByBody);
++#endif
+ }
+ 
+ void RecentFilesController::cleanUpThumbnailCache(const RecentFilesList& files)
 diff --git a/src/project/internal/recentfilescontroller.h b/src/project/internal/recentfilescontroller.h
-index 5decf115..abe9003d 100644
+index 5decf115..3b0061f1 100644
 --- a/src/project/internal/recentfilescontroller.h
 +++ b/src/project/internal/recentfilescontroller.h
-@@ -63,6 +63,7 @@ protected:
+@@ -33,6 +33,7 @@
+ #include "project/iprojectconfiguration.h"
+ #include "project/imscmetareader.h"
+ #include "io/ifilesystem.h"
++#include "iglobalconfiguration.h"
+ #include "multiwindows/imultiwindowsprovider.h"
+ 
+ namespace mu::project {
+@@ -43,6 +44,7 @@ public:
+     muse::GlobalThreadSafeInject<muse::io::IFileSystem> fileSystem;
+     muse::GlobalThreadSafeInject<muse::mi::IMultiWindowsProvider> multiwindowsProvider;
+     muse::GlobalThreadSafeInject<IMscMetaReader> mscMetaReader;
++    muse::GlobalThreadSafeInject<muse::IGlobalConfiguration> globalConfiguration;
+ 
+ public:
+     void init();
+@@ -63,6 +65,7 @@ protected:
  
  private:
      void loadRecentFilesList();
@@ -1538,6 +2227,36 @@ index 5decf115..abe9003d 100644
      void removeNonexistentFiles();
      bool setRecentFilesList(const RecentFilesList& list);
      void setRecentFilesListAndNotify(const RecentFilesList& list, const RecentFilesChange& change);
+diff --git a/src/project/qml/MuseScore/Project/CMakeLists.txt b/src/project/qml/MuseScore/Project/CMakeLists.txt
+index 8f7cc2ee..bc0abc62 100644
+--- a/src/project/qml/MuseScore/Project/CMakeLists.txt
++++ b/src/project/qml/MuseScore/Project/CMakeLists.txt
+@@ -20,6 +20,14 @@
+ 
+ muse_create_qml_module(project_qml FOR project)
+ 
++# The web build has no MuseScore.com or Audio.com uploads, so their dialogs' pictures stay out.
++if (NOT MUSE_WEB_DESKTOP)
++    set(PROJECT_QML_CLOUD_IMAGES
++        resources/AudioCom_Waveform.png
++        resources/PublishScores.png
++    )
++endif()
++
+ qt_add_qml_module(project_qml
+     URI MuseScore.Project
+     VERSION 1.0
+@@ -152,9 +160,8 @@ qt_add_qml_module(project_qml
+         internal/ScoresPage/images/Placeholder_MIDI.png
+         internal/ScoresPage/images/Placeholder_MXML.png
+         internal/ScoresPage/images/Placeholder_Other.png
+-        resources/AudioCom_Waveform.png
+-        resources/PublishScores.png
+         resources/ScoreProcessing.png
++        ${PROJECT_QML_CLOUD_IMAGES}
+     IMPORTS
+         TARGET muse_ui_qml
+         TARGET muse_uicomponents_qml
 diff --git a/src/project/qml/MuseScore/Project/ScoresPage.qml b/src/project/qml/MuseScore/Project/ScoresPage.qml
 index 26b6428a..ea4f8193 100644
 --- a/src/project/qml/MuseScore/Project/ScoresPage.qml
