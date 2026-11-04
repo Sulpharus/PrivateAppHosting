@@ -25,7 +25,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - id: key
-        run: echo "key=musescore-qt-${{ hashFiles('hosted/musescore/toolchain/build-qt.sh', 'hosted/musescore/toolchain/env.sh') }}" >> "$GITHUB_OUTPUT"
+        run: echo "key=musescore-qt-${{ hashFiles('hosted/musescore/toolchain/build-qt.sh', 'hosted/musescore/toolchain/env.sh', 'hosted/musescore/toolchain/qt-*.patch') }}" >> "$GITHUB_OUTPUT"
       - id: cache
         uses: actions/cache@v4
         with:

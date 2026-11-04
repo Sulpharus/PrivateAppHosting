@@ -35,7 +35,10 @@ WebAssembly.
 - **Qt for WebAssembly from source** (`toolchain/build-qt.sh`, Qt 6.10.2 from GitHub): static,
   single thread, `-optimize-size`, wasm exceptions and **JSPI**, so Qt's nested event loops (modal
   dialogs) work without Asyncify's size cost. JSPI needs Chrome or Edge 137+ (Firefox and Safari:
-  not supported yet). The official Qt binaries have no JSPI.
+  not supported yet). The official Qt binaries have no JSPI. `toolchain/qt-<module>.patch` fixes Qt
+  itself and ships with the app's licences: the queue of events taken while the editor waits stays
+  consistent when a handler runs a nested event loop, and a paste keeps the app's own clipboard data
+  (MuseScore's notes) while the page kept the focus since the app copied it.
 - **Emscripten** 4.0.7, as upstream (`toolchain/env.sh`).
 
 `node build.mjs --source` clones the tag, applies the patch, builds Qt (once, into `.cache/qt`, or
@@ -138,7 +141,10 @@ Mobile is not a target.
 Set `version` and `commit` in `source.json` (and the toolchain versions in `toolchain/env.sh` to
 what upstream's `build_wasm.yml` uses), then `node build.mjs --source`. A patch that no longer
 applies stops the build: rebase it in `.cache/src-<version>` (`git apply --3way`) and save it again
-with `git diff > patches/mininode.patch`.
+with `git diff > patches/mininode.patch`. Qt patches are made the same way in a clone of the Qt module
+(`git diff > toolchain/qt-qtbase.patch`); they change the Qt cache key in CI, so Qt is built again once, and `build-qt.sh` rebuilds an
+existing local Qt too (its `wasm_singlethread/.done` holds the patches' hash). `test/glue.test.js`
+(`pnpm test`) covers the page's glue: SoundFont addresses and names, Qt's queued events.
 
 ## State
 

@@ -12,6 +12,12 @@ import { createAudioDriver } from './mn-audio.js';
 // Names and sizes of this build's files, written by build.mjs.
 import build from './mn-build.js';
 import { installDataMenu } from './mn-data.js';
+import {
+  createSoundFontNames,
+  DEFAULT_SOUNDFONT,
+  keepQueuedEventTargets,
+  soundFontUri,
+} from './mn-glue.js';
 import { installPluginsPanel, installSharedPlugins } from './mn-plugins.js';
 import { unpackShare } from './mn-share.js';
 import { soundFontUrl } from './mn-soundfont.js';
@@ -390,6 +396,7 @@ async function start() {
       containerElements: [screen],
       environment: { MININODE_LANGUAGE: window.mnI18n?.lang ?? 'de' },
       onLoaded: () => {
+        keepQueuedEventTargets(Module);
         status.hidden = true;
         window.__mnReady = true;
         dispatchEvent(new Event('mn:ready'));
@@ -428,8 +435,7 @@ async function start() {
       await driver.setup(Module);
       soundFontUrl(build.soundFont)
         .then((url) => {
-          // MuseScore's Uri keeps only scheme://path; its web loader turns this back into blob:.
-          Module.soundFont = url.replace(/^blob:/, 'blob://');
+          Module.soundFont = soundFontUri(url, DEFAULT_SOUNDFONT);
           if (driver.inited) Module.ccall('addSoundFont', '', ['string'], [Module.soundFont]);
         })
         .catch((error) => console.warn('musescore: SoundFont not loaded', error));
@@ -453,14 +459,15 @@ async function start() {
   );
 
   const instance = await qtLoad(Module);
+  keepQueuedEventTargets(instance);
   const dataChanged = createAccountSync(mn, instance.FS, DATA_DIR);
   installWriteHook(instance, dataChanged);
   installPluginsPanel({ mn, Module: instance });
   // The sound library: SoundFonts and sound effects from the person's and the shared folders.
   const pendingFonts = [];
-  const addSoundFont = (url) => {
-    // MuseScore's Uri keeps only scheme://path; its web loader turns this back into blob:.
-    const uri = url.replace(/^blob:/, 'blob://');
+  const soundFontName = createSoundFontNames();
+  const addSoundFont = (url, name) => {
+    const uri = soundFontUri(url, soundFontName(name));
     if (driver.inited) instance.ccall('addSoundFont', '', ['string'], [uri]);
     else pendingFonts.push(uri);
   };

@@ -300,9 +300,18 @@ for (const name of readdirSync(join(unpacked, 'sound'))) {
 }
 for (const patch of source.patches)
   cpSync(join(here, patch), join(dist, 'licenses', basename(patch)));
+// Qt (LGPL-3.0) is built from its sources with these changes (toolchain/build-qt.sh).
+const QT_VERSION = readFileSync(join(here, 'toolchain', 'env.sh'), 'utf8').match(
+  /^QT_VERSION=(\S+)/m,
+)?.[1];
+if (!QT_VERSION) throw new Error('musescore: QT_VERSION missing in toolchain/env.sh');
+const qtPatches = readdirSync(join(here, 'toolchain'))
+  .filter((name) => /^qt-.*\.patch$/.test(name))
+  .sort();
+for (const name of qtPatches) cpSync(join(here, 'toolchain', name), join(dist, 'licenses', name));
 writeFileSync(
   join(dist, 'licenses', 'SOURCE.md'),
-  `# Source\n\n${source.name} ${source.version} (GPL-3.0), built from ${source.repository} at commit ${source.commit}\nwith the changes in ${source.patches.map((p) => basename(p)).join(', ')} (in this folder).\nThe SoundFont "${source.soundFont}" ships with MuseScore under its own licence (in this folder).\n`,
+  `# Source\n\n${source.name} ${source.version} (GPL-3.0), built from ${source.repository} at commit ${source.commit}\nwith the changes in ${source.patches.map((p) => basename(p)).join(', ')} (in this folder).\nQt ${QT_VERSION} (LGPL-3.0), tag v${QT_VERSION} of https://github.com/qt/qtbase, qtshadertools, qtsvg, qtdeclarative and qt5compat${qtPatches.length ? `, with the changes in ${qtPatches.join(', ')} (in this folder)` : ''}.\nThe SoundFont "${source.soundFont}" ships with MuseScore under its own licence (in this folder).\n`,
 );
 
 writeFileSync(

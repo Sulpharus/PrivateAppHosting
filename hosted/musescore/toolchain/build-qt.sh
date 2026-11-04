@@ -5,7 +5,8 @@
 # JSPI and their download server is not reachable from every build environment.
 #
 # Usage: toolchain/build-qt.sh <prefix>     (needs cmake, ninja, git, a C++ compiler, OpenGL headers)
-# Result: <prefix>/gcc_64 (host) and <prefix>/wasm_singlethread (target), each with a .done marker.
+# Result: <prefix>/gcc_64 (host) and <prefix>/wasm_singlethread (target), each with a .done marker
+# (the target's holds a hash of toolchain/qt-*.patch).
 # Emscripten comes from toolchain/env.sh (EMSDK_VERSION).
 set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"
@@ -24,6 +25,23 @@ for module in "${MODULES[@]}"; do
   [ -d "$SRC/$module" ] ||
     git clone -q --depth 1 --branch "v$QT_VERSION" "https://github.com/qt/$module.git" "$SRC/$module"
 done
+
+# Fixes for Qt itself (toolchain/qt-<module>.patch), applied once; a changed patch replaces the
+# old one on a clean source. The WebAssembly marker holds the patches' hash, so an existing Qt
+# built before a patch changed is built again.
+for patch in "$here"/qt-*.patch; do
+  [ -e "$patch" ] || continue
+  module="$(basename "$patch" .patch)"
+  module="${module#qt-}"
+  if ! git -C "$SRC/$module" apply --reverse --check "$patch" 2>/dev/null; then
+    git -C "$SRC/$module" checkout -q -- .
+    git -C "$SRC/$module" apply "$patch"
+  fi
+done
+qt_patches="$(cat /dev/null "$here"/qt-*.patch 2>/dev/null | sha256sum | cut -c1-16)"
+if [ -f "$WASM_PREFIX/.done" ] && [ "$(cat "$WASM_PREFIX/.done")" != "$qt_patches" ]; then
+  rm "$WASM_PREFIX/.done"
+fi
 
 common=(-GNinja -DCMAKE_BUILD_TYPE=Release -DQT_BUILD_EXAMPLES=OFF -DQT_BUILD_TESTS=OFF
   -DQT_GENERATE_SBOM=OFF)
@@ -80,6 +98,6 @@ if [ ! -f "$WASM_PREFIX/.done" ]; then
     cmake --build "$BUILD/wasm-$module" -j"$JOBS"
     cmake --install "$BUILD/wasm-$module"
   done
-  touch "$WASM_PREFIX/.done"
+  echo "$qt_patches" > "$WASM_PREFIX/.done"
 fi
 echo "=== Qt $QT_VERSION for WebAssembly is in $PREFIX"

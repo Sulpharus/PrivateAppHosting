@@ -191,17 +191,46 @@ since the PR #12 deploy. Earlier deploys stopped at medialog and never shipped t
     save dialog → file in storage, File → Open lists MiniNode files, Plugins page shows MuseScore's
     and shared plugins (14 open-source ones tested), Klänge panel lists folders and effect keys; the
     generated effects SoundFont parses with an independent SF2 parser.
-  - **Not yet checked:** playback (audio worklet + MS Basic + library SoundFonts reaching the engine),
-    opening a chosen file and reopening after a reload, exports (PDF, MusicXML, MIDI, audio), print,
-    settings snapshot across browsers, ZIP export/import, keyboard focus back in the editor after the
-    page's dialogs (Ctrl+O did nothing after the save dialog), anything against the real Supabase.
-  - **Next:** the checks above, focus fix, Web MIDI (task), size work (85 MB module, 22.6 MB as .br;
+  - **Checked on 2026-11-03 (local build, same harness):** playback with sound (clock runs, output
+    peak about 0.12 while playing), reopening a MiniNode score from the recent list and through the
+    session-restore prompt after a reload, exports to PDF, PNG, MusicXML (.mxl), MIDI, MNX and LRC into
+    MiniNode, keyboard focus back in the editor after the save dialog (Ctrl+O opens the open dialog);
+    opening from MiniNode through File → Open; copy and paste of notes; Tools → Explode. Against the
+    original program: ten of MuseScore's own MusicXML reference files (clefs, guitar tablature, drum
+    sets, transposing clarinet, voice and piano, orchestral brackets, two key signatures) open and
+    export with identical musical content, and an ensemble built in the new-score dialog has the
+    right written keys and pitches (alto sax A major/+M6, horn in F G major/+P5, trumpet in B♭ D
+    major/+M2, guitar +8va, alto clef viola, grand-staff piano).
+    Fixed on the way (patch, `web/`, kit): the playback controller set up no tracks when the engine's
+    sequence arrived before the score; the worklet engine never processed its async messages; the
+    worklet glue read `HEAPU8`, which Emscripten 4 no longer exports, so the processor died on its
+    first block; SoundFonts were named after their blob id, so "MS Basic" was never found (the page
+    now appends the file name, the loader strips it); the recent list dropped MiniNode scores after a
+    reload; `kit/ui.js` restored focus to the shadow host instead of Qt's input; File → Open lost the
+    chosen file (its promise resolved before anyone listened); events Qt queued during a dialog lost
+    their target (the page now keeps it) and Qt's queue broke under a nested event loop, and Qt's
+    paste replaced MuseScore's copied notes with the empty browser clipboard (both fixed in
+    `toolchain/qt-qtbase.patch`, so CI builds Qt once more).
+  - **Not working yet:** audio export (WAV, MP3, OGG, FLAC): the engine build has
+    `MUSE_MODULE_AUDIO_EXPORT` off, and the engine's file system is the worklet's own, so the file
+    would also have to be sent back to the editor. The export shows "Fehler beim Schreiben".
+  - **Test harness note:** headless Chromium lacks `window.chrome`, so Qt installs other clipboard
+    handlers than in real Chrome; set it in an init script, and grant clipboard permissions.
+  - **Not yet checked:** print (opens the PDF in a new tab; headless cannot show it), opening a file
+    from the device, ZIP export/import, settings snapshot across browsers, anything against the real
+    Supabase, sound effects folders reaching the engine.
+  - **Next:** audio export (above), Web MIDI (task), size work (85 MB module, 22.6 MB as .br;
     `-Oz`, module list, unused qrc images). Merged to `main` with PR 57 on 2026-11-03; wiki article
     `docs/wiki/musescore.md` and a `neuigkeiten.md` line exist.
+  - **Debugging the engine:** it logs nothing in a release build. Locally, switch
+    `muse::runtime::isDebug()` in `src/web/audioengine/webaudioengine.cpp` to `true` and add
+    `print`/`printErr` that call `debugLog` to the `MuseAudio` object in the packaged worklet file;
+    `web/mn-audio.js` shows the engine's string messages and a dead processor in the console.
   - **Local build:** Qt 6.10.2 for WebAssembly in `~/build_tools/Qt/6.10.2` (from
     `toolchain/build-qt.sh`), MuseScore tree `~/src/musescore` with the patch applied; helper scripts
     `hosted/musescore/test/ms-ninja.sh` (incremental build) and `ms-test.sh` (build, package with
-    `MUSESCORE_PREBUILT` and `MUSESCORE_PLAIN_WASM`, smoke test). Qt and the built tree live outside
+    `MUSESCORE_PREBUILT` and `MUSESCORE_PLAIN_WASM`, smoke test). The MuseAudio engine has its own
+    build folder: `cmake --build <tree>/build.audio`. Qt and the built tree live outside
     the repo; a new container must rebuild Qt (about 2 hours). CI's build artifact cannot be
     downloaded here (blob storage is blocked by the network policy). `download.qt.io`, `musescore.org` and
     `michaelnorris.info` are blocked by the cloud network policy; Emscripten's zlib port download is
@@ -217,7 +246,8 @@ since the PR #12 deploy. Earlier deploys stopped at medialog and never shipped t
     (`mnorrisvuw/MN-Better-Notation-Plugins-for-MuseScore`); its `getAssetPath` needs
     `Qt.platform.os === "wasm"` next to `"linux"` (the pack's copy has that), and its two layout
     plugins need fonts the browser cannot install.
-  - **Known limits:** JSPI needs Chrome/Edge 137+; no MIDI keyboards yet; device files in the recent
+  - **Known limits:** JSPI needs Chrome/Edge 137+; no MIDI keyboards or audio export yet; every reload
+    shows MuseScore's "session ended unexpectedly" prompt (Yes reopens the scores); device files in the recent
     list cannot be reopened after a reload; only English and German UI; no VST, Muse Sounds or Muse
     Hub content; anyone with the app can add or remove shared plugins and sounds.
 
