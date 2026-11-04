@@ -1437,10 +1437,10 @@ index daa43ec9..e5e8156d 100644
  
 diff --git a/src/framework/midi/internal/platform/web/webmidiinport.cpp b/src/framework/midi/internal/platform/web/webmidiinport.cpp
 new file mode 100644
-index 00000000..7e1c2d63
+index 00000000..e857a0ab
 --- /dev/null
 +++ b/src/framework/midi/internal/platform/web/webmidiinport.cpp
-@@ -0,0 +1,197 @@
+@@ -0,0 +1,204 @@
 +/*
 + * SPDX-License-Identifier: GPL-3.0-only
 + * MuseScore-CLA-applies
@@ -1542,9 +1542,16 @@ index 00000000..7e1c2d63
 +        start = end + 1;
 +    }
 +
++    // At start the page knows no inputs yet, so the editor picks "No device". That was no choice:
++    // forget it when the first inputs appear, so the editor takes the chosen or the first one
++    // (MidiInputOutputController::checkConnection). A "No device" chosen in the preferences
++    // still wins there.
++    const bool firstInputs = m_devices.empty() && !devices.empty();
 +    m_devices = devices;
 +    if (isConnected() && !deviceExists(m_deviceID)) {
 +        disconnect();
++    } else if (firstInputs && m_deviceID == NONE_DEVICE_ID) {
++        m_deviceID.clear();
 +    }
 +    m_availableDevicesChanged.notify();
 +}

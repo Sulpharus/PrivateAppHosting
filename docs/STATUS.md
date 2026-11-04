@@ -224,9 +224,17 @@ since the PR #12 deploy. Earlier deploys stopped at medialog and never shipped t
     Mixer, Piano keyboard, Timeline, Instruments, all menus. **Not yet checked:** anything against the
     real Supabase, sound effects folders reaching the engine, Help links (Qt opens them with
     `window.open`), translation-update check (needs musescore.org).
-  - **Next:** Web MIDI (task), size work (85 MB module, 22.6 MB as .br;
-    `-Oz`, module list, unused qrc images). Merged to `main` with PR 57 on 2026-11-03; wiki article
-    `docs/wiki/musescore.md` and a `neuigkeiten.md` line exist.
+  - **Added on 2026-11-04 (PR 61, checked in the harness):** "Partituren" panel (versions of
+    MiniNode scores in `.versions/`, sharing in `scores/`), the GeneralUser GS library in "Klänge",
+    thumbnails in the recent list, autosave every minute with the copy in the account
+    (`.autosave/`, removed on save; restore after a reload brings the edits back), MIDI keyboards
+    through Web MIDI (`WebMidiInPort` in the patch; a fake input in `scenario`-style tests enters
+    notes), preferences without welcome/update/video switches, welcome and cloud-upload images left
+    out (module 79 MB, 23.8 MiB as .br). Print calls `print()` in the PDF tab: **check in real
+    Chrome** (headless cannot show the print dialog).
+  - **Next:** check print and MIDI with real devices in Chrome; further size work would need
+    lazy-loaded modules (remaining big parts are code). Merged to `main` with PR 57 on 2026-11-03;
+    wiki article `docs/wiki/musescore.md` and `neuigkeiten.md` lines exist.
   - **Debugging the engine:** it logs nothing in a release build. Locally, switch
     `muse::runtime::isDebug()` in `src/web/audioengine/webaudioengine.cpp` to `true` and add
     `print`/`printErr` that call `debugLog` to the `MuseAudio` object in the packaged worklet file;

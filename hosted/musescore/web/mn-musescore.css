@@ -42,6 +42,10 @@ body {
   cursor: pointer;
 }
 
+.mn-bar-button[hidden] {
+  display: none;
+}
+
 .mn-bar-button:hover {
   background: var(--mn-surface-2, #eef0ec);
 }

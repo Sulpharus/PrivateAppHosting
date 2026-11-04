@@ -11,7 +11,7 @@ summary: Das Notensatzprogramm MuseScore Studio als App: Partituren in MiniNode,
 
 - **Chrome oder Edge ab Version 137** auf einem Computer (Windows, macOS, Linux). Firefox und Safari können es noch nicht (es braucht die Browser-Funktion JSPI für Dialoge). Handys und Tablets sind kein Ziel.
 - Am besten als **installierte App** (im Browser: „App installieren“), dann bekommt das Programm ein eigenes Fenster und alle Tastenkürzel.
-- Der erste Start lädt rund 25 MB (das Programm) und im Hintergrund den Klang „MS Basic“; danach kommt beides aus dem Browser-Speicher.
+- Der erste Start lädt rund 24 MB (das Programm) und im Hintergrund den Klang „MS Basic“; danach kommt beides aus dem Browser-Speicher.
 
 ## Partituren öffnen und speichern
 
@@ -58,9 +58,18 @@ MuseScore-Plugins sind kleine Programme (`.qml`), die im Editor laufen. Hier lie
 - Welche Ordner geladen werden, stellt jede Person für sich ein. Einschalten wirkt sofort, Ausschalten oder Löschen beim nächsten Start.
 - **Freie Klangbibliothek**: Oben im Fenster fügt **„GeneralUser GS“ für alle hinzufügen** einen vollständigen General-MIDI-SoundFont (rund 32 MB, frei weitergebbar) als geteilten Ordner hinzu. Er kommt mit der App, es wird nichts aus dem Internet geladen.
 
+## MIDI-Keyboard
+
+1. Keyboard per USB anschließen.
+2. **MIDI-Keyboard** in der MiniNode-Leiste anklicken; der Browser fragt einmal, ob MuseScore MIDI-Geräte nutzen darf. Danach verbindet sich MuseScore bei jedem Start selbst, und der Knopf verschwindet.
+3. In der Partitur eine Note oder einen Takt anklicken, mit **N** die Noteneingabe starten und spielen: Jede gedrückte Taste wird eine Note in der gewählten Länge.
+
+- Sind mehrere Geräte angeschlossen, wählst du eines unter Einstellungen → Audio & MIDI → MIDI-Eingabe. „Kein Gerät“ dort schaltet MIDI ab.
+- MIDI-Ausgabe an externe Geräte gibt es im Browser nicht.
+
 ## Was im Browser nicht geht
 
-- **MIDI-Keyboards** (noch nicht), VST-Instrumente und -Effekte, Muse Sounds und andere Inhalte aus Muse Hub, Video-Export, mehrere Fenster (eine zweite Partitur ersetzt die erste).
+- VST-Instrumente und -Effekte, Muse Sounds und andere Inhalte aus Muse Hub, Video-Export, mehrere Fenster (eine zweite Partitur ersetzt die erste).
 - Konto, Cloud und Veröffentlichen bei MuseScore.com sind entfernt.
 - Oberfläche auf Deutsch und Englisch (folgt der Sprache von MiniNode).
 
