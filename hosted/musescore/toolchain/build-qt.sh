@@ -25,6 +25,15 @@ for module in "${MODULES[@]}"; do
     git clone -q --depth 1 --branch "v$QT_VERSION" "https://github.com/qt/$module.git" "$SRC/$module"
 done
 
+# Fixes for Qt itself (toolchain/qt-<module>.patch), applied once.
+for patch in "$here"/qt-*.patch; do
+  module="$(basename "$patch" .patch)"
+  module="${module#qt-}"
+  if ! git -C "$SRC/$module" apply --reverse --check "$patch" 2>/dev/null; then
+    git -C "$SRC/$module" apply "$patch"
+  fi
+done
+
 common=(-GNinja -DCMAKE_BUILD_TYPE=Release -DQT_BUILD_EXAMPLES=OFF -DQT_BUILD_TESTS=OFF
   -DQT_GENERATE_SBOM=OFF)
 command -v ccache >/dev/null && common+=(-DQT_USE_CCACHE=ON)

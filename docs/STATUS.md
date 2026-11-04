@@ -194,16 +194,28 @@ since the PR #12 deploy. Earlier deploys stopped at medialog and never shipped t
   - **Checked on 2026-11-03 (local build, same harness):** playback with sound (clock runs, output
     peak about 0.12 while playing), reopening a MiniNode score from the recent list and through the
     session-restore prompt after a reload, exports to PDF, PNG, MusicXML (.mxl), MIDI, MNX and LRC into
-    MiniNode, keyboard focus back in the editor after the save dialog (Ctrl+O opens the open dialog).
+    MiniNode, keyboard focus back in the editor after the save dialog (Ctrl+O opens the open dialog);
+    opening from MiniNode through File → Open; copy and paste of notes; Tools → Explode. Against the
+    original program: ten of MuseScore's own MusicXML reference files (clefs, guitar tablature, drum
+    sets, transposing clarinet, voice and piano, orchestral brackets, two key signatures) open and
+    export with identical musical content, and an ensemble built in the new-score dialog has the
+    right written keys and pitches (alto sax A major/+M6, horn in F G major/+P5, trumpet in B♭ D
+    major/+M2, guitar +8va, alto clef viola, grand-staff piano).
     Fixed on the way (patch, `web/`, kit): the playback controller set up no tracks when the engine's
     sequence arrived before the score; the worklet engine never processed its async messages; the
     worklet glue read `HEAPU8`, which Emscripten 4 no longer exports, so the processor died on its
     first block; SoundFonts were named after their blob id, so "MS Basic" was never found (the page
     now appends the file name, the loader strips it); the recent list dropped MiniNode scores after a
-    reload; `kit/ui.js` restored focus to the shadow host instead of Qt's input.
+    reload; `kit/ui.js` restored focus to the shadow host instead of Qt's input; File → Open lost the
+    chosen file (its promise resolved before anyone listened); events Qt queued during a dialog lost
+    their target (the page now keeps it) and Qt's queue broke under a nested event loop, and Qt's
+    paste replaced MuseScore's copied notes with the empty browser clipboard (both fixed in
+    `toolchain/qt-qtbase.patch`, so CI builds Qt once more).
   - **Not working yet:** audio export (WAV, MP3, OGG, FLAC): the engine build has
     `MUSE_MODULE_AUDIO_EXPORT` off, and the engine's file system is the worklet's own, so the file
     would also have to be sent back to the editor. The export shows "Fehler beim Schreiben".
+  - **Test harness note:** headless Chromium lacks `window.chrome`, so Qt installs other clipboard
+    handlers than in real Chrome; set it in an init script, and grant clipboard permissions.
   - **Not yet checked:** print (opens the PDF in a new tab; headless cannot show it), opening a file
     from the device, ZIP export/import, settings snapshot across browsers, anything against the real
     Supabase, sound effects folders reaching the engine.

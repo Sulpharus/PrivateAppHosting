@@ -1,0 +1,69 @@
+diff --git a/src/corelib/platform/wasm/qwasmsuspendresumecontrol.cpp b/src/corelib/platform/wasm/qwasmsuspendresumecontrol.cpp
+index a286eee5..8bcf053c 100644
+--- a/src/corelib/platform/wasm/qwasmsuspendresumecontrol.cpp
++++ b/src/corelib/platform/wasm/qwasmsuspendresumecontrol.cpp
+@@ -168,6 +168,9 @@ int QWasmSuspendResumeControl::sendPendingEvents()
+     if (count == 0)
+         return false;
+     while (count-- > 0) {
++        // A handler can run a nested event loop that sends the remaining events itself.
++        if (pendingEvents["length"].as<int>() == 0)
++            break;
+         // Grab one event (handler and arg), and call it
+         emscripten::val event = pendingEvents.call<val>("shift");
+         auto it = m_eventHandlers.find(event["index"].as<int>());
+diff --git a/src/plugins/platforms/wasm/qwasmclipboard.cpp b/src/plugins/platforms/wasm/qwasmclipboard.cpp
+index 44db371c..ae0e73d9 100644
+--- a/src/plugins/platforms/wasm/qwasmclipboard.cpp
++++ b/src/plugins/platforms/wasm/qwasmclipboard.cpp
+@@ -71,7 +71,16 @@ void QWasmClipboard::paste(val event)
+ {
+     event.call<void>("preventDefault"); // prevent browser from handling drop event
+ 
+-    QWasmIntegration::get()->getWasmClipboard()->sendClipboardData(event);
++    QWasmClipboard *clipboard = QWasmIntegration::get()->getWasmClipboard();
++    if (clipboard->m_ownsClipboard) {
++        // Keep the app's own data (e.g. MuseScore's notes) and let it paste that.
++        QWindowSystemInterface::handleKeyEvent(0, QEvent::KeyPress, Qt::Key_V,
++                                               Qt::ControlModifier, "V");
++        QWindowSystemInterface::handleKeyEvent(0, QEvent::KeyRelease, Qt::Key_V,
++                                               Qt::ControlModifier, "V");
++        return;
++    }
++    clipboard->sendClipboardData(event);
+ }
+ 
+ QWasmClipboard::QWasmClipboard()
+@@ -90,6 +99,9 @@ QWasmClipboard::QWasmClipboard()
+         m_documentCopy = QWasmEventHandler(document, "copy", QWasmClipboard::copy);
+         m_documentPaste = QWasmEventHandler(document, "paste", QWasmClipboard::paste);
+     }
++    // Another program can change the clipboard only while the page does not have the focus.
++    m_windowBlur = QWasmEventHandler(val::global("window"), "blur",
++                                     [](val) { QWasmIntegration::get()->getWasmClipboard()->m_ownsClipboard = false; });
+ }
+ 
+ QWasmClipboard::~QWasmClipboard()
+@@ -108,6 +120,7 @@ void QWasmClipboard::setMimeData(QMimeData *mimeData, QClipboard::Mode mode)
+ {
+     // handle setText/ setData programmatically
+     QPlatformClipboard::setMimeData(mimeData, mode);
++    m_ownsClipboard = mimeData != nullptr;
+     if (m_hasClipboardApi)
+         writeToClipboardApi();
+     else
+diff --git a/src/plugins/platforms/wasm/qwasmclipboard.h b/src/plugins/platforms/wasm/qwasmclipboard.h
+index 3f24e64c..64b04c53 100644
+--- a/src/plugins/platforms/wasm/qwasmclipboard.h
++++ b/src/plugins/platforms/wasm/qwasmclipboard.h
+@@ -53,6 +53,10 @@ private:
+     QWasmEventHandler m_documentCut;
+     QWasmEventHandler m_documentCopy;
+     QWasmEventHandler m_documentPaste;
++    // The app wrote the clipboard and the page kept the focus since: nothing else can have
++    // changed it, so a paste uses the app's own data (custom formats never reach the browser).
++    bool m_ownsClipboard = false;
++    QWasmEventHandler m_windowBlur;
+ };
+ 
+ QT_END_NAMESPACE

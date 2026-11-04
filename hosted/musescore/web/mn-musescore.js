@@ -367,6 +367,28 @@ function installWriteHook(Module, dataChanged) {
   });
 }
 
+// ---- Qt's event queue ----------------------------------------------------------------------------
+
+/**
+ * Qt queues browser events while the editor waits (a file dialog suspends it) and handles them
+ * later. By then the browser has cleared `target` of events inside Qt's shadow root, and Qt
+ * reads it (pointer enter, move, wheel: "Cannot read properties of null"), which aborts what the
+ * editor was doing, e.g. opening the chosen file. The target is kept on the event when queued.
+ */
+function keepQueuedEventTargets(Module) {
+  const queue = Module.qtSuspendResumeControl?.pendingEvents;
+  if (!Array.isArray(queue) || queue.push !== Array.prototype.push) return;
+  queue.push = function pushKeepingTargets(...items) {
+    for (const item of items) {
+      const event = item?.arg;
+      if (event instanceof Event && event.target) {
+        Object.defineProperty(event, 'target', { value: event.target, configurable: true });
+      }
+    }
+    return Array.prototype.push.apply(this, items);
+  };
+}
+
 // ---- start ----------------------------------------------------------------------------------
 
 /**
@@ -398,6 +420,7 @@ async function start() {
       containerElements: [screen],
       environment: { MININODE_LANGUAGE: window.mnI18n?.lang ?? 'de' },
       onLoaded: () => {
+        keepQueuedEventTargets(Module);
         status.hidden = true;
         window.__mnReady = true;
         dispatchEvent(new Event('mn:ready'));
@@ -460,6 +483,7 @@ async function start() {
   );
 
   const instance = await qtLoad(Module);
+  keepQueuedEventTargets(instance);
   const dataChanged = createAccountSync(mn, instance.FS, DATA_DIR);
   installWriteHook(instance, dataChanged);
   installPluginsPanel({ mn, Module: instance });

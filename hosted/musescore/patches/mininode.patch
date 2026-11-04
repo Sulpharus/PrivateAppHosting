@@ -822,7 +822,7 @@ index 00000000..dbf381f1
 +bool fetchFile(const io::path_t& path);
 +}
 diff --git a/src/framework/global/internal/platform/web/webinteractive.cpp b/src/framework/global/internal/platform/web/webinteractive.cpp
-index e77e195f..74a880f5 100644
+index e77e195f..b13b926d 100644
 --- a/src/framework/global/internal/platform/web/webinteractive.cpp
 +++ b/src/framework/global/internal/platform/web/webinteractive.cpp
 @@ -25,7 +25,15 @@
@@ -932,24 +932,26 @@ index e77e195f..74a880f5 100644
  WebInteractive::WebInteractive(std::shared_ptr<muse::IInteractive> origin)
      : m_origin(origin)
  {
-@@ -159,7 +251,15 @@ void WebInteractive::showProgress(const std::string& title, Progress progress)
+@@ -159,7 +251,17 @@ void WebInteractive::showProgress(const std::string& title, Progress progress)
  async::Promise<io::path_t> WebInteractive::selectOpeningFile(const std::string& title, const io::path_t& dir,
                                                               const std::vector<std::string>& filter)
  {
 -#ifdef Q_OS_WASM
 +#if defined(Q_OS_WASM) && defined(MUSE_WEB_DESKTOP)
++    //! The body runs later (not AsyncByBody): the dialog waits inside it, and an answer given
++    //! before the caller listens (onResolve) would be lost.
 +    return async::make_promise<io::path_t>([this, title, dir, filter](auto resolve, auto reject) {
 +        io::path_t path = selectOpeningFileSync(title, dir, filter);
 +        if (path.empty()) {
 +            return reject((int)Ret::Code::Cancel, "Cancel");
 +        }
 +        return resolve(path);
-+    }, async::PromiseType::AsyncByBody);
++    });
 +#elif defined(Q_OS_WASM)
      return async::make_promise<io::path_t>([title, dir, filter](auto resolve, auto reject) {
          IF_ASSERT_FAILED(!g_fileOpenData.callback) {
              LOGE() << "Opening file already open";
-@@ -201,7 +301,11 @@ async::Promise<io::path_t> WebInteractive::selectOpeningFile(const std::string&
+@@ -201,7 +303,11 @@ async::Promise<io::path_t> WebInteractive::selectOpeningFile(const std::string&
  io::path_t WebInteractive::selectOpeningFileSync(const std::string& title, const io::path_t& dir, const std::vector<std::string>& filter,
                                                   const int options)
  {
@@ -962,7 +964,7 @@ index e77e195f..74a880f5 100644
      UNUSED(title);
      UNUSED(dir);
      UNUSED(filter);
-@@ -216,7 +320,14 @@ io::path_t WebInteractive::selectOpeningFileSync(const std::string& title, const
+@@ -216,7 +322,14 @@ io::path_t WebInteractive::selectOpeningFileSync(const std::string& title, const
  io::paths_t WebInteractive::selectOpeningFilesSync(const std::string& title, const io::path_t& dir, const std::vector<std::string>& filter,
                                                     const int options)
  {
@@ -978,7 +980,7 @@ index e77e195f..74a880f5 100644
      UNUSED(title);
      UNUSED(dir);
      UNUSED(filter);
-@@ -231,7 +342,11 @@ io::paths_t WebInteractive::selectOpeningFilesSync(const std::string& title, con
+@@ -231,7 +344,11 @@ io::paths_t WebInteractive::selectOpeningFilesSync(const std::string& title, con
  io::path_t WebInteractive::selectSavingFileSync(const std::string& title, const io::path_t& dir, const std::vector<std::string>& filter,
                                                  bool confirmOverwrite)
  {
@@ -991,7 +993,7 @@ index e77e195f..74a880f5 100644
      UNUSED(title);
      UNUSED(dir);
      UNUSED(filter);
-@@ -309,19 +424,24 @@ void WebInteractive::raise(const UriQuery& uri)
+@@ -309,19 +426,24 @@ void WebInteractive::raise(const UriQuery& uri)
      m_origin->raise(uri);
  }
  
