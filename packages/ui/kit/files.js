@@ -7,9 +7,9 @@
 //   - window.showSaveFilePicker and a download link (<a download href="blob:…">.click()) open a
 //     dialog that saves to MiniNode or, as before, to the device;
 //   - a download or a save picker for a file that was opened from or saved to MiniNode in this
-//     page (the app's "Save") goes straight back to MiniNode; the toast offers "Speichern unter …" for the dialog,
-//     and saving again while it shows (e.g. Ctrl+S twice) opens the dialog too. A file of that name
-//     opened from or saved to the device ends this.
+//     app (the app's "Save", also after a reload) goes straight back to MiniNode, overwriting it;
+//     the toast offers "Speichern unter …" for the dialog. A file of that name opened from or
+//     saved to the device ends this.
 // The app needs a data mode other than "none" (mn.files) and nothing else; texts come from the
 // app's language packages (keys files.*, German fallback below). data-mn-native on a field or a
 // link keeps the browser's own behaviour. URL.createObjectURL and revokeObjectURL are wrapped to
@@ -90,11 +90,41 @@
       )
       .join(',');
 
-  /** Names opened from or saved to MiniNode in this page: saving them again needs no dialog. */
-  const linked = new Set();
-  /** The last save that went straight back; a second one of the same name soon after asks. */
-  let lastDirect = { name: '', at: 0 };
-  const ASK_AGAIN_MS = 8000;
+  /**
+   * Names opened from or saved to MiniNode in this app: saving them again needs no dialog, as a
+   * desktop program saves a document back where it came from. Kept in this browser (per app), so
+   * a reload does not ask again; "Speichern unter …" in the toast still offers the dialog.
+   */
+  const LINKED_KEY = 'mn-files-linked';
+  const LINKED_MAX = 200;
+  const linked = (() => {
+    const names = new Set();
+    try {
+      for (const name of JSON.parse(localStorage.getItem(LINKED_KEY) ?? '[]')) {
+        if (typeof name === 'string') names.add(name);
+      }
+    } catch {
+      // No storage (private window, blocked): names are kept for this page only.
+    }
+    const persist = () => {
+      try {
+        localStorage.setItem(LINKED_KEY, JSON.stringify([...names].slice(-LINKED_MAX)));
+      } catch {
+        // as above
+      }
+    };
+    return {
+      has: (name) => names.has(name),
+      add: (name) => {
+        names.delete(name); // most recent last, so the oldest go first past the limit
+        names.add(name);
+        persist();
+      },
+      delete: (name) => {
+        if (names.delete(name)) persist();
+      },
+    };
+  })();
 
   const abort = () => new DOMException('The user aborted a request.', 'AbortError');
 
@@ -260,16 +290,8 @@
       }
     });
 
-  /** Whether saving `name` goes straight back to MiniNode (and counts this save if so). */
-  const direct = (name) => {
-    const again = lastDirect.name === name && Date.now() - lastDirect.at < ASK_AGAIN_MS;
-    if (!linked.has(name) || again) {
-      lastDirect = { name: '', at: 0 };
-      return false;
-    }
-    lastDirect = { name, at: Date.now() };
-    return true;
-  };
+  /** Whether saving `name` goes straight back to MiniNode. */
+  const direct = (name) => linked.has(name);
 
   /** Stores `blob` (a promise) under `name` without the dialog; the toast offers it. */
   const saveDirect = (name, blob) => {

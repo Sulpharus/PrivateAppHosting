@@ -195,24 +195,22 @@ describe('saving', () => {
   const downloadOf = (name: string) =>
     Object.assign(document.createElement('a'), { href: 'blob:https://app.test/3', download: name });
 
-  it('saves again without a dialog after saving to MiniNode, and asks on a quick second save', async () => {
+  it('saves again and again without a dialog after saving to MiniNode, like Ctrl+S', async () => {
     downloadOf('Plan.pdf').click();
     await until(() => buttonNamed('In MiniNode speichern'));
     buttonNamed('In MiniNode speichern')?.click();
     await until(() => upload.mock.calls.length === 1);
-    vi.useFakeTimers({ toFake: ['Date'] });
-    try {
-      vi.setSystemTime(Date.now() + 60_000);
-      downloadOf('Plan.pdf').click();
-      await until(() => upload.mock.calls.length === 2);
-      expect(sheet()).toBeNull();
-      // Ctrl+S twice: the second one is the way to the dialog without the pointer.
-      downloadOf('Plan.pdf').click();
-      await until(() => buttonNamed('In MiniNode speichern'));
-      expect(upload).toHaveBeenCalledTimes(2);
-    } finally {
-      vi.useRealTimers();
-    }
+    downloadOf('Plan.pdf').click();
+    await until(() => upload.mock.calls.length === 2);
+    downloadOf('Plan.pdf').click();
+    await until(() => upload.mock.calls.length === 3);
+    expect(sheet()).toBeNull();
+    expect(upload.mock.calls.map((call) => call[0])).toEqual(['Plan.pdf', 'Plan.pdf', 'Plan.pdf']);
+  });
+
+  it('remembers saved names across a reload of the app', () => {
+    // The previous tests saved Plan.pdf to MiniNode; the next page load reads this list.
+    expect(JSON.parse(localStorage.getItem('mn-files-linked') ?? '[]')).toContain('Plan.pdf');
   });
 
   it('asks again once a file of that name came from the device', async () => {

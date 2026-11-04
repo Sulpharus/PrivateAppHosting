@@ -6,7 +6,7 @@
   for (const [path, b64] of window.__mnSeed ?? []) {
     files.set(path, new Blob([Uint8Array.from(atob(b64), (c) => c.charCodeAt(0))]));
   }
-  const kv = new Map();
+  const kv = new Map(window.__mnKvSeed ?? []);
   window.__mnKv = kv;
   const mn = {
     auth: { requireLogin: async () => ({ id: 'u1', user_metadata: { name: 'Test Person' } }) },

@@ -211,15 +211,20 @@ since the PR #12 deploy. Earlier deploys stopped at medialog and never shipped t
     their target (the page now keeps it) and Qt's queue broke under a nested event loop, and Qt's
     paste replaced MuseScore's copied notes with the empty browser clipboard (both fixed in
     `toolchain/qt-qtbase.patch`, so CI builds Qt once more).
-  - **Not working yet:** audio export (WAV, MP3, OGG, FLAC): the engine build has
-    `MUSE_MODULE_AUDIO_EXPORT` off, and the engine's file system is the worklet's own, so the file
-    would also have to be sent back to the editor. The export shows "Fehler beim Schreiben".
+  - **Fixed on 2026-11-04:** audio export (WAV, MP3, OGG/Opus, FLAC, AAC): the engine build turns
+    `MUSE_MODULE_AUDIO_EXPORT` on and sends the rendered file back with its answer (the worklet
+    has its own file system); the files are valid and not silent. Closing the tab counts as a normal
+    quit (the session prompt only appears when a score has unsaved changes). Qt's own German texts
+    (qtbase, qtdeclarative from qttranslations) ship with the program ("Abbrechen" etc.).
   - **Test harness note:** headless Chromium lacks `window.chrome`, so Qt installs other clipboard
     handlers than in real Chrome; set it in an init script, and grant clipboard permissions.
-  - **Not yet checked:** print (opens the PDF in a new tab; headless cannot show it), opening a file
-    from the device, ZIP export/import, settings snapshot across browsers, anything against the real
-    Supabase, sound effects folders reaching the engine.
-  - **Next:** audio export (above), Web MIDI (task), size work (85 MB module, 22.6 MB as .br;
+  - **Checked on 2026-11-04:** print (PDF in a new tab), opening a file from the device (file-field
+    path; headless cannot drive the native picker), ZIP export and import (settings apply after a
+    reload), settings snapshot across browsers, Preferences, Style, Page settings, Transpose, Parts,
+    Mixer, Piano keyboard, Timeline, Instruments, all menus. **Not yet checked:** anything against the
+    real Supabase, sound effects folders reaching the engine, Help links (Qt opens them with
+    `window.open`), translation-update check (needs musescore.org).
+  - **Next:** Web MIDI (task), size work (85 MB module, 22.6 MB as .br;
     `-Oz`, module list, unused qrc images). Merged to `main` with PR 57 on 2026-11-03; wiki article
     `docs/wiki/musescore.md` and a `neuigkeiten.md` line exist.
   - **Debugging the engine:** it logs nothing in a release build. Locally, switch
@@ -246,8 +251,7 @@ since the PR #12 deploy. Earlier deploys stopped at medialog and never shipped t
     (`mnorrisvuw/MN-Better-Notation-Plugins-for-MuseScore`); its `getAssetPath` needs
     `Qt.platform.os === "wasm"` next to `"linux"` (the pack's copy has that), and its two layout
     plugins need fonts the browser cannot install.
-  - **Known limits:** JSPI needs Chrome/Edge 137+; no MIDI keyboards or audio export yet; every reload
-    shows MuseScore's "session ended unexpectedly" prompt (Yes reopens the scores); device files in the recent
+  - **Known limits:** JSPI needs Chrome/Edge 137+; no MIDI keyboards yet; device files in the recent
     list cannot be reopened after a reload; only English and German UI; no VST, Muse Sounds or Muse
     Hub content; anyone with the app can add or remove shared plugins and sounds.
 
