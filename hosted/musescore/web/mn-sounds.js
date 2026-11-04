@@ -298,7 +298,9 @@ export function installSoundsPanel({ mn, addSoundFont }) {
         element('p', { className: 'mn-sounds-hint', textContent: t('sounds.library.hint') }),
       );
       for (const entry of build.library) {
-        if (shared.some((folder) => folder.name === entry.name)) {
+        // Added means the SoundFont itself is there; a folder alone (an upload that failed) offers it again.
+        const present = shared.find((folder) => folder.name === entry.name);
+        if (present?.files.some((file) => file.name === entry.file)) {
           section.append(
             element('p', { textContent: t('sounds.library.added', { name: entry.name }) }),
           );

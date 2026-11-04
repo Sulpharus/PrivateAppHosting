@@ -303,3 +303,8 @@ body {
   display: flex;
   justify-content: flex-end;
 }
+
+/* The sheet sits outside .mn-app, so the kit's [hidden] rule does not reach it. */
+.mn-scores [hidden] {
+  display: none;
+}

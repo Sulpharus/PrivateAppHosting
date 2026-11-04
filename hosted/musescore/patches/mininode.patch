@@ -1640,10 +1640,10 @@ index 00000000..7e1c2d63
 +}
 diff --git a/src/framework/midi/internal/platform/web/webmidiinport.h b/src/framework/midi/internal/platform/web/webmidiinport.h
 new file mode 100644
-index 00000000..28442c1e
+index 00000000..0456277d
 --- /dev/null
 +++ b/src/framework/midi/internal/platform/web/webmidiinport.h
-@@ -0,0 +1,68 @@
+@@ -0,0 +1,66 @@
 +/*
 + * SPDX-License-Identifier: GPL-3.0-only
 + * MuseScore-CLA-applies
@@ -1667,8 +1667,6 @@ index 00000000..28442c1e
 + */
 +#ifndef MUSE_MIDI_WEBMIDIINPORT_H
 +#define MUSE_MIDI_WEBMIDIINPORT_H
-+
-+#include <mutex>
 +
 +#include "async/asyncable.h"
 +#include "imidiinport.h"

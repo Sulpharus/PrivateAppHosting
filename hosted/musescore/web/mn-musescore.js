@@ -350,6 +350,22 @@ function keepThumbnail(Module, name, blob) {
     .catch((error) => console.warn('musescore: no thumbnail kept', error));
 }
 
+/**
+ * Account writes of one score (the score, its autosave) run one after another, so a slow autosave
+ * upload cannot land after the save that replaced it.
+ */
+const accountQueues = new Map();
+function inOrder(score, work) {
+  const previous = accountQueues.get(score) ?? Promise.resolve();
+  const next = previous.catch(() => {}).then(work);
+  accountQueues.set(score, next);
+  next.finally(() => {
+    if (accountQueues.get(score) === next) accountQueues.delete(score);
+  });
+  return next;
+}
+const autosaveOf = (score) => `${AUTOSAVE_FOLDER}/${score}.autosave`;
+
 /** Hands a file the editor finished to the place chosen for its folder. */
 async function deliver(Module, path) {
   const name = baseName(path);
@@ -370,12 +386,21 @@ async function deliver(Module, path) {
   const blob = new Blob([data], { type: 'application/octet-stream' });
   if (folder === MININODE_DIR && autosave) {
     const mn = await window.mininode.mininode();
-    await mn.files.upload(`${AUTOSAVE_FOLDER}/${name}`, blob);
+    const score = name.slice(0, -'.autosave'.length);
+    await inOrder(score, async () => {
+      // Saved or discarded meanwhile: this autosave is out of date.
+      if (!Module.FS.analyzePath(path).exists) return;
+      await mn.files.upload(autosaveOf(score), blob);
+    });
     return;
   }
   if (folder === MININODE_DIR) {
     const mn = await window.mininode.mininode();
-    await mn.files.upload(name, blob);
+    await inOrder(name, async () => {
+      await mn.files.upload(name, blob);
+      // An autosave in the account would open instead of this save (from any device).
+      await mn.files.remove(autosaveOf(name)).catch(() => {});
+    });
     window.mnui?.toast(t('files.save.done', { name }));
     keepThumbnail(Module, name, blob);
     keepVersion(mn, name, blob).catch((error) => console.warn('musescore: no version kept', error));
@@ -433,10 +458,22 @@ function installWriteHook(Module, dataChanged) {
     const result = unlink.call(this, path);
     const target = String(path);
     if (target.startsWith(`${MININODE_DIR}/`) && target.endsWith('.autosave')) {
-      window.mininode
-        .mininode()
-        .then((mn) => mn.files.remove(`${AUTOSAVE_FOLDER}/${baseName(target)}`))
-        .catch((error) => console.warn('musescore: autosave not removed from the account', error));
+      // The editor also removes the old autosave right before writing a new one: wait a moment and
+      // keep the account copy when the file is back.
+      setTimeout(() => {
+        if (FS.analyzePath(target).exists) return;
+        const score = baseName(target).slice(0, -'.autosave'.length);
+        window.mininode
+          .mininode()
+          .then((mn) =>
+            inOrder(score, () =>
+              FS.analyzePath(target).exists ? null : mn.files.remove(autosaveOf(score)),
+            ),
+          )
+          .catch((error) =>
+            console.warn('musescore: autosave not removed from the account', error),
+          );
+      }, 1500);
     }
     return result;
   };

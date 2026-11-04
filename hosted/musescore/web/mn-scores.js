@@ -16,10 +16,15 @@ const MAX_VERSIONS = 20;
 const SCORE = /\.(mscz|mscx)$/i;
 
 /** "2026-11-04T10-12-05-123Z.mscz" ↔ Date (file names cannot hold ":"). */
-const stampOf = (date) => `${date.toISOString().replaceAll(':', '-').replace('.', '-')}`;
-const dateOf = (name) => {
+export const stampOf = (date) => `${date.toISOString().replaceAll(':', '-').replace('.', '-')}`;
+export const dateOf = (name) => {
   const match = name.match(/^(\d{4}-\d{2}-\d{2})T(\d{2})-(\d{2})-(\d{2})-(\d{3})Z/);
   return match ? new Date(`${match[1]}T${match[2]}:${match[3]}:${match[4]}.${match[5]}Z`) : null;
+};
+/** "2026-11-04 10-12" in local time, for file names. */
+export const fileStamp = (date) => {
+  const two = (n) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${two(date.getMonth() + 1)}-${two(date.getDate())} ${two(date.getHours())}-${two(date.getMinutes())}`;
 };
 const formatDate = (date) =>
   new Intl.DateTimeFormat(window.mnI18n?.lang ?? 'de', {
@@ -58,8 +63,8 @@ async function copyFile(mn, from, to, options = {}) {
   await mn.files.upload(to, await response.blob(), options.to);
 }
 
-/** A name next to `name` that is not taken yet: "Lied (Version 4. Nov. 2026).mscz", "… (2)". */
-function freeName(taken, base, extension) {
+/** A name next to `name` that is not taken yet: "Lied (Stand 2026-11-04 10-12).mscz", "… (2)". */
+export function freeName(taken, base, extension) {
   let name = `${base}${extension}`;
   for (let n = 2; taken.has(name); n++) name = `${base} (${n})${extension}`;
   return name;
@@ -111,17 +116,22 @@ function show(mn) {
               'li',
               {},
               el('span', { className: 'mn-scores-name', textContent: name }),
-              button(t('scores.versions'), '', () =>
+              button(t('scores.versions'), '', (event) =>
                 run(async () => {
                   versions.hidden = !versions.hidden;
-                  if (!versions.hidden) await listVersions(name, versions, new Set(names));
+                  event.currentTarget?.setAttribute('aria-expanded', String(!versions.hidden));
+                  if (!versions.hidden) await listVersions(name, versions);
                 }),
               ),
               button(t('scores.share'), '', () =>
                 run(async () => {
                   report(t('scores.sharing', { name }));
-                  await copyFile(mn, name, `${SHARED}/${name}`, { to: { shared: true } });
-                  report(t('scores.shared.done', { name }));
+                  // Never replace someone else's shared score of the same name.
+                  const sharedNames = new Set(await mn.files.list(SHARED, { shared: true }));
+                  const dot = name.lastIndexOf('.');
+                  const target = freeName(sharedNames, name.slice(0, dot), name.slice(dot));
+                  await copyFile(mn, name, `${SHARED}/${target}`, { to: { shared: true } });
+                  report(t('scores.shared.done', { name: target }));
                   await listShared();
                 }),
               ),
@@ -133,7 +143,7 @@ function show(mn) {
     );
   }
 
-  async function listVersions(name, list, taken) {
+  async function listVersions(name, list) {
     list.replaceChildren(el('li', { textContent: t('scores.loading') }));
     const folder = `${VERSIONS}/${name}`;
     const entries = (await mn.files.list(folder))
@@ -152,13 +162,13 @@ function show(mn) {
               el('span', { textContent: when }),
               button(t('scores.restore'), '', () =>
                 run(async () => {
+                  // A fixed, locale-free stamp: file names stay the same in every language.
                   const target = freeName(
-                    taken,
-                    `${base} (${t('scores.versionOf', { date: when })})`,
+                    new Set(await mn.files.list()),
+                    `${base} (${t('scores.versionOf', { date: fileStamp(dateOf(entry)) })})`,
                     extension,
                   );
                   await copyFile(mn, `${folder}/${entry}`, target);
-                  taken.add(target);
                   report(t('scores.restored', { name: target }));
                   await listMine();
                 }),
