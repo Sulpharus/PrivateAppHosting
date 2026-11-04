@@ -142,7 +142,9 @@ Set `version` and `commit` in `source.json` (and the toolchain versions in `tool
 what upstream's `build_wasm.yml` uses), then `node build.mjs --source`. A patch that no longer
 applies stops the build: rebase it in `.cache/src-<version>` (`git apply --3way`) and save it again
 with `git diff > patches/mininode.patch`. Qt patches are made the same way in a clone of the Qt module
-(`git diff > toolchain/qt-qtbase.patch`); they change the Qt cache key in CI, so Qt is built again once.
+(`git diff > toolchain/qt-qtbase.patch`); they change the Qt cache key in CI, so Qt is built again once, and `build-qt.sh` rebuilds an
+existing local Qt too (its `wasm_singlethread/.done` holds the patches' hash). `test/glue.test.js`
+(`pnpm test`) covers the page's glue: SoundFont addresses and names, Qt's queued events.
 
 ## State
 

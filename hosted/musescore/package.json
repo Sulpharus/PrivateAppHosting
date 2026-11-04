@@ -3,6 +3,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "bundle": "node build.mjs"
+    "bundle": "node build.mjs",
+    "test": "vitest run test"
+  },
+  "devDependencies": {
+    "vitest": "5.0.1"
   }
 }

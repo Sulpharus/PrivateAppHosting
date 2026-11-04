@@ -21,7 +21,7 @@ summary: Das Notensatzprogramm MuseScore Studio als App: Partituren in MiniNode,
 - **Drucken** erzeugt ein PDF und öffnet es im PDF-Betrachter des Browsers; dort druckst du.
 - **Zuletzt geöffnet**: Partituren aus MiniNode öffnen sich auch nach einem Neuladen wieder. Dateien vom Gerät musst du nach einem Neuladen neu öffnen.
 - **Nach einem Neuladen** fragt MuseScore, ob die „unerwartet beendete“ Sitzung wiederhergestellt werden soll. Im Browser ist das der normale Weg, das Programm zu schließen: **Ja** öffnet die Partituren wieder, die offen waren.
-- **Kopieren und Einfügen** von Noten geht wie auf dem Desktop. Hast du zwischendurch in einem anderen Programm etwas kopiert, fügt MuseScore das ein (z. B. Text).
+- **Kopieren und Einfügen** von Noten geht innerhalb des Editors wie auf dem Desktop. Wechselst du zwischen Kopieren und Einfügen in ein anderes Fenster oder einen anderen Tab, fügt MuseScore danach den Inhalt der Zwischenablage des Computers ein (z. B. Text von dort); kopiere die Noten dann noch einmal.
 - **Abspielen** startet beim ersten Mal erst nach einem Klick in die Seite (der Browser verlangt das); die Wiedergabe nutzt „MS Basic“ und die Klänge deiner Ordner.
 
 ## Einstellungen und Datensicherung

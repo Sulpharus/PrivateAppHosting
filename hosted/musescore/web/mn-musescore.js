@@ -12,6 +12,12 @@ import { createAudioDriver } from './mn-audio.js';
 // Names and sizes of this build's files, written by build.mjs.
 import build from './mn-build.js';
 import { installDataMenu } from './mn-data.js';
+import {
+  createSoundFontNames,
+  DEFAULT_SOUNDFONT,
+  keepQueuedEventTargets,
+  soundFontUri,
+} from './mn-glue.js';
 import { installPluginsPanel, installSharedPlugins } from './mn-plugins.js';
 import { unpackShare } from './mn-share.js';
 import { soundFontUrl } from './mn-soundfont.js';
@@ -367,37 +373,7 @@ function installWriteHook(Module, dataChanged) {
   });
 }
 
-// ---- Qt's event queue ----------------------------------------------------------------------------
-
-/**
- * Qt queues browser events while the editor waits (a file dialog suspends it) and handles them
- * later. By then the browser has cleared `target` of events inside Qt's shadow root, and Qt
- * reads it (pointer enter, move, wheel: "Cannot read properties of null"), which aborts what the
- * editor was doing, e.g. opening the chosen file. The target is kept on the event when queued.
- */
-function keepQueuedEventTargets(Module) {
-  const queue = Module.qtSuspendResumeControl?.pendingEvents;
-  if (!Array.isArray(queue) || queue.push !== Array.prototype.push) return;
-  queue.push = function pushKeepingTargets(...items) {
-    for (const item of items) {
-      const event = item?.arg;
-      if (event instanceof Event && event.target) {
-        Object.defineProperty(event, 'target', { value: event.target, configurable: true });
-      }
-    }
-    return Array.prototype.push.apply(this, items);
-  };
-}
-
 // ---- start ----------------------------------------------------------------------------------
-
-/**
- * A SoundFont for the editor: MuseScore's Uri keeps only scheme://path, so blob:… is passed as
- * blob://…; its web loader turns it back into blob: and drops the file name after the last "/".
- * The engine names a SoundFont after that file name ("MS Basic" is the editor's default).
- */
-const soundFontUri = (url, name) =>
-  `${url.replace(/^blob:/, 'blob://')}/${encodeURIComponent(name.replaceAll('/', '-'))}`;
 
 async function start() {
   showStep('app.step.account');
@@ -459,7 +435,7 @@ async function start() {
       await driver.setup(Module);
       soundFontUrl(build.soundFont)
         .then((url) => {
-          Module.soundFont = soundFontUri(url, 'MS Basic.sf3');
+          Module.soundFont = soundFontUri(url, DEFAULT_SOUNDFONT);
           if (driver.inited) Module.ccall('addSoundFont', '', ['string'], [Module.soundFont]);
         })
         .catch((error) => console.warn('musescore: SoundFont not loaded', error));
@@ -489,8 +465,9 @@ async function start() {
   installPluginsPanel({ mn, Module: instance });
   // The sound library: SoundFonts and sound effects from the person's and the shared folders.
   const pendingFonts = [];
+  const soundFontName = createSoundFontNames();
   const addSoundFont = (url, name) => {
-    const uri = soundFontUri(url, name);
+    const uri = soundFontUri(url, soundFontName(name));
     if (driver.inited) instance.ccall('addSoundFont', '', ['string'], [uri]);
     else pendingFonts.push(uri);
   };

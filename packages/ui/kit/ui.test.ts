@@ -101,6 +101,7 @@ describe('mnui.sheet', () => {
     mnui.sheet.open(html);
     press('Escape');
     expect(host.shadowRoot?.activeElement).toBe(input);
+    host.remove();
   });
 
   it('calls onClose when used as an event handler', () => {

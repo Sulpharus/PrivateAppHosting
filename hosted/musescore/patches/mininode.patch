@@ -1241,7 +1241,7 @@ index ec9a1a79..e97d030f 100644
      SaveLocationType lastUsed = configuration()->lastUsedSaveLocationType();
      if (!shouldAsk && lastUsed != SaveLocationType::Undefined) {
 diff --git a/src/project/internal/projectactionscontroller.cpp b/src/project/internal/projectactionscontroller.cpp
-index 4eb13888..06d53bfb 100644
+index 4eb13888..21cd68db 100644
 --- a/src/project/internal/projectactionscontroller.cpp
 +++ b/src/project/internal/projectactionscontroller.cpp
 @@ -21,6 +21,12 @@
@@ -1263,9 +1263,9 @@ index 4eb13888..06d53bfb 100644
  
 +#ifdef MUSE_WEB_DESKTOP
 +    //! A score kept in the person's MiniNode files (the recent list after a reload) is fetched by
-+    //! the page first.
-+    if (!fileSystem()->exists(actualPath)) {
-+        muse::web::fetchFile(actualPath);
++    //! the page first; one that is gone from there leaves the recent list.
++    if (!fileSystem()->exists(actualPath) && !muse::web::fetchFile(actualPath)) {
++        recentFilesController()->removeRecentFile(actualPath);
 +    }
 +#endif
 +
