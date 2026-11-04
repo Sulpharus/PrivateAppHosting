@@ -35,6 +35,10 @@ const source = JSON.parse(readFileSync(join(here, 'source.json'), 'utf8'));
 const MAX_ASSET = 25 * 1024 * 1024;
 const PART_SIZE = 24 * 1024 * 1024;
 const cache = join(here, '.cache');
+const QT_VERSION = readFileSync(join(here, 'toolchain', 'env.sh'), 'utf8').match(
+  /^QT_VERSION=(\S+)/m,
+)?.[1];
+if (!QT_VERSION) throw new Error('musescore: QT_VERSION missing in toolchain/env.sh');
 const dist = join(here, 'dist');
 
 function run(command, args, options = {}) {
@@ -51,18 +55,47 @@ const files = (dir) =>
     .sort();
 
 // Bump when the way the program zip is made changes, so caches built the old way are not reused.
-const SOURCE_BUILDER = 1;
+const SOURCE_BUILDER = 2;
 const toolchainFiles = () => files(join(here, 'toolchain'));
 const sourceKey = () => {
   const digest = createHash('sha256').update(
     `${source.version}@${source.commit}#${SOURCE_BUILDER}`,
   );
-  digest.update(JSON.stringify([source.languages, source.share, source.soundFont]));
+  digest.update(
+    JSON.stringify([source.languages, source.share, source.soundFont, source.qtTranslations]),
+  );
   for (const file of [...source.patches.map((p) => join(here, p)), ...toolchainFiles()]) {
     digest.update(`\0${relative(here, file)}\0`).update(readFileSync(file));
   }
   return digest.digest('hex').slice(0, 16);
 };
+
+/** Qt's translations (qttranslations at the Qt version of toolchain/env.sh), cloned once. */
+function qtTranslations() {
+  const dir = join(cache, `qttranslations-${QT_VERSION}`);
+  if (!existsSync(join(dir, 'translations'))) {
+    rmSync(dir, { recursive: true, force: true });
+    run('git', [
+      'clone',
+      '-q',
+      '--depth',
+      '1',
+      '--branch',
+      `v${QT_VERSION}`,
+      'https://github.com/qt/qttranslations.git',
+      dir,
+    ]);
+  }
+  // Pinned: a moved tag must not change the shipped translations unnoticed.
+  const head = spawnSync('git', ['-C', dir, 'rev-parse', 'HEAD'], {
+    encoding: 'utf8',
+  }).stdout.trim();
+  if (head !== source.qtTranslations)
+    throw new Error(
+      `musescore: qttranslations is at ${head}, source.json pins ${source.qtTranslations}`,
+    );
+  return dir;
+}
 
 /** lrelease from Qt's tools; without one, PySide6's copy from PyPI in .cache/lrelease. */
 function lrelease() {
@@ -90,7 +123,7 @@ function programZip() {
   // MUSESCORE_PREBUILT=<source dir>: package a tree that is already patched and built (local
   // work on the patch: build there with toolchain/build-musescore.sh, then package it here).
   const prebuilt = process.env.MUSESCORE_PREBUILT;
-  const tools = prebuilt ? ['python3', 'zip'] : ['git', 'cmake', 'ninja', 'python3', 'zip'];
+  const tools = prebuilt ? ['git', 'python3', 'zip'] : ['git', 'cmake', 'ninja', 'python3', 'zip'];
   for (const tool of tools) {
     if (!has(tool))
       throw new Error(`musescore: ${tool} is needed to build the program (see README)`);
@@ -177,6 +210,13 @@ function programZip() {
   for (const code of source.languages) {
     for (const resource of ['musescore', 'instruments']) {
       const ts = join(src, 'share', 'locale', `${resource}_${code}.ts`);
+      if (existsSync(ts)) run(tool, ['-silent', ts, '-qm', join(locale, `${resource}_${code}.qm`)]);
+    }
+    // Qt's own texts (standard buttons such as "Cancel", file and colour dialogs), as the
+    // desktop installers ship them; MuseScore loads every <name>_<language>.qm it finds.
+    const qt = qtTranslations();
+    for (const resource of ['qtbase', 'qtdeclarative']) {
+      const ts = join(qt, 'translations', `${resource}_${code}.ts`);
       if (existsSync(ts)) run(tool, ['-silent', ts, '-qm', join(locale, `${resource}_${code}.qm`)]);
     }
   }
@@ -301,10 +341,6 @@ for (const name of readdirSync(join(unpacked, 'sound'))) {
 for (const patch of source.patches)
   cpSync(join(here, patch), join(dist, 'licenses', basename(patch)));
 // Qt (LGPL-3.0) is built from its sources with these changes (toolchain/build-qt.sh).
-const QT_VERSION = readFileSync(join(here, 'toolchain', 'env.sh'), 'utf8').match(
-  /^QT_VERSION=(\S+)/m,
-)?.[1];
-if (!QT_VERSION) throw new Error('musescore: QT_VERSION missing in toolchain/env.sh');
 const qtPatches = readdirSync(join(here, 'toolchain'))
   .filter((name) => /^qt-.*\.patch$/.test(name))
   .sort();

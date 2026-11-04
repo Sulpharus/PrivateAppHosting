@@ -22,6 +22,7 @@ beforeAll(() => {
   HTMLAnchorElement.prototype.click = nativeAnchorClick;
   win.mininode = {
     mininode: async () => ({
+      auth: { user: async () => ({ id: 'u1' }) },
       files: {
         list: async () => stored,
         url: async (path: string) => `https://storage.test/${path}`,
@@ -195,24 +196,48 @@ describe('saving', () => {
   const downloadOf = (name: string) =>
     Object.assign(document.createElement('a'), { href: 'blob:https://app.test/3', download: name });
 
-  it('saves again without a dialog after saving to MiniNode, and asks on a quick second save', async () => {
+  it('saves again and again without a dialog after saving to MiniNode, like Ctrl+S', async () => {
     downloadOf('Plan.pdf').click();
     await until(() => buttonNamed('In MiniNode speichern'));
     buttonNamed('In MiniNode speichern')?.click();
     await until(() => upload.mock.calls.length === 1);
-    vi.useFakeTimers({ toFake: ['Date'] });
-    try {
-      vi.setSystemTime(Date.now() + 60_000);
-      downloadOf('Plan.pdf').click();
-      await until(() => upload.mock.calls.length === 2);
-      expect(sheet()).toBeNull();
-      // Ctrl+S twice: the second one is the way to the dialog without the pointer.
-      downloadOf('Plan.pdf').click();
-      await until(() => buttonNamed('In MiniNode speichern'));
-      expect(upload).toHaveBeenCalledTimes(2);
-    } finally {
-      vi.useRealTimers();
-    }
+    downloadOf('Plan.pdf').click();
+    await until(() => upload.mock.calls.length === 2);
+    downloadOf('Plan.pdf').click();
+    await until(() => upload.mock.calls.length === 3);
+    expect(sheet()).toBeNull();
+    expect(upload.mock.calls.map((call) => call[0])).toEqual(['Plan.pdf', 'Plan.pdf', 'Plan.pdf']);
+  });
+
+  it('remembers saved names per person and asks once per page before overwriting one', async () => {
+    expect(JSON.parse(localStorage.getItem('mn-files-linked:u1') ?? '[]')).toContain('Plan.pdf');
+    // A name saved in an earlier page load: maybe another document of that name, so ask once.
+    localStorage.setItem('mn-files-linked:u1', JSON.stringify(['Alt.pdf']));
+    downloadOf('Alt.pdf').click();
+    await until(() => buttonNamed('Überschreiben'));
+    expect(document.activeElement).toBe(buttonNamed('Überschreiben'));
+    buttonNamed('Überschreiben')?.click();
+    await until(() => upload.mock.calls.length === 1);
+    expect(upload.mock.calls[0]?.[0]).toBe('Alt.pdf');
+    downloadOf('Alt.pdf').click();
+    await until(() => upload.mock.calls.length === 2);
+    expect(sheet()).toBeNull();
+  });
+
+  it('offers the dialog instead of overwriting a remembered name', async () => {
+    localStorage.setItem('mn-files-linked:u1', JSON.stringify(['Brief2.pdf']));
+    downloadOf('Brief2.pdf').click();
+    await until(() => buttonNamed('Speichern unter …'));
+    buttonNamed('Speichern unter …')?.click();
+    await until(() => buttonNamed('In MiniNode speichern'));
+    expect(upload).not.toHaveBeenCalled();
+  });
+
+  it('ignores a broken list of remembered names', async () => {
+    localStorage.setItem('mn-files-linked:u1', '{"no":"list"}');
+    downloadOf('Neu.pdf').click();
+    await until(() => buttonNamed('In MiniNode speichern'));
+    expect(upload).not.toHaveBeenCalled();
   });
 
   it('asks again once a file of that name came from the device', async () => {

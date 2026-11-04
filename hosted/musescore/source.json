@@ -14,5 +14,6 @@
     "plugins",
     "extensions"
   ],
-  "soundFont": "MS Basic.sf3"
+  "soundFont": "MS Basic.sf3",
+  "qtTranslations": "198cf16a901055ddfd235d297da059de97b29257"
 }

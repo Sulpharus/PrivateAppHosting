@@ -7,9 +7,10 @@
 //   - window.showSaveFilePicker and a download link (<a download href="blob:…">.click()) open a
 //     dialog that saves to MiniNode or, as before, to the device;
 //   - a download or a save picker for a file that was opened from or saved to MiniNode in this
-//     page (the app's "Save") goes straight back to MiniNode; the toast offers "Speichern unter …" for the dialog,
-//     and saving again while it shows (e.g. Ctrl+S twice) opens the dialog too. A file of that name
-//     opened from or saved to the device ends this.
+//     page (the app's "Save") goes straight back to MiniNode, overwriting it; the toast offers
+//     "Speichern unter …" for the dialog. The names are remembered per person in this browser:
+//     after a reload the first save of one asks once "… überschreiben?" (Enter confirms). A file
+//     of that name opened from or saved to the device ends this.
 // The app needs a data mode other than "none" (mn.files) and nothing else; texts come from the
 // app's language packages (keys files.*, German fallback below). data-mn-native on a field or a
 // link keeps the browser's own behaviour. URL.createObjectURL and revokeObjectURL are wrapped to
@@ -27,6 +28,8 @@
     'files.save.device': 'Auf diesem Gerät speichern',
     'files.save.replace': '„{name}“ gibt es schon in MiniNode. Ersetzen?',
     'files.save.done': '„{name}“ in MiniNode gespeichert',
+    'files.save.overwrite': '„{name}“ in MiniNode überschreiben?',
+    'files.save.overwriteYes': 'Überschreiben',
     'files.save.as': 'Speichern unter …',
     'files.cancel': 'Abbrechen',
     'files.error': 'Das hat nicht geklappt: {message}',
@@ -90,11 +93,57 @@
       )
       .join(',');
 
-  /** Names opened from or saved to MiniNode in this page: saving them again needs no dialog. */
-  const linked = new Set();
-  /** The last save that went straight back; a second one of the same name soon after asks. */
-  let lastDirect = { name: '', at: 0 };
-  const ASK_AGAIN_MS = 8000;
+  /**
+   * Names opened from or saved to MiniNode in this page: saving them again goes straight back,
+   * as a desktop program saves a document where it came from. They are also remembered in this
+   * browser for the signed-in person (per app): after a reload the first save of such a name asks
+   * once whether to overwrite it in MiniNode, since it may be another document of the same name.
+   */
+  const LINKED_MAX = 200;
+  const pageLinked = new Set();
+  let linkedKey;
+  /** The storage key of the signed-in person ('' without one or without storage). */
+  const rememberedKey = async () => {
+    if (linkedKey === undefined) {
+      try {
+        const user = await (await mn()).auth?.user?.();
+        linkedKey = user?.id ? `mn-files-linked:${user.id}` : '';
+      } catch {
+        linkedKey = '';
+      }
+    }
+    return linkedKey;
+  };
+  const readRemembered = (key) => {
+    try {
+      const names = JSON.parse(localStorage.getItem(key) ?? '[]');
+      return Array.isArray(names) ? names.filter((name) => typeof name === 'string') : [];
+    } catch {
+      return []; // no storage (private window, blocked) or a broken entry
+    }
+  };
+  /** Adds or removes one name; read fresh each time, so tabs of the same app do not undo each other. */
+  const remember = async (name, keep) => {
+    const key = await rememberedKey();
+    if (!key) return;
+    const names = readRemembered(key).filter((other) => other !== name);
+    if (keep) names.push(name); // most recent last, so the oldest go first past the limit
+    try {
+      localStorage.setItem(key, JSON.stringify(names.slice(-LINKED_MAX)));
+    } catch {
+      // as above
+    }
+  };
+  const linked = {
+    add: (name) => {
+      pageLinked.add(name);
+      remember(name, true);
+    },
+    delete: (name) => {
+      pageLinked.delete(name);
+      remember(name, false);
+    },
+  };
 
   const abort = () => new DOMException('The user aborted a request.', 'AbortError');
 
@@ -260,15 +309,32 @@
       }
     });
 
-  /** Whether saving `name` goes straight back to MiniNode (and counts this save if so). */
-  const direct = (name) => {
-    const again = lastDirect.name === name && Date.now() - lastDirect.at < ASK_AGAIN_MS;
-    if (!linked.has(name) || again) {
-      lastDirect = { name: '', at: 0 };
-      return false;
+  /** Asks once per page before a remembered name overwrites MiniNode: 'overwrite', 'saveAs' or null. */
+  const confirmOverwrite = (name) =>
+    sheet(t('files.save.title'), (body, foot, done) => {
+      body.append(el('p', { textContent: t('files.save.overwrite', { name }) }));
+      const overwrite = button(t('files.save.overwriteYes'), 'mn-btn--primary', () =>
+        done('overwrite'),
+      );
+      foot.append(
+        button(t('files.cancel'), 'mn-btn--ghost', () => done(null)),
+        button(t('files.save.as'), '', () => done('saveAs')),
+        overwrite,
+      );
+      queueMicrotask(() => overwrite.focus());
+    });
+
+  /** How saving `name` goes: straight back ('direct'), through the dialog ('dialog') or not at all. */
+  const saveRoute = async (name) => {
+    if (pageLinked.has(name)) return 'direct';
+    const key = await rememberedKey();
+    if (!key || !readRemembered(key).includes(name)) return 'dialog';
+    const answer = await confirmOverwrite(name);
+    if (answer === 'overwrite') {
+      pageLinked.add(name);
+      return 'direct';
     }
-    lastDirect = { name, at: Date.now() };
-    return true;
+    return answer === 'saveAs' ? 'dialog' : 'cancel';
   };
 
   /** Stores `blob` (a promise) under `name` without the dialog; the toast offers it. */
@@ -354,8 +420,9 @@
   const nativeSavePicker = window.showSaveFilePicker?.bind(window);
   window.showSaveFilePicker = async (options = {}) => {
     const types = Object.keys(options.types?.[0]?.accept ?? {});
-    if (options.suggestedName && direct(options.suggestedName))
-      return storedHandle(options.suggestedName, types[0] ?? '', true);
+    const route = options.suggestedName ? await saveRoute(options.suggestedName) : 'dialog';
+    if (route === 'cancel') throw abort();
+    if (route === 'direct') return storedHandle(options.suggestedName, types[0] ?? '', true);
     const choice = await chooseTarget(options.suggestedName);
     if (!choice) throw abort();
     if (choice.to === 'mininode') return storedHandle(choice.name, types[0] ?? '');
@@ -414,7 +481,9 @@
     // Read the file now: the app may revoke its address while the dialog is open.
     const name = this.download || 'download';
     const blob = blobOf(this.href);
-    if (direct(name)) saveDirect(name, blob);
-    else askFor(name, blob);
+    saveRoute(name).then((route) => {
+      if (route === 'direct') saveDirect(name, blob);
+      else if (route === 'dialog') askFor(name, blob);
+    });
   };
 })();

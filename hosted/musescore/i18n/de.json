@@ -80,6 +80,8 @@
   "files.save.device": "Auf diesem Gerät speichern",
   "files.save.replace": "„{name}“ gibt es schon in MiniNode. Ersetzen?",
   "files.save.done": "„{name}“ in MiniNode gespeichert",
+  "files.save.overwrite": "„{name}“ in MiniNode überschreiben?",
+  "files.save.overwriteYes": "Überschreiben",
   "files.save.as": "Speichern unter …",
   "files.cancel": "Abbrechen",
   "files.error": "Das hat nicht geklappt: {message}",
