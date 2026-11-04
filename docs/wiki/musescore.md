@@ -11,18 +11,26 @@ summary: Das Notensatzprogramm MuseScore Studio als App: Partituren in MiniNode,
 
 - **Chrome oder Edge ab Version 137** auf einem Computer (Windows, macOS, Linux). Firefox und Safari können es noch nicht (es braucht die Browser-Funktion JSPI für Dialoge). Handys und Tablets sind kein Ziel.
 - Am besten als **installierte App** (im Browser: „App installieren“), dann bekommt das Programm ein eigenes Fenster und alle Tastenkürzel.
-- Der erste Start lädt rund 25 MB (das Programm) und im Hintergrund den Klang „MS Basic“; danach kommt beides aus dem Browser-Speicher.
+- Der erste Start lädt rund 24 MB (das Programm) und im Hintergrund den Klang „MS Basic“; danach kommt beides aus dem Browser-Speicher.
 
 ## Partituren öffnen und speichern
 
 - **Öffnen** und **Speichern unter** zeigen den Dateidialog von MiniNode: deine Dateien in MiniNode (privat, nur für dich) oder eine Datei auf dem Gerät.
 - **Speichern** schreibt dorthin zurück, woher die Partitur kam, wie auf dem Desktop.
 - **Exportieren** (PDF, PNG, SVG, MusicXML, MIDI, MEI, Braille, Audio als WAV, MP3, OGG, FLAC oder AAC …) geht genauso; Stimmen eines Exports landen nebeneinander. Audio rechnet der Browser selbst aus, das dauert bei langen Partituren etwas; „Abbrechen“ wirkt erst, wenn die Datei fertig gerechnet ist. Sehr lange Partituren als WAV können am Speicher des Browsers scheitern: dann MP3, OGG oder FLAC wählen.
-- **Drucken** erzeugt ein PDF und öffnet es im PDF-Betrachter des Browsers; dort druckst du.
-- **Zuletzt geöffnet**: Partituren aus MiniNode öffnen sich auch nach einem Neuladen wieder. Dateien vom Gerät musst du nach einem Neuladen neu öffnen.
+- **Drucken** erzeugt ein PDF, öffnet es in einem neuen Tab und ruft dort gleich das Druckfenster des Browsers auf. Blockiert der Browser das, druckst du aus dem PDF-Betrachter im neuen Tab.
+- **Zuletzt geöffnet**: Partituren aus MiniNode öffnen sich auch nach einem Neuladen wieder und zeigen ihr Vorschaubild. Dateien vom Gerät musst du nach einem Neuladen neu öffnen.
 - **Tab schließen oder neu laden** gilt als normales Beenden. Wie MuseScore danach startet (leer, mit der letzten Sitzung …), stellst du unter Bearbeiten → Einstellungen → Allgemein → Programmstart ein. Nur wenn eine Partitur ungesicherte Änderungen hatte (auch eine neue, noch nie gespeicherte), fragt MuseScore, ob es sie wiederherstellen soll.
+- **Automatisch sichern**: Hat eine Partitur aus MiniNode ungesicherte Änderungen, sichert MuseScore sie jede Minute in deinen MiniNode-Dateien (versteckter Ordner `.autosave`). Schließt sich der Tab, stürzt er ab oder geht das Gerät aus, fragt MuseScore beim nächsten Start, ob es die Sitzung wiederherstellen soll; „Ja“ öffnet die Partitur mit den Änderungen. Sobald du speicherst, verschwindet die Sicherung. Dateien vom Gerät werden nicht automatisch gesichert. Das Intervall stellst du unter Einstellungen → Speichern & veröffentlichen ein.
 - **Kopieren und Einfügen** von Noten geht innerhalb des Editors wie auf dem Desktop. Wechselst du zwischen Kopieren und Einfügen in ein anderes Fenster oder einen anderen Tab, fügt MuseScore danach den Inhalt der Zwischenablage des Computers ein (z. B. Text von dort); kopiere die Noten dann noch einmal.
 - **Abspielen** startet beim ersten Mal erst nach einem Klick in die Seite (der Browser verlangt das); die Wiedergabe nutzt „MS Basic“ und die Klänge deiner Ordner.
+
+## Partituren: Versionen und Teilen
+
+**Partituren** in der MiniNode-Leiste listet deine Partituren in MiniNode.
+
+- **Versionen**: Jedes Speichern nach MiniNode behält eine Kopie (die letzten 20 je Partitur, im versteckten Ordner `.versions`). „Wiederherstellen“ legt eine ältere Version als eigene Datei neben die Partitur, z. B. „Lied (Stand 2026-11-04 10-12).mscz“; das Original bleibt unverändert.
+- **Teilen** kopiert eine Partitur unter „Geteilt (für alle)“. Dort kann jede Person, die MuseScore nutzt, sie mit **In meine Dateien** zu sich kopieren. Jede Person mit Zugriff auf die App kann geteilte Partituren auch wieder entfernen.
 
 ## Einstellungen und Datensicherung
 
@@ -48,10 +56,20 @@ MuseScore-Plugins sind kleine Programme (`.qml`), die im Editor laufen. Hier lie
 - **SoundFonts** (`.sf2`, `.sf3`) erscheinen im Mischpult als Instrumentenklang. Große Dateien werden in Teilen gespeichert und im Browser wieder zusammengesetzt.
 - **Geräusche** (WAV, MP3, OGG, FLAC …): Aus den Dateien eines Ordners baut der Browser einen SoundFont mit dem Namen des Ordners, ein Klang je Taste ab C4. Das Fenster zeigt, welcher Klang auf welcher Taste liegt.
 - Welche Ordner geladen werden, stellt jede Person für sich ein. Einschalten wirkt sofort, Ausschalten oder Löschen beim nächsten Start.
+- **Freie Klangbibliothek**: Oben im Fenster fügt **„GeneralUser GS“ für alle hinzufügen** einen vollständigen General-MIDI-SoundFont (rund 32 MB, frei weitergebbar) als geteilten Ordner hinzu. Er kommt mit der App, es wird nichts aus dem Internet geladen.
+
+## MIDI-Keyboard
+
+1. Keyboard per USB anschließen.
+2. **MIDI-Keyboard** in der MiniNode-Leiste anklicken; der Browser fragt einmal, ob MuseScore MIDI-Geräte nutzen darf. Danach verbindet sich MuseScore bei jedem Start selbst, und der Knopf verschwindet.
+3. In der Partitur eine Note oder einen Takt anklicken, mit **N** die Noteneingabe starten und spielen: Jede gedrückte Taste wird eine Note in der gewählten Länge.
+
+- Sind mehrere Geräte angeschlossen, wählst du eines unter Einstellungen → Audio & MIDI → MIDI-Eingabe. „Kein Gerät“ dort schaltet MIDI ab.
+- MIDI-Ausgabe an externe Geräte gibt es im Browser nicht.
 
 ## Was im Browser nicht geht
 
-- **MIDI-Keyboards** (noch nicht), VST-Instrumente und -Effekte, Muse Sounds und andere Inhalte aus Muse Hub, Video-Export, mehrere Fenster (eine zweite Partitur ersetzt die erste).
+- VST-Instrumente und -Effekte, Muse Sounds und andere Inhalte aus Muse Hub, Video-Export, mehrere Fenster (eine zweite Partitur ersetzt die erste).
 - Konto, Cloud und Veröffentlichen bei MuseScore.com sind entfernt.
 - Oberfläche auf Deutsch und Englisch (folgt der Sprache von MiniNode).
 

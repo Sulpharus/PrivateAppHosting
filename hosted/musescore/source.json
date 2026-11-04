@@ -15,5 +15,14 @@
     "extensions"
   ],
   "soundFont": "MS Basic.sf3",
-  "qtTranslations": "198cf16a901055ddfd235d297da059de97b29257"
+  "qtTranslations": "198cf16a901055ddfd235d297da059de97b29257",
+  "soundLibrary": [
+    {
+      "name": "GeneralUser GS",
+      "repository": "https://github.com/mrbumpy409/GeneralUser-GS.git",
+      "commit": "684543d5e5efaef08d02be50dcda8d552478fa60",
+      "file": "GeneralUser-GS.sf2",
+      "licence": "documentation/LICENSE.txt"
+    }
+  ]
 }

@@ -11,14 +11,16 @@
 import { createAudioDriver } from './mn-audio.js';
 // Names and sizes of this build's files, written by build.mjs.
 import build from './mn-build.js';
-import { installDataMenu } from './mn-data.js';
+import { installDataMenu, readZip } from './mn-data.js';
 import {
   createSoundFontNames,
   DEFAULT_SOUNDFONT,
   keepQueuedEventTargets,
   soundFontUri,
 } from './mn-glue.js';
+import { installMidi } from './mn-midi.js';
 import { installPluginsPanel, installSharedPlugins } from './mn-plugins.js';
+import { installScoresPanel, keepVersion } from './mn-scores.js';
 import { unpackShare } from './mn-share.js';
 import { soundFontUrl } from './mn-soundfont.js';
 import { installSoundsPanel, loadSoundLibrary } from './mn-sounds.js';
@@ -29,6 +31,8 @@ const DATA_DIR = '/files/data';
 const SHARE_DIR = '/files/share';
 const SAVE_DIR = '/mn-save';
 const MININODE_DIR = '/mininode';
+/** Autosaves of scores in MiniNode, kept in the account so they survive the tab (hidden folder). */
+const AUTOSAVE_FOLDER = '.autosave';
 
 const t = (key, params = {}) => {
   const text = window.mnI18n?.t(key, params);
@@ -171,7 +175,10 @@ async function openFiles(Module, options) {
   const paths = [];
   for (const { handle, file } of chosen) {
     let folder;
-    if (handle && isMiniNodeHandle(handle)) folder = MININODE_DIR;
+    if (handle && isMiniNodeHandle(handle)) {
+      folder = MININODE_DIR;
+      keepThumbnail(Module, file.name, file);
+    }
     // A device file is saved back into it; without a handle "Save" becomes a download.
     else folder = deviceFolder(Module, { handle, name: file.name });
     Module.FS.mkdirTree(folder);
@@ -217,6 +224,19 @@ async function fetchFromMiniNode(Module, path) {
   return [path];
 }
 
+/** Puts the account's autosaves next to the scores in MiniNode (<score>.autosave). */
+async function restoreAutosaves(mn, Module) {
+  const names = (await mn.files.list(AUTOSAVE_FOLDER)).filter((name) => name.endsWith('.autosave'));
+  if (!names.length) return;
+  Module.FS.mkdirTree(MININODE_DIR);
+  for (const name of names) {
+    const response = await fetch(await mn.files.url(`${AUTOSAVE_FOLDER}/${name}`));
+    if (response.ok) {
+      writeOwnFile(Module, `${MININODE_DIR}/${name}`, new Uint8Array(await response.arrayBuffer()));
+    }
+  }
+}
+
 /** Called by the editor for every file dialog; answers with paths (none when cancelled). */
 function installFileDialogs(Module) {
   Module.mnFileDialog = (options, done) => {
@@ -260,11 +280,28 @@ function installFileDialogs(Module) {
       reload();
     }
   };
-  // File → Print: the editor hands over the score as PDF; the browser's PDF viewer prints it.
+  // File → Print: the editor hands over the score as PDF; a new tab shows it and opens the print dialog.
   Module.mnPrintPdf = (bytes) => {
     const url = URL.createObjectURL(new Blob([bytes.slice()], { type: 'application/pdf' }));
     const opened = window.open(url, '_blank');
     if (!opened) window.mnui?.toast(t('print.blocked'));
+    else {
+      // The tab is this page's own blob: document: open the print dialog right away. If the
+      // browser does not allow it, the PDF stays open in its viewer for printing by hand.
+      const print = () => {
+        try {
+          opened.focus();
+          opened.print();
+        } catch {
+          // as above
+        }
+      };
+      try {
+        opened.addEventListener('load', () => setTimeout(print, 500), { once: true });
+      } catch {
+        // as above
+      }
+    }
     setTimeout(() => URL.revokeObjectURL(url), 10 * 60_000);
   };
 }
@@ -296,6 +333,39 @@ const download = (blob, name) => {
   setTimeout(() => URL.revokeObjectURL(link.href), 60_000);
 };
 
+/**
+ * Keeps the thumbnail of a score in MiniNode in the user data (<data>/thumbnails/<name>.png), so
+ * "Zuletzt geöffnet" shows it after a reload and in other browsers before the score is fetched.
+ */
+function keepThumbnail(Module, name, blob) {
+  if (!/\.mscz$/i.test(name)) return;
+  readZip(blob)
+    .then((files) => {
+      const thumbnail = files.find(([entry]) => entry === 'Thumbnails/thumbnail.png')?.[1];
+      if (!thumbnail) return;
+      Module.FS.mkdirTree(`${DATA_DIR}/thumbnails`);
+      Module.FS.writeFile(`${DATA_DIR}/thumbnails/${name}.png`, thumbnail);
+      persistData(Module);
+    })
+    .catch((error) => console.warn('musescore: no thumbnail kept', error));
+}
+
+/**
+ * Account writes of one score (the score, its autosave) run one after another, so a slow autosave
+ * upload cannot land after the save that replaced it.
+ */
+const accountQueues = new Map();
+function inOrder(score, work) {
+  const previous = accountQueues.get(score) ?? Promise.resolve();
+  const next = previous.catch(() => {}).then(work);
+  accountQueues.set(score, next);
+  next.finally(() => {
+    if (accountQueues.get(score) === next) accountQueues.delete(score);
+  });
+  return next;
+}
+const autosaveOf = (score) => `${AUTOSAVE_FOLDER}/${score}.autosave`;
+
 /** Hands a file the editor finished to the place chosen for its folder. */
 async function deliver(Module, path) {
   const name = baseName(path);
@@ -303,6 +373,10 @@ async function deliver(Module, path) {
   // MuseScore writes "<name>_saving" first and keeps backups in a hidden ".mscbackup" folder;
   // only the real file leaves the editor.
   if (!name || name.startsWith('.') || name.endsWith('_saving')) return;
+  // Autosaves (<score>.autosave) are no files of their own: one of a score in MiniNode goes to the
+  // account's hidden autosave folder, one of a file on the device stays in the editor.
+  const autosave = name.endsWith('.autosave');
+  if (autosave && folder !== MININODE_DIR) return;
   let data;
   try {
     data = Module.FS.readFile(path);
@@ -310,10 +384,26 @@ async function deliver(Module, path) {
     return; // removed again
   }
   const blob = new Blob([data], { type: 'application/octet-stream' });
+  if (folder === MININODE_DIR && autosave) {
+    const mn = await window.mininode.mininode();
+    const score = name.slice(0, -'.autosave'.length);
+    await inOrder(score, async () => {
+      // Saved or discarded meanwhile: this autosave is out of date.
+      if (!Module.FS.analyzePath(path).exists) return;
+      await mn.files.upload(autosaveOf(score), blob);
+    });
+    return;
+  }
   if (folder === MININODE_DIR) {
     const mn = await window.mininode.mininode();
-    await mn.files.upload(name, blob);
+    await inOrder(name, async () => {
+      await mn.files.upload(name, blob);
+      // An autosave in the account would open instead of this save (from any device).
+      await mn.files.remove(autosaveOf(name)).catch(() => {});
+    });
     window.mnui?.toast(t('files.save.done', { name }));
+    keepThumbnail(Module, name, blob);
+    keepVersion(mn, name, blob).catch((error) => console.warn('musescore: no version kept', error));
     return;
   }
   const target = saveTargets.get(folder);
@@ -361,6 +451,32 @@ function installWriteHook(Module, dataChanged) {
     return result;
   };
   // Qt saves atomically: it writes "<name>.XXXXXX" and renames it to "<name>" when done.
+  // An autosave the editor removes (the score was saved, or the changes discarded) leaves the
+  // account too.
+  const unlink = FS.unlink;
+  FS.unlink = function unlinkAndForget(path) {
+    const result = unlink.call(this, path);
+    const target = String(path);
+    if (target.startsWith(`${MININODE_DIR}/`) && target.endsWith('.autosave')) {
+      // The editor also removes the old autosave right before writing a new one: wait a moment and
+      // keep the account copy when the file is back.
+      setTimeout(() => {
+        if (FS.analyzePath(target).exists) return;
+        const score = baseName(target).slice(0, -'.autosave'.length);
+        window.mininode
+          .mininode()
+          .then((mn) =>
+            inOrder(score, () =>
+              FS.analyzePath(target).exists ? null : mn.files.remove(autosaveOf(score)),
+            ),
+          )
+          .catch((error) =>
+            console.warn('musescore: autosave not removed from the account', error),
+          );
+      }, 1500);
+    }
+    return result;
+  };
   const rename = FS.rename;
   FS.rename = function renameAndDeliver(oldPath, newPath) {
     const result = rename.call(this, oldPath, newPath);
@@ -420,6 +536,15 @@ async function start() {
           })
           .catch(fail)
           .finally(() => instance.removeRunDependency('mn-share'));
+        // Autosaves of scores in MiniNode come back before the editor looks for them, so it offers
+        // to recover unsaved changes after a closed tab or on another device.
+        instance.addRunDependency('mn-autosave');
+        Promise.race([
+          restoreAutosaves(mn, instance),
+          new Promise((resolve) => setTimeout(resolve, 8000)),
+        ])
+          .catch((error) => console.warn('musescore: autosaves not restored', error))
+          .finally(() => instance.removeRunDependency('mn-autosave'));
         // Plugins shared by everyone; without the network the editor starts without them.
         instance.addRunDependency('mn-plugins');
         Promise.race([
@@ -449,6 +574,7 @@ async function start() {
     Module.main_worker_rpcListen(event.data);
   Module.driver_worker_rpcChannel = new MessageChannel();
   installFileDialogs(Module);
+  installMidi(Module);
   addEventListener(
     'pointerdown',
     () => {
@@ -479,6 +605,7 @@ async function start() {
   loadSoundLibrary(mn, addSoundFont).catch((error) =>
     console.warn('musescore: sound library not loaded', error),
   );
+  installScoresPanel({ mn });
   installDataMenu({
     mn,
     Module: instance,
