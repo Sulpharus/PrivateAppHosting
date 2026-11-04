@@ -22,6 +22,7 @@ beforeAll(() => {
   HTMLAnchorElement.prototype.click = nativeAnchorClick;
   win.mininode = {
     mininode: async () => ({
+      auth: { user: async () => ({ id: 'u1' }) },
       files: {
         list: async () => stored,
         url: async (path: string) => `https://storage.test/${path}`,
@@ -208,9 +209,35 @@ describe('saving', () => {
     expect(upload.mock.calls.map((call) => call[0])).toEqual(['Plan.pdf', 'Plan.pdf', 'Plan.pdf']);
   });
 
-  it('remembers saved names across a reload of the app', () => {
-    // The previous tests saved Plan.pdf to MiniNode; the next page load reads this list.
-    expect(JSON.parse(localStorage.getItem('mn-files-linked') ?? '[]')).toContain('Plan.pdf');
+  it('remembers saved names per person and asks once per page before overwriting one', async () => {
+    expect(JSON.parse(localStorage.getItem('mn-files-linked:u1') ?? '[]')).toContain('Plan.pdf');
+    // A name saved in an earlier page load: maybe another document of that name, so ask once.
+    localStorage.setItem('mn-files-linked:u1', JSON.stringify(['Alt.pdf']));
+    downloadOf('Alt.pdf').click();
+    await until(() => buttonNamed('Überschreiben'));
+    expect(document.activeElement).toBe(buttonNamed('Überschreiben'));
+    buttonNamed('Überschreiben')?.click();
+    await until(() => upload.mock.calls.length === 1);
+    expect(upload.mock.calls[0]?.[0]).toBe('Alt.pdf');
+    downloadOf('Alt.pdf').click();
+    await until(() => upload.mock.calls.length === 2);
+    expect(sheet()).toBeNull();
+  });
+
+  it('offers the dialog instead of overwriting a remembered name', async () => {
+    localStorage.setItem('mn-files-linked:u1', JSON.stringify(['Brief2.pdf']));
+    downloadOf('Brief2.pdf').click();
+    await until(() => buttonNamed('Speichern unter …'));
+    buttonNamed('Speichern unter …')?.click();
+    await until(() => buttonNamed('In MiniNode speichern'));
+    expect(upload).not.toHaveBeenCalled();
+  });
+
+  it('ignores a broken list of remembered names', async () => {
+    localStorage.setItem('mn-files-linked:u1', '{"no":"list"}');
+    downloadOf('Neu.pdf').click();
+    await until(() => buttonNamed('In MiniNode speichern'));
+    expect(upload).not.toHaveBeenCalled();
   });
 
   it('asks again once a file of that name came from the device', async () => {

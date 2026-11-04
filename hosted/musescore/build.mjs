@@ -61,7 +61,9 @@ const sourceKey = () => {
   const digest = createHash('sha256').update(
     `${source.version}@${source.commit}#${SOURCE_BUILDER}`,
   );
-  digest.update(JSON.stringify([source.languages, source.share, source.soundFont]));
+  digest.update(
+    JSON.stringify([source.languages, source.share, source.soundFont, source.qtTranslations]),
+  );
   for (const file of [...source.patches.map((p) => join(here, p)), ...toolchainFiles()]) {
     digest.update(`\0${relative(here, file)}\0`).update(readFileSync(file));
   }
@@ -84,6 +86,14 @@ function qtTranslations() {
       dir,
     ]);
   }
+  // Pinned: a moved tag must not change the shipped translations unnoticed.
+  const head = spawnSync('git', ['-C', dir, 'rev-parse', 'HEAD'], {
+    encoding: 'utf8',
+  }).stdout.trim();
+  if (head !== source.qtTranslations)
+    throw new Error(
+      `musescore: qttranslations is at ${head}, source.json pins ${source.qtTranslations}`,
+    );
   return dir;
 }
 

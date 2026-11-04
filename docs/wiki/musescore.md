@@ -17,10 +17,10 @@ summary: Das Notensatzprogramm MuseScore Studio als App: Partituren in MiniNode,
 
 - **Öffnen** und **Speichern unter** zeigen den Dateidialog von MiniNode: deine Dateien in MiniNode (privat, nur für dich) oder eine Datei auf dem Gerät.
 - **Speichern** schreibt dorthin zurück, woher die Partitur kam, wie auf dem Desktop.
-- **Exportieren** (PDF, PNG, SVG, MusicXML, MIDI, MEI, Braille, Audio als WAV, MP3, OGG, FLAC oder AAC …) geht genauso; Stimmen eines Exports landen nebeneinander. Audio rechnet der Browser selbst aus, das dauert bei langen Partituren etwas.
+- **Exportieren** (PDF, PNG, SVG, MusicXML, MIDI, MEI, Braille, Audio als WAV, MP3, OGG, FLAC oder AAC …) geht genauso; Stimmen eines Exports landen nebeneinander. Audio rechnet der Browser selbst aus, das dauert bei langen Partituren etwas; „Abbrechen“ wirkt erst, wenn die Datei fertig gerechnet ist. Sehr lange Partituren als WAV können am Speicher des Browsers scheitern: dann MP3, OGG oder FLAC wählen.
 - **Drucken** erzeugt ein PDF und öffnet es im PDF-Betrachter des Browsers; dort druckst du.
 - **Zuletzt geöffnet**: Partituren aus MiniNode öffnen sich auch nach einem Neuladen wieder. Dateien vom Gerät musst du nach einem Neuladen neu öffnen.
-- **Tab schließen oder neu laden** gilt als normales Beenden. Wie MuseScore danach startet (leer, mit der letzten Sitzung …), stellst du unter Bearbeiten → Einstellungen → Allgemein → Programmstart ein. Nur wenn eine Partitur ungesicherte Änderungen hatte, fragt MuseScore, ob es sie wiederherstellen soll.
+- **Tab schließen oder neu laden** gilt als normales Beenden. Wie MuseScore danach startet (leer, mit der letzten Sitzung …), stellst du unter Bearbeiten → Einstellungen → Allgemein → Programmstart ein. Nur wenn eine Partitur ungesicherte Änderungen hatte (auch eine neue, noch nie gespeicherte), fragt MuseScore, ob es sie wiederherstellen soll.
 - **Kopieren und Einfügen** von Noten geht innerhalb des Editors wie auf dem Desktop. Wechselst du zwischen Kopieren und Einfügen in ein anderes Fenster oder einen anderen Tab, fügt MuseScore danach den Inhalt der Zwischenablage des Computers ein (z. B. Text von dort); kopiere die Noten dann noch einmal.
 - **Abspielen** startet beim ersten Mal erst nach einem Klick in die Seite (der Browser verlangt das); die Wiedergabe nutzt „MS Basic“ und die Klänge deiner Ordner.
 

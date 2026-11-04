@@ -173,7 +173,7 @@ index 2ac78a89..6f35c38e 100644
      // ====================================================
      // Run main loop
 diff --git a/src/appshell/internal/startupscenario.cpp b/src/appshell/internal/startupscenario.cpp
-index fad6a767..ed3378d1 100644
+index fad6a767..51cd2384 100644
 --- a/src/appshell/internal/startupscenario.cpp
 +++ b/src/appshell/internal/startupscenario.cpp
 @@ -24,6 +24,8 @@
@@ -185,7 +185,7 @@ index fad6a767..ed3378d1 100644
  #include "async/async.h"
  #include "translation.h"
  
-@@ -152,7 +154,22 @@ void StartupScenario::runAfterSplashScreen()
+@@ -152,7 +154,25 @@ void StartupScenario::runAfterSplashScreen()
  
      StartupModeType modeType = resolveStartupModeType();
      if (multiwindowsProvider()->windowCount() == 1 && sessionsManager()->hasProjectsForRestore()) {
@@ -194,8 +194,11 @@ index fad6a767..ed3378d1 100644
 +        //! normally unless a score has unsaved changes to recover: ask only then, otherwise follow
 +        //! the startup setting as after a normal quit.
 +        const io::paths_t paths = configuration()->sessionProjectsPaths();
-+        const bool unsaved = std::any_of(paths.cbegin(), paths.cend(), [this](const io::path_t& path) {
-+            return projectAutoSaver()->projectHasUnsavedChanges(path);
++        //! A new score that was never saved autosaves to the temporary path itself.
++        const io::path_t newProjectPath = projectConfiguration()->newProjectTemporaryPath();
++        const bool unsaved = std::any_of(paths.cbegin(), paths.cend(), [this, &newProjectPath](const io::path_t& path) {
++            return path == newProjectPath ? static_cast<bool>(fileSystem()->exists(path))
++                                          : projectAutoSaver()->projectHasUnsavedChanges(path);
 +        });
 +        if (unsaved) {
 +            modeType = StartupModeType::Recovery;
@@ -208,7 +211,7 @@ index fad6a767..ed3378d1 100644
      }
  
      muse::async::Channel<Uri> opened = interactive()->opened();
-@@ -297,6 +314,10 @@ void StartupScenario::showStartupDialogsIfNeed(StartupModeType modeType)
+@@ -297,6 +317,10 @@ void StartupScenario::showStartupDialogsIfNeed(StartupModeType modeType)
  
  bool StartupScenario::shouldShowWelcomeDialog(StartupModeType modeType) const
  {
@@ -219,6 +222,28 @@ index fad6a767..ed3378d1 100644
      if (!configuration()->welcomeDialogShowOnStartup()) {
          return false;
      }
+diff --git a/src/appshell/internal/startupscenario.h b/src/appshell/internal/startupscenario.h
+index 2f6a0958..206b2bb7 100644
+--- a/src/appshell/internal/startupscenario.h
++++ b/src/appshell/internal/startupscenario.h
+@@ -33,6 +33,8 @@
+ #include "iappshellconfiguration.h"
+ #include "isessionsmanager.h"
+ #include "project/iprojectautosaver.h"
++#include "project/iprojectconfiguration.h"
++#include "io/ifilesystem.h"
+ #include "audioplugins/iregisteraudiopluginsscenario.h"
+ 
+ #include "update/iappupdatescenario.h"
+@@ -48,6 +50,8 @@ class StartupScenario : public IStartupScenario, public muse::Contextable, publi
+     muse::ContextInject<muse::actions::IActionsDispatcher> dispatcher = { this };
+     muse::ContextInject<ISessionsManager> sessionsManager = { this };
+     muse::ContextInject<project::IProjectAutoSaver> projectAutoSaver = { this };
++    muse::GlobalInject<project::IProjectConfiguration> projectConfiguration;
++    muse::GlobalInject<muse::io::IFileSystem> fileSystem;
+     muse::ContextInject<muse::audioplugins::IRegisterAudioPluginsScenario> registerAudioPluginsScenario = { this };
+     muse::ContextInject<muse::update::IAppUpdateScenario> appUpdateScenario = { this };
+     muse::ContextInject<mu::musesounds::IMuseSoundsCheckUpdateScenario> museSoundsUpdateScenario = { this };
 diff --git a/src/appshell/qml/MuseScore/AppShell/CMakeLists.txt b/src/appshell/qml/MuseScore/AppShell/CMakeLists.txt
 index 84f19f06..2f6dad64 100644
 --- a/src/appshell/qml/MuseScore/AppShell/CMakeLists.txt
@@ -603,37 +628,58 @@ index e05cfa22..f2874a9a 100644
  private:
  
 diff --git a/src/framework/audio/engine/internal/enginerpccontroller.cpp b/src/framework/audio/engine/internal/enginerpccontroller.cpp
-index cb795cde..d859c66e 100644
+index cb795cde..0b4209ba 100644
 --- a/src/framework/audio/engine/internal/enginerpccontroller.cpp
 +++ b/src/framework/audio/engine/internal/enginerpccontroller.cpp
-@@ -30,6 +30,10 @@
+@@ -26,6 +26,11 @@
  
- #ifdef CHECK_METHODS_DURATION
- #include <chrono>
+ #include "log.h"
+ 
 +#ifdef Q_OS_WASM
 +#include <filesystem>
 +#include <fstream>
 +#endif
- #define BEGIN_METHOD_DURATION \
-     auto _start_clock = std::chrono::high_resolution_clock::now();
- #define END_METHOD_DURATION(method) \
-@@ -592,9 +596,26 @@ void EngineRpcController::init()
++
+ //#define CHECK_METHODS_DURATION
+ 
+ #ifdef CHECK_METHODS_DURATION
+@@ -592,9 +597,46 @@ void EngineRpcController::init()
          IF_ASSERT_FAILED(RpcPacker::unpack(msg.data, seqId, destination, format)) {
              return;
          }
 +#ifdef Q_OS_WASM
 +        //! MiniNode: the engine runs in an AudioWorklet with its own file system. The track is
 +        //! written there and its bytes go back with the answer; the editor writes the file.
-+        std::filesystem::create_directories(std::filesystem::path(destination.toStdString()).parent_path());
-+        playback()->saveSoundTrack(seqId, destination, format).onResolve(this, [this, msg, destination](const Ret& ret) {
++        //! No exceptions here (they would stop the worklet): error codes and an error answer.
++        std::error_code error;
++        const std::filesystem::path target(destination.toStdString());
++        if (target.has_parent_path()) {
++            std::filesystem::create_directories(target.parent_path(), error);
++        }
++        if (error) {
++            channel()->send(rpc::make_response(msg, RpcPacker::pack(make_ret(Ret::Code::InternalError,
++                                                                              std::string("no folder for the sound track")), ByteArray())));
++            return;
++        }
++        playback()->saveSoundTrack(seqId, destination, format).onResolve(this, [this, msg, target](const Ret& rendered) {
++            Ret ret = rendered;
 +            ByteArray data;
-+            const std::string path = destination.toStdString();
 +            if (ret) {
-+                std::ifstream file(path, std::ios::binary);
-+                const std::string bytes((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-+                data = ByteArray(bytes.data(), bytes.size());
++                // Read straight into the answer's buffer and free the worklet's copy before packing.
++                std::ifstream file(target, std::ios::binary | std::ios::ate);
++                const std::streamsize size = file.is_open() ? static_cast<std::streamsize>(file.tellg()) : -1;
++                if (size >= 0) {
++                    data = ByteArray(static_cast<size_t>(size));
++                    file.seekg(0);
++                    file.read(reinterpret_cast<char*>(data.data()), size);
++                }
++                if (size < 0 || file.bad()) {
++                    ret = make_ret(Ret::Code::InternalError, std::string("the sound track could not be read"));
++                    data = ByteArray();
++                }
 +            }
-+            std::filesystem::remove(path);
++            std::error_code removeError;
++            std::filesystem::remove(target, removeError);
 +            channel()->send(rpc::make_response(msg, RpcPacker::pack(ret, data)));
 +        });
 +#else

@@ -269,6 +269,10 @@ export function createMininode(config: MininodeConfig): Mininode {
         // Cached pages and the offline user of this app belong to the user who signs out.
         navigator.serviceWorker?.controller?.postMessage({ type: 'mininode:clear' });
         localStorage.removeItem(userKey);
+        // File names the kit remembers for "Save" (files.js) belong to them too.
+        for (const key of Object.keys(localStorage)) {
+          if (key.startsWith('mn-files-linked:')) localStorage.removeItem(key);
+        }
         // The portal signs out the shared session and switches this device's push off.
         location.assign(new URL('/logout', config.portalUrl).toString());
       },

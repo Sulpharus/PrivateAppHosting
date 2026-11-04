@@ -41,7 +41,8 @@ WebAssembly.
   (MuseScore's notes) while the page kept the focus since the app copied it.
 - **Emscripten** 4.0.7, as upstream (`toolchain/env.sh`).
 
-`node build.mjs --source` clones the tag, applies the patch, builds Qt (once, into `.cache/qt`, or
+Packaging needs `git` (Qt's translations come from qttranslations, pinned in `source.json` as
+`qtTranslations`). `node build.mjs --source` clones the tag, applies the patch, builds Qt (once, into `.cache/qt`, or
 `MUSESCORE_QT_PREFIX`) and MuseScore (`toolchain/build-musescore.sh`), compiles the translations
 (`lrelease`; without Qt's tools PySide6's copy from PyPI) and writes `.cache/source-<key>.zip`.
 The key covers version, commit, patches and toolchain. A first build takes several hours (Qt about
