@@ -182,5 +182,6 @@
   "filter.none": "Ohne Kategorie",
   "editor.category": "Kategorie",
   "editor.categoryPlaceholder": "z. B. Bücher",
-  "editor.categoryHint": "Frei wählbar, zum Sortieren und Filtern"
+  "editor.categoryHint": "Frei wählbar, zum Sortieren und Filtern",
+  "view.label": "Ansicht der Liste"
 }

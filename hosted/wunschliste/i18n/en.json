@@ -182,5 +182,6 @@
   "filter.none": "No category",
   "editor.category": "Category",
   "editor.categoryPlaceholder": "e.g. Books",
-  "editor.categoryHint": "Your own words, for sorting and filtering"
+  "editor.categoryHint": "Your own words, for sorting and filtering",
+  "view.label": "List view"
 }

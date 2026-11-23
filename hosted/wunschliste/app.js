@@ -347,7 +347,7 @@ function viewBar(wishes) {
     );
   return h(
     'div',
-    { class: 'view-bar', role: 'group', 'aria-label': t('sort.label') },
+    { class: 'view-bar', role: 'group', 'aria-label': t('view.label') },
     h('label', { class: 'view-field' }, h('span', {}, t('sort.label')), sortSelect),
     h(
       'button',
