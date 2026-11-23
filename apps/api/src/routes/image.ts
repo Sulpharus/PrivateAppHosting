@@ -3,12 +3,12 @@
 //   GET /image?url=<https address>   the picture, for any signed-in user
 //
 // Only public https addresses (the same rules as API base URLs), at most 3 redirects, each one
-// checked again; only raster images (no SVG), at most 8 MB, 10 s.
+// checked again; only raster images (no SVG), at most 8 MB (streamed, never held whole), 10 s in all.
+// On the desktop edition the Workers' outbound service only reaches public addresses (edge.ts).
 
 import { isAllowedApiBase } from '@mininode/manifest';
 import { Hono } from 'hono';
 import { type AppContext, problem, requireUser } from '../lib/auth.ts';
-import { readCapped } from '../lib/body.ts';
 
 const MAX_BYTES = 8_000_000;
 const MAX_REDIRECTS = 3;
@@ -64,20 +64,21 @@ image.get('/image', requireUser(), async (c) => {
   if (!allowed(c.get('claims').sub))
     return problem(429, 'rate_limited', 'Zu viele Bilder in kurzer Zeit.');
 
+  // One deadline for the whole call, redirects included.
+  const signal = AbortSignal.timeout(10_000);
   let upstream: Response | undefined;
   try {
     for (let hop = 0; ; hop += 1) {
       upstream = await fetch(url, {
         headers: { Accept: 'image/avif,image/webp,image/jpeg,image/png,image/*;q=0.8' },
         redirect: 'manual',
-        signal: AbortSignal.timeout(10_000),
+        signal,
       });
       if (upstream.status < 300 || upstream.status >= 400) break;
       await upstream.body?.cancel();
-      const next = isPublicImageUrl(
-        new URL(upstream.headers.get('Location') ?? '', url).href,
-        domain,
-      );
+      const location = upstream.headers.get('Location');
+      if (!location) return problem(502, 'image_unavailable', 'Das Bild ist nicht erreichbar.');
+      const next = isPublicImageUrl(new URL(location, url).href, domain);
       if (!next || hop >= MAX_REDIRECTS)
         return problem(502, 'image_redirect', 'Das Bild leitet auf eine unzulässige Adresse um.');
       url = next;
@@ -86,25 +87,81 @@ image.get('/image', requireUser(), async (c) => {
     log('image_failed', { host: url.hostname, error: String(err) });
     return problem(502, 'image_unavailable', 'Das Bild ist gerade nicht erreichbar.');
   }
-  if (!upstream.ok) {
+  if (!upstream.ok || !upstream.body) {
     await upstream.body?.cancel();
     return problem(502, 'image_unavailable', `Die Seite antwortet mit ${upstream.status}.`);
   }
   if (Number(upstream.headers.get('Content-Length') ?? 0) > MAX_BYTES) {
-    await upstream.body?.cancel();
+    await upstream.body.cancel();
     return problem(413, 'too_large', 'Das Bild ist zu groß.');
   }
-  const bytes = await readCapped(upstream.body, MAX_BYTES);
-  if (!bytes) return problem(413, 'too_large', 'Das Bild ist zu groß.');
-  const type = sniffImage(bytes);
-  if (!type) return problem(415, 'not_an_image', 'Unter der Adresse liegt kein Bild.');
-  log('image', { host: url.hostname, bytes: bytes.byteLength });
-  return new Response(bytes, {
+  const picture = await cappedPicture(upstream.body, MAX_BYTES);
+  if (picture === 'too_large') return problem(413, 'too_large', 'Das Bild ist zu groß.');
+  if (picture === 'not_an_image')
+    return problem(415, 'not_an_image', 'Unter der Adresse liegt kein Bild.');
+  log('image', { host: url.hostname });
+  return new Response(picture.stream, {
     headers: {
-      'Content-Type': type,
+      'Content-Type': picture.type,
       'Cache-Control': 'private, max-age=3600',
       'X-Content-Type-Options': 'nosniff',
       'Content-Security-Policy': "default-src 'none'; sandbox",
     },
   });
 });
+
+/**
+ * Reads just enough to tell the picture's type, then streams the rest without holding it: the
+ * stream fails once more than `max` bytes went through (a body larger than its Content-Length).
+ */
+export async function cappedPicture(
+  body: ReadableStream<Uint8Array>,
+  max: number,
+): Promise<{ type: string; stream: ReadableStream<Uint8Array> } | 'too_large' | 'not_an_image'> {
+  const reader = body.getReader();
+  const head: Uint8Array[] = [];
+  let size = 0;
+  let done = false;
+  while (size < 16 && !done) {
+    const next = await reader.read();
+    done = next.done;
+    if (next.value) {
+      head.push(next.value);
+      size += next.value.byteLength;
+    }
+  }
+  if (size > max) {
+    await reader.cancel();
+    return 'too_large';
+  }
+  const first = new Uint8Array(size);
+  let at = 0;
+  for (const chunk of head) {
+    first.set(chunk, at);
+    at += chunk.byteLength;
+  }
+  const type = sniffImage(first);
+  if (!type) {
+    await reader.cancel();
+    return 'not_an_image';
+  }
+  let sent = size;
+  const stream = new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.enqueue(first);
+      if (done) controller.close();
+    },
+    async pull(controller) {
+      const next = await reader.read();
+      if (next.done) return controller.close();
+      sent += next.value.byteLength;
+      if (sent > max) {
+        await reader.cancel();
+        return controller.error(new Error('picture too large'));
+      }
+      controller.enqueue(next.value);
+    },
+    cancel: (reason) => reader.cancel(reason),
+  });
+  return { type, stream };
+}

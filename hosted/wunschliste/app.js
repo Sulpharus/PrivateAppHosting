@@ -324,7 +324,20 @@ function viewBar(wishes) {
         },
       },
       h('option', { value: '', selected: current === '' ? true : null }, t('filter.all')),
-      categories.map((c) => h('option', { value: c, selected: current === c ? true : null }, c)),
+      categories.map((c) =>
+        h(
+          'option',
+          {
+            value: c,
+            selected:
+              typeof current === 'string' &&
+              current.toLocaleLowerCase(locale()) === c.toLocaleLowerCase(locale())
+                ? true
+                : null,
+          },
+          c,
+        ),
+      ),
       hasNone &&
         h(
           'option',
@@ -778,7 +791,17 @@ async function exportPdf() {
     const name = String(meta.display_name || meta.name || user?.email?.split('@')[0] || '').trim();
     // The PDF shows the list as it is on screen: same order, same category.
     const wishes = visible(S.wishes);
-    const pictures = await Promise.all(wishes.map(pictureForPdf));
+    // Four at a time: gentle on the API (and its per-minute limit) with long lists.
+    const pictures = new Array(wishes.length).fill(null);
+    let nextPicture = 0;
+    await Promise.all(
+      Array.from({ length: Math.min(4, wishes.length) }, async () => {
+        while (nextPicture < wishes.length) {
+          const index = nextPicture++;
+          pictures[index] = await pictureForPdf(wishes[index]);
+        }
+      }),
+    );
     const today = new Date();
     const bytes = buildWishlistPdf({
       title: t('pdf.title'),

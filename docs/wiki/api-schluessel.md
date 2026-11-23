@@ -32,3 +32,7 @@ Pro API stellst du den Modus um:
 ## Ohne Schlüssel
 
 `auth: { "type": "none" }` deklariert eine öffentliche API, die nur über den Proxy läuft, weil Browser sie sonst nicht erreichen.
+
+## Bilder von fremden Seiten (`mn.image`)
+
+Für Bilder braucht eine App keinen Schlüssel und keinen Eintrag: `mn.image(url)` holt ein Bild von einer öffentlichen https-Adresse über `api.<domain>` (`GET /image`) und gibt es als Blob zurück, etwa für den PDF-Export der Wunschliste. Erlaubt sind JPEG, PNG, GIF, WebP und AVIF bis 8 MB; Adressen im Heimnetz, die eigene Domain und Umleitungen dorthin lehnt die API ab. In der Desktop-Version erreichen die Dienste nach außen nur öffentliche Adressen, auch über diesen Weg und den API-Proxy.

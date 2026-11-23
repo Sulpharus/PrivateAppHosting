@@ -8,6 +8,7 @@ import { createApi } from './api.ts';
 import { appSchema, loadConfig, type MininodeConfig } from './config.ts';
 import { createGame } from './game.ts';
 import { createGoogle } from './google.ts';
+import { createImage } from './image.ts';
 import { createKv, type KvScope } from './kv.ts';
 import {
   createOfflineKv,
@@ -328,19 +329,7 @@ export function createMininode(config: MininodeConfig): Mininode {
     ai: createAi(config, sessionToken),
     google: createGoogle(config, sessionToken),
     api: createApi(config, sessionToken),
-    async image(url) {
-      const token = await sessionToken();
-      if (!token) throw new Error('mininode: not signed in');
-      const response = await fetch(
-        `${config.apiUrl.replace(/\/$/, '')}/image?url=${encodeURIComponent(url)}`,
-        { headers: { Authorization: `Bearer ${token}` }, credentials: 'omit' },
-      );
-      if (!response.ok) {
-        const body = (await response.json().catch(() => ({}))) as { message?: string };
-        throw new Error(`mininode: ${body.message ?? response.statusText}`);
-      }
-      return response.blob();
-    },
+    image: createImage(config, sessionToken),
     push: createPush(config, supabase),
     game: createGame(config, supabase),
     suite: createSuite(supabase),

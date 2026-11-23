@@ -97,6 +97,16 @@ export function miniflareOptions(config: DesktopConfig, apps: InstalledApp[]): M
         modules: true,
         script: SUPABASE_PROXY_SCRIPT,
         compatibilityDate: COMPATIBILITY_DATE,
+        // Public internet only (no private, loopback, link-local or carrier-grade NAT ranges).
+        serviceBindings: {
+          PUBLIC: {
+            network: {
+              allow: ['public'],
+              deny: ['100.64.0.0/10'],
+              tlsOptions: { trustBrowserCas: true },
+            },
+          },
+        },
         bindings: {
           GATEWAY_URL: config.GATEWAY_URL,
           SUPABASE_HOST: `supabase.${config.MININODE_DOMAIN}`,
