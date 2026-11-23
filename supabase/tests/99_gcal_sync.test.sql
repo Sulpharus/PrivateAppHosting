@@ -95,11 +95,15 @@ select platform.gcal_save_links(:'lena_id', format('[{"record_id": "%s", "calend
 select is(jsonb_array_length(platform.gcal_push_plan(:'lena_id', 50) -> 'upserts'), 1, 'pushed records rest');
 
 -- Changes in "MiniNode" to another app's record are undone; a new event there comes in.
-select platform.gcal_apply(:'lena_id', 'mn-target', 'push', '[
+-- "Neu in Google" lies ahead: the push plan only mirrors the last 30 days and later, so a fixed
+-- date would fall out of it with time and turn into a delete below.
+select platform.gcal_apply(:'lena_id', 'mn-target', 'push', format('[
   {"event_id": "p1", "etag": "x2", "updated": "2026-10-03T08:00:00Z", "record_id": "x",
    "fields": {"title": "Bouldern?", "starts_at": "2026-10-04T17:00:00Z", "ends_at": "2026-10-04T19:00:00Z", "data": {}}},
   {"event_id": "p2", "etag": "x3", "updated": "2026-10-03T08:00:00Z",
-   "fields": {"title": "Neu in Google", "starts_at": "2026-10-05T17:00:00Z", "ends_at": "2026-10-05T18:00:00Z", "data": {}}}]',
+   "fields": {"title": "Neu in Google", "starts_at": %s, "ends_at": %s, "data": {}}}]',
+  to_json(date_trunc('hour', now()) + interval '2 days'),
+  to_json(date_trunc('hour', now()) + interval '2 days 1 hour'))::jsonb,
   'mn-token');
 select is((select title from platform.records where id = :'act'), 'Bouldern', 'other apps keep their data');
 select is((select synced_version from platform.gcal_links where record_id = :'act'), -1, 'and push it again');
