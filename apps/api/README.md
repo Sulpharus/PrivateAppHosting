@@ -14,6 +14,7 @@ Hono Worker for everything that needs the service role or a secret:
 | `POST /google/calendar/sync` | same | Sync now (at most every 30 seconds unless something was requested) |
 | `GET /push/config` | anyone | VAPID public key for the portal's push subscription (ADR 0005) |
 | `POST /push/test` | signed-in user | Sends a test notification to all of the caller's devices |
+| `GET /image?url=…` | signed-in user | A picture from a public https address (JPEG, PNG, GIF, WebP, AVIF; max 8 MB, 3 redirects, each checked), for apps that need its bytes despite CSP and missing CORS (`mn.image`) |
 | `ALL /proxy/:service/*` | signed-in user with grant, from the app's own origin, API declared by the app | Calls the external API with the host-level key added server-side (ADR 0006) |
 | `PUT` / `DELETE /admin/api-keys/:service` | admin, recent sign-in | Stores (encrypted with `VAULT_KEY`) or removes the key of an API |
 | `PUT /admin/api-services/:service/mode` | admin, recent sign-in | `sitewide` or `personal` keys for an API (ADR 0014) |

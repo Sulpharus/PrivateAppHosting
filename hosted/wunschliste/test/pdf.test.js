@@ -103,12 +103,18 @@ describe('wishlist pdf', () => {
       now: new Date('2026-10-05T10:00:00Z'),
     });
 
-  it('breaks into pages and numbers them', () => {
+  it('puts two cards side by side, fills the page and numbers the pages', () => {
     const { s } = checkStructure(build(Array.from({ length: 30 }, (_, i) => wish(i + 1))));
     const pages = Number(/\/Count (\d+)/.exec(s)?.[1]);
-    expect(pages).toBeGreaterThanOrEqual(4);
-    expect(s).toContain(`(Seite 1 von ${pages})`);
-    expect(s).toContain(`(Seite ${pages} von ${pages})`);
+    // Two columns and as many rows as fit: 30 wishes need two pages, not eight.
+    expect(pages).toBe(2);
+    expect(s).toContain('(Seite 1 von 2)');
+    expect(s).toContain('(Seite 2 von 2)');
+    // The titles of the first row start in two different columns at the same height.
+    const at = (n) => new RegExp(`([\\d.]+) ([\\d.]+) Td \\(Wunsch ${n}\\)`).exec(s);
+    const [a, b] = [at(1), at(2)];
+    expect(Number(b?.[1])).toBeGreaterThan(Number(a?.[1]) + 200);
+    expect(b?.[2]).toBe(a?.[2]);
   });
 
   it('draws the picture when there is one, and the initial when there is none', () => {

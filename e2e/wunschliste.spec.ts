@@ -302,3 +302,49 @@ test('birthdays: shared ones of other people, own entries, gift ideas', async ({
   await lena.getByRole('button', { name: /Wunschliste von .* ansehen/ }).click();
   await expect(lena.getByRole('heading', { level: 1, name: people.tom.name })).toBeVisible();
 });
+
+test('sort by price or name, filter by category, and the PDF follows the view', async ({
+  browser,
+}) => {
+  test.setTimeout(120_000);
+  const mia = await signedIn(browser, people.mia.email);
+  for (const [title, price, category] of [
+    ['Buch Alpha', '12,00', 'Bücher'],
+    ['Zelt', '199,00', 'Sport'],
+    ['Buch Omega', '30,00', 'Bücher'],
+  ] as const) {
+    await mia.getByRole('button', { name: 'Wunsch hinzufügen' }).first().click();
+    const dialog = mia.getByRole('dialog', { name: 'Neuer Wunsch' });
+    await dialog.getByLabel('Was wünschst du dir?').fill(title);
+    await dialog.getByLabel('Preis in € (ungefähr)').fill(price);
+    await dialog.getByLabel('Kategorie').fill(category);
+    await dialog.getByRole('button', { name: 'Speichern' }).click();
+    await expect(dialog).toBeHidden();
+  }
+  const titles = () => mia.locator('.wish .mn-row-title').allTextContents();
+
+  await mia.getByLabel('Sortieren nach').selectOption('price');
+  await mia.getByRole('button', { name: /Aufsteigend sortiert/ }).click();
+  await expect.poll(titles).toEqual(['Zelt', 'Buch Omega', 'Buch Alpha']);
+  await mia.getByLabel('Sortieren nach').selectOption('name');
+  await expect.poll(titles).toEqual(['Zelt', 'Buch Omega', 'Buch Alpha']);
+  await mia.getByRole('button', { name: /Absteigend sortiert/ }).click();
+  await expect.poll(titles).toEqual(['Buch Alpha', 'Buch Omega', 'Zelt']);
+
+  await mia.getByLabel('Kategorie', { exact: true }).selectOption('Bücher');
+  await expect.poll(titles).toEqual(['Buch Alpha', 'Buch Omega']);
+
+  // The PDF holds what is shown, in this order.
+  const download = mia.waitForEvent('download');
+  await mia.getByRole('button', { name: 'Als PDF' }).click();
+  const { readFileSync } = await import('node:fs');
+  const pdf = readFileSync(await (await download).path()).toString('latin1');
+  expect(pdf.indexOf('(Buch Alpha)')).toBeGreaterThan(-1);
+  expect(pdf.indexOf('(Buch Alpha)')).toBeLessThan(pdf.indexOf('(Buch Omega)'));
+  expect(pdf).not.toContain('(Zelt)');
+
+  // The sort order is kept for the next visit.
+  await mia.reload();
+  await expect(mia.getByLabel('Sortieren nach')).toHaveValue('name');
+  await expect.poll(titles).toEqual(['Buch Alpha', 'Buch Omega', 'Zelt']);
+});

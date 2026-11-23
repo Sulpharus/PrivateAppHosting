@@ -96,6 +96,12 @@ export interface Mininode {
   /** External APIs declared in mininode.json (`apis`); the key is added on the server (ADR 0006). */
   readonly api: ReturnType<typeof createApi>;
   /**
+   * A picture from a public https address as a Blob, fetched by api.<domain> (the page's CSP and
+   * most shops' missing CORS headers keep the browser from reading it), e.g. to embed it in a PDF.
+   * JPEG, PNG, GIF, WebP or AVIF, at most 8 MB. Throws when the address is not public or not a picture.
+   */
+  image(url: string): Promise<Blob>;
+  /**
    * The other people who may use this app (display names), e.g. to share something with them.
    * Only answers from the app's own page.
    */
@@ -322,6 +328,19 @@ export function createMininode(config: MininodeConfig): Mininode {
     ai: createAi(config, sessionToken),
     google: createGoogle(config, sessionToken),
     api: createApi(config, sessionToken),
+    async image(url) {
+      const token = await sessionToken();
+      if (!token) throw new Error('mininode: not signed in');
+      const response = await fetch(
+        `${config.apiUrl.replace(/\/$/, '')}/image?url=${encodeURIComponent(url)}`,
+        { headers: { Authorization: `Bearer ${token}` }, credentials: 'omit' },
+      );
+      if (!response.ok) {
+        const body = (await response.json().catch(() => ({}))) as { message?: string };
+        throw new Error(`mininode: ${body.message ?? response.statusText}`);
+      }
+      return response.blob();
+    },
     push: createPush(config, supabase),
     game: createGame(config, supabase),
     suite: createSuite(supabase),

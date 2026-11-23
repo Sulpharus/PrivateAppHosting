@@ -86,6 +86,9 @@ await mn.files.upload('fotos/urlaub.jpg', file);
 const url = await mn.files.url('fotos/urlaub.jpg'); // signed URL, 1 h
 // A signed URL expires: never store it in kv or a table. Store the path and ask for the URL when
 // showing (`{ expiresIn: 86400 }` for longer). Delete with mn.files.remove(path), not "delete".
+// The bytes of a picture from another site (fetch() is blocked by the CSP and most shops' CORS),
+// e.g. to put it in a PDF or a canvas: a Blob, JPEG/PNG/GIF/WebP/AVIF, max 8 MB.
+const blob = await mn.image('https://shop.example/produkt.jpg');
 const names = await mn.files.list('fotos');
 
 // Realtime (live updates between users of the app):
