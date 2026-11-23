@@ -6,7 +6,7 @@ import { setVerifierForTests } from '../lib/auth.ts';
 import { cappedPicture, isPublicImageUrl, sniffImage } from './image.ts';
 
 describe('isPublicImageUrl', () => {
-  const ok = (u: string) => isPublicImageUrl(u, 'mininode.app') !== null;
+  const ok = (u: string) => isPublicImageUrl(u, 'example.org') !== null;
 
   it('accepts public https pictures with a query', () => {
     expect(ok('https://m.media-amazon.com/images/I/71abc.jpg')).toBe(true);
@@ -23,7 +23,7 @@ describe('isPublicImageUrl', () => {
       'https://intranet/a.jpg',
       'https://cdn.shop.de:8443/a.jpg',
       'https://user:pw@cdn.shop.de/a.jpg',
-      'https://api.mininode.app/x',
+      'https://api.example.org/x',
       'https://x.supabase.co/a.jpg',
       'file:///etc/passwd',
       'not a url',
@@ -73,7 +73,7 @@ describe('cappedPicture', () => {
 
 describe('GET /image', () => {
   const SUPABASE_URL = 'http://supabase.test';
-  const env = { SUPABASE_URL, PORTAL_URL: 'https://mininode.app' } as unknown as ApiEnv;
+  const env = { SUPABASE_URL, PORTAL_URL: 'https://example.org' } as unknown as ApiEnv;
   const JPEG = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
   let routes: Record<string, () => Response>;
   let fetched: string[];
@@ -121,7 +121,7 @@ describe('GET /image', () => {
     for (const location of [
       'https://localhost/x',
       'https://127.0.0.1/x',
-      'https://api.mininode.app/me',
+      'https://api.example.org/me',
     ]) {
       routes['https://cdn.shop.de/a.jpg'] = () =>
         new Response(null, { status: 302, headers: { Location: location } });
