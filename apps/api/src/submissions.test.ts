@@ -23,6 +23,7 @@ describe('githubRepository', () => {
   it('refuses other hosts and odd names', () => {
     for (const input of [
       'https://gitlab.com/me/notes',
+      'gitlab.com/me/notes',
       'https://evil.example/github.com/me/notes',
       'ftp://github.com/me/notes',
       'notes',

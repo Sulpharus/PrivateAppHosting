@@ -42,6 +42,7 @@ export function AppZips({ version, names }: { version: number; names: Map<string
       const result = await api<{ configured: boolean; zips: ZipRow[] }>('/admin/app-zips');
       setConfigured(result.configured);
       setZips(result.zips);
+      setError(null);
     } catch (err) {
       setError(
         err instanceof ApiError ? err.message : 'Die ZIP-Exporte konnten nicht geladen werden.',

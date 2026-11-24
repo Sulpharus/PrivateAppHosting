@@ -32,13 +32,22 @@ Trage in der `mininode.json` der App `"repository": "name/projekt"` ein (zum Bei
 
 Neben jeder App mit Repository steht der Schalter **Automatisch aktualisieren**. Ist er an, holt der Workflow **Apps automatisch
 aktualisieren** (`auto-update-apps.yml`) jede Nacht um 02:41 UTC die neueste Version. Der Pull Request mergt sich selbst, sobald die
-Pflicht-Prüfungen von `main` grün sind, aber **nur, wenn die `mininode.json` gleich bleibt** (Rechte, Domains, Schlüssel, Datenmodus):
-sonst wartet er auf dich wie jedes andere Update. Bei einer App, die schon auf dem neuesten Stand ist, passiert nichts.
+Pflicht-Prüfungen von `main` grün sind, aber **nur, wenn vom Update beim Deploy nichts mit den Schlüsseln läuft**:
+
+- die `mininode.json` bleibt gleich (Rechte, Domains, Schlüssel, Datenmodus);
+- die App hat keinen Build-Schritt und läuft auf Cloudflare (ein Build führt Werkzeuge des Projekts mit den Cloudflare- und
+  Datenbank-Schlüsseln aus);
+- keine Datei unter `db/` (Migrationen laufen als Datenbank-Besitzer), keine `package.json`, kein Lockfile und keine
+  Werkzeug-Konfiguration ändern sich.
+
+Sonst wartet er auf dich wie jedes andere Update. Bei einer App, die schon auf dem neuesten Stand ist, passiert nichts. Apps mit
+Build-Schritt (die meisten umgebauten Exporte) aktualisieren sich darum nie selbst.
 
 Voraussetzungen fürs selbständige Mergen: der Schlüssel `INTEGRATE_TOKEN` (sonst laufen keine Prüfungen), **Allow auto-merge** in den
 Repository-Einstellungen und eine Regel, die auf `main` die Prüfungen verlangt. Fehlt etwas davon, bleibt der Pull Request einfach
-offen. Bedenke: Ein automatisches Update kann ändern, was die App innerhalb ihrer Rechte tut. Schalte es nur für Projekte ein, denen
-du vertraust.
+offen. Bedenke: Ein automatisches Update kann ändern, was die App im Browser innerhalb ihrer Rechte tut (ihre Daten, ihre
+API-Schlüssel über den Proxy). Schalte es nur für Projekte ein, denen du vertraust. Private Projekte brauchen den Schlüssel
+`APP_READ_TOKEN` (Lesezugriff) in der GitHub-Umgebung `production`.
 
 ## Vorher sichern
 

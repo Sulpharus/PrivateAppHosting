@@ -211,9 +211,10 @@ async function uploadWebapp(
  */
 export function githubRepository(input: string): string | null {
   const text = input.trim().replace(/^(https?:\/\/)?(www\.)?github\.com\//i, '');
-  const match = /^([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+?)(\.git)?(\/.*)?$/.exec(text);
+  // GitHub account names have no dots (so `gitlab.com/me/x` is not taken for owner `gitlab.com`).
+  const match = /^([A-Za-z0-9-]+)\/([A-Za-z0-9_.-]+?)(\.git)?(\/.*)?$/.exec(text);
   if (!match?.[1] || !match[2]) return null;
-  if (/^\.+$/.test(match[1]) || /^\.+$/.test(match[2])) return null;
+  if (/^\.+$/.test(match[2])) return null;
   // A bare "owner/repo" must not be a URL of another host.
   if (/^[a-z]+:/i.test(input.trim()) && !/^https?:\/\/(www\.)?github\.com\//i.test(input.trim()))
     return null;

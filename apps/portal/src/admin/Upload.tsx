@@ -48,7 +48,7 @@ export function Upload() {
   const [notice, setNotice] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
   const [repoUrl, setRepoUrl] = useState('');
-  const [autoUpdate, setAutoUpdate] = useState(true);
+  const [autoUpdate, setAutoUpdate] = useState(false);
   const [installing, setInstalling] = useState(false);
   const input = useRef<HTMLInputElement>(null);
 
@@ -328,12 +328,12 @@ export function Upload() {
         >
           <p className="muted">
             Eine Web-App aus einem GitHub-Projekt, eingebaut wie eine ZIP-Datei. Für private
-            Projekte braucht GitHub den Schlüssel EXPORT_REPO_TOKEN mit Lesezugriff.
+            Projekte braucht GitHub den Schlüssel APP_READ_TOKEN mit Lesezugriff.
           </p>
           <label className="field">
             Adresse des Projekts
             <input
-              type="url"
+              type="text"
               inputMode="url"
               value={repoUrl}
               onChange={(event) => setRepoUrl(event.target.value)}
@@ -344,14 +344,14 @@ export function Upload() {
               autoComplete="off"
             />
           </label>
-          <label className="row" style={{ gap: 8 }}>
+          <label className="check-row">
             <input
               type="checkbox"
               checked={autoUpdate}
               onChange={(event) => setAutoUpdate(event.target.checked)}
             />
-            Automatisch aktualisieren (neue Versionen kommen von selbst, solange sich ihre Rechte
-            nicht ändern; nur für MiniNode-Apps mit eigener mininode.json)
+            Automatisch aktualisieren (neue Versionen kommen von selbst, wenn dabei nichts mit den
+            Schlüsseln läuft; nur für MiniNode-Apps mit eigener mininode.json)
           </label>
           <div className="row" style={{ gap: 12 }}>
             <button

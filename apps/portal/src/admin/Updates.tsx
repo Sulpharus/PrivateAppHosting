@@ -60,7 +60,7 @@ export function Updates() {
       );
       setNotice(
         enabled
-          ? `${name} aktualisiert sich jetzt jede Nacht selbst. Ändern sich dabei Rechte oder Domains in der mininode.json, wartet der Pull Request auf dich.`
+          ? `${name} aktualisiert sich jetzt jede Nacht selbst. Ändern sich dabei Rechte, Migrationen, Abhängigkeiten oder hat die App einen Build-Schritt, wartet der Pull Request auf dich.`
           : `${name} aktualisiert sich nicht mehr selbst.`,
       );
       await load();
@@ -196,7 +196,7 @@ export function Updates() {
                   {busy === row.slug ? 'Startet …' : 'Aktualisieren'}
                 </button>
               </div>
-              <label className="row" style={{ gap: 8 }}>
+              <label className="check-row">
                 <input
                   type="checkbox"
                   checked={row.autoUpdate}
@@ -204,7 +204,7 @@ export function Updates() {
                   onChange={(event) => void setAuto(row.slug, row.name, event.target.checked)}
                 />
                 Automatisch aktualisieren (jede Nacht; mergt sich selbst, wenn die Prüfungen grün
-                sind und sich Rechte und Domains nicht ändern)
+                sind und beim Deploy nichts aus dem Projekt mit den Schlüsseln läuft)
               </label>
             </section>
           );
