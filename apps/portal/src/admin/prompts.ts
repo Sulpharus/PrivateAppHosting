@@ -747,7 +747,9 @@ export function starterFiles(brief: Brief, lib: Library, composed: Composed): St
   const base = layout === 'vite' ? 'public/' : '';
   const name = escapeHtml(ctx.name || 'Neue App');
   const manifest = {
-    $schema: 'https://mininode.app/schema/mininode.json',
+    ...(typeof location === 'undefined'
+      ? {}
+      : { $schema: `${location.origin}/schema/mininode.json` }),
     specVersion: 1,
     slug: ctx.slug || 'bitte-waehlen',
     name,

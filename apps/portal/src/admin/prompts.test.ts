@@ -102,7 +102,8 @@ describe('prompt library', () => {
       /invitations via `mn\.notify`/,
     );
     expect(read('docs/ai/prompts/modules/places.md')).toContain('tile.openstreetmap.org');
-    expect(`${library.spec}${library.design}`).not.toContain('href="https://mininode.app"');
+    // The portal's address comes from mn.config.portalUrl, never a domain written into the app.
+    expect(`${library.spec}${library.design}`).not.toMatch(/class="mn-home" href="https:/);
   });
 });
 describe('app briefs', () => {
