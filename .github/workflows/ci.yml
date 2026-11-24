@@ -28,6 +28,7 @@ jobs:
       hosted: ${{ steps.diff.outputs.hosted }}
       musescore: ${{ steps.diff.outputs.musescore }}
       crafts: ${{ steps.diff.outputs.crafts }}
+      craft_apps: ${{ steps.diff.outputs.craft_apps }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -44,6 +45,8 @@ jobs:
     needs: changes
     if: github.event_name == 'pull_request' && needs.changes.outputs.crafts != 'false'
     uses: ./.github/workflows/crafts.yml
+    with:
+      apps: ${{ needs.changes.outputs.craft_apps }}
 
   musescore:
     needs: changes

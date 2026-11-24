@@ -60,6 +60,7 @@ const USAGE = `mininode <command>
   deploy <app-dir> [--env staging|desktop]  Build, migrate, deploy and register one app
   deploy --changed <base-ref>       Deploy every app changed since <base-ref>
   deploy --since-deployed           Deploy every app changed since the commit it was last deployed from
+  deploy --since-deployed --plan    Only print those apps (JSON); apps built from source count own changes only
   expose [--env staging]            Expose the schema of every app with tables in the Data API (deploy)
   changed <base-ref>                List hosted apps changed since <base-ref>
   prune [--env staging] [--dry-run]  Delete Workers of apps removed from hosted/, disable them
@@ -524,6 +525,11 @@ async function main(args: string[]): Promise<number> {
         dirs = withManifest(changedApps(base, ROOT));
       } else {
         dirs = [resolve(process.cwd(), target)];
+      }
+      // --plan: only name the apps (JSON, last line), e.g. so the workflow builds only what ships.
+      if (args.includes('--plan')) {
+        console.log(JSON.stringify(dirs.map((dir) => basename(dir))));
+        return 0;
       }
       const version = readVersion();
       // One broken app must not keep the others from shipping: deploy them all, then fail.

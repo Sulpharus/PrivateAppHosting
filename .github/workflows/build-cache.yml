@@ -1,0 +1,42 @@
+name: Keep program builds cached
+
+# GitHub deletes a cache that nobody used for 7 days. Without this, the first deploy of MuseScore or
+# a patched Craft app after a quiet week would compile from scratch (Qt about two hours, MuseScore
+# about half an hour, each Craft app minutes) while the merge waits. Every three days this restores
+# each cache once on main, where the Deploy workflow finds it, and builds whatever is missing, so a
+# merge never waits for a cold build. On a warm cache it only restores and finishes in minutes.
+
+on:
+  schedule:
+    - cron: '17 3 */3 * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-cache
+  cancel-in-progress: false
+
+jobs:
+  # The program zips: restored (counts as a use) or rebuilt when they are gone.
+  crafts:
+    uses: ./.github/workflows/crafts.yml
+
+  musescore:
+    uses: ./.github/workflows/musescore.yml
+
+  # The MuseScore build skips restoring Qt when its zip is cached, so Qt is restored here.
+  qt:
+    name: Touch the Qt cache
+    needs: musescore
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/qt-wasm/gcc_64
+            ~/qt-wasm/wasm_singlethread
+          key: musescore-qt-${{ hashFiles('hosted/musescore/toolchain/build-qt.sh', 'hosted/musescore/toolchain/env.sh', 'hosted/musescore/toolchain/qt-*.patch') }}

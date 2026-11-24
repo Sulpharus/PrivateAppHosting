@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { appsFromPaths, appsToDeploy } from './changed.ts';
+import { appsFromPaths, appsToDeploy, builtFromSource } from './changed.ts';
 
 let dir = '';
 const git = (...args: string[]) => {
@@ -102,5 +102,42 @@ describe('appsToDeploy', () => {
       ['b', first],
     ]);
     expect(appsToDeploy(['a', 'b'], deployed, dir)).toEqual(['b']);
+  });
+
+  it('ships apps built from source only for changes in their own folder', () => {
+    write('hosted/score/source.json', '{}');
+    write('hosted/craft/release.json', JSON.stringify({ patches: ['patches/a.patch'] }));
+    write('hosted/plain/app.js', '1');
+    const first = commit('first');
+    write('packages/ui/kit/ui.js', 'kit');
+    write('pnpm-lock.yaml', 'lock');
+    commit('shared');
+    const deployed = new Map([
+      ['score', first],
+      ['craft', first],
+      ['plain', first],
+    ]);
+    expect(appsToDeploy(['score', 'craft', 'plain'], deployed, dir)).toEqual(['plain']);
+    write('hosted/score/README.md', 'docs');
+    write('hosted/score/test/a.test.js', 'test');
+    commit('docs and tests');
+    expect(appsToDeploy(['score', 'craft', 'plain'], deployed, dir)).toEqual(['plain']);
+    write('hosted/craft/patches/a.patch', 'changed');
+    commit('craft');
+    expect(appsToDeploy(['score', 'craft', 'plain'], deployed, dir)).toEqual(['craft', 'plain']);
+  });
+});
+
+describe('builtFromSource', () => {
+  it('knows MuseScore-like apps and Craft apps with patches', () => {
+    write('hosted/score/source.json', '{}');
+    write('hosted/craft/release.json', JSON.stringify({ patches: ['x'] }));
+    write('hosted/upstream/release.json', JSON.stringify({ patches: [] }));
+    write('hosted/broken/release.json', '{nope');
+    expect(builtFromSource('score', dir)).toBe(true);
+    expect(builtFromSource('craft', dir)).toBe(true);
+    expect(builtFromSource('upstream', dir)).toBe(false);
+    expect(builtFromSource('broken', dir)).toBe(false);
+    expect(builtFromSource('missing', dir)).toBe(false);
   });
 });

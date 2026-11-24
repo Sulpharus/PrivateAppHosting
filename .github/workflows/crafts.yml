@@ -7,6 +7,11 @@ name: Craft builds
 
 on:
   workflow_call:
+    inputs:
+      apps:
+        description: JSON list of the apps to build (default all Craft apps with patches)
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -20,6 +25,8 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - id: list
+        env:
+          WANTED: ${{ inputs.apps }}
         run: |
           apps=$(node -e '
             const fs = require("node:fs");
@@ -27,7 +34,9 @@ jobs:
               try { return (JSON.parse(fs.readFileSync(`hosted/${slug}/release.json`, "utf8")).patches ?? []).length > 0; }
               catch { return false; }
             });
-            console.log(JSON.stringify(apps));
+            // Only the apps the caller asked for (those whose own folder changed), if it named any.
+            const wanted = process.env.WANTED ? JSON.parse(process.env.WANTED) : null;
+            console.log(JSON.stringify(wanted ? apps.filter((slug) => wanted.includes(slug)) : apps));
           ')
           echo "apps=$apps" >> "$GITHUB_OUTPUT"
 

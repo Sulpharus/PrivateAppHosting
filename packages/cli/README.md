@@ -6,6 +6,7 @@ mininode dev <app-dir> [--port 8790]       Serve an app locally behind the gate 
 mininode deploy <app-dir> [--env staging]  Build, migrate, deploy and register one app
 mininode deploy --changed <base-ref>       Deploy every app changed since <base-ref> (--dry-run)
 mininode deploy --since-deployed [--env]   Deploy every app changed since its own registered deployed_version (the deploy workflow; unreadable registry = all apps)
+mininode deploy --since-deployed --plan    Only print those apps as JSON (the deploy workflow's plan job). Apps built from source (source.json, or release.json with patches) count only changes to their own folder, not shared packages, *.md or test/
 mininode changed <base-ref>                List hosted apps changed since <base-ref>
 mininode prune [--env staging] [--dry-run] Delete Workers of apps gone from hosted/ (--force if empty)
 mininode expose [--env staging]            Expose the schema of every app with tables in the Data API
