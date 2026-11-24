@@ -28,6 +28,14 @@ with the rose accent. Built on MiniNode (not ported from an export).
   wish has an optional free-text category (editor, with the ones already used as suggestions;
   `db/005_wish_category.sql`, also returned by `wishlist()`). Pure logic in `sort.js`, tests in
   `test/sort.test.js`.
+- **Sichtbarkeit:** above *Meine Liste* the owner switches between "Alle mit der App" (default) and
+  "Nur Whitelist". The whitelist sheet finds people by name (parts in any order, without accents or
+  case, initials, one typo per longer word; `people-search.js`, tests in `test/people-search.test.js`)
+  over `mn.people()`, or by an exact e-mail address through `find_person()`, which never returns an
+  address. `db/006_list_access.sql`: `list_settings` (visibility) and `list_viewers` (the
+  whitelist), both private to the owner; `can_see()` is asked by `people()`, `wishlist()` and
+  `reserve()`, so a list one may not see looks empty and its wishes cannot be reserved. Uploaded
+  photos stay in the shared folder under random names.
 - **Andere:** everyone with a wish, then their list. "Ich schenke das" reserves a wish; others
   see it as *Geschenkt* and cannot pick it; 30 days after the reservation it disappears for
   them. The owner never sees any of this.
@@ -72,7 +80,12 @@ three users.
 - **PDF export** ("Als PDF" on *Meine Liste*): the list as it is on screen (same order and category)
   on A4 pages: two cards side by side and as many rows as fit (picture or initial, title, price,
   priority tag, category, two lines of note, link to the shop), laid out by `wishlist-pdf.js` on
-  `pdf.js`, a small PDF writer (standard fonts, JPEG pictures, links; no library). Uploaded photos come
+  `pdf.js`, a small PDF writer (standard fonts, JPEG pictures, links, check boxes; no library).
+  Sorted by category, the cards come in sections with a heading per category (repeated with
+  "Fortsetzung" after a page break; the cards then leave the category out). Every card is a form
+  check box: tapping it in a PDF viewer (Chrome, Firefox, Acrobat, Vorschau) crosses the wish out
+  (veil, line through the title, stamp "Vergeben"); saved and passed on, the file shows people
+  without an account what is already taken. Shop links lie above the check box and stay clickable. Uploaded photos come
   from storage; image links through `mn.image` (`GET /image` on api.<domain>), because the page's CSP
   and most shops' missing CORS headers keep the browser from reading them. Every picture is shrunk to
   480 px and embedded; one that cannot be read gets the initial. `test/pdf.test.js` checks the file

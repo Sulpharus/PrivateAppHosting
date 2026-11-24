@@ -1,5 +1,6 @@
 // A small PDF writer for the wishlist export: A4 pages, the standard fonts (Helvetica, bold,
-// oblique, WinAnsi), filled and rounded rectangles, JPEG pictures, links. No library: the app is
+// oblique, WinAnsi), filled and rounded rectangles, JPEG pictures, links, and check boxes (form
+// fields) that a reader ticks in any PDF viewer, e.g. to cross out a wish that is taken. No library: the app is
 // plain files, and everything it needs from a PDF fits in this one. Text is measured with the fonts'
 // own widths, so lines wrap where they really end.
 
@@ -174,12 +175,33 @@ const escapeText = (text) => {
 
 export const A4 = { width: 595.28, height: 841.89 };
 
+/**
+ * Drawing operators for a check box's appearance (`page.checkbox`), in its own coordinates with
+ * the origin at the bottom left.
+ */
+export const boxOps = {
+  /** Fills the whole box (w × h) with a colour at 72 % opacity. */
+  veil: (w, h, colour) => `q /GS1 gs ${hex(colour)} rg 0 0 ${num(w)} ${num(h)} re f Q`,
+  line: (x1, y1, x2, y2, colour, width) =>
+    `${hex(colour)} RG ${num(width)} w 1 J ${num(x1)} ${num(y1)} m ${num(x2)} ${num(y2)} l S`,
+  /** A filled rounded rectangle. */
+  pill: (x, y, w, h, colour) => {
+    const r = h / 2;
+    const k = 0.5523 * r;
+    return `${hex(colour)} rg ${num(x + r)} ${num(y)} m ${num(x + w - r)} ${num(y)} l ${num(x + w - r + k)} ${num(y)} ${num(x + w)} ${num(y + r - k)} ${num(x + w)} ${num(y + r)} c ${num(x + w)} ${num(y + r + k)} ${num(x + w - r + k)} ${num(y + h)} ${num(x + w - r)} ${num(y + h)} c ${num(x + r)} ${num(y + h)} l ${num(x + r - k)} ${num(y + h)} ${num(x)} ${num(y + r + k)} ${num(x)} ${num(y + r)} c ${num(x)} ${num(y + r - k)} ${num(x + r - k)} ${num(y)} ${num(x + r)} ${num(y)} c f`;
+  },
+  text: (text, x, y, font, size, colour) => {
+    return `BT ${hex(colour)} rg /${font.id} ${num(size)} Tf ${num(x)} ${num(y)} Td (${escapeText(text)}) Tj ET`;
+  },
+};
+
 /** One page: drawing commands in a coordinate system with the origin at the top left, in points. */
 class Page {
   constructor(doc) {
     this.doc = doc;
     this.ops = [];
     this.links = [];
+    this.boxes = [];
     this.imageIds = new Set();
   }
 
@@ -256,6 +278,15 @@ class Page {
     );
   }
 
+  /**
+   * A check box (AcroForm field `name`) over the area: unticked it shows nothing of its own,
+   * ticked it shows `onOps`, PDF drawing operators in the box's own coordinates (origin at the
+   * bottom left, `w` × `h` points). `/GS1` in them is 72 % opacity.
+   */
+  checkbox(name, x, top, w, h, onOps) {
+    this.boxes.push({ name, w, h, onOps, rect: [x, this.y(top + h), x + w, this.y(top)] });
+  }
+
   /** A clickable area that opens `url`. */
   link(url, x, top, w, h) {
     this.links.push({ url, rect: [x, this.y(top + h), x + w, this.y(top)] });
@@ -316,14 +347,38 @@ export class PdfDocument {
       );
 
     const pageIds = [];
+    const fieldIds = [];
+    const appearance = (w, h, ops) => {
+      const content = latin1(ops);
+      const fonts = Object.values(fontIds)
+        .map((id, i) => `/F${i + 1} ${id} 0 R`)
+        .join(' ');
+      return add(
+        `<< /Type /XObject /Subtype /Form /BBox [0 0 ${num(w)} ${num(h)}] /Resources << /Font << ${fonts} >> /ExtGState << /GS1 << /ca 0.72 /CA 0.72 >> >> >> /Length ${content.length} >>\nstream\n`,
+        content,
+        '\nendstream',
+      );
+    };
     for (const page of this.pages) {
       const content = latin1(page.ops.join('\n'));
       const contentId = add(`<< /Length ${content.length} >>\nstream\n`, content, '\nendstream');
-      const annots = page.links.map((link) =>
+      // Check boxes first: a link inside a box comes later and so lies on top, and stays clickable.
+      const annots = [];
+      for (const box of page.boxes) {
+        const off = appearance(box.w, box.h, '');
+        const on = appearance(box.w, box.h, box.onOps);
+        const id = add(
+          `<< /Type /Annot /Subtype /Widget /FT /Btn /T (${escapeText(box.name)}) /F 4 /Rect [${box.rect.map(num).join(' ')}] /V /Off /AS /Off /Border [0 0 0] /MK << >> /AP << /N << /Yes ${on} 0 R /Off ${off} 0 R >> /D << /Yes ${on} 0 R /Off ${off} 0 R >> >> >>`,
+        );
+        annots.push(id);
+        fieldIds.push(id);
+      }
+      const links = page.links.map((link) =>
         add(
           `<< /Type /Annot /Subtype /Link /Rect [${link.rect.map(num).join(' ')}] /Border [0 0 0] /A << /S /URI /URI (${link.url.replace(/[^\x21-\x7e]/g, '').replace(/[()\\]/g, (c) => `\\${c}`)}) >> >>`,
         ),
       );
+      annots.push(...links);
       const fonts = Object.values(fontIds)
         .map((id, i) => `/F${i + 1} ${id} 0 R`)
         .join(' ');
@@ -338,7 +393,10 @@ export class PdfDocument {
       pagesRoot,
       `<< /Type /Pages /Kids [${pageIds.map((id) => `${id} 0 R`).join(' ')}] /Count ${pageIds.length} >>`,
     );
-    set(catalog, `<< /Type /Catalog /Pages ${pagesRoot} 0 R >>`);
+    const form = fieldIds.length
+      ? ` /AcroForm << /Fields [${fieldIds.map((id) => `${id} 0 R`).join(' ')}] /NeedAppearances false >>`
+      : '';
+    set(catalog, `<< /Type /Catalog /Pages ${pagesRoot} 0 R${form} >>`);
     const stamp = `D:${now.toISOString().replace(/[-:T]/g, '').slice(0, 14)}Z`;
     const info = add(
       `<< /Title (${escapeText(this.info.title)}) /Author (${escapeText(this.info.author)}) /Subject (${escapeText(this.info.subject)}) /Producer (MiniNode) /CreationDate (${stamp}) >>`,
