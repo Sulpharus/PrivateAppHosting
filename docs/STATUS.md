@@ -182,6 +182,11 @@ since the PR #12 deploy. Earlier deploys stopped at medialog and never shipped t
 
 ## Open and proposed work
 
+- **Wunschliste: photos of whitelist-only lists.** Uploaded photos live under
+  `wunschliste/shared/wishes/<uuid>.jpg`, readable by everyone with the app (`may_access_app_file`).
+  The whitelist (db/006) hides wishes, not these files. Fix: store photos of whitelist-only lists in
+  a path whose storage policy asks `app_wunschliste.can_see`, and move them when the visibility
+  changes. The sheet tells users meanwhile.
 - **MuseScore Studio (`hosted/musescore`), in progress since 2026-11-03.** The owner wants the full
   desktop editor in the browser (Chrome/Edge desktop, as an installed app window; no mobile),
   original name, MS Basic SoundFont, scores private per person in Supabase (`mn.files`) with

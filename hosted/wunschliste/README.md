@@ -34,8 +34,11 @@ with the rose accent. Built on MiniNode (not ported from an export).
   over `mn.people()`, or by an exact e-mail address through `find_person()`, which never returns an
   address. `db/006_list_access.sql`: `list_settings` (visibility) and `list_viewers` (the
   whitelist), both private to the owner; `can_see()` is asked by `people()`, `wishlist()` and
-  `reserve()`, so a list one may not see looks empty and its wishes cannot be reserved. Uploaded
-  photos stay in the shared folder under random names.
+  `reserve()` (callers cannot ask `can_see()` themselves), so a list one may not see looks empty
+  and its wishes cannot be reserved. Known gap: uploaded photos stay in the shared folder under
+  random names, which every app user may read (the sheet says so; tracked in docs/STATUS.md).
+  `find_person` tells someone who already knows an address whether it uses the app, and under
+  which name (accepted for an invite-only group).
 - **Andere:** everyone with a wish, then their list. "Ich schenke das" reserves a wish; others
   see it as *Geschenkt* and cannot pick it; 30 days after the reservation it disappears for
   them. The owner never sees any of this.
@@ -83,7 +86,8 @@ three users.
   `pdf.js`, a small PDF writer (standard fonts, JPEG pictures, links, check boxes; no library).
   Sorted by category, the cards come in sections with a heading per category (repeated with
   "Fortsetzung" after a page break; the cards then leave the category out). Every card is a form
-  check box: tapping it in a PDF viewer (Chrome, Firefox, Acrobat, Vorschau) crosses the wish out
+  check box: tapping it in a PDF viewer (most desktop viewers: Chrome, Firefox, Acrobat; phone
+  viewers often cannot) crosses the wish out
   (veil, line through the title, stamp "Vergeben"); saved and passed on, the file shows people
   without an account what is already taken. Shop links lie above the check box and stay clickable. Uploaded photos come
   from storage; image links through `mn.image` (`GET /image` on api.<domain>), because the page's CSP

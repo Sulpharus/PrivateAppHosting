@@ -27,7 +27,8 @@ select platform.secure_table('wunschliste', 'list_viewers', 'private');
 -- A whitelist row only says who may look; it is never edited, only added or removed.
 revoke update on app_wunschliste.list_viewers from authenticated;
 
--- Whether the caller may see p_owner's list.
+-- Whether the caller may see p_owner's list. Only for the functions below (they run as the
+-- owner of the schema): callers cannot ask it, so nobody can probe who keeps a whitelist.
 create function app_wunschliste.can_see(p_owner uuid)
 returns boolean
 language sql
@@ -45,8 +46,7 @@ as $$
       where v.owner_id = p_owner and v.viewer_id = (select auth.uid())
     );
 $$;
-revoke execute on function app_wunschliste.can_see(uuid) from public, anon;
-grant execute on function app_wunschliste.can_see(uuid) to authenticated;
+revoke execute on function app_wunschliste.can_see(uuid) from public, anon, authenticated;
 
 -- people(): only lists the caller may see.
 create or replace function app_wunschliste.people()
@@ -56,12 +56,18 @@ stable
 security definer
 set search_path = ''
 as $$
+  -- The owners the caller may see, asked once per owner (not per wish).
+  with visible as (
+    select distinct w.owner_id
+    from app_wunschliste.wishes w
+    where app_wunschliste.can_see(w.owner_id)
+  )
   select w.owner_id, p.display_name, count(*), w.owner_id = (select auth.uid())
   from app_wunschliste.wishes w
+  join visible v on v.owner_id = w.owner_id
   join platform.profiles p on p.user_id = w.owner_id
   left join app_wunschliste.reservations r on r.wish_id = w.id
   where (select platform.app_access('wunschliste'))
-    and app_wunschliste.can_see(w.owner_id)
     -- Counted like wishlist() shows them (given wishes vanish for others after 30 days).
     and (
       w.owner_id = (select auth.uid())
@@ -127,8 +133,14 @@ begin
   ) then
     raise exception 'own_wish' using errcode = '42501';
   end if;
+  -- Access first, without a lock: someone who may not see the list never holds its rows.
+  if not exists (
+    select 1 from app_wunschliste.wishes w where w.id = p_wish and app_wunschliste.can_see(w.owner_id)
+  ) then
+    raise exception 'wish_not_found' using errcode = 'P0002';
+  end if;
   select * into v_wish from app_wunschliste.wishes where id = p_wish for update;
-  if not found or not app_wunschliste.can_see(v_wish.owner_id) then
+  if not found then
     raise exception 'wish_not_found' using errcode = 'P0002';
   end if;
   select display_name into v_name from platform.profiles where user_id = v_wish.owner_id;
@@ -145,8 +157,10 @@ end;
 $$;
 
 -- Find someone for the whitelist by their exact e-mail address: their id and name, only among
--- the people who may use the app. Nobody's address is ever returned, so the search cannot be
--- used to list addresses; names are searched in the browser over mn.people().
+-- the people who may use the app (app_people leaves the caller out). Nobody's address is ever
+-- returned, so the search cannot list addresses; names are searched in the browser over
+-- mn.people(). Trade-off, accepted for an invite-only group: someone who already knows an
+-- address learns whether its owner uses the app, and under which name.
 create function app_wunschliste.find_person(p_email text)
 returns table (user_id uuid, display_name text)
 language sql

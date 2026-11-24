@@ -186,16 +186,19 @@
   "view.label": "Ansicht der Liste",
   "pdf.continued": "Fortsetzung",
   "pdf.taken": "Vergeben",
-  "pdf.hint": "Tipp: Tippe in diesem PDF auf einen Wunsch, um ihn als vergeben abzuhaken, und speichere die Datei. Wer sie danach bekommt, sieht, was schon besorgt wird.",
+  "pdf.hint": "Tipp: In den meisten PDF-Programmen am Computer (Chrome, Firefox, Acrobat) tippst du auf einen Wunsch, um ihn als vergeben abzuhaken, und speicherst die Datei. Wer sie danach bekommt, sieht, was schon besorgt wird.",
   "access.label": "Wer sieht deine Liste?",
   "access.public": "Alle mit der App",
   "access.whitelist": "Nur Whitelist",
   "access.edit": "Whitelist ({n})",
   "access.publicHint": "Jede Person, die die Wunschliste nutzt, sieht deine Liste.",
-  "access.whitelistHint": "Nur {n} ausgewählte Personen sehen deine Liste.",
+  "access.whitelistHint": {
+    "one": "Nur {n} ausgewählte Person sieht deine Liste.",
+    "other": "Nur {n} ausgewählte Personen sehen deine Liste."
+  },
   "access.whitelistEmpty": "Noch niemand auf der Whitelist: Gerade sieht niemand deine Liste.",
   "access.title": "Whitelist",
-  "access.intro": "Nur diese Personen sehen deine Liste und können etwas reservieren. Suche nach Namen (Teile, Initialen, auch mit Tippfehlern) oder gib eine E-Mail-Adresse genau ein.",
+  "access.intro": "Nur diese Personen sehen deine Liste und können etwas reservieren. Suche nach Namen (Teile, Initialen, auch mit Tippfehlern) oder gib eine E-Mail-Adresse genau ein. Hochgeladene Fotos liegen im gemeinsamen Ordner der App: Wer einen Link darauf hat, kann sie öffnen.",
   "access.search": "Person suchen",
   "access.searchPlaceholder": "Name oder E-Mail-Adresse",
   "access.add": "Hinzufügen",
@@ -212,5 +215,10 @@
   "toast.whitelistOn": "Nur noch die Whitelist sieht deine Liste",
   "toast.publicOn": "Alle mit der App sehen deine Liste",
   "toast.viewerAdded": "{name} sieht deine Liste jetzt",
-  "toast.viewerRemoved": "{name} sieht deine Liste nicht mehr"
+  "toast.viewerRemoved": "{name} sieht deine Liste nicht mehr",
+  "access.matches": {
+    "one": "{n} Treffer",
+    "other": "{n} Treffer"
+  },
+  "access.unavailable": "Wer deine Liste sieht, ließ sich gerade nicht laden. Lade die Seite neu, um es zu ändern."
 }

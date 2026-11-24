@@ -362,13 +362,15 @@ export class PdfDocument {
     for (const page of this.pages) {
       const content = latin1(page.ops.join('\n'));
       const contentId = add(`<< /Length ${content.length} >>\nstream\n`, content, '\nendstream');
+      // The page's number is known before its widgets, which point back to it (/P).
+      const pageId = reserve();
       // Check boxes first: a link inside a box comes later and so lies on top, and stays clickable.
       const annots = [];
       for (const box of page.boxes) {
         const off = appearance(box.w, box.h, '');
         const on = appearance(box.w, box.h, box.onOps);
         const id = add(
-          `<< /Type /Annot /Subtype /Widget /FT /Btn /T (${escapeText(box.name)}) /F 4 /Rect [${box.rect.map(num).join(' ')}] /V /Off /AS /Off /Border [0 0 0] /MK << >> /AP << /N << /Yes ${on} 0 R /Off ${off} 0 R >> /D << /Yes ${on} 0 R /Off ${off} 0 R >> >> >>`,
+          `<< /Type /Annot /Subtype /Widget /FT /Btn /T (${escapeText(box.name)}) /F 4 /P ${pageId} 0 R /Rect [${box.rect.map(num).join(' ')}] /V /Off /AS /Off /Border [0 0 0] /MK << >> /AP << /N << /Yes ${on} 0 R /Off ${off} 0 R >> /D << /Yes ${on} 0 R /Off ${off} 0 R >> >> >>`,
         );
         annots.push(id);
         fieldIds.push(id);
@@ -383,11 +385,11 @@ export class PdfDocument {
         .map((id, i) => `/F${i + 1} ${id} 0 R`)
         .join(' ');
       const xobjects = [...page.imageIds].map((id) => `/${id} ${imageIds[id]} 0 R`).join(' ');
-      pageIds.push(
-        add(
-          `<< /Type /Page /Parent ${pagesRoot} 0 R /MediaBox [0 0 ${num(A4.width)} ${num(A4.height)}] /Resources << /Font << ${fonts} >>${xobjects ? ` /XObject << ${xobjects} >>` : ''} >> /Contents ${contentId} 0 R${annots.length ? ` /Annots [${annots.map((id) => `${id} 0 R`).join(' ')}]` : ''} >>`,
-        ),
+      set(
+        pageId,
+        `<< /Type /Page /Parent ${pagesRoot} 0 R /MediaBox [0 0 ${num(A4.width)} ${num(A4.height)}] /Resources << /Font << ${fonts} >>${xobjects ? ` /XObject << ${xobjects} >>` : ''} >> /Contents ${contentId} 0 R${annots.length ? ` /Annots [${annots.map((id) => `${id} 0 R`).join(' ')}]` : ''} >>`,
       );
+      pageIds.push(pageId);
     }
     set(
       pagesRoot,

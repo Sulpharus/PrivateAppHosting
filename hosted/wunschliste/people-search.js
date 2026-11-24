@@ -7,7 +7,7 @@
 export function normalize(text) {
   return String(text ?? '')
     .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
+    .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
     .replace(/ß/g, 'ss')
     .replace(/[^a-z0-9@.+_-]+/g, ' ')

@@ -83,7 +83,8 @@ const S = {
   // How lists are shown (and the PDF made): sort key, direction, category ('' all, null none).
   view: { key: 'priority', dir: 'asc', category: '' },
   // Who may see the own list (db/006): everyone with the app, or only the whitelist.
-  access: { visibility: 'public', viewers: [] },
+  // `loaded` false: the settings could not be read, so the switch is not shown.
+  access: { visibility: 'public', viewers: [], loaded: false },
   // Everyone who may use the app (mn.people()), for the whitelist search.
   everyone: [],
 };
@@ -156,28 +157,33 @@ async function load() {
   render();
 }
 
-/** The own list's visibility and whitelist, with names (a failure leaves the list public-looking). */
+/** The own list's visibility and whitelist, with names (mn.people() only for the names). */
 async function loadAccess(mn) {
-  try {
-    const [settings, viewers, everyone] = await Promise.all([
-      mn.db.from('list_settings').select('visibility').maybeSingle(),
-      mn.db.from('list_viewers').select('id, viewer_id').order('created_at'),
-      mn.people(),
-    ]);
-    if (settings.error || viewers.error) throw settings.error ?? viewers.error;
-    S.everyone = everyone;
-    const names = new Map(everyone.map((p) => [p.id, p.name]));
-    S.access = {
-      visibility: settings.data?.visibility === 'whitelist' ? 'whitelist' : 'public',
-      viewers: viewers.data.map((v) => ({
-        id: v.id,
-        userId: v.viewer_id,
-        name: names.get(v.viewer_id) ?? t('access.unknown'),
-      })),
-    };
-  } catch (err) {
-    console.error('wunschliste: access failed', err);
+  const [settings, viewers, everyone] = await Promise.all([
+    mn.db.from('list_settings').select('visibility').maybeSingle(),
+    mn.db.from('list_viewers').select('id, viewer_id').order('created_at'),
+    mn.people().catch((err) => {
+      console.error('wunschliste: people failed', err);
+      return null;
+    }),
+  ]);
+  if (everyone) S.everyone = everyone;
+  if (settings.error || viewers.error) {
+    // Never claim "public" for a list whose setting could not be read.
+    console.error('wunschliste: access failed', settings.error ?? viewers.error);
+    S.access = { ...S.access, loaded: false };
+    return;
   }
+  const names = new Map(S.everyone.map((p) => [p.id, p.name]));
+  S.access = {
+    loaded: true,
+    visibility: settings.data?.visibility === 'whitelist' ? 'whitelist' : 'public',
+    viewers: viewers.data.map((v) => ({
+      id: v.id,
+      userId: v.viewer_id,
+      name: names.get(v.viewer_id) ?? t('access.unknown'),
+    })),
+  };
 }
 
 async function loadPerson() {
@@ -398,6 +404,7 @@ function viewBar(wishes) {
 
 /** Who sees the own list: everyone, or only the whitelist (with a button to edit it). */
 function accessBar() {
+  if (!S.access.loaded) return h('p', { class: 'mn-hint access-hint' }, t('access.unavailable'));
   const whitelist = S.access.visibility === 'whitelist';
   const option = (value, label) =>
     h(
@@ -438,7 +445,7 @@ function accessBar() {
 }
 
 async function setVisibility(visibility) {
-  if (S.access.visibility === visibility) return;
+  if (!S.access.loaded || S.access.visibility === visibility) return;
   const mn = await ready;
   const { error } = await mn.db
     .from('list_settings')
@@ -447,6 +454,8 @@ async function setVisibility(visibility) {
   S.access = { ...S.access, visibility };
   toast(t(visibility === 'whitelist' ? 'toast.whitelistOn' : 'toast.publicOn'));
   render();
+  // The switch was drawn again: focus goes back to it (and the sheet returns there).
+  document.querySelector('.access-bar [aria-pressed="true"]')?.focus();
   if (visibility === 'whitelist' && S.access.viewers.length === 0) openWhitelist();
 }
 
@@ -459,20 +468,26 @@ function openWhitelist() {
     placeholder: t('access.searchPlaceholder'),
     'aria-label': t('access.search'),
   });
-  const results = h('div', { class: 'mn-list', 'aria-live': 'polite' });
+  const results = h('div', { class: 'mn-list' });
+  // A short line for screen readers instead of announcing every row on each key.
+  const status = h('p', { class: 'mn-hint', 'aria-live': 'polite' });
   const current = h('div', { class: 'mn-list' });
   let searchRun = 0;
 
   const isViewer = (id) => S.access.viewers.some((v) => v.userId === id);
-  const add = async (person) => {
+  const add = async (person, button) => {
     if (isViewer(person.id)) return;
+    if (button) button.disabled = true;
     const mn = await ready;
     const { data, error } = await mn.db
       .from('list_viewers')
       .insert({ viewer_id: person.id })
       .select('id')
       .single();
-    if (error) return toast(t('toast.failed'));
+    if (error) {
+      if (button) button.disabled = false;
+      return toast(t('toast.failed'));
+    }
     S.access.viewers = [...S.access.viewers, { id: data.id, userId: person.id, name: person.name }];
     toast(t('toast.viewerAdded', { name: person.name }));
     drawCurrent();
@@ -523,15 +538,25 @@ function openWhitelist() {
     const query = input.value.trim();
     if (!query) {
       results.replaceChildren();
+      status.textContent = '';
       return;
     }
-    let found = searchPeople(S.everyone, query);
+    let found = searchPeople(
+      S.everyone.filter((p) => p.id !== S.me),
+      query,
+    );
     // An address is looked up exactly on the server, which never returns addresses itself.
     if (looksLikeEmail(query)) {
       const mn = await ready;
-      const { data } = await mn.db.rpc('find_person', { p_email: query });
+      const { data, error } = await mn.db.rpc('find_person', { p_email: query });
       if (run !== searchRun) return;
-      found = (data ?? []).map((p) => ({ id: p.user_id, name: p.display_name }));
+      if (error) {
+        toast(t('toast.failed'));
+        return;
+      }
+      found = (data ?? [])
+        .map((p) => ({ id: p.user_id, name: p.display_name }))
+        .filter((p) => p.id !== S.me);
     }
     results.replaceChildren(
       ...(found.length
@@ -546,7 +571,7 @@ function openWhitelist() {
                       type: 'button',
                       class: 'mn-btn mn-btn--primary',
                       'aria-label': t('access.addAria', { name: person.name }),
-                      onclick: () => void add(person),
+                      onclick: (event) => void add(person, event.currentTarget),
                     },
                     t('access.add'),
                   ),
@@ -560,6 +585,7 @@ function openWhitelist() {
             ),
           ]),
     );
+    status.textContent = t('access.matches', { n: found.length });
   };
   let timer;
   input.addEventListener('input', () => {
@@ -586,6 +612,7 @@ function openWhitelist() {
       { class: 'mn-form mn-sheet-body' },
       h('p', { class: 'mn-hint' }, t('access.intro')),
       h('label', { class: 'mn-field' }, t('access.search'), input),
+      status,
       results,
       h('h3', { class: 'access-heading' }, t('access.current')),
       current,

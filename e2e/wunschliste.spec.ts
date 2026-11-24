@@ -351,8 +351,13 @@ test('sort by price or name, filter by category, and the PDF follows the view', 
 
 test('a list shown only to the whitelist: Tom sees it, Mia does not', async ({ browser }) => {
   test.setTimeout(120_000);
+  // Runs after the tests above (one worker, in order): Lena and Mia already have wishes.
   const lena = await signedIn(browser, people.lena.email);
   await lena.getByRole('button', { name: 'Nur Whitelist' }).click();
+  await expect(lena.getByRole('button', { name: 'Nur Whitelist' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
   const sheet = lena.getByRole('dialog', { name: 'Whitelist' });
   await expect(sheet).toBeVisible();
   // Found by part of the name, in lower case.
@@ -372,12 +377,19 @@ test('a list shown only to the whitelist: Tom sees it, Mia does not', async ({ b
   await tom.getByRole('button', { name: 'Andere' }).first().click();
   await expect(tom.getByRole('button', { name: new RegExp(people.lena.name) })).toBeVisible();
 
+  // Mia's list of others has loaded (Tom's own list is not hers, but Lena's would be there).
   const mia = await signedIn(browser, people.mia.email);
   await mia.getByRole('button', { name: 'Andere' }).first().click();
+  await expect(mia.getByRole('heading', { level: 1, name: 'Andere' })).toBeVisible();
+  await expect(mia.locator('.mn-row, .mn-empty').first()).toBeVisible();
   await expect(mia.getByRole('button', { name: new RegExp(people.lena.name) })).toHaveCount(0);
 
-  // Back to everyone: Mia sees the list again.
+  // Back to everyone: the switch turns only after the server stored it, then Mia sees the list.
   await lena.getByRole('button', { name: 'Alle mit der App' }).click();
+  await expect(lena.getByRole('button', { name: 'Alle mit der App' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
   await mia.reload();
   await mia.getByRole('button', { name: 'Andere' }).first().click();
   await expect(mia.getByRole('button', { name: new RegExp(people.lena.name) })).toBeVisible();

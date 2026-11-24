@@ -186,16 +186,19 @@
   "view.label": "List view",
   "pdf.continued": "continued",
   "pdf.taken": "Taken",
-  "pdf.hint": "Tip: tap a wish in this PDF to tick it off as taken, then save the file. Whoever gets it next sees what is already being bought.",
+  "pdf.hint": "Tip: in most PDF programs on a computer (Chrome, Firefox, Acrobat) tap a wish to tick it off as taken, then save the file. Whoever gets it next sees what is already being bought.",
   "access.label": "Who sees your list?",
   "access.public": "Everyone with the app",
   "access.whitelist": "Whitelist only",
   "access.edit": "Whitelist ({n})",
   "access.publicHint": "Everyone who uses the wishlist sees your list.",
-  "access.whitelistHint": "Only {n} chosen people see your list.",
+  "access.whitelistHint": {
+    "one": "Only {n} chosen person sees your list.",
+    "other": "Only {n} chosen people see your list."
+  },
   "access.whitelistEmpty": "Nobody on the whitelist yet: right now nobody sees your list.",
   "access.title": "Whitelist",
-  "access.intro": "Only these people see your list and can reserve something. Search by name (parts, initials, typos are fine) or enter an e-mail address exactly.",
+  "access.intro": "Only these people see your list and can reserve something. Search by name (parts, initials, typos are fine) or enter an e-mail address exactly. Uploaded photos sit in the app's shared folder: anyone with a link to one can open it.",
   "access.search": "Find a person",
   "access.searchPlaceholder": "Name or e-mail address",
   "access.add": "Add",
@@ -212,5 +215,10 @@
   "toast.whitelistOn": "Only the whitelist sees your list now",
   "toast.publicOn": "Everyone with the app sees your list",
   "toast.viewerAdded": "{name} sees your list now",
-  "toast.viewerRemoved": "{name} no longer sees your list"
+  "toast.viewerRemoved": "{name} no longer sees your list",
+  "access.matches": {
+    "one": "{n} match",
+    "other": "{n} matches"
+  },
+  "access.unavailable": "Who sees your list could not be loaded right now. Reload the page to change it."
 }

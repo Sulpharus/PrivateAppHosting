@@ -224,6 +224,28 @@ describe.skipIf(!dbUrl)('wunschliste database', () => {
         expect(
           await as(mia, () => tx`select * from app_wunschliste.find_person('example.com')`),
         ).toHaveLength(0);
+        // Tom, on the whitelist, may reserve there; the check itself is not for callers.
+        await as(tom, () => tx`select app_wunschliste.reserve(${free.id})`);
+        await tx`delete from app_wunschliste.reservations where wish_id = ${free.id}`;
+        await expect(
+          refused(mia, (db) => db`select app_wunschliste.can_see(${lena})`),
+        ).rejects.toThrow(/permission denied/);
+        // Not from another app's page.
+        expect(
+          await as(
+            mia,
+            () => tx`select * from app_wunschliste.find_person(${tomEmail.email})`,
+            'https://evil.test',
+          ),
+        ).toHaveLength(0);
+        // An empty whitelist hides the list from everyone but its owner.
+        await as(lena, () => tx`delete from app_wunschliste.list_viewers`);
+        expect(
+          await as(tom, () => tx`select * from app_wunschliste.wishlist(${lena})`),
+        ).toHaveLength(0);
+        const ownPeople = await as(lena, () => tx`select mine from app_wunschliste.people()`);
+        expect(ownPeople.map((p) => p.mine)).toContain(true);
+
         // Back to public: Mia sees it again.
         await as(lena, () => tx`update app_wunschliste.list_settings set visibility = 'public'`);
         expect(
