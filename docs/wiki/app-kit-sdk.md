@@ -43,6 +43,7 @@ const user = await mn.auth.requireLogin();  // schickt zum zentralen Login, fall
 | `mn.team` | Teams für Apps mit Datenmodus `team`: `list`, `create`, `members`, `setMember`, `removeMember`, `rename`, `remove`, `notify` | [Daten speichern](wiki:daten-speichern) |
 | `mn.ai` | `chat()`, `stream()`, `json()` über den KI-Proxy, keine Schlüssel im Browser | [KI-Proxy](wiki:ki-proxy) |
 | `mn.api(id)` | Externe APIs über den Schlüssel-Proxy | [API-Schlüssel](wiki:api-schluessel) |
+| `mn.image(url)` | Ein Bild von einer fremden Seite als Blob (z. B. für ein PDF). Der Browser darf es wegen CSP und fehlendem CORS nicht selbst lesen; `api.<domain>` holt es (nur öffentliche https-Adressen, JPEG/PNG/GIF/WebP/AVIF, höchstens 8 MB). Anders als `mn.api` ohne Schlüssel und ohne Eintrag in `mininode.json` | [API-Schlüssel](wiki:api-schluessel) |
 | `mn.google` | Gmail/Kalender-Tokens für deklarierte Bereiche; `calendarSync` (nur Kalender) | [Google](wiki:google) |
 | `mn.suite` | Gemeinsame Datensätze und Sammlungen | [Gemeinsame Daten](wiki:gemeinsame-daten) |
 | `mn.notify`, `mn.push` | Glocke und Push; Erinnerungen zu einer Zeit | [Push und Offline](wiki:push-offline) |

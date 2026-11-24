@@ -155,3 +155,29 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--mn-s3);
 }
+
+/* Sort and category above a list: wraps on phones, one row on wider screens. */
+.view-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--mn-s2) var(--mn-s3);
+  margin-bottom: var(--mn-s3);
+}
+.view-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: var(--mn-fs-sm);
+  color: var(--mn-muted);
+  min-width: 0;
+  flex: 1 1 10rem;
+  max-width: 16rem;
+}
+.view-field select {
+  min-height: 44px;
+}
+.view-dir svg {
+  width: 18px;
+  height: 18px;
+}

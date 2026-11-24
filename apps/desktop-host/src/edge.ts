@@ -23,13 +23,15 @@ export default {
 /**
  * Sends calls for supabase.<domain> to the Supabase gateway inside the Docker network. It is the
  * Worker behind that address for browsers, and the outbound service of the platform Workers, so
- * they reach Supabase by its public address without any DNS for it.
+ * they reach Supabase by its public address without any DNS for it. Every other call goes out
+ * through PUBLIC, which only reaches public addresses: like on Cloudflare, a Worker cannot be made
+ * to call into the local network (API proxy, /image), whatever a host name resolves to.
  */
 export const SUPABASE_PROXY_SCRIPT = `
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    if (url.hostname.toLowerCase() !== env.SUPABASE_HOST) return fetch(request);
+    if (url.hostname.toLowerCase() !== env.SUPABASE_HOST) return env.PUBLIC.fetch(request);
     const gateway = new URL(env.GATEWAY_URL);
     url.protocol = gateway.protocol;
     url.host = gateway.host;

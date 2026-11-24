@@ -166,5 +166,22 @@
   "bd.pushIdeas": "In {days} days. {n} gift ideas noted.",
   "bd.pushNoIdea": "In {days} days. No gift idea yet.",
   "bd.noContacts": "Birthdays of your contacts appear here once Aether Notes publishes them. The admin has to approve reading the calendar entries.",
-  "bd.pushIdea1": "In {days} days. One gift idea noted."
+  "bd.pushIdea1": "In {days} days. One gift idea noted.",
+  "sort.label": "Sort by",
+  "sort.priority": "How much wanted",
+  "sort.name": "Name",
+  "sort.price": "Price",
+  "sort.shop": "Website",
+  "sort.category": "Category",
+  "sort.asc": "Ascending",
+  "sort.desc": "Descending",
+  "sort.ascAria": "Sorted ascending, switch to descending",
+  "sort.descAria": "Sorted descending, switch to ascending",
+  "filter.label": "Category",
+  "filter.all": "All categories",
+  "filter.none": "No category",
+  "editor.category": "Category",
+  "editor.categoryPlaceholder": "e.g. Books",
+  "editor.categoryHint": "Your own words, for sorting and filtering",
+  "view.label": "List view"
 }

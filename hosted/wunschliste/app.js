@@ -4,6 +4,7 @@
 // wishlist(owner) and reserve(wish) show and reserve other people's wishes.
 import { euro, parseLink, parsePrice } from './amazon.js';
 import { createBirthdayView } from './birthday-view.js';
+import { categoriesOf, cleanCategory, SORT_KEYS, shopOf, sortWishes } from './sort.js';
 import { buildWishlistPdf } from './wishlist-pdf.js';
 
 // ---------- helpers ----------
@@ -36,6 +37,8 @@ const ICON_PATHS = {
   people: 'M9 12a3.5 3.5 0 100-7 3.5 3.5 0 000 7zM3 20c.8-3.4 3.2-5 6-5s5.2 1.6 6 5',
   check: 'M5 12.5l4.5 4.5L19 7.5',
   download: 'M12 4v11M7.5 10.5L12 15l4.5-4.5M5 19.5h14',
+  up: 'M12 19V5M6.5 10.5L12 5l5.5 5.5',
+  down: 'M12 5v14M6.5 13.5L12 19l5.5-5.5',
   photo: 'M4 7h3l1.5-2h7L17 7h3v12H4zM12 16.5a3.5 3.5 0 100-7 3.5 3.5 0 000 7z',
 };
 function icon(name) {
@@ -60,13 +63,7 @@ const initials = (text) =>
     .slice(0, 2)
     .map((w) => w[0]?.toUpperCase() ?? '')
     .join('') || '?';
-const shop = (url) => {
-  try {
-    return new URL(url).hostname.replace(/^www\./, '');
-  } catch {
-    return '';
-  }
-};
+const shop = shopOf;
 const priorityLabel = (p) => t(`priority.${p}`);
 const dateLabel = (iso) => window.mnui.date.format(new Date(iso));
 
@@ -82,7 +79,10 @@ const S = {
   reservations: [],
   loading: true,
   error: null,
+  // How lists are shown (and the PDF made): sort key, direction, category ('' all, null none).
+  view: { key: 'priority', dir: 'asc', category: '' },
 };
+const VIEW_KEY = 'list-view';
 // Handlers work right away; the SDK and the login check run in the background.
 const ready = (async () => {
   const client = await window.mininode.mininode();
@@ -103,14 +103,27 @@ const birthdays = createBirthdayView({
   openPerson: (id) => openPerson(id),
 });
 
+let viewLoaded = false;
 async function load() {
   const mn = await ready;
   S.error = null;
+  if (!viewLoaded) {
+    viewLoaded = true;
+    try {
+      const saved = await mn.kv.get(VIEW_KEY);
+      if (saved && SORT_KEYS.includes(saved.key))
+        S.view = { key: saved.key, dir: saved.dir === 'desc' ? 'desc' : 'asc', category: '' };
+    } catch {
+      // The default order is fine.
+    }
+  }
   try {
     const [wishes, people, reservations] = await Promise.all([
       mn.db
         .from('wishes')
-        .select('id, title, note, url, image_url, image_path, price_cents, priority, created_at')
+        .select(
+          'id, title, note, url, image_url, image_path, price_cents, priority, category, created_at',
+        )
         .order('priority')
         .order('created_at', { ascending: false }),
       mn.db.rpc('people'),
@@ -243,6 +256,7 @@ function details(item) {
     parts.push(euro(item.price_cents));
   if (item.priority && item.priority !== 2) parts.push(priorityLabel(item.priority));
   if (item.url) parts.push(shop(item.url));
+  if (item.category) parts.push(item.category);
   return parts.join(' · ');
 }
 
@@ -259,6 +273,96 @@ function shopLink(item) {
     },
     icon('link'),
     t('wish.view'),
+  );
+}
+
+/** The wishes as currently sorted and filtered (also the order of the PDF). */
+function visible(wishes) {
+  // A category that is not on this list (any more) shows everything.
+  let { category } = S.view;
+  const lower = (c) => String(c).toLocaleLowerCase(locale());
+  if (
+    category === null
+      ? !wishes.some((w) => !w.category)
+      : category && !categoriesOf(wishes, locale()).some((c) => lower(c) === lower(category))
+  )
+    category = '';
+  return sortWishes(wishes, { ...S.view, category, locale: locale() });
+}
+
+function setView(change) {
+  S.view = { ...S.view, ...change };
+  render();
+  if ('key' in change || 'dir' in change)
+    void ready
+      .then((mn) => mn.kv.set(VIEW_KEY, { key: S.view.key, dir: S.view.dir }))
+      .catch(() => undefined);
+}
+
+/** Sort by, up/down and (when the list has categories) one category. */
+function viewBar(wishes) {
+  const sortSelect = h(
+    'select',
+    { 'aria-label': t('sort.label'), onchange: (e) => setView({ key: e.currentTarget.value }) },
+    SORT_KEYS.map((key) =>
+      h('option', { value: key, selected: key === S.view.key ? true : null }, t(`sort.${key}`)),
+    ),
+  );
+  const down = S.view.dir === 'desc';
+  const categories = categoriesOf(wishes, locale());
+  const hasNone = wishes.some((w) => !w.category);
+  const current = S.view.category;
+  const categorySelect =
+    categories.length > 0 &&
+    h(
+      'select',
+      {
+        'aria-label': t('filter.label'),
+        onchange: (e) => {
+          const value = e.currentTarget.value;
+          setView({ category: value === '\u0000' ? null : value });
+        },
+      },
+      h('option', { value: '', selected: current === '' ? true : null }, t('filter.all')),
+      categories.map((c) =>
+        h(
+          'option',
+          {
+            value: c,
+            selected:
+              typeof current === 'string' &&
+              current.toLocaleLowerCase(locale()) === c.toLocaleLowerCase(locale())
+                ? true
+                : null,
+          },
+          c,
+        ),
+      ),
+      hasNone &&
+        h(
+          'option',
+          { value: '\u0000', selected: current === null ? true : null },
+          t('filter.none'),
+        ),
+    );
+  return h(
+    'div',
+    { class: 'view-bar', role: 'group', 'aria-label': t('view.label') },
+    h('label', { class: 'view-field' }, h('span', {}, t('sort.label')), sortSelect),
+    h(
+      'button',
+      {
+        type: 'button',
+        class: 'mn-btn view-dir',
+        'aria-pressed': down ? 'true' : 'false',
+        'aria-label': t(down ? 'sort.descAria' : 'sort.ascAria'),
+        onclick: () => setView({ dir: down ? 'asc' : 'desc' }),
+      },
+      icon(down ? 'down' : 'up'),
+      t(down ? 'sort.desc' : 'sort.asc'),
+    ),
+    categorySelect &&
+      h('label', { class: 'view-field' }, h('span', {}, t('filter.label')), categorySelect),
   );
 }
 
@@ -298,10 +402,11 @@ function renderMine(main, tools) {
   }
   main.append(
     h('p', { class: 'mn-note' }, t('mine.note')),
+    viewBar(S.wishes),
     h(
       'div',
       { class: 'mn-list' },
-      S.wishes.map((wish) =>
+      visible(S.wishes).map((wish) =>
         h(
           'div',
           { class: 'wish' },
@@ -402,10 +507,11 @@ function renderPerson(main, tools) {
     return;
   }
   main.append(
+    viewBar(S.personWishes),
     h(
       'div',
       { class: 'mn-list' },
-      S.personWishes.map((wish) => {
+      visible(S.personWishes).map((wish) => {
         const given = wish.status === 'geschenkt';
         const mine = wish.status === 'von-dir';
         return h(
@@ -648,14 +754,22 @@ async function setPurchased(r, bought) {
   await load();
 }
 
-/** The bytes of a wish's picture as a small JPEG, or null (no picture, or its site does not allow it). */
+/**
+ * The bytes of a wish's picture as a small JPEG, or null (no picture, or it cannot be read). An
+ * uploaded photo comes from storage; an image link through `mn.image` (api.<domain>), because the
+ * page's CSP and most shops' missing CORS headers keep the browser from reading it.
+ */
 async function pictureForPdf(wish) {
   try {
-    const src = wish.image_path ? await pictureUrl(wish.image_path) : wish.image_url;
-    if (!src) return null;
-    const response = await fetch(src, { mode: 'cors', referrerPolicy: 'no-referrer' });
-    if (!response.ok) return null;
-    const jpeg = await toJpeg(await response.blob(), 700, 0.8);
+    const mn = await ready;
+    let blob;
+    if (wish.image_path) {
+      const response = await fetch(await pictureUrl(wish.image_path));
+      if (!response.ok) return null;
+      blob = await response.blob();
+    } else if (wish.image_url) blob = await mn.image(wish.image_url);
+    else return null;
+    const jpeg = await toJpeg(blob, 480, 0.82);
     return new Uint8Array(await jpeg.arrayBuffer());
   } catch {
     return null;
@@ -675,17 +789,29 @@ async function exportPdf() {
     const user = await mn.auth.user();
     const meta = user?.user_metadata ?? {};
     const name = String(meta.display_name || meta.name || user?.email?.split('@')[0] || '').trim();
-    const pictures = await Promise.all(S.wishes.map(pictureForPdf));
+    // The PDF shows the list as it is on screen: same order, same category.
+    const wishes = visible(S.wishes);
+    // Four at a time: gentle on the API (and its per-minute limit) with long lists.
+    const pictures = new Array(wishes.length).fill(null);
+    let nextPicture = 0;
+    await Promise.all(
+      Array.from({ length: Math.min(4, wishes.length) }, async () => {
+        while (nextPicture < wishes.length) {
+          const index = nextPicture++;
+          pictures[index] = await pictureForPdf(wishes[index]);
+        }
+      }),
+    );
     const today = new Date();
     const bytes = buildWishlistPdf({
       title: t('pdf.title'),
       subtitle: t('pdf.subtitle', {
         name: name || t('pdf.anonymous'),
-        count: t('wishes.count', { n: S.wishes.length }),
+        count: t('wishes.count', { n: wishes.length }),
         date: today.toLocaleDateString(locale(), { dateStyle: 'long' }),
       }),
       author: name,
-      wishes: S.wishes.map((wish, index) => ({
+      wishes: wishes.map((wish, index) => ({
         title: wish.title,
         note: wish.note ?? '',
         price:
@@ -695,6 +821,7 @@ async function exportPdf() {
         url: wish.url ?? '',
         shop: wish.url ? shop(wish.url) : '',
         linkLabel: t('pdf.link'),
+        category: wish.category ?? '',
         image: pictures[index] ?? null,
       })),
       brand: t('pdf.brand'),
@@ -787,6 +914,20 @@ function openEditor(wish) {
     value: wish?.image_url ?? '',
   });
   const note = h('textarea', { name: 'note', rows: 3, maxlength: 1000 }, wish?.note ?? '');
+  // Free text, with the categories already used as suggestions.
+  const categoryList = h(
+    'datalist',
+    { id: 'wish-categories' },
+    categoriesOf(S.wishes, locale()).map((c) => h('option', { value: c })),
+  );
+  const category = h('input', {
+    name: 'category',
+    maxlength: 40,
+    autocomplete: 'off',
+    list: 'wish-categories',
+    placeholder: t('editor.categoryPlaceholder'),
+    value: wish?.category ?? '',
+  });
 
   // The photo: chosen from the device (gallery or camera), shrunk here, uploaded when saving.
   let photo = null; // the new JPEG, when one was chosen
@@ -875,7 +1016,13 @@ function openEditor(wish) {
       field(t('editor.url'), link, t('editor.urlHint')),
       status,
       field(t('editor.title'), title),
-      h('div', { class: 'mn-grid-2' }, field(t('editor.price'), price)),
+      h(
+        'div',
+        { class: 'mn-grid-2' },
+        field(t('editor.price'), price),
+        field(t('editor.category'), category, t('editor.categoryHint')),
+      ),
+      categoryList,
       h('div', { class: 'mn-field' }, h('span', {}, t('priority.short')), seg),
     ),
     h(
@@ -923,6 +1070,7 @@ function openEditor(wish) {
       price_cents: cents,
       priority,
       note: note.value.trim() || null,
+      category: cleanCategory(category.value),
     };
     const mn = await ready;
     // The uploaded photo wins over a link; removing it leaves the link (if any).

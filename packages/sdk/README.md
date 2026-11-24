@@ -19,6 +19,7 @@ const answer = await mn.ai.chat('Fasse zusammen: …');  // via ai.mininode.app,
 const events = await mn.google.fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events'); // "google" in mininode.json (ADR 0004)
 await mn.google.calendarSync.get(); // Kalender only: Google Calendar sync state, set() and sync() (ADR 0010)
 const weather = await mn.api('openweather').json('/weather?q=München'); // "apis" in mininode.json, key stays on the server (ADR 0006)
+const picture = await mn.image('https://shop.example/p.jpg'); // Blob of a public picture, fetched by api.<domain> (CSP/CORS)
 const people = await mn.people();                    // others with this app: [{ id, name }] (for sharing)
 await mn.suite.type('event').upsert({ title, starts_at }, { sourceKey }); // shared records (ADR 0002)
 await mn.suite.range({ from, to });                // every readable record in a time range

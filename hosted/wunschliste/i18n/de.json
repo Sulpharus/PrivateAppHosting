@@ -166,5 +166,22 @@
   "bd.pushIdeas": "In {days} Tagen. {n} Geschenkideen notiert.",
   "bd.pushNoIdea": "In {days} Tagen. Noch keine Geschenkidee.",
   "bd.noContacts": "Geburtstage deiner Kontakte erscheinen hier, sobald Aether Notes sie veröffentlicht. Der Admin muss das Lesen der Kalendereinträge freigeben.",
-  "bd.pushIdea1": "In {days} Tagen. Eine Geschenkidee notiert."
+  "bd.pushIdea1": "In {days} Tagen. Eine Geschenkidee notiert.",
+  "sort.label": "Sortieren nach",
+  "sort.priority": "Wie sehr gewünscht",
+  "sort.name": "Name",
+  "sort.price": "Preis",
+  "sort.shop": "Website",
+  "sort.category": "Kategorie",
+  "sort.asc": "Aufsteigend",
+  "sort.desc": "Absteigend",
+  "sort.ascAria": "Aufsteigend sortiert, umschalten auf absteigend",
+  "sort.descAria": "Absteigend sortiert, umschalten auf aufsteigend",
+  "filter.label": "Kategorie",
+  "filter.all": "Alle Kategorien",
+  "filter.none": "Ohne Kategorie",
+  "editor.category": "Kategorie",
+  "editor.categoryPlaceholder": "z. B. Bücher",
+  "editor.categoryHint": "Frei wählbar, zum Sortieren und Filtern",
+  "view.label": "Ansicht der Liste"
 }

@@ -7,7 +7,7 @@ one port. Supabase runs next to it in Docker (`infra/desktop`).
 - `src/config.ts`: environment of the host (domain, scheme, port, keys); derives every address.
 - `src/bundle.ts`: bundles the four Workers with esbuild (`node src/bundle.ts <outdir>`).
 - `src/options.ts`: the Miniflare configuration: router, shared asset store with one shim per app,
-  Supabase proxy (also the outbound service of every Worker), portal, API, AI proxy, app gates.
+  Supabase proxy (also the outbound service of every Worker: Supabase goes to the gateway in the Docker network, everything else only to public addresses, never the LAN), portal, API, AI proxy, app gates.
 - `src/edge.ts`: the small Workers in front (host router, Supabase proxy, asset store and shim).
 - `src/apps.ts`: installed apps from `<DATA_DIR>/apps/<slug>/app.json` and `<DATA_DIR>/served/<slug>/`.
 - `src/scheduler.ts`: the API's cron triggers.

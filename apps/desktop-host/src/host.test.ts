@@ -177,6 +177,27 @@ describe('the host', () => {
     if (location) expect(location).not.toMatch(/alpha/);
   });
 
+  it('lets the platform Workers reach only public addresses, not the local network', async () => {
+    let hits = 0;
+    const lan = http.createServer((_, response) => {
+      hits += 1;
+      response.end('lan');
+    });
+    await new Promise<void>((resolve) => lan.listen(0, '127.0.0.1', resolve));
+    const { port } = lan.address() as { port: number };
+    try {
+      const outbound = await mf.getWorker('supabase');
+      const status = await outbound.fetch(`http://127.0.0.1:${port}/`).then(
+        (response) => response.status,
+        () => 'refused',
+      );
+      expect(status).not.toBe(200);
+      expect(hits).toBe(0);
+    } finally {
+      lan.close();
+    }
+  });
+
   it('answers unknown hosts and apps with 404', async () => {
     expect((await get('nope.mininode.localhost')).status).toBe(404);
     expect((await get('elsewhere.example')).status).toBe(404);

@@ -8,6 +8,7 @@ import { createApi } from './api.ts';
 import { appSchema, loadConfig, type MininodeConfig } from './config.ts';
 import { createGame } from './game.ts';
 import { createGoogle } from './google.ts';
+import { createImage } from './image.ts';
 import { createKv, type KvScope } from './kv.ts';
 import {
   createOfflineKv,
@@ -95,6 +96,12 @@ export interface Mininode {
   readonly google: ReturnType<typeof createGoogle>;
   /** External APIs declared in mininode.json (`apis`); the key is added on the server (ADR 0006). */
   readonly api: ReturnType<typeof createApi>;
+  /**
+   * A picture from a public https address as a Blob, fetched by api.<domain> (the page's CSP and
+   * most shops' missing CORS headers keep the browser from reading it), e.g. to embed it in a PDF.
+   * JPEG, PNG, GIF, WebP or AVIF, at most 8 MB. Throws when the address is not public or not a picture.
+   */
+  image(url: string): Promise<Blob>;
   /**
    * The other people who may use this app (display names), e.g. to share something with them.
    * Only answers from the app's own page.
@@ -322,6 +329,7 @@ export function createMininode(config: MininodeConfig): Mininode {
     ai: createAi(config, sessionToken),
     google: createGoogle(config, sessionToken),
     api: createApi(config, sessionToken),
+    image: createImage(config, sessionToken),
     push: createPush(config, supabase),
     game: createGame(config, supabase),
     suite: createSuite(supabase),

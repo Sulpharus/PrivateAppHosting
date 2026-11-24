@@ -61,3 +61,7 @@ privat außerhalb des Rechners ab. `restore <Ordner>` ersetzt alles durch die Si
 - Docker, Betriebssystem und MiniNode aktuell halten.
 
 Mehr: Runbook `setup-desktop.md`. Probleme: [Fehlerbehebung](wiki:fehlerbehebung).
+
+## Netz nach außen
+
+Portal, API, KI-Proxy und Apps erreichen nach außen nur **öffentliche** Adressen (wie auf Cloudflare). Geräte im Heimnetz (Router, NAS, Drucker) sind für sie nicht erreichbar, auch nicht über den API-Proxy oder `mn.image`. Nur Supabase im Docker-Netz ist ausgenommen.

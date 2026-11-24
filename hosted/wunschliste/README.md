@@ -22,6 +22,12 @@ with the rose accent. Built on MiniNode (not ported from an export).
   (`amazon.js`; nothing is fetched from Amazon). Optional price, priority (Sehr gern / Gern /
   Nur eine Idee), note and image address. A wish stays until its owner deletes it. "Teilen"
   shares a link that opens the owner's list directly (`?person=<id>`).
+- **Sortieren und Kategorien:** above *Meine Liste* and another person's list: sort by priority
+  (default), name, price, website or category, up or down, and show one category (or the wishes
+  without one). The order is kept in `mn.kv` (`list-view`); the category choice is per visit. Each
+  wish has an optional free-text category (editor, with the ones already used as suggestions;
+  `db/005_wish_category.sql`, also returned by `wishlist()`). Pure logic in `sort.js`, tests in
+  `test/sort.test.js`.
 - **Andere:** everyone with a wish, then their list. "Ich schenke das" reserves a wish; others
   see it as *Geschenkt* and cannot pick it; 30 days after the reservation it disappears for
   them. The owner never sees any of this.
@@ -63,11 +69,14 @@ three users.
   `wishes.image_path` and returns it from `wishlist()`. A photo wins over an image link; replacing or
   removing it, or deleting the wish, deletes the file. Signed addresses expire after an hour: they are
   made on demand and kept for 50 minutes (`pictureUrl`). The shopping list still shows initials.
-- **PDF export** ("Als PDF" on *Meine Liste*): `wishlist-pdf.js` lays out A4 pages (title, one card per
-  wish with picture or initial, price, priority tag, note, link to the shop) on `pdf.js`, a small PDF
-  writer (standard fonts, JPEG pictures, links; no library). Pictures are fetched, shrunk to 700 px and
-  embedded; an image link whose site does not allow cross-origin reads is left out (initial instead).
-  `test/pdf.test.js` checks the file structure, `e2e/wunschliste.spec.ts` the download.
+- **PDF export** ("Als PDF" on *Meine Liste*): the list as it is on screen (same order and category)
+  on A4 pages: two cards side by side and as many rows as fit (picture or initial, title, price,
+  priority tag, category, two lines of note, link to the shop), laid out by `wishlist-pdf.js` on
+  `pdf.js`, a small PDF writer (standard fonts, JPEG pictures, links; no library). Uploaded photos come
+  from storage; image links through `mn.image` (`GET /image` on api.<domain>), because the page's CSP
+  and most shops' missing CORS headers keep the browser from reading them. Every picture is shrunk to
+  480 px and embedded; one that cannot be read gets the initial. `test/pdf.test.js` checks the file
+  structure and the two columns, `e2e/wunschliste.spec.ts` the download.
 
 ## Languages
 
