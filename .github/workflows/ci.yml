@@ -28,6 +28,7 @@ jobs:
       hosted: ${{ steps.diff.outputs.hosted }}
       musescore: ${{ steps.diff.outputs.musescore }}
       crafts: ${{ steps.diff.outputs.crafts }}
+      craft_apps: ${{ steps.diff.outputs.craft_apps }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -44,6 +45,8 @@ jobs:
     needs: changes
     if: github.event_name == 'pull_request' && needs.changes.outputs.crafts != 'false'
     uses: ./.github/workflows/crafts.yml
+    with:
+      apps: ${{ needs.changes.outputs.craft_apps }}
 
   musescore:
     needs: changes
@@ -97,7 +100,7 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - name: Patched program builds
-        if: needs.crafts.result == 'success' || needs.musescore.result == 'success'
+        if: needs.crafts.result != 'skipped' || needs.musescore.result != 'skipped'
         uses: actions/download-artifact@v4
         with:
           pattern: craft-*

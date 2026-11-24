@@ -13,11 +13,14 @@ summary: Wie eine Änderung live geht und welche automatischen Abläufe es gibt
 4. Der **Deploy** (`deploy.yml`) startet automatisch, **parallel zur CI und auch bei roter CI** (er wartet nicht darauf): darum nur bei grünen Prüfungen mergen. Ein Push auf `main` geht **direkt nach Produktion**:
    - **database:** Datenbank-Migrationen (`supabase db push`); nur auf **Produktion** außerdem die Auth-Einstellungen (`supabase config push`, Passkey-Einstellungen per Management API, Google-Anmeldung). Vor dem Push schreibt `scripts/keep-app-schemas.sh` die App-Schemas, die die Daten-API gerade freigibt, mit in die Liste; sonst würde der Push die Tabellen aller Apps verstecken;
    - **platform:** Portal (`{{domain}}`), API (`api.`) und KI-Proxy (`ai.`); Wrangler legt Domains an, die Geheimnisse der Worker werden aus GitHub hochgeladen;
+   - **plan:** bestimmt zuerst, welche Apps ausgeliefert werden; nur für diese laufen die Programm-Bauten (MuseScore, Craft-Apps mit Patches), und **apps** wartet nicht auf Bauten, die nicht nötig sind;
    - **apps:** jede **geänderte** App (oder alle: *all_apps*): Migrationen der App, Deploy, Eintrag in `platform.apps`; danach gibt `mininode expose` die Schemas **aller** Apps mit Tabellen in der Daten-API frei (auch die, die nicht dran waren); anschließend **Prune** (Worker von Apps, die nicht mehr im
      Repository liegen, werden gelöscht, ihr Eintrag deaktiviert);
    - **nucbox:** Container-Apps und Bibliothek über SSH (nur wenn `NUCBOX_TUNNEL_ID` gesetzt ist).
 
-Ändern sich Dinge, die **jede App** betreffen (SDK, App-Kit, Gate, Manifest, CLI, Lockfile), werden **alle Apps** neu ausgeliefert.
+Ändern sich Dinge, die **jede App** betreffen (SDK, App-Kit, Gate, Manifest, CLI, Lockfile), werden **alle Apps** neu ausgeliefert (jede braucht Sekunden), **außer MuseScore und den Craft-Apps mit Patches**: Ihr Programm wird aus dem Quellcode gebaut (MuseScore bei kaltem Cache Stunden), darum gehen sie nur raus, wenn sich ihr **eigener Ordner** ändert (ohne `*.md` und `test/`) oder das **Gate** bzw. das **Manifest** (das Gate ist der Worker jeder App, Sicherheitskorrekturen müssen überall ankommen; dafür wird nichts neu gebaut, nur der Cache geholt). Eine SDK-, Kit-, CLI- oder Lockfile-Änderung erreicht sie mit dem nächsten **nächtlichen Deploy aller Apps** (siehe unten); muss es schneller gehen, markiert `scripts/mark-program-apps.sh "<Grund>"` sie im selben Commit als geändert (es schreibt `hosted/<app>/REBUILD`; neu kompiliert wird dabei nichts).
+
+**Nachts alle Apps:** Montag und Donnerstag um 01:23 UTC (02:23 bzw. 03:23 Uhr deutscher Zeit) läuft der Deploy von selbst mit *all_apps*. So kommen SDK- und Kit-Änderungen auch bei MuseScore und den Craft-Apps an, und jeder Bau-Cache wird spätestens alle vier Tage benutzt. GitHub löscht einen Cache, der 7 Tage nicht benutzt wurde; ohne diesen Lauf müsste ein Merge nach einer ruhigen Woche stundenlang auf einen Neubau warten.
 
 ## Umgebungen
 
@@ -36,7 +39,7 @@ Die vollständige, automatisch erzeugte Liste mit Auslösern und Zweck steht unt
 | Workflow | Wann |
 | --- | --- |
 | **CI** (`ci.yml`) | jeder Pull Request und jeder Push auf `main` |
-| **Deploy** (`deploy.yml`) | Push auf `main`, oder von Hand |
+| **Deploy** (`deploy.yml`) | Push auf `main`, Montag und Donnerstag nachts (alle Apps), oder von Hand |
 | **Web-App einbauen** (`integrate.yml`) | ein ZIP wurde hochgeladen |
 | **Upload nach dem Pull Request** (`pr-merged.yml`) | ein Einbau-Pull-Request wurde gemergt oder geschlossen |
 | **Sicherung** (`backup.yml`) | Verwaltung → Sicherung |

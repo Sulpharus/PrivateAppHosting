@@ -32,8 +32,9 @@ Eine Prüfung, die nichts Geändertes testet, läuft im Pull Request nicht; GitH
 | Code irgendwo | Database, integration and e2e (alles) |
 | `infra/`, `scripts/`, Gate, `packages/config`, `packages/manifest`, Steuerprogramm der Server-Hardware, `.github/actions/`, `release.yml`, `LICENSE` | Infra scripts and images |
 | `apps/`, `packages/`, `supabase/`, `scripts/`, `infra/desktop/`, `mininode.config.json`, `.dockerignore` | Desktop edition |
-| eine App in `hosted/` | Probe-Deploy; bei MuseScore oder einer Craft-App vorher deren Programm-Bau |
-| `ci.yml`, `crafts.yml`, `musescore.yml`, `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `turbo.json`, `.nvmrc`, `biome.json`, `tsconfig*.json` | alles |
+| eine App in `hosted/` | Probe-Deploy; bei MuseScore oder einer Craft-App vorher deren Programm-Bau (nur für die geänderte Craft-App; `*.md` und `test/` im App-Ordner zählen nicht) |
+| `musescore.yml` / `crafts.yml` | der Programm-Bau von MuseScore / aller Craft-Apps mit Patches |
+| `ci.yml`, `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `turbo.json`, `.nvmrc`, `biome.json`, `tsconfig*.json` | alles außer den Programm-Bauten |
 
 Auf `main` (nach dem Merge) läuft jede Prüfung, außer den Programm-Bauten und dem Probe-Deploy: Die Programme baut dort der Deploy.
 

@@ -1,12 +1,18 @@
 name: Deploy
 
 # Runs after CI on main. Order: database → platform Workers → hosted apps → physical server containers.
+# Also twice a week at night with every app: SDK, kit and CLI changes reach MuseScore and the Craft
+# apps (which otherwise ship only for their own changes), and every build cache is used at least
+# every 4 days, before GitHub's 7-day eviction, so no merge waits for a cold build.
 # Secrets and variables live in the GitHub environment (production / staging); see
 # docs/runbooks/setup-cloudflare.md for the full list.
 
 on:
   push:
     branches: [main]
+  schedule:
+    # Monday and Thursday 01:23 UTC (02:23 / 03:23 in Germany).
+    - cron: '23 1 * * 1,4'
   workflow_dispatch:
     inputs:
       environment:
@@ -185,15 +191,96 @@ jobs:
             GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET GOOGLE_TOKEN_KEY VAPID_PUBLIC_KEY VAPID_PRIVATE_KEY VAULT_KEY GITHUB_DISPATCH_TOKEN
           upload apps/ai-proxy SUPABASE_SECRET_KEY ANTHROPIC_API_KEY GEMINI_API_KEY AI_GATEWAY_TOKEN
 
+  # Which apps this run ships, before anything is built: the program builds (MuseScore takes hours
+  # on a cold cache, each patched Craft app minutes) run only for an app that ships, and such an
+  # app ships only when its own folder (not its *.md or test/), the gate or the manifest changed
+  # (`mininode deploy --plan`), never for the SDK, kit, CLI, lockfile or another app.
+  plan:
+    name: Apps to ship
+    # Like the platform job: the apps ship to production only, so staging builds nothing here.
+    if: (inputs.environment || 'production') == 'production'
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment || 'production' }}
+    outputs:
+      apps: ${{ steps.plan.outputs.apps }}
+      crafts: ${{ steps.plan.outputs.crafts }}
+      musescore: ${{ steps.plan.outputs.musescore }}
+    env:
+      SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/load-config
+        with:
+          environment: ${{ inputs.environment || 'production' }}
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - id: plan
+        run: |
+          if [ "${{ github.event_name == 'schedule' || inputs.all_apps }}" = "true" ]; then
+            apps=$(node -e 'const fs=require("node:fs");console.log(JSON.stringify(fs.readdirSync("hosted").filter((s)=>fs.existsSync(`hosted/${s}/mininode.json`))))')
+          else
+            apps=$(pnpm -s mininode deploy --since-deployed --plan --env "$DEPLOY_ENV")
+          fi
+          echo "$apps" | jq -e 'type == "array"' >/dev/null
+          crafts=$(APPS="$apps" node -e '
+            const fs = require("node:fs");
+            const ship = JSON.parse(process.env.APPS);
+            console.log(JSON.stringify(ship.filter((slug) => {
+              try { return (JSON.parse(fs.readFileSync(`hosted/${slug}/release.json`, "utf8")).patches ?? []).length > 0; }
+              catch { return false; }
+            })));
+          ')
+          echo "apps=$apps" >> "$GITHUB_OUTPUT"
+          echo "crafts=$crafts" >> "$GITHUB_OUTPUT"
+          echo "musescore=$(jq -c 'index("musescore") != null' <<<"$apps")" >> "$GITHUB_OUTPUT"
+          echo "ships: $apps"
+
   crafts:
+    needs: plan
+    if: needs.plan.outputs.crafts != '[]'
     uses: ./.github/workflows/crafts.yml
+    with:
+      apps: ${{ needs.plan.outputs.crafts }}
 
   musescore:
+    needs: plan
+    if: needs.plan.outputs.musescore == 'true'
     uses: ./.github/workflows/musescore.yml
+
+  # The MuseScore build skips Qt and its compiler cache when its program zip is cached: the nightly
+  # run restores both, so they are used often enough not to be evicted.
+  caches:
+    name: Touch the Qt and compiler caches
+    needs: musescore
+    if: ${{ !cancelled() && github.event_name == 'schedule' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/qt-wasm/gcc_64
+            ~/qt-wasm/wasm_singlethread
+          key: musescore-qt-${{ hashFiles('hosted/musescore/toolchain/build-qt.sh', 'hosted/musescore/toolchain/env.sh', 'hosted/musescore/toolchain/qt-*.patch') }}
+      - uses: actions/cache/restore@v4
+        with:
+          path: ~/.cache/ccache
+          key: musescore-ccache-none
+          restore-keys: musescore-ccache-
 
   apps:
     name: Hosted apps
-    needs: [platform, crafts, musescore]
+    needs: [plan, platform, crafts, musescore]
+    # Runs as soon as the platform is out and the builds it needs are done; skipped builds (no app
+    # of theirs ships) do not hold it back.
+    if: >-
+      !cancelled() && needs.plan.result == 'success' && needs.platform.result == 'success'
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment || 'production' }}
     outputs:
@@ -220,28 +307,29 @@ jobs:
       - name: Check the Cloudflare API token
         run: scripts/ci-clean-secret.sh CLOUDFLARE_API_TOKEN
       - name: Patched Craft builds
+        # Also after a partly failed Craft matrix: the legs that passed uploaded their zips.
+        if: needs.crafts.result != 'skipped' || needs.musescore.result != 'skipped'
         uses: actions/download-artifact@v4
         with:
           pattern: craft-*
           path: craft-builds
       - name: Deploy changed apps
+        env:
+          APPS: ${{ needs.plan.outputs.apps }}
         run: |
           scripts/craft-builds.sh craft-builds
-          # Each app is compared with the commit it was last deployed from (its registered version in
-          # this environment), not with the previous push: an earlier failed run must not make its
-          # changes get skipped by the next green one. Changes to the SDK, kit, gate, manifest or CLI
-          # count for every app.
-          if [ "${{ inputs.all_apps }}" = "true" ]; then
-            # one broken app must not keep the others from shipping: deploy all, then fail
-            failed=""
-            for dir in hosted/*/; do
-              [ -f "$dir/mininode.json" ] || continue
-              pnpm mininode deploy "$dir" --env "$DEPLOY_ENV" || failed="$failed $(basename "$dir")"
-            done
-            if [ -n "$failed" ]; then echo "::error::Deploy failed for:$failed"; exit 1; fi
-          else
-            pnpm mininode deploy --since-deployed --env "$DEPLOY_ENV"
-          fi
+          # The apps the plan job chose: each one changed since the commit it was last deployed from
+          # (its registered version in this environment), so an earlier failed run is caught up.
+          # Changes to the SDK, kit, gate, manifest or CLI count for every app; apps built from
+          # source (MuseScore, patched Craft apps) ship only for their own folder, the gate or the
+          # manifest.
+          # One broken app must not keep the others from shipping: deploy all, then fail.
+          failed=""
+          for slug in $(jq -r '.[]' <<<"$APPS"); do
+            pnpm mininode deploy "hosted/$slug" --env "$DEPLOY_ENV" || failed="$failed $slug"
+          done
+          [ -n "$(jq -r '.[]' <<<"$APPS")" ] || echo "nothing to deploy"
+          if [ -n "$failed" ]; then echo "::error::Deploy failed for:$failed"; exit 1; fi
       - name: Expose the schemas of every app with tables
         # Also apps not deployed in this run: a schema hidden by mistake comes back with the next deploy.
         if: ${{ !cancelled() }}
@@ -265,7 +353,10 @@ jobs:
     name: Physical server container ${{ matrix.slug }}
     needs: apps
     # Skipped until the physical server is set up (docs/runbooks/nucbox-install.md).
-    if: needs.apps.outputs.containers != '[]' && vars.NUCBOX_TUNNEL_ID != ''
+    # !cancelled(): a skipped program build earlier in the chain must not skip the rollout.
+    if: >-
+      !cancelled() && needs.apps.result == 'success' && needs.apps.outputs.containers != '[]'
+      && vars.NUCBOX_TUNNEL_ID != ''
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment || 'production' }}
     permissions:

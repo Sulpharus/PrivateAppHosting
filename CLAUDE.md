@@ -90,6 +90,9 @@ is still true: check it. The `reviewer` subagent asks for this too.
 - Migrations on live data follow expand and contract: add nullable, dual-write, backfill,
   switch reads, then drop. Create indexes on large tables `concurrently`.
 - Webhook and hook handlers verify signatures and are idempotent (safe to receive twice).
+- MuseScore and the patched Craft apps ship only for changes to their own folder (fast merges). When a
+  change to `packages/sdk`, `packages/ui/kit`, `packages/cli` or the lockfile must reach them before the
+  nightly all-apps deploy (Mon/Thu), run `scripts/mark-program-apps.sh "<reason>"` in the same commit.
 - Non-trivial changes get an independent review before pushing: spawn the `reviewer` subagent
   on the diff and fix what it reports.
 - Commits follow Conventional Commits (`feat:`, `fix:`, `docs:`, `chore:`, `test:`).
