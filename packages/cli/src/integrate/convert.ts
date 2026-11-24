@@ -23,7 +23,16 @@ export interface Converted {
 /** Server, secrets, lockfiles and the generator's own notes never enter hosted/. */
 const DROP_FILES =
   /^(\.env(\..*)?|package-lock\.json|yarn\.lock|pnpm-lock\.yaml|bun\.lockb?|metadata\.json|mininode-assistant\.md|\.gitignore|\.DS_Store)$/i;
-const DROP_PATHS = [/^assets\/\.aistudio\//, /^\.aistudio\//];
+const DROP_PATHS = [
+  /^assets\/\.aistudio\//,
+  /^\.aistudio\//,
+  // The KI-Werkstatt starter package (ADR 0029): the gate serves /_mininode/ itself, and the
+  // reference was only for the AI that built the app.
+  /^(public\/)?_mininode\//,
+  /^MININODE-REFERENCE\.md$/,
+];
+/** Marks a file of the starter package (its AGENTS.md); kept in sync with the portal's STARTER_MARK. */
+const STARTER_MARK = '<!-- mininode-starter: removed on upload -->';
 /** Dependencies of the dev server and of provider SDKs: the platform provides these. */
 const DROP_DEPS = new Set([
   'express',
@@ -39,9 +48,21 @@ const DROP_DEPS = new Set([
   '@types/cors',
 ]);
 
+function isStarterNote(inspection: Inspection, file: string): boolean {
+  return (
+    file === 'AGENTS.md' &&
+    readFileSync(join(inspection.root, file), 'utf8').startsWith(STARTER_MARK)
+  );
+}
+
 function copyTree(inspection: Inspection, outDir: string, drop: (file: string) => boolean) {
   for (const file of inspection.files) {
-    if (DROP_FILES.test(basename(file)) || DROP_PATHS.some((p) => p.test(file)) || drop(file))
+    if (
+      DROP_FILES.test(basename(file)) ||
+      DROP_PATHS.some((p) => p.test(file)) ||
+      isStarterNote(inspection, file) ||
+      drop(file)
+    )
       continue;
     mkdirSync(dirname(join(outDir, file)), { recursive: true });
     cpSync(join(inspection.root, file), join(outDir, file));

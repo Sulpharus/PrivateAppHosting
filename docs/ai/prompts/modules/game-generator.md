@@ -2,6 +2,7 @@
 id: game-generator
 title: Rätsel selbst erzeugen
 summary: Eindeutige Rätsel per Skript, Schwierigkeit messen, im Worker erzeugen
+when: Nimm das für Rätselspiele wie Sudoku, bei denen jedes Rätsel neu erzeugt wird und genau eine Lösung hat.
 group: spiele
 order: 108
 ---

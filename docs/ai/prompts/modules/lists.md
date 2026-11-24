@@ -2,6 +2,7 @@
 id: lists
 title: Listen und Aufgaben
 summary: Checklisten, Unteraufgaben, Reihenfolge, Erledigt-Bereich, Einkaufslisten
+when: Nimm das für abhakbare Listen wie Aufgaben, Einkauf oder Checklisten, mit Reihenfolge und Erledigt-Bereich.
 order: 22
 group: daten
 ---

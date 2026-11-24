@@ -18,15 +18,19 @@
 5. **AI.** Replace any provider SDK or key with `mn.ai.chat|stream|json`; declare the models in
    `ai.models` and a sensible `monthlyBudgetEur` and `maxOutputTokens`. Show a friendly message
    for `AiError.code === 'budget_exceeded'`.
-6. **CSP.** No external scripts. Fonts and images from third parties are allowed (`img-src https:`)
-   but prefer bundling. API calls to third-party hosts need to be listed in the manifest in a
-   later spec version; for now avoid them or proxy through `mn.ai`.
+6. **CSP.** No external scripts. Images from third parties are allowed (`img-src https:`) but
+   prefer bundling; fonts come from the kit. Calls to third-party hosts go through `mn.api` with an
+   `apis` entry in the manifest (`auth: { "type": "none" }` for free APIs, ADR 0006).
 7. **Language packages.** Move every text for people into `i18n/de.json` and `i18n/en.json`
    (Vite apps: `public/i18n/`), name them in `mininode.json` (`"i18n"`), and use `data-i18n` in
    markup and `mnI18n.t()` in script; see `docs/ai/LANGUAGE-PACKAGES.md`. Doctor checks key and
    placeholder parity. An export without them gets a warning (`i18n-missing`) until they exist.
-8. **UI.** German copy, 44 px touch targets, light/dark, loading and error states. The look is
+8. **UI.** German and English texts (step 7), 44 px touch targets, light/dark, loading and error states. The look is
    the App Kit (`docs/ai/DESIGN-SYSTEM.md`):
+   - An app built from the KI-Werkstatt starter package (ADR 0029): `mininode integrate` already
+     dropped `_mininode/`, `public/_mininode/`, `MININODE-REFERENCE.md` and the starter `AGENTS.md`;
+     the links to `/_mininode/*` stay as they are. Check that no other copy of the kit or the preview
+     SDK is left.
    - An app that already uses `mn-*` classes with the kit CSS inlined (built outside MiniNode):
      delete the inlined copy and link `/_mininode/ui.css` and `/_mininode/ui.js` instead, keep
      `body.mn-app` and `data-accent`.

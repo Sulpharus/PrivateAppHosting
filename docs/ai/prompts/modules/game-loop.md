@@ -2,6 +2,7 @@
 id: game-loop
 title: Spielschleife und Steuerung
 summary: Echtzeit-Spiele mit Canvas, fester Takt, Pause, Tastatur, Touch und Gamepad
+when: Nimm das für Echtzeit-Spiele mit Bewegung, etwa Geschicklichkeits- oder Actionspiele.
 order: 102
 group: spiele
 ---

@@ -2,6 +2,7 @@
 id: accessibility
 title: Barrierefreiheit
 summary: Screenreader, Tastatur, Kontrast, Bewegung und Beschriftungen prüfen
+when: Nimm das, wenn die App besonders gut mit Screenreader, Tastatur und großer Schrift funktionieren muss. Die Grundlagen sind immer dabei.
 group: qualitaet
 order: 92
 ---

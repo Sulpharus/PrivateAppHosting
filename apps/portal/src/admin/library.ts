@@ -6,6 +6,8 @@ import language from '../../../../docs/ai/LANGUAGE-PACKAGES.md?raw';
 import spec from '../../../../docs/ai/NEW-APP-SPEC.md?raw';
 import specShort from '../../../../docs/ai/NEW-APP-SPEC.short.md?raw';
 import retrofitLanguage from '../../../../docs/ai/RETROFIT-LANGUAGE.md?raw';
+import i18nJs from '../../../../packages/ui/kit/i18n.js?raw';
+import previewSdk from '../../../../packages/ui/kit/sdk-preview.js?raw';
 import kitCss from '../../../../packages/ui/kit/ui.css?raw';
 import kitJs from '../../../../packages/ui/kit/ui.js?raw';
 import { type Library, parsePart, retrofitLanguagePrompt, sortParts } from './prompts.ts';
@@ -27,6 +29,9 @@ export const LIBRARY: Library = {
   design,
   language,
   kitCss,
+  kitJs,
+  i18nJs,
+  previewSdk,
   types: sortParts(Object.values(types).map(parsePart)),
   modules: sortParts(Object.values(modules).map(parsePart)),
 };
@@ -44,7 +49,7 @@ export const FILES: BuildFile[] = [
     name: 'NEW-APP-SPEC.md',
     title: 'App-Spezifikation',
     description:
-      'Technik, SDK, Datenablage, KI, Manifest und Regeln. Immer mitgeben (im Prompt-Ersteller schon enthalten).',
+      'Technik, SDK, Datenablage, KI, Manifest und Regeln. Im Prompt-Ersteller schon enthalten.',
     content: spec,
     type: 'text/markdown',
   },
@@ -83,7 +88,7 @@ export const FILES: BuildFile[] = [
     name: 'ui.css',
     title: 'App Kit CSS',
     description:
-      'Das Stylesheet des Designsystems. Nur nötig, wenn die App außerhalb von MiniNode entsteht (z. B. als Claude-Artifact).',
+      'Das Stylesheet des Designsystems. Steckt schon im Startpaket des Prompt-Erstellers; einzeln nur für Sonderfälle.',
     content: kitCss,
     type: 'text/css',
   },
@@ -91,7 +96,7 @@ export const FILES: BuildFile[] = [
     name: 'ui.js',
     title: 'App Kit Skript',
     description:
-      'Dialoge, Toasts und Theme (window.mnui). Wie ui.css nur für Builds außerhalb von MiniNode.',
+      'Dialoge, Toasts und Theme (window.mnui). Wie ui.css schon im Startpaket enthalten.',
     content: kitJs,
     type: 'text/javascript',
   },

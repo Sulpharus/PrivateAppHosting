@@ -1,11 +1,15 @@
-// Turns a brief from docs/ai/briefs into the full construction prompt (the same one Verwaltung →
-// KI-Werkstatt builds): the brief, the platform spec, the design system, the app type, the chosen
-// feature modules and the kit CSS. Usage: node scripts/compose-brief.ts docs/ai/briefs/<name>.brief.md
+// Turns a brief from docs/ai/briefs into the construction prompt (the same one Verwaltung →
+// KI-Werkstatt builds for the brief's tool): reference (spec, design system, language packages, app
+// type, feature modules), task, delivery, hard rules and checklist. A tool that takes a reference
+// file (ChatGPT, Bolt) gets it appended after a separator.
+// Usage: node scripts/compose-brief.ts docs/ai/briefs/<name>.brief.md
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
   type Audience,
   type Brief,
+  BUILDER_ALIASES,
+  BUILDERS,
   type Builder,
   compose,
   type Library,
@@ -40,6 +44,9 @@ const library: Library = {
   design: read('docs/ai/DESIGN-SYSTEM.md'),
   language: read('docs/ai/LANGUAGE-PACKAGES.md'),
   kitCss: read('packages/ui/kit/ui.css'),
+  kitJs: read('packages/ui/kit/ui.js'),
+  i18nJs: read('packages/ui/kit/i18n.js'),
+  previewSdk: read('packages/ui/kit/sdk-preview.js'),
   types: parts('docs/ai/prompts/types'),
   modules: parts('docs/ai/prompts/modules'),
 };
@@ -52,16 +59,26 @@ const unknown = modules.filter((id) => !library.modules.some((m) => m.id === id)
 if (unknown.length) throw new Error(`${file}: unknown modules ${unknown.join(', ')}`);
 if (!library.types.some((t) => t.id === meta.type)) throw new Error(`${file}: unknown type`);
 
+const wanted = meta.builder ?? 'ai-studio';
+const builder = BUILDER_ALIASES[wanted] ?? wanted;
+if (!(builder in BUILDERS)) throw new Error(`${file}: unknown builder ${wanted}`);
+
 const brief: Brief = {
+  task: 'new',
   name: meta.name ?? '',
   idea: (match[2] ?? '').trim(),
   audience: (meta.audience ?? 'me') as Audience,
-  builder: (meta.builder ?? 'ai-studio') as Builder,
+  builder: builder as Builder,
   type: meta.type ?? 'sonstiges',
   modules: [...modules, ...(meta.ai === 'true' && !modules.includes('ai') ? ['ai'] : [])],
   accent: meta.accent ?? 'violet',
   extra: '',
+  findings: '',
   short: false,
-  embedKit: true,
 };
-process.stdout.write(`${compose(brief, library)}\n`);
+const composed = compose(brief, library);
+const reference =
+  BUILDERS[brief.builder].output === 'split' && composed.reference
+    ? `\n---\n\n${composed.reference}`
+    : '';
+process.stdout.write(`${composed.prompt}${reference}\n`);

@@ -31,11 +31,12 @@ On MiniNode every app gets the kit from its own gate, next to the SDK:
   inside it.
 - Pick one accent per app with `data-accent` on `<html>`: `green` (default), `blue`,
   `violet`, `amber`, `rose` or `teal`. Nothing else changes between apps.
-- **Built outside MiniNode** (Claude artifact, AI Studio): copy the content of
-  `packages/ui/kit/ui.css` into a `<style>` block and `ui.js` into a `<script>`, and use the
-  same classes. The fonts then fall back to system fonts, because `url(fonts/…)` only resolves
-  on MiniNode; that is expected. `/integrate-app` swaps the copies for the two links above
-  (`docs/ai/playbooks/common-steps.md`, step 7).
+- **Built outside MiniNode** (Claude, ChatGPT, AI Studio, Bolt): the *Startpaket* from the
+  KI-Werkstatt contains the folder `_mininode/` with `ui.css`, `ui.js`, `i18n.js` and a preview
+  `sdk.js`. Put it next to `index.html` (static apps) or into `public/` (Vite apps), keep the
+  links above unchanged, and the app looks and works in the tool's preview. The fonts fall back
+  to system fonts there; that is expected. The upload removes the folder, because MiniNode
+  serves `/_mininode/` itself.
 - App CSS only adds what the kit lacks. Colours, fonts, radii and spacing always come from the
   `--mn-*` tokens. Never write raw hex values or font names in app CSS.
 
@@ -61,6 +62,12 @@ All tokens are CSS custom properties on `:root`. Dark values apply automatically
 
 ### Colour roles
 
+Tokens: `--mn-bg`, `--mn-surface`, `--mn-surface-2`, `--mn-ink`, `--mn-muted`, `--mn-line`,
+`--mn-line-strong`, `--mn-scrim`, `--mn-shadow`, and `--mn-ok`, `--mn-warn`, `--mn-bad` with their
+`-soft` variants. Dark mode switches them automatically; never style inside a
+`prefers-color-scheme` or `[data-theme]` block.
+
+<!-- full:start -->
 | Token | Light | Dark | Use |
 |---|---|---|---|
 | `--mn-bg` | `#f3f4f1` | `#0e1113` | page background, inputs |
@@ -75,6 +82,7 @@ All tokens are CSS custom properties on `:root`. Dark values apply automatically
 | `--mn-ok` / `--mn-ok-soft` | `#1f7a3a` / `#e2f1e6` | `#6fcf8c` / `#16301f` | done, paid, returned |
 | `--mn-warn` / `--mn-warn-soft` | `#7a5600` / `#f6ecd2` | `#e3c35a` / `#33290f` | due soon, needs attention |
 | `--mn-bad` / `--mn-bad-soft` | `#b42318` / `#f9e3e1` | `#f97066` / `#3a1a17` | errors, overdue, delete |
+<!-- full:end -->
 
 ### Accents (`data-accent`)
 
@@ -84,6 +92,7 @@ coloured text and links). All pairs meet WCAG AA (4.5:1) in both themes.
 
 Light: `--mn-accent-ink` is `#ffffff` for every accent.
 
+<!-- full:start -->
 | Accent | Light accent / text / soft | Dark accent / ink / soft / text | Suits |
 |---|---|---|---|
 | `green` | `#1c6a4f` / `#175a43` / `#e0ede6` | `#5cc49a` / `#0b1a14` / `#173229` / `#7fd6b1` | sport, health, household |
@@ -92,6 +101,7 @@ Light: `--mn-accent-ink` is `#ffffff` for every accent.
 | `amber` | `#8a5a00` / `#7a4f00` / `#f6ead2` | `#f0b949` / `#231802` / `#352710` / `#f5ca72` | finance, budget, contracts |
 | `rose` | `#b3264f` / `#9c2045` / `#f8e1e8` | `#ff8fb0` / `#2a0a15` / `#3a1824` / `#ffadc5` | people, CRM, social |
 | `teal` | `#0f6e78` / `#0c5d66` / `#dcefef` | `#5cc9d4` / `#061c1f` / `#12302f` / `#86d9e1` | travel, places, games |
+<!-- full:end -->
 
 Status colours are never used as the accent, and the accent never means "good" or "bad".
 
@@ -148,6 +158,7 @@ Numbers that line up use `font-variant-numeric: tabular-nums` (class `mn-num`).
 - Breakpoints: 640 px (tablet: more tile columns, inline chips), 960 px (side navigation,
   dialogs centred, split layouts), 1200 px (four tile columns).
 
+<!-- full:start -->
 ## 4. Dark mode
 
 - Dark is a full theme, not an inversion. Surfaces get lighter as they come forward: `bg` →
@@ -158,13 +169,14 @@ Numbers that line up use `font-variant-numeric: tabular-nums` (class `mn-num`).
   the tokens, and the kit switches them.
 - Test every screen in both themes before handing over.
 
+<!-- full:end -->
 ## 5. App shell
 
 ```html
 <body class="mn-app">
   <nav class="mn-nav" aria-label="Bereiche">
     <div class="mn-brand">                         <!-- only visible from 960 px -->
-      <a class="mn-home" href="https://mininode.app">Alle Apps</a>
+      <a class="mn-home" href="/" data-i18n="nav.allApps">Alle Apps</a>
       <span class="mn-brand-name"><span class="mn-brand-mark"><svg aria-hidden="true">…</svg></span>Bücherregal</span>
       <button class="mn-btn mn-btn--primary" type="button">Buch hinzufügen</button>
     </div>
@@ -175,7 +187,7 @@ Numbers that line up use `font-variant-numeric: tabular-nums` (class `mn-num`).
   </nav>
   <div class="mn-page">
     <header class="mn-top"><div class="mn-top-inner">
-      <div class="mn-top-text"><a class="mn-home" href="https://mininode.app">← Alle Apps</a><h1>Liste</h1><p class="mn-sub">23 Bücher</p></div>
+      <div class="mn-top-text"><a class="mn-home" href="/">← Alle Apps</a><h1>Liste</h1><p class="mn-sub">23 Bücher</p></div>
       <div class="mn-top-tools"><!-- optional: year stepper, view switch --></div>
       <button class="mn-fab" type="button" aria-label="Buch hinzufügen"><svg aria-hidden="true">…</svg></button>
     </div></header>
@@ -185,7 +197,9 @@ Numbers that line up use `font-variant-numeric: tabular-nums` (class `mn-num`).
 ```
 
 - The active tab has `aria-current="page"` (`mnui.select(button)` sets it).
-- The "Alle Apps" link always points to `https://mininode.app`.
+- The "Alle Apps" links point to the portal: set their `href` to `mn.config.portalUrl` at start-up
+  (`document.querySelectorAll('.mn-home').forEach((a) => { a.href = mn.config.portalUrl; })`).
+  Never write a domain into the app.
 - `h1` names the view, not the app (the app name is in the side navigation). The subtitle adds
   one fact: a date, a count or a status. It never repeats information shown right below.
 - Layout helpers inside `mn-main`: `mn-split mn-split--start` (fixed panel left, e.g. month
@@ -360,6 +374,7 @@ mnui.sheet.open(sheet, { onClose: () => render() });
 **Utilities**: `mn-muted` (secondary text colour), `mn-num` (tabular figures), `mn-sr-only`
 (text for screen readers only), `mn-note` (a quiet line of muted text).
 
+<!-- full:start -->
 ## 7. Screen patterns
 
 | Screen | Build it from |
@@ -372,6 +387,7 @@ mnui.sheet.open(sheet, { onClose: () => render() });
 | Editor | tall sheet with steps; photos and name first, rarely used fields last and collapsed |
 | Settings / backup | one `mn-card` per topic with its action buttons |
 
+<!-- full:end -->
 ## 8. Copy
 
 - Texts live in the language packages `i18n/de.json` and `i18n/en.json` (see
@@ -380,17 +396,18 @@ mnui.sheet.open(sheet, { onClose: () => render() });
   are the German package.
 
 - German, informal "du", sentence case. Buttons say what happens: "Speichern", "Buch anlegen",
-  "Exportieren", never "OK" or "Absenden".
+  "Exportieren", never "OK" or "Absenden". English follows the same rules ("Save", "Add book").
 - Toasts in the past tense: "Buch gespeichert", "Besuch eingetragen".
 - Errors say what is wrong and how to fix it: "Gib ein gültiges Erscheinungsjahr an, z. B.
   1924." No apologies, no "Fehler!".
-- Dates and numbers always in German format:
+- Dates and numbers follow the language; never hard-code `'de-DE'`. In German:
   - A full date is day, abbreviated month and year: "01. Okt. 2026". Use
-    `mnui.date.format('2026-10-01')` (or `Intl.DateTimeFormat('de-DE', { day: '2-digit',
-    month: 'short', year: 'numeric' })`). Never "01.10.2026", "2026-10-01" or "October 1".
+    `mnui.date.format('2026-10-01')`, which gives "01 Oct 2026" in English (other formats:
+    `Intl.DateTimeFormat(mnI18n.locale, …)`). Never "01.10.2026", "2026-10-01" or "October 1".
   - Short contexts may leave out the year, never the format: "Mo., 28. Sept.", "Okt. 2026".
   - Times use 24 hours: "17:00–22:00".
-  - Numbers and amounts: "1.234,50 €", "61 %"; read typed amounts the German way ("1.200,50").
+  - Numbers and amounts: "1.234,50 €", "61 %" (English "€1,234.50", "61%") with
+    `Intl.NumberFormat(mnI18n.locale, …)`; read typed amounts in both forms ("1.200,50", "1,200.50").
 - Date and time **inputs**: use plain `<input type="date">`, `type="month"` and `type="time"`.
   `ui.js` shows each one as parts (Tag · Monat · Jahr, Stunde : Minute; in English Day · Month ·
   Year, Hour : Minute), the same in every browser.

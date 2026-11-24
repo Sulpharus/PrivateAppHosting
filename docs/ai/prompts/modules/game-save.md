@@ -2,6 +2,7 @@
 id: game-save
 title: Spielstand speichern
 summary: Laufendes Spiel fortsetzen, Versionen, Aufräumen
+when: Nimm das, wenn ein angefangenes Spiel später weitergespielt werden soll.
 group: spiele
 order: 106
 ---

@@ -205,6 +205,33 @@ describe('integrate: other shapes', () => {
     const result = integrate({ input, root: dir, hostedDir: hosted });
     expect(result).toMatchObject({ status: 'integrated', slug: 'fertig' });
   });
+
+  it('removes the KI-Werkstatt starter package (preview kit, rules, reference)', () => {
+    const { input, hosted } = project({
+      'mininode.json': JSON.stringify({
+        specVersion: 1,
+        slug: 'startpaket',
+        name: 'Startpaket',
+        description: 'Aus dem Startpaket gebaut',
+        kind: 'static',
+        target: 'cloudflare',
+        data: { mode: 'none' },
+      }),
+      'index.html': '<html><head><script src="/_mininode/sdk.js"></script></head></html>',
+      'README.md': '# Startpaket\n',
+      '_mininode/sdk.js': '(() => { window.mininode = {}; })();',
+      '_mininode/ui.css': 'body{}',
+      'AGENTS.md': '<!-- mininode-starter: removed on upload -->\n# Rules\n',
+      'MININODE-REFERENCE.md': '# MiniNode reference\n',
+    });
+    const result = integrate({ input, root: dir, hostedDir: hosted });
+    expect(result).toMatchObject({ status: 'integrated', slug: 'startpaket' });
+    const out = join(hosted, 'startpaket');
+    expect(existsSync(join(out, '_mininode'))).toBe(false);
+    expect(existsSync(join(out, 'AGENTS.md'))).toBe(false);
+    expect(existsSync(join(out, 'MININODE-REFERENCE.md'))).toBe(false);
+    expect(existsSync(join(out, 'index.html'))).toBe(true);
+  });
 });
 
 describe('integrate: guards for what an export brings along', () => {

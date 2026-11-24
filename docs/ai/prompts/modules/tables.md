@@ -2,6 +2,7 @@
 id: tables
 title: Eigene Tabellen
 summary: Listen als SQL-Tabellen mit Typen und Regeln, offline über mn.table
+when: Fast immer dabei: sobald die App eine Liste von Einträgen speichert, kommen die in eine eigene Tabelle.
 order: 70
 group: daten
 ---

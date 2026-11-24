@@ -1,8 +1,15 @@
 # Playbook: Claude artifact
 
-Typical export: one `App.jsx`/`.tsx` (React, default export), Tailwind classes, sometimes
-shadcn/lucide imports, `window.claude.complete(prompt)` for AI and `window.storage.get/set`
-for persistence. No `package.json`.
+Two kinds of exports:
+
+- **Built with the KI-Werkstatt prompt (ADR 0029):** a ZIP with real files made in Claude's code
+  environment from the starter package. It already loads `/_mininode/*` and uses `mn`; integrate it
+  like a static or Vite app (`static-html.md`, `vite-react.md`) and finish with the common steps.
+- **A classic artifact** (made before the composer's Claude variant, or by hand): one
+  `App.jsx`/`.tsx` (React, default export), Tailwind classes, sometimes shadcn/lucide imports,
+  `window.claude.complete(prompt)` for AI and `window.storage.get/set` for persistence. No
+  `package.json`. Newer artifacts may use `claude.use('db')` and `claude.use('sample')` instead;
+  map them the same way as below. The rest of this playbook is for this kind.
 
 Reference: `fixtures/claude-artifact/` (input → expected).
 
@@ -12,9 +19,12 @@ Reference: `fixtures/claude-artifact/` (input → expected).
    `index.html`, `vite.config.*`, `src/main.jsx`, the artifact as `src/App.jsx`.
 2. **Bootstrap** in `main.jsx`: `const mn = await mininode(); await mn.auth.requireLogin();`
    and pass `mn` to `App` (prop or React context).
-3. **Storage:** `window.storage.get(key)` returns `{ value }` with a JSON string →
-   `await mn.kv.get(key)` returns the parsed value (or `null`). `window.storage.set(key, JSON.stringify(v))`
-   → `mn.kv.set(key, v)`. Shared artifact storage (`shared: true`) → `mn.kv.set(key, v, 'shared')`.
+3. **Storage:** a list of entries (keys like `item:<id>`, or one key holding an array of entries)
+   becomes a table (`db/001_init.sql`, `mn.table`, ADR 0022) with a one-time import of the old
+   values. Settings and small state: `window.storage.get(key)` returns `{ value }` with a JSON
+   string → `await mn.kv.get(key)` returns the parsed value (or `null`);
+   `window.storage.set(key, JSON.stringify(v))` → `mn.kv.set(key, v)`. Shared artifact storage
+   (`shared: true`) → `mn.kv.set(key, v, 'shared')` or a table in data mode `group`.
 4. **AI:** `window.claude.complete(prompt)` → `mn.ai.chat(prompt, { model: 'claude-haiku' })`.
    If the artifact asks for JSON in the prompt and parses it, use `mn.ai.json(prompt, schema)`
    with a JSON Schema instead. Declare `ai.models` in the manifest.

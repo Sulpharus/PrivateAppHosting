@@ -2,6 +2,7 @@
 id: game-touch
 title: Touch, Wischen und Tastatur im Spiel
 summary: Eingaben für Handy und Desktop gleichwertig bauen
+when: Nimm das, wenn das Spiel auf dem Handy mit Wischen und Tippen und am PC mit der Tastatur gleich gut gehen soll.
 group: spiele
 order: 107
 ---

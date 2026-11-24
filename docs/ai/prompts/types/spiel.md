@@ -2,7 +2,10 @@
 id: spiel
 title: Spiel
 summary: Kleine Spiele, Rätsel, Quiz, mit Punkten und Bestenliste
+when: Nimm das für kleine Spiele, Rätsel oder ein Quiz. Das Spiel erscheint dann im Gaming Hub mit Spielzeit, Rekorden und Bestenliste.
 accent: teal
+audience: me
+modules: game-hub, game-save, game-touch
 order: 60
 ---
 
@@ -16,13 +19,13 @@ Small games: puzzles, quizzes, card or board games, reflex games.
   colour from the `--mn-*` tokens so light and dark both work. Controls are real buttons of at
   least 44 px; keyboard play where it makes sense (arrow keys, Enter).
 - **State:** the running game lives in memory and is saved to `mn.kv` (`game:current`) after
-  each move, so a reload resumes. Finished games go to `result:<date>:<id>`.
+  each move, so a reload resumes (module *Spielstand speichern*). Finished rounds go to the
+  Gaming Hub with `mn.game.result`, never into kv.
 - **Scores and levels:** `profile` in `mn.kv` holds `xp`, `level` and unlocked content.
   Compute the level from xp with a fixed formula and show progress with `mn-meter`.
 - **Gaming Hub:** add the `game` block to `mininode.json` and report playtime and rounds with
-  `mn.game` (module "Gaming Hub anbinden"). The username comes from the hub; leaderboards come
-  from `mn.game.leaderboard()`, not from your own kv keys. The kit script `/_mininode/game.js`
-  (`window.mnGame`: `connect`, `timer`, `report`, `leaders`) does that shell for you.
+  `mn.game` (module *Gaming Hub anbinden*). The username comes from the hub; leaderboards come
+  from `mn.game.leaderboard()`, not from your own data.
 - **Motion:** short `transform` animations for moves; everything stays playable with
   `prefers-reduced-motion`.
 - **Fairness:** randomness from `crypto.getRandomValues`, scoring rules shown on *Regeln*.

@@ -2,7 +2,10 @@
 id: dienst
 title: Server-Dienst
 summary: Eigener Server-Prozess mit Weboberfläche, läuft als Container auf der Server-Hardware
+when: Nur nehmen, wenn eine normale Web-App nicht reicht, etwa für dauerhaft laufende Abläufe, Zeitpläne, WebSockets oder ein fertiges Server-Programm. Braucht die Server-Hardware.
 accent: blue
+audience: me
+modules: container
 order: 85
 ---
 
@@ -17,7 +20,7 @@ interface a normal MiniNode view.
   handling: the platform has done the login before a request reaches the app.
 - **Views:** a status view first (running, last run, last error), then the settings, then the
   data. Long jobs show progress and can be stopped; the result stays visible after a reload.
-- **Data:** per user through Supabase with the user's token; shared state in app tables. Files
+- **Data:** per user through Supabase with the user's token; lists in the app's tables. Files
   the service creates are downloads, not a public folder.
 - **Operation:** log one line per event to stdout, answer the health path quickly, restart
   cleanly after a crash, and keep memory within `memoryMb`.

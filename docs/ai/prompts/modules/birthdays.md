@@ -2,6 +2,7 @@
 id: birthdays
 title: Geburtstage
 summary: Geburtstage der Personen auf MiniNode (freiwillig freigegeben) und eigener Kontakte
+when: Nimm das, wenn die App Geburtstage zeigen oder daran erinnern soll.
 order: 83
 group: teilen
 ---

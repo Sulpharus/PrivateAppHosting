@@ -2,6 +2,7 @@
 id: onboarding
 title: Erster Start und Hilfe
 summary: Leere Zustände, Beispieldaten, kurze Einführung, Hilfetexte
+when: Nimm das, wenn die App beim ersten Öffnen erklären soll, wofür sie da ist, oder Beispieldaten zum Ausprobieren zeigen soll.
 order: 16
 group: qualitaet
 ---

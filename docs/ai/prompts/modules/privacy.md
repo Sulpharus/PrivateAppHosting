@@ -2,6 +2,7 @@
 id: privacy
 title: Sensible Daten und Datenschutz
 summary: Gesundheits-, Finanz- oder Personendaten sparsam und nachvollziehbar speichern
+when: Nimm das bei sensiblen Daten wie Gesundheit, Geld oder Daten über andere Personen.
 order: 95
 group: qualitaet
 ---

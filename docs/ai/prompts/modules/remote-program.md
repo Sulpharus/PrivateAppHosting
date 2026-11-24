@@ -2,6 +2,7 @@
 id: remote-program
 title: Programm für PC/Server
 summary: Windows- oder Linux-Programm im Browser nutzen, stille Installation, Prüfsumme
+when: Nimm das, wenn ein vorhandenes Windows- oder Android-Programm im Browser benutzt werden soll.
 group: server
 order: 111
 ---

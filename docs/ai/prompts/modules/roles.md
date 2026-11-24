@@ -2,6 +2,7 @@
 id: roles
 title: Rollen und Rechte in der App
 summary: Admin, vertraute Nutzer und Nutzer unterscheiden, Bearbeiten nur für Berechtigte
+when: Nimm das, wenn nicht alle dasselbe dürfen, etwa nur Admins Kategorien ändern.
 group: teilen
 order: 83
 ---

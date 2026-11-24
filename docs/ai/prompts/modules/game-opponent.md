@@ -2,6 +2,7 @@
 id: game-opponent
 title: Computergegner
 summary: KI-Gegner für Brett- und Kartenspiele in mehreren Stärken
+when: Nimm das, wenn man gegen den Computer spielen soll, etwa bei Brett- oder Kartenspielen.
 order: 104
 group: spiele
 ---

@@ -268,7 +268,7 @@ function checkReservedPaths(dir: string, findings: Finding[]): void {
         rule: 'reserved-path',
         file: reserved,
         message:
-          'the platform serves /_mininode/ (SDK, App Kit, language helper) itself; delete this folder, a copy here is a stand-in that fakes the login and the data',
+          'the platform serves /_mininode/ (SDK, App Kit, language helper) itself; delete this folder (the KI-Werkstatt starter package puts a preview copy there, the upload removes it), a copy here is a stand-in that fakes the login and the data',
       });
     }
   }

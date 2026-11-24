@@ -85,8 +85,15 @@ export function anthropicProvider(keys: ProviderKeys): Provider {
     max_tokens: request.maxOutputTokens,
     messages: request.messages,
     ...(request.system ? { system: request.system } : {}),
-    ...(request.schema
-      ? { output_config: { format: { type: 'json_schema' as const, schema: request.schema } } }
+    ...(request.schema || request.model.effort
+      ? {
+          output_config: {
+            ...(request.model.effort ? { effort: request.model.effort } : {}),
+            ...(request.schema
+              ? { format: { type: 'json_schema' as const, schema: request.schema } }
+              : {}),
+          },
+        }
       : {}),
     ...(request.search
       ? {
