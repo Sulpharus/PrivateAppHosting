@@ -186,6 +186,72 @@ describe.skipIf(!dbUrl)('wunschliste database', () => {
           await as(tom, () => tx`select * from app_wunschliste.wishlist(${lena})`),
         ).toHaveLength(2);
 
+        // Whitelist (db/006): Lena shows her list to Tom only.
+        await as(
+          lena,
+          () => tx`insert into app_wunschliste.list_settings (visibility) values ('whitelist')`,
+        );
+        await as(
+          lena,
+          () => tx`insert into app_wunschliste.list_viewers (viewer_id) values (${tom})`,
+        );
+        expect(
+          await as(mia, () => tx`select * from app_wunschliste.wishlist(${lena})`),
+        ).toHaveLength(0);
+        expect(await as(mia, () => tx`select * from app_wunschliste.people()`)).toHaveLength(0);
+        await expect(
+          refused(mia, (db) => db`select app_wunschliste.reserve(${free.id})`),
+        ).rejects.toThrow(/wish_not_found/);
+        expect(
+          await as(tom, () => tx`select * from app_wunschliste.wishlist(${lena})`),
+        ).toHaveLength(2);
+        // Nobody else reads or writes Lena's whitelist.
+        expect(await as(mia, () => tx`select * from app_wunschliste.list_viewers`)).toHaveLength(0);
+        await expect(
+          refused(
+            mia,
+            (db) =>
+              db`insert into app_wunschliste.list_viewers (owner_id, viewer_id) values (${lena}, ${mia})`,
+          ),
+        ).rejects.toThrow(/row-level security|permission denied/);
+        // Found by exact address only, and no address comes back.
+        const [tomEmail] = await tx`select email from auth.users where id = ${tom}`;
+        const found = await as(
+          mia,
+          () => tx`select * from app_wunschliste.find_person(${tomEmail.email.toUpperCase()})`,
+        );
+        expect(found).toEqual([{ user_id: tom, display_name: 'Tom' }]);
+        expect(
+          await as(mia, () => tx`select * from app_wunschliste.find_person('example.com')`),
+        ).toHaveLength(0);
+        // Tom, on the whitelist, may reserve there; the check itself is not for callers.
+        await as(tom, () => tx`select app_wunschliste.reserve(${free.id})`);
+        await tx`delete from app_wunschliste.reservations where wish_id = ${free.id}`;
+        await expect(
+          refused(mia, (db) => db`select app_wunschliste.can_see(${lena})`),
+        ).rejects.toThrow(/permission denied/);
+        // Not from another app's page.
+        expect(
+          await as(
+            mia,
+            () => tx`select * from app_wunschliste.find_person(${tomEmail.email})`,
+            'https://evil.test',
+          ),
+        ).toHaveLength(0);
+        // An empty whitelist hides the list from everyone but its owner.
+        await as(lena, () => tx`delete from app_wunschliste.list_viewers`);
+        expect(
+          await as(tom, () => tx`select * from app_wunschliste.wishlist(${lena})`),
+        ).toHaveLength(0);
+        const ownPeople = await as(lena, () => tx`select mine from app_wunschliste.people()`);
+        expect(ownPeople.map((p) => p.mine)).toContain(true);
+
+        // Back to public: Mia sees it again.
+        await as(lena, () => tx`update app_wunschliste.list_settings set visibility = 'public'`);
+        expect(
+          await as(mia, () => tx`select * from app_wunschliste.wishlist(${lena})`),
+        ).toHaveLength(1);
+
         // Lena deletes the wish; Tom's shopping list keeps it until he ticks it off.
         await as(lena, () => tx`delete from app_wunschliste.wishes where id = ${wish.id}`);
         const kept = await as(

@@ -4,6 +4,7 @@
 // wishlist(owner) and reserve(wish) show and reserve other people's wishes.
 import { euro, parseLink, parsePrice } from './amazon.js';
 import { createBirthdayView } from './birthday-view.js';
+import { looksLikeEmail, searchPeople } from './people-search.js';
 import { categoriesOf, cleanCategory, SORT_KEYS, shopOf, sortWishes } from './sort.js';
 import { buildWishlistPdf } from './wishlist-pdf.js';
 
@@ -81,6 +82,11 @@ const S = {
   error: null,
   // How lists are shown (and the PDF made): sort key, direction, category ('' all, null none).
   view: { key: 'priority', dir: 'asc', category: '' },
+  // Who may see the own list (db/006): everyone with the app, or only the whitelist.
+  // `loaded` false: the settings could not be read, so the switch is not shown.
+  access: { visibility: 'public', viewers: [], loaded: false },
+  // Everyone who may use the app (mn.people()), for the whitelist search.
+  everyone: [],
 };
 const VIEW_KEY = 'list-view';
 // Handlers work right away; the SDK and the login check run in the background.
@@ -135,6 +141,7 @@ async function load() {
         .order('reserved_at', { ascending: false }),
     ]);
     for (const result of [wishes, people, reservations]) if (result.error) throw result.error;
+    await loadAccess(mn);
     S.wishes = wishes.data;
     S.people = people.data.filter((p) => !p.mine);
     S.reservations = reservations.data;
@@ -148,6 +155,35 @@ async function load() {
   }
   S.loading = false;
   render();
+}
+
+/** The own list's visibility and whitelist, with names (mn.people() only for the names). */
+async function loadAccess(mn) {
+  const [settings, viewers, everyone] = await Promise.all([
+    mn.db.from('list_settings').select('visibility').maybeSingle(),
+    mn.db.from('list_viewers').select('id, viewer_id').order('created_at'),
+    mn.people().catch((err) => {
+      console.error('wunschliste: people failed', err);
+      return null;
+    }),
+  ]);
+  if (everyone) S.everyone = everyone;
+  if (settings.error || viewers.error) {
+    // Never claim "public" for a list whose setting could not be read.
+    console.error('wunschliste: access failed', settings.error ?? viewers.error);
+    S.access = { ...S.access, loaded: false };
+    return;
+  }
+  const names = new Map(S.everyone.map((p) => [p.id, p.name]));
+  S.access = {
+    loaded: true,
+    visibility: settings.data?.visibility === 'whitelist' ? 'whitelist' : 'public',
+    viewers: viewers.data.map((v) => ({
+      id: v.id,
+      userId: v.viewer_id,
+      name: names.get(v.viewer_id) ?? t('access.unknown'),
+    })),
+  };
 }
 
 async function loadPerson() {
@@ -366,6 +402,226 @@ function viewBar(wishes) {
   );
 }
 
+/** Who sees the own list: everyone, or only the whitelist (with a button to edit it). */
+function accessBar() {
+  if (!S.access.loaded) return h('p', { class: 'mn-hint access-hint' }, t('access.unavailable'));
+  const whitelist = S.access.visibility === 'whitelist';
+  const option = (value, label) =>
+    h(
+      'button',
+      {
+        type: 'button',
+        'aria-pressed': S.access.visibility === value ? 'true' : 'false',
+        onclick: () => void setVisibility(value),
+      },
+      label,
+    );
+  return h(
+    'div',
+    { class: 'access-bar' },
+    h(
+      'div',
+      { class: 'mn-seg', role: 'group', 'aria-label': t('access.label') },
+      option('public', t('access.public')),
+      option('whitelist', t('access.whitelist')),
+    ),
+    whitelist &&
+      h(
+        'button',
+        { type: 'button', class: 'mn-btn', onclick: () => openWhitelist() },
+        icon('people'),
+        t('access.edit', { n: S.access.viewers.length }),
+      ),
+    h(
+      'span',
+      { class: 'mn-hint access-hint' },
+      whitelist
+        ? S.access.viewers.length
+          ? t('access.whitelistHint', { n: S.access.viewers.length })
+          : t('access.whitelistEmpty')
+        : t('access.publicHint'),
+    ),
+  );
+}
+
+async function setVisibility(visibility) {
+  if (!S.access.loaded || S.access.visibility === visibility) return;
+  const mn = await ready;
+  const { error } = await mn.db
+    .from('list_settings')
+    .upsert({ owner_id: S.me, visibility }, { onConflict: 'owner_id' });
+  if (error) return toast(t('toast.failed'));
+  S.access = { ...S.access, visibility };
+  toast(t(visibility === 'whitelist' ? 'toast.whitelistOn' : 'toast.publicOn'));
+  render();
+  // The switch was drawn again: focus goes back to it (and the sheet returns there).
+  document.querySelector('.access-bar [aria-pressed="true"]')?.focus();
+  if (visibility === 'whitelist' && S.access.viewers.length === 0) openWhitelist();
+}
+
+/** The whitelist: who may see the list, and a search to add people by name or exact address. */
+function openWhitelist() {
+  const input = h('input', {
+    type: 'search',
+    autocomplete: 'off',
+    spellcheck: 'false',
+    placeholder: t('access.searchPlaceholder'),
+    'aria-label': t('access.search'),
+  });
+  const results = h('div', { class: 'mn-list' });
+  // A short line for screen readers instead of announcing every row on each key.
+  const status = h('p', { class: 'mn-hint', 'aria-live': 'polite' });
+  const current = h('div', { class: 'mn-list' });
+  let searchRun = 0;
+
+  const isViewer = (id) => S.access.viewers.some((v) => v.userId === id);
+  const add = async (person, button) => {
+    if (isViewer(person.id)) return;
+    if (button) button.disabled = true;
+    const mn = await ready;
+    const { data, error } = await mn.db
+      .from('list_viewers')
+      .insert({ viewer_id: person.id })
+      .select('id')
+      .single();
+    if (error) {
+      if (button) button.disabled = false;
+      return toast(t('toast.failed'));
+    }
+    S.access.viewers = [...S.access.viewers, { id: data.id, userId: person.id, name: person.name }];
+    toast(t('toast.viewerAdded', { name: person.name }));
+    drawCurrent();
+    void search();
+    render();
+  };
+  const remove = async (viewer) => {
+    const mn = await ready;
+    const { error } = await mn.db.from('list_viewers').delete().eq('id', viewer.id);
+    if (error) return toast(t('toast.failed'));
+    S.access.viewers = S.access.viewers.filter((v) => v.id !== viewer.id);
+    toast(t('toast.viewerRemoved', { name: viewer.name }));
+    drawCurrent();
+    void search();
+    render();
+  };
+  const personRow = (person, action) =>
+    h(
+      'div',
+      { class: 'wish' },
+      h('span', { class: 'mn-thumb', 'aria-hidden': 'true' }, initials(person.name)),
+      h('div', { class: 'wish-text' }, h('span', { class: 'mn-row-title' }, person.name)),
+      h('div', { class: 'wish-actions' }, action),
+    );
+  const drawCurrent = () => {
+    current.replaceChildren(
+      ...(S.access.viewers.length
+        ? S.access.viewers.map((viewer) =>
+            personRow(
+              viewer,
+              h(
+                'button',
+                {
+                  type: 'button',
+                  class: 'mn-btn mn-btn--ghost',
+                  'aria-label': t('access.removeAria', { name: viewer.name }),
+                  onclick: () => void remove(viewer),
+                },
+                t('access.remove'),
+              ),
+            ),
+          )
+        : [h('p', { class: 'mn-hint' }, t('access.nobody'))]),
+    );
+  };
+  const search = async () => {
+    const run = ++searchRun;
+    const query = input.value.trim();
+    if (!query) {
+      results.replaceChildren();
+      status.textContent = '';
+      return;
+    }
+    let found = searchPeople(
+      S.everyone.filter((p) => p.id !== S.me),
+      query,
+    );
+    // An address is looked up exactly on the server, which never returns addresses itself.
+    if (looksLikeEmail(query)) {
+      const mn = await ready;
+      const { data, error } = await mn.db.rpc('find_person', { p_email: query });
+      if (run !== searchRun) return;
+      if (error) {
+        toast(t('toast.failed'));
+        return;
+      }
+      found = (data ?? [])
+        .map((p) => ({ id: p.user_id, name: p.display_name }))
+        .filter((p) => p.id !== S.me);
+    }
+    results.replaceChildren(
+      ...(found.length
+        ? found.map((person) =>
+            personRow(
+              person,
+              isViewer(person.id)
+                ? h('span', { class: 'mn-chip mn-chip--ok' }, t('access.added'))
+                : h(
+                    'button',
+                    {
+                      type: 'button',
+                      class: 'mn-btn mn-btn--primary',
+                      'aria-label': t('access.addAria', { name: person.name }),
+                      onclick: (event) => void add(person, event.currentTarget),
+                    },
+                    t('access.add'),
+                  ),
+            ),
+          )
+        : [
+            h(
+              'p',
+              { class: 'mn-hint' },
+              t(looksLikeEmail(query) ? 'access.noEmail' : 'access.noMatch'),
+            ),
+          ]),
+    );
+    status.textContent = t('access.matches', { n: found.length });
+  };
+  let timer;
+  input.addEventListener('input', () => {
+    clearTimeout(timer);
+    timer = setTimeout(() => void search(), 150);
+  });
+  drawCurrent();
+
+  const content = document.createDocumentFragment();
+  content.append(
+    h(
+      'div',
+      { class: 'mn-sheet-bar' },
+      h(
+        'button',
+        { type: 'button', class: 'mn-btn mn-btn--ghost', 'data-mn-close': true },
+        t('access.done'),
+      ),
+      h('h2', {}, t('access.title')),
+      h('span', {}),
+    ),
+    h(
+      'div',
+      { class: 'mn-form mn-sheet-body' },
+      h('p', { class: 'mn-hint' }, t('access.intro')),
+      h('label', { class: 'mn-field' }, t('access.search'), input),
+      status,
+      results,
+      h('h3', { class: 'access-heading' }, t('access.current')),
+      current,
+    ),
+  );
+  window.mnui.sheet.open(content, { tall: true, modal: true });
+  input.focus();
+}
+
 function renderMine(main, tools) {
   header(t('tab.mine'), t('wishes.count', { n: S.wishes.length }));
   if (S.wishes.length > 0)
@@ -402,6 +658,7 @@ function renderMine(main, tools) {
   }
   main.append(
     h('p', { class: 'mn-note' }, t('mine.note')),
+    accessBar(),
     viewBar(S.wishes),
     h(
       'div',
@@ -827,6 +1084,13 @@ async function exportPdf() {
       brand: t('pdf.brand'),
       pageLabel: (page, pages) => t('pdf.page', { page, pages }),
       empty: t('mine.emptyTitle'),
+      // Sorted by category: one section per category, as on screen.
+      sections:
+        S.view.key === 'category'
+          ? { none: t('filter.none'), continued: t('pdf.continued') }
+          : undefined,
+      // Every wish can be ticked off in a PDF viewer, for people without an account.
+      crossOut: { label: t('pdf.taken'), hint: t('pdf.hint') },
       now: today,
     });
     const slug =

@@ -1,9 +1,11 @@
 name: Web-App einbauen
 # Registered with GitHub on the default branch (touched again so Actions lists it).
 
-# Integrates an uploaded ZIP (Verwaltung → Hochladen, ADR 0013). Started by the API.
+# Integrates an uploaded ZIP (Verwaltung → Hochladen, ADR 0013), or an app from a GitHub link
+# (ADR 0029). Started by the API.
 #
-#   fetch    (secrets)     downloads the ZIP from the private bucket
+#   fetch    (secrets)     downloads the ZIP from the private bucket, or clones the repository
+#                          (only git, nothing of it runs here) and packs it as the ZIP
 #   build    (NO secrets)  `mininode integrate` rewrites the export, checks it with doctor and
 #                          builds it. The export's own build code (PostCSS and Tailwind configs,
 #                          dependencies) runs only here, with no token and no key in reach.
@@ -65,10 +67,52 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Mark as running
         run: pnpm mininode submission status "$SUBMISSION" integrating --run "$RUN_URL" --env "$DEPLOY_ENV"
-      - name: Download the ZIP
+      - name: Where the upload comes from
+        id: source
         run: |
+          set -euo pipefail
           mkdir -p upload
-          pnpm mininode submission fetch "$SUBMISSION" --out upload/upload.zip --env "$DEPLOY_ENV" | tail -n1 > upload/filename.txt
+          source=$(pnpm -s mininode submission source "$SUBMISSION" --env "$DEPLOY_ENV" | tail -n1)
+          repository=$(jq -r '.repository // empty' <<<"$source")
+          # Checked again here: the value goes into a URL and a file name.
+          if [ -n "$repository" ]; then
+            [[ "$repository" =~ ^[A-Za-z0-9-]+/[A-Za-z0-9_.-]+$ && ! "$repository" =~ (^|/)\.+(/|$) ]] || {
+              echo "::error::invalid repository"; exit 1; }
+          fi
+          { echo "repository=$repository"; echo "auto=$(jq '.autoUpdate // false' <<<"$source")"; } >> "$GITHUB_OUTPUT"
+      - name: Download the ZIP
+        if: steps.source.outputs.repository == ''
+        run: pnpm mininode submission fetch "$SUBMISSION" --out upload/upload.zip --env "$DEPLOY_ENV" | tail -n1 > upload/filename.txt
+      # Cloning runs nothing of the repository, but it holds untrusted files: no database key in
+      # reach, only a key that can read repositories (APP_READ_TOKEN; public ones need none).
+      - name: Clone the repository
+        if: steps.source.outputs.repository != ''
+        env:
+          SUPABASE_SECRET_KEY: ''
+          CLONE_TOKEN: ${{ secrets.APP_READ_TOKEN || github.token }}
+          REPOSITORY: ${{ steps.source.outputs.repository }}
+          AUTO: ${{ steps.source.outputs.auto }}
+        run: |
+          set -euo pipefail
+          clone="$RUNNER_TEMP/clone"
+          git clone -q --depth 1 "https://x-access-token:${CLONE_TOKEN}@github.com/${REPOSITORY}.git" "$clone"
+          commit=$(git -C "$clone" rev-parse HEAD)
+          rm -rf "$clone/.git"
+          # Links could point at files of this runner: refused, and zip stores links as links.
+          [ -z "$(find "$clone" -type l -print -quit)" ] || { echo "::error::the repository contains symbolic links"; exit 1; }
+          # The same limit as a ZIP upload (40 MB).
+          size=$(du -sb "$clone" | cut -f1)
+          [ "$size" -le 41943040 ] || { echo "::error::the repository is larger than 40 MB"; exit 1; }
+          # Only a MiniNode app (its own mininode.json) can be updated from the repository later.
+          manifest_slug=$(jq -r '.slug // empty' "$clone/mininode.json" 2>/dev/null || true)
+          manifest_repo=$(jq -r '.repository // empty' "$clone/mininode.json" 2>/dev/null || true)
+          (cd "$clone" && zip -q -r -X -y "$GITHUB_WORKSPACE/upload/upload.zip" .)
+          echo "${REPOSITORY##*/}.zip" > upload/filename.txt
+          jq -n --arg repository "$REPOSITORY" --arg commit "$commit" --arg slug "$manifest_slug" \
+            --arg manifestRepository "$manifest_repo" --argjson autoUpdate "$AUTO" \
+            '{repository: $repository, commit: $commit, manifestSlug: $slug,
+              manifestRepository: $manifestRepository, autoUpdate: $autoUpdate}' \
+            > upload/source.json
       - uses: actions/upload-artifact@v4
         with:
           name: upload
@@ -169,6 +213,33 @@ jobs:
           if [ -n "$(find "$src" -type l)" ]; then echo "links in the result" >&2; exit 1; fi
           [ ! -e "hosted/$slug" ] || { echo "hosted/$slug exists" >&2; exit 1; }
           cp -r "$src" "hosted/$slug"
+          # Where updates come from is this installation's decision, never the upload's: a ZIP
+          # (or a repository) that names its own `repository` and `autoUpdate` gets neither.
+          jq 'del(.repository, .autoUpdate)' "hosted/$slug/mininode.json" > mininode.json.tmp
+          mv mininode.json.tmp "hosted/$slug/mininode.json"
+          rm -f "hosted/$slug/.mininode-source.json"
+          # From a GitHub link (ADR 0029): the app remembers its repository, so Verwaltung → Updates
+          # can bring in new versions (and, if the admin ticked it, do so by itself). Only for a
+          # MiniNode app whose own mininode.json has this slug (and, if it names one, this
+          # repository): an update replaces the folder with the repository's files.
+          if [ -f artifacts/upload/source.json ]; then
+            repository=$(jq -r .repository artifacts/upload/source.json)
+            commit=$(jq -r .commit artifacts/upload/source.json)
+            named=$(jq -r .manifestRepository artifacts/upload/source.json)
+            if [ "$(jq -r .manifestSlug artifacts/upload/source.json)" = "$slug" ] \
+              && { [ -z "$named" ] || [ "$named" = "$repository" ]; }; then
+              jq --arg r "$repository" --argjson a "$(jq .autoUpdate artifacts/upload/source.json)" \
+                '.repository = $r | if $a then .autoUpdate = true else . end' \
+                "hosted/$slug/mininode.json" > mininode.json.tmp
+              mv mininode.json.tmp "hosted/$slug/mininode.json"
+              jq -n --arg r "$repository" --arg c "$commit" '{repository: $r, commit: $c}' \
+                > "hosted/$slug/.mininode-source.json"
+            else
+              echo "::notice::$repository is not a MiniNode app for $slug: installed once, without updates from the repository."
+            fi
+          fi
+          # (An app exempt from Biome is skipped by it; that is fine here.)
+          pnpm exec biome format --write "hosted/$slug/mininode.json" || true
           # Root files are made here, in the job that does not run the export's code.
           pnpm install --lockfile-only --ignore-scripts
           if [ "$(jq -r '.lintExempt // false' artifacts/result/result.json)" = "true" ]; then

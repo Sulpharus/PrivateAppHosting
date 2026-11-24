@@ -395,9 +395,21 @@ export const manifestSchema = z
      * newest version of the app in with one click (ADR 0028). Data is not in the repository.
      */
     repository: githubRepoSchema.optional(),
+    /**
+     * With `repository`: new versions of the repository come in by themselves (ADR 0029), merged
+     * when the manifest stays the same. Read on the first deploy only; afterwards the admin
+     * switches it in Verwaltung → Updates.
+     */
+    autoUpdate: z.boolean().optional(),
   })
   .strict()
   .superRefine((m, ctx) => {
+    if (m.autoUpdate && !m.repository)
+      ctx.addIssue({
+        code: 'custom',
+        path: ['autoUpdate'],
+        message: 'autoUpdate needs a repository to update from',
+      });
     if (!TARGET_KINDS[m.target].includes(m.kind)) {
       ctx.addIssue({
         code: 'custom',

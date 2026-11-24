@@ -5,6 +5,8 @@
 //               installed by nucbox-control (snapshot, hash check, silent install)
 //   GET  /admin/submissions/config      what can be uploaded right now
 //   POST /admin/submissions             raw body + X-Filename (+ X-Runtime, X-Silent-Args, X-Program, X-Slug)
+//   POST /admin/submissions/github      { url, autoUpdate } a web app from a GitHub repository (ADR 0029):
+//                                       integrated like a ZIP, the workflow clones it
 //   GET  /admin/submissions/:id         the upload; refreshes a running program install first
 //   POST /admin/submissions/:id/retry   again (programs: optionally with another program path or arguments)
 //   POST /admin/submissions/:id/dismiss take it off the list
@@ -202,6 +204,72 @@ async function uploadWebapp(
   await audit(db, actor, 'submission.upload', { id, kind: 'webapp', filename });
   return startIntegration(env, db, row);
 }
+
+/**
+ * `owner/repo` from what an admin pastes: https://github.com/owner/repo(.git)(/…), github.com/owner/repo
+ * or owner/repo. Null for anything else (other hosts, `..`).
+ */
+export function githubRepository(input: string): string | null {
+  const text = input.trim().replace(/^(https?:\/\/)?(www\.)?github\.com\//i, '');
+  // GitHub account names have no dots (so `gitlab.com/me/x` is not taken for owner `gitlab.com`).
+  const match = /^([A-Za-z0-9-]+)\/([A-Za-z0-9_.-]+?)(\.git)?(\/.*)?$/.exec(text);
+  if (!match?.[1] || !match[2]) return null;
+  if (/^\.+$/.test(match[2])) return null;
+  // A bare "owner/repo" must not be a URL of another host.
+  if (/^[a-z]+:/i.test(input.trim()) && !/^https?:\/\/(www\.)?github\.com\//i.test(input.trim()))
+    return null;
+  return `${match[1]}/${match[2]}`;
+}
+
+const githubSchema = z
+  .object({ url: z.string().min(3).max(300), autoUpdate: z.boolean().default(false) })
+  .strict();
+
+submissions.post(
+  '/admin/submissions/github',
+  requireUser({ role: 'admin', recentAuth: 600 }),
+  async (c) => {
+    const parsed = githubSchema.safeParse(await c.req.json().catch(() => null));
+    const repository = parsed.success ? githubRepository(parsed.data.url) : null;
+    if (!parsed.success || !repository)
+      return problem(
+        400,
+        'invalid_request',
+        'Gib die Adresse eines GitHub-Projekts an, z. B. https://github.com/name/projekt.',
+      );
+    if (!c.env.GITHUB_DISPATCH_TOKEN)
+      return problem(
+        503,
+        'not_configured',
+        'Der automatische Einbau ist noch nicht eingerichtet: der Schlüssel LIBRARY_DISPATCH_TOKEN fehlt.',
+      );
+    const db = adminClient(c.env);
+    const actor = c.get('claims').sub;
+    const { data: row, error } = await db
+      .schema('platform')
+      .from('submissions')
+      .insert({
+        kind: 'webapp',
+        filename: safeFilename(`${repository.split('/')[1]}.zip`),
+        size_bytes: 0,
+        // No stored file: the workflow clones the repository.
+        storage_path: `github:${repository}`,
+        repository,
+        auto_update: parsed.data.autoUpdate,
+        created_by: actor,
+      })
+      .select('*')
+      .single<SubmissionRow>();
+    if (error || !row)
+      return problem(500, 'db_error', 'Die Installation konnte nicht gespeichert werden.');
+    await audit(db, actor, 'submission.github', {
+      id: row.id,
+      repository,
+      autoUpdate: parsed.data.autoUpdate,
+    });
+    return startIntegration(c.env, db, row);
+  },
+);
 
 /** Starts (or restarts) the workflow for a stored ZIP. */
 async function startIntegration(env: ApiEnv, db: SupabaseClient, row: SubmissionRow) {

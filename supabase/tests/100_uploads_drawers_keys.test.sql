@@ -1,5 +1,5 @@
 begin;
-select plan(31);
+select plan(35);
 select tests.reset();
 
 -- The first user becomes admin (bootstrap).
@@ -27,6 +27,14 @@ select throws_ok($$insert into platform.submissions (kind, filename, size_bytes,
 update platform.submissions set status = 'pr_open' where filename = 'sentinel.zip';
 select is((select status from platform.submissions where filename = 'sentinel.zip'), 'pr_open', 'an upload can wait on its open pull request');
 select is((select public from storage.buckets where id = 'submissions'), false, 'the upload bucket is private');
+-- Installed from a GitHub link (ADR 0029).
+insert into platform.submissions (kind, filename, size_bytes, storage_path, repository, auto_update)
+values ('webapp', 'notes.zip', 0, 'github:owner/notes', 'owner/notes', true);
+select is((select repository from platform.submissions where filename = 'notes.zip'), 'owner/notes', 'an upload can come from a repository');
+select throws_ok($$insert into platform.submissions (kind, filename, size_bytes, storage_path, repository) values ('webapp', 'x.zip', 0, 'x', 'https://evil/x y')$$,
+  '23514', null, 'only owner/repo is stored as a repository');
+select is((select auto_update from platform.apps where slug = 'wetter'), false, 'apps do not update themselves unless asked');
+select is((select auto_update from platform.submissions where filename = 'sentinel.zip'), false, 'a ZIP upload asks for no updates');
 
 -- ---------- drawers ----------
 select tests.login(:'anna_id');

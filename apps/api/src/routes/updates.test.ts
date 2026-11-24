@@ -217,3 +217,52 @@ describe('POST /admin/updates/apps/:slug', () => {
     expect((await request('/admin/updates/apps/notes', { method: 'POST' })).status).toBe(403);
   });
 });
+
+describe('PUT /admin/updates/apps/:slug/auto', () => {
+  const patches = () =>
+    calls.filter((c) => c.url.includes('/rest/v1/apps') && c.method === 'PATCH');
+
+  it('switches automatic updates for an app with a repository, after the audit row', async () => {
+    signedIn('admin');
+    const response = await request('/admin/updates/apps/notes/auto', {
+      method: 'PUT',
+      body: { enabled: true },
+    });
+    expect(response.status).toBe(200);
+    expect(audits()[0]?.body).toMatchObject({ action: 'app.auto_update_on', app_slug: 'notes' });
+    expect(patches()[0]?.body).toEqual({ auto_update: true });
+    const order = calls.map((c) => (c.url.includes('/audit_log') ? 'audit' : c.method));
+    expect(order.indexOf('audit')).toBeLessThan(order.indexOf('PATCH'));
+  });
+
+  it('refuses an app without a repository, other users and a stale sign-in', async () => {
+    signedIn('admin');
+    const plain = await request('/admin/updates/apps/plain/auto', {
+      method: 'PUT',
+      body: { enabled: true },
+    });
+    expect(plain.status).toBe(400);
+    expect(patches()).toHaveLength(0);
+    signedIn('user');
+    expect(
+      (await request('/admin/updates/apps/notes/auto', { method: 'PUT', body: { enabled: true } }))
+        .status,
+    ).toBe(403);
+    signedIn('admin', false);
+    expect(
+      (await request('/admin/updates/apps/notes/auto', { method: 'PUT', body: { enabled: true } }))
+        .status,
+    ).toBe(403);
+    expect(patches()).toHaveLength(0);
+  });
+
+  it('can always switch it off', async () => {
+    signedIn('admin');
+    const response = await request('/admin/updates/apps/plain/auto', {
+      method: 'PUT',
+      body: { enabled: false },
+    });
+    expect(response.status).toBe(200);
+    expect(patches()[0]?.body).toEqual({ auto_update: false });
+  });
+});

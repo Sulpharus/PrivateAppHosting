@@ -30,7 +30,12 @@ import {
 import { integrate, reportMarkdown } from './integrate/index.ts';
 import type { IntegrateResult } from './integrate/types.ts';
 import { biomeSkip, lintExemption, tidy, verifyBuild } from './integrate/verify.ts';
-import { fetchSubmission, type SubmissionStatus, setSubmissionStatus } from './submissions.ts';
+import {
+  fetchSubmission,
+  type SubmissionStatus,
+  setSubmissionStatus,
+  submissionSource,
+} from './submissions.ts';
 import {
   applyAppUpdate,
   applyPlatformUpdate,
@@ -70,6 +75,7 @@ const USAGE = `mininode <command>
   exempt <slug> [--skip|--remove]   Exempt an imported app from the linter, or from Biome entirely (publish step); --remove forgets it
   uninstall <slug> [--purge] [--env]  Take an app offline (Worker deleted, or removed from the desktop host with --env desktop); --purge also deletes its data, files and registry entry
   submission fetch <id> --out <file>  Download an uploaded ZIP (workflow)
+  submission source <id>            Where an upload comes from: {repository, autoUpdate} or {} (workflow)
   submission status <id> <status> [--result file] [--report file] [--pr url] [--review url] [--run url] [--only-if-pr url]
                                     Report the state of an upload (workflow)
   backup create --out <dir> [--no-files]   Copy the database and the stored files into a folder
@@ -286,6 +292,10 @@ async function main(args: string[]): Promise<number> {
     case 'submission': {
       const [, , id, status] = args;
       const env = envFlag(args);
+      if (target === 'source' && id) {
+        console.log(JSON.stringify(await submissionSource(env, id)));
+        return 0;
+      }
       if (target === 'fetch' && id) {
         const out = flag(args, '--out');
         if (!out) break;

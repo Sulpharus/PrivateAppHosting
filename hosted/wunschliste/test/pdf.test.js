@@ -139,3 +139,69 @@ describe('wishlist pdf', () => {
     expect(s).toContain('(Noch keine W\xfcnschen)'.replace('nschen', 'nsche'));
   });
 });
+
+describe('wishlist pdf: sections and ticking off', () => {
+  const wish = (title, category) => ({
+    title,
+    category,
+    priority: 2,
+    url: 'https://example.com/x',
+    linkLabel: 'Zum Angebot',
+    image: null,
+  });
+  const bytes = (wishes, extra = {}) =>
+    buildWishlistPdf({
+      title: 'Wunschliste',
+      subtitle: 'Lena',
+      wishes,
+      brand: 'MiniNode',
+      pageLabel: (p, n) => `Seite ${p} von ${n}`,
+      now: new Date('2026-10-05T10:00:00Z'),
+      ...extra,
+    });
+  const build = (wishes, extra = {}) => text(bytes(wishes, extra));
+
+  it('puts a heading over each category, with wishes without one under their own', () => {
+    const s = build([wish('A', 'Bücher'), wish('B', 'Bücher'), wish('C', 'Küche'), wish('D', '')], {
+      sections: { none: 'Ohne Kategorie', continued: 'Fortsetzung' },
+    });
+    expect(s).toContain('(B\xfccher) Tj');
+    expect(s).toContain('(K\xfcche) Tj');
+    expect(s).toContain('(Ohne Kategorie) Tj');
+    // The heading names the category, so the cards do not repeat it.
+    expect(s.match(/\(B\xfccher\) Tj/g)).toHaveLength(1);
+  });
+
+  it('repeats a heading that continues on the next page', () => {
+    const many = Array.from({ length: 30 }, (_, i) => wish(`W${i}`, 'Bücher'));
+    const s = build(many, { sections: { none: 'Ohne', continued: 'Fortsetzung' } });
+    expect(s).toContain('(B\xfccher \\(Fortsetzung\\)) Tj');
+  });
+
+  it('makes every card a check box that crosses the wish out, links still on top', () => {
+    const plain = build([wish('A', ''), wish('B', '')]);
+    expect(plain).not.toContain('/AcroForm');
+    const { s, objects } = checkStructure(
+      bytes([wish('A', ''), wish('B', '')], {
+        crossOut: { label: 'Vergeben', hint: 'Tipp: abhaken' },
+      }),
+    );
+    expect(objects).toBeGreaterThan(10);
+    expect(s).toMatch(/\/AcroForm << \/Fields \[\d+ 0 R \d+ 0 R\]/);
+    expect(s).toContain('/T (wish-1)');
+    expect(s).toContain('/T (wish-2)');
+    expect(s).toContain('/AS /Off');
+    expect(s).toContain('(Vergeben) Tj');
+    expect(s).toContain('(Tipp: abhaken) Tj');
+    // In each page's list the widgets come before the links, so a link lies on top.
+    const annots = /\/Annots \[([^\]]+)\]/
+      .exec(s)?.[1]
+      ?.trim()
+      .split(/ 0 R ?/)
+      .filter(Boolean);
+    const kinds = (annots ?? []).map(
+      (id) => new RegExp(`\\n${id} 0 obj\\n<< /Type /Annot /Subtype /(\\w+)`).exec(s)?.[1],
+    );
+    expect(kinds).toEqual(['Widget', 'Widget', 'Link', 'Link']);
+  });
+});

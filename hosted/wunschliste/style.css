@@ -181,3 +181,24 @@
   width: 18px;
   height: 18px;
 }
+
+/* Who sees the own list: the switch, the whitelist button and a line that says what it means. */
+.access-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--mn-s2) var(--mn-s3);
+  margin-bottom: var(--mn-s3);
+}
+.access-bar svg {
+  width: 18px;
+  height: 18px;
+}
+.access-hint {
+  flex: 1 1 100%;
+}
+.access-heading {
+  margin-top: var(--mn-s4);
+  font-size: var(--mn-fs-sm);
+  color: var(--mn-muted);
+}

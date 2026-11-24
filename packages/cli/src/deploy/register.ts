@@ -55,7 +55,8 @@ export async function registerApp(
     // The admin decides visibility and defaults in the Host Manager after the first deploy.
     ...(existing
       ? { status: existing.status === 'disabled' ? 'disabled' : 'online' }
-      : { is_default: manifest.access.default }),
+      : // Automatic updates too (ADR 0029): afterwards the admin switches them in Verwaltung → Updates.
+        { is_default: manifest.access.default, auto_update: manifest.autoUpdate === true }),
   });
   if (error) throw new Error(`registering ${manifest.slug} failed: ${error.message}`);
 

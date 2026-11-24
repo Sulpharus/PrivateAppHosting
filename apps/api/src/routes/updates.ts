@@ -5,6 +5,8 @@
 //   GET  /admin/updates                  admin: installed and newest versions
 //   POST /admin/updates/platform         admin + recent sign-in; { version? } → 202
 //   POST /admin/updates/apps/:slug       admin + recent sign-in → 202
+//   PUT  /admin/updates/apps/:slug/auto  admin + recent sign-in; { enabled } → automatic updates
+//                                        (auto-update-apps.yml, ADR 0029)
 
 import { GITHUB_REPO, slugSchema } from '@mininode/manifest';
 import { Hono } from 'hono';
@@ -54,7 +56,7 @@ updates.get('/admin/updates', requireUser({ role: 'admin' }), async (c) => {
   const { data: rows, error } = await db
     .schema('platform')
     .from('apps')
-    .select('slug, name, kind, status, manifest')
+    .select('slug, name, kind, status, manifest, auto_update')
     .neq('kind', 'link');
   if (error) return problem(500, 'db_error', error.message);
 
@@ -66,10 +68,11 @@ updates.get('/admin/updates', requireUser({ role: 'admin' }), async (c) => {
         .map((row) => ({
           slug: row.slug as string,
           name: row.name as string,
+          autoUpdate: row.auto_update === true,
           repository: (row.manifest as { repository?: unknown } | null)?.repository,
         }))
         .filter(
-          (row): row is { slug: string; name: string; repository: string } =>
+          (row): row is { slug: string; name: string; autoUpdate: boolean; repository: string } =>
             typeof row.repository === 'string' && REPO.test(row.repository),
         )
         .map(async (row) => {
@@ -83,6 +86,7 @@ updates.get('/admin/updates', requireUser({ role: 'admin' }), async (c) => {
             slug: row.slug,
             name: row.name,
             repository: row.repository,
+            autoUpdate: row.autoUpdate,
             installedCommit,
             latestCommit,
             // null: unknown (never updated from the repository, or GitHub did not answer)
@@ -188,5 +192,52 @@ updates.post(
     const started = await dispatchWorkflow(c.env, 'update-app.yml', { slug: slug.data });
     if (started instanceof Response) return started;
     return c.json({ started: true, runs: started.runs }, 202);
+  },
+);
+
+const autoSchema = z.object({ enabled: z.boolean() }).strict();
+
+updates.put(
+  '/admin/updates/apps/:slug/auto',
+  requireUser({ role: 'admin', recentAuth: 600 }),
+  async (c) => {
+    const slug = slugSchema.safeParse(c.req.param('slug'));
+    if (!slug.success) return problem(404, 'not_found', 'Diese App gibt es nicht.');
+    const parsed = autoSchema.safeParse(await c.req.json().catch(() => null));
+    if (!parsed.success) return problem(400, 'invalid_request', 'Ungültige Anfrage.');
+    const db = adminClient(c.env);
+    const { data: app, error } = await db
+      .schema('platform')
+      .from('apps')
+      .select('slug, kind, manifest')
+      .eq('slug', slug.data)
+      .maybeSingle();
+    if (error) return problem(500, 'db_error', error.message);
+    if (!app || app.kind === 'link') return problem(404, 'not_found', 'Diese App gibt es nicht.');
+    const repository = (app.manifest as { repository?: unknown } | null)?.repository;
+    if (parsed.data.enabled && (typeof repository !== 'string' || !REPO.test(repository)))
+      return problem(
+        400,
+        'no_repository',
+        'Diese App hat kein GitHub-Repository (Feld „repository“ in mininode.json).',
+      );
+    const { error: auditError } = await db
+      .schema('platform')
+      .from('audit_log')
+      .insert({
+        actor_id: c.get('claims').sub,
+        app_slug: slug.data,
+        action: parsed.data.enabled ? 'app.auto_update_on' : 'app.auto_update_off',
+        detail: { repository: typeof repository === 'string' ? repository : null },
+      });
+    if (auditError)
+      return problem(500, 'audit_failed', 'Die Änderung konnte nicht protokolliert werden.');
+    const { error: updateError } = await db
+      .schema('platform')
+      .from('apps')
+      .update({ auto_update: parsed.data.enabled })
+      .eq('slug', slug.data);
+    if (updateError) return problem(500, 'db_error', updateError.message);
+    return c.json({ slug: slug.data, autoUpdate: parsed.data.enabled });
   },
 );
