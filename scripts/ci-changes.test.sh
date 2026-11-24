@@ -55,6 +55,7 @@ expect 'musescore' 'hosted/musescore/build.mjs' 'hosted=true musescore=true craf
 expect 'app readme' 'hosted/notes/README.md' 'code=false hosted=true'
 expect 'MuseScore readme and tests' 'hosted/musescore/README.md hosted/musescore/test/a.test.js' 'musescore=false'
 expect 'Craft readme' 'hosted/wordcraft/README.md' 'crafts=false craft_apps=[]'
+expect 'rebuild mark' 'hosted/musescore/REBUILD hosted/wordcraft/REBUILD' 'musescore=true crafts=true craft_apps=["wordcraft"]'
 
 # More files than a pipe buffer holds: code must still be seen (no SIGPIPE under pipefail).
 many=""

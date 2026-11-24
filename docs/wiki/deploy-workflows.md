@@ -18,9 +18,9 @@ summary: Wie eine Änderung live geht und welche automatischen Abläufe es gibt
      Repository liegen, werden gelöscht, ihr Eintrag deaktiviert);
    - **nucbox:** Container-Apps und Bibliothek über SSH (nur wenn `NUCBOX_TUNNEL_ID` gesetzt ist).
 
-Ändern sich Dinge, die **jede App** betreffen (SDK, App-Kit, Gate, Manifest, CLI, Lockfile), werden **alle Apps** neu ausgeliefert (jede braucht Sekunden), **außer MuseScore und den Craft-Apps mit Patches**: Ihr Programm wird aus dem Quellcode gebaut (MuseScore bei kaltem Cache Stunden), darum gehen sie nur raus, wenn sich ihr **eigener Ordner** ändert (ohne `*.md` und `test/`) oder das **Gate** bzw. das **Manifest** (das Gate ist der Worker jeder App, Sicherheitskorrekturen müssen überall ankommen; dafür wird nichts neu gebaut, nur der Cache geholt). Eine SDK-, Kit-, CLI- oder Lockfile-Änderung erreicht sie mit ihrer nächsten eigenen Änderung oder einem Deploy mit *all_apps*.
+Ändern sich Dinge, die **jede App** betreffen (SDK, App-Kit, Gate, Manifest, CLI, Lockfile), werden **alle Apps** neu ausgeliefert (jede braucht Sekunden), **außer MuseScore und den Craft-Apps mit Patches**: Ihr Programm wird aus dem Quellcode gebaut (MuseScore bei kaltem Cache Stunden), darum gehen sie nur raus, wenn sich ihr **eigener Ordner** ändert (ohne `*.md` und `test/`) oder das **Gate** bzw. das **Manifest** (das Gate ist der Worker jeder App, Sicherheitskorrekturen müssen überall ankommen; dafür wird nichts neu gebaut, nur der Cache geholt). Eine SDK-, Kit-, CLI- oder Lockfile-Änderung erreicht sie mit dem nächsten **nächtlichen Deploy aller Apps** (siehe unten); muss es schneller gehen, markiert `scripts/mark-program-apps.sh "<Grund>"` sie im selben Commit als geändert (es schreibt `hosted/<app>/REBUILD`; neu kompiliert wird dabei nichts).
 
-**Caches warm halten:** GitHub löscht einen Cache, der 7 Tage nicht benutzt wurde. Der Workflow **Keep program builds cached** (`build-cache.yml`) holt alle drei Tage die Programm-Caches einmal ab und baut nach, was fehlt, damit ein Merge nie auf einen kalten Bau wartet.
+**Nachts alle Apps:** Montag und Donnerstag um 01:23 UTC (02:23 bzw. 03:23 Uhr deutscher Zeit) läuft der Deploy von selbst mit *all_apps*. So kommen SDK- und Kit-Änderungen auch bei MuseScore und den Craft-Apps an, und jeder Bau-Cache wird spätestens alle vier Tage benutzt. GitHub löscht einen Cache, der 7 Tage nicht benutzt wurde; ohne diesen Lauf müsste ein Merge nach einer ruhigen Woche stundenlang auf einen Neubau warten.
 
 ## Umgebungen
 
@@ -39,8 +39,7 @@ Die vollständige, automatisch erzeugte Liste mit Auslösern und Zweck steht unt
 | Workflow | Wann |
 | --- | --- |
 | **CI** (`ci.yml`) | jeder Pull Request und jeder Push auf `main` |
-| **Deploy** (`deploy.yml`) | Push auf `main`, oder von Hand |
-| **Keep program builds cached** (`build-cache.yml`) | alle drei Tage, oder von Hand |
+| **Deploy** (`deploy.yml`) | Push auf `main`, Montag und Donnerstag nachts (alle Apps), oder von Hand |
 | **Web-App einbauen** (`integrate.yml`) | ein ZIP wurde hochgeladen |
 | **Upload nach dem Pull Request** (`pr-merged.yml`) | ein Einbau-Pull-Request wurde gemergt oder geschlossen |
 | **Sicherung** (`backup.yml`) | Verwaltung → Sicherung |

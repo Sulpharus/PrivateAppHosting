@@ -1,12 +1,18 @@
 name: Deploy
 
 # Runs after CI on main. Order: database → platform Workers → hosted apps → physical server containers.
+# Also twice a week at night with every app: SDK, kit and CLI changes reach MuseScore and the Craft
+# apps (which otherwise ship only for their own changes), and every build cache is used at least
+# every 4 days, before GitHub's 7-day eviction, so no merge waits for a cold build.
 # Secrets and variables live in the GitHub environment (production / staging); see
 # docs/runbooks/setup-cloudflare.md for the full list.
 
 on:
   push:
     branches: [main]
+  schedule:
+    # Monday and Thursday 01:23 UTC (02:23 / 03:23 in Germany).
+    - cron: '23 1 * * 1,4'
   workflow_dispatch:
     inputs:
       environment:
@@ -216,7 +222,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - id: plan
         run: |
-          if [ "${{ inputs.all_apps }}" = "true" ]; then
+          if [ "${{ github.event_name == 'schedule' || inputs.all_apps }}" = "true" ]; then
             apps=$(node -e 'const fs=require("node:fs");console.log(JSON.stringify(fs.readdirSync("hosted").filter((s)=>fs.existsSync(`hosted/${s}/mininode.json`))))')
           else
             apps=$(pnpm -s mininode deploy --since-deployed --plan --env "$DEPLOY_ENV")
@@ -246,6 +252,27 @@ jobs:
     needs: plan
     if: needs.plan.outputs.musescore == 'true'
     uses: ./.github/workflows/musescore.yml
+
+  # The MuseScore build skips Qt and its compiler cache when its program zip is cached: the nightly
+  # run restores both, so they are used often enough not to be evicted.
+  caches:
+    name: Touch the Qt and compiler caches
+    needs: musescore
+    if: ${{ !cancelled() && github.event_name == 'schedule' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/qt-wasm/gcc_64
+            ~/qt-wasm/wasm_singlethread
+          key: musescore-qt-${{ hashFiles('hosted/musescore/toolchain/build-qt.sh', 'hosted/musescore/toolchain/env.sh', 'hosted/musescore/toolchain/qt-*.patch') }}
+      - uses: actions/cache/restore@v4
+        with:
+          path: ~/.cache/ccache
+          key: musescore-ccache-none
+          restore-keys: musescore-ccache-
 
   apps:
     name: Hosted apps
