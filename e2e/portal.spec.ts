@@ -172,11 +172,9 @@ test('the KI-Werkstatt composes a prompt for the chosen tool, with tooltips', as
   await expect(page.getByRole('button', { name: 'Startpaket (ZIP)' })).toBeVisible();
 
   // A coding agent in the repository gets a short pointer prompt instead.
-  await page
-    .getByLabel('Womit baust du sie?')
-    .selectOption({
-      label: 'Coding-Agent im Repository (Claude Code, Codex, Cursor, Copilot, Gemini CLI)',
-    });
+  await page.getByLabel('Womit baust du sie?').selectOption({
+    label: 'Coding-Agent im Repository (Claude Code, Codex, Cursor, Copilot, Gemini CLI)',
+  });
   await expect(prompt).toHaveValue(/docs\/ai\/prompts\/modules\/scanning\.md/);
   await expect(page.getByRole('button', { name: 'Startpaket (ZIP)' })).toBeHidden();
 });
