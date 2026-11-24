@@ -23,12 +23,12 @@ out a short-lived download address (`/admin/app-zips`), recorded in the audit lo
 /admin/submissions/github`). It becomes an upload with `repository` set and no stored file; the
 fetch job of `integrate.yml` clones the repository (git only, nothing of it runs there; no
 database key in that step, only `APP_READ_TOKEN` or the workflow token; symbolic links and more
-than 40 MB are refused) and packs it as the ZIP, and from there it is an upload like any other: the integration script without
-secrets, a pull request, auto-merge only with `INTEGRATE_AUTOMERGE`. When the repository holds a
+than 40 MB are refused) and packs it as the ZIP. From there it is an upload like any other: the
+integration script without secrets, a pull request, auto-merge only with `INTEGRATE_AUTOMERGE`. When the repository holds a
 MiniNode app with its own `mininode.json` for the same slug (and, if it names one, the same
 repository), the publish job writes `repository` (and `autoUpdate` if the admin ticked it) into the
 manifest. Any `repository` or `autoUpdate` an upload brings itself is removed first: where updates
-come from is never the upload's decision. The publish job and records the commit in
+come from is never the upload's decision. The publish job also records the commit in
 `.mininode-source.json`, so Verwaltung → Updates knows the app. Any other repository is installed
 once, without updates.
 
