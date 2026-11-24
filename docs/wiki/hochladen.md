@@ -10,6 +10,18 @@ Verwaltung → Apps → **Hochladen** (ADR 0013). Ein Feld nimmt zwei Arten Date
 - **ZIP** = Web-App. Ein Skript baut sie ein.
 - **`.exe` / `.msi`** = Programm für PC/Server ([Programme](wiki:app-bibliothek-programme)).
 
+## Von GitHub installieren (ADR 0029)
+
+Unter dem Upload-Feld steht **Von GitHub installieren**: die Adresse eines Projekts eintragen (`https://github.com/name/projekt`)
+und **Installieren**. Der Workflow holt das Projekt (bei privaten Projekten mit dem Schlüssel `EXPORT_REPO_TOKEN`) und baut es ein wie
+ein ZIP, mit Pull Request und Liste unten.
+
+Mit **Automatisch aktualisieren** merkt sich die App ihr Projekt: Jede Nacht kommt dann die neueste Version als Pull Request, der sich
+selbst mergt, sobald die Prüfungen grün sind, solange sich Rechte, Domains und Schlüssel in der `mininode.json` nicht ändern (sonst
+wartet er auf dich). Das geht nur bei MiniNode-Apps, die selbst eine `mininode.json` mit derselben Adresse mitbringen (zum Beispiel
+ein Projekt aus „Als GitHub-Projekt“); andere Projekte werden einmal eingebaut, ohne Updates. Den Schalter änderst du später unter
+Verwaltung → **Updates** ([Aktualisieren](wiki:aktualisieren)).
+
 ## Was bei einem ZIP passiert
 
 1. Die API speichert das ZIP und startet den Workflow **Web-App einbauen** (`integrate.yml`).

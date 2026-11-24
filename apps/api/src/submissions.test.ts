@@ -1,7 +1,39 @@
 import { describe, expect, it } from 'vitest';
 import type { ApiEnv } from './env.ts';
 import { app } from './index.ts';
-import { guessProgramPath, safeFilename, validProgramPath } from './routes/submissions.ts';
+import {
+  githubRepository,
+  guessProgramPath,
+  safeFilename,
+  validProgramPath,
+} from './routes/submissions.ts';
+
+describe('githubRepository', () => {
+  it('takes the usual ways of writing a GitHub project', () => {
+    for (const input of [
+      'https://github.com/me/notes',
+      'https://github.com/me/notes.git',
+      'https://www.github.com/me/notes/tree/main/src',
+      'github.com/me/notes',
+      '  me/notes  ',
+    ])
+      expect(githubRepository(input), input).toBe('me/notes');
+  });
+
+  it('refuses other hosts and odd names', () => {
+    for (const input of [
+      'https://gitlab.com/me/notes',
+      'https://evil.example/github.com/me/notes',
+      'ftp://github.com/me/notes',
+      'notes',
+      '../notes',
+      'me/..',
+      'me/no tes',
+      '',
+    ])
+      expect(githubRepository(input), input).toBeNull();
+  });
+});
 
 describe('upload helpers', () => {
   it('cleans file names for storage paths and command lines', () => {

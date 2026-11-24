@@ -28,6 +28,18 @@ Verwaltung → **Updates** (ADR 0028, Runbook `updates.md`). Die Seite zeigt, we
 
 Trage in der `mininode.json` der App `"repository": "name/projekt"` ein (zum Beispiel das Projekt, das [Apps exportieren](wiki:apps-exportieren-releases) angelegt hat). Danach erscheint sie unter Updates. „Installiert“ steht bei einer App auf *unbekannt*, bis das erste Update ihren Stand gemerkt hat; bei MiniNode, bis das erste Update `.mininode/platform-files.json` geschrieben hat. Das Update ersetzt `hosted/<slug>` durch den Stand des Repositories und merkt sich dessen Commit. Die Adresse (`slug`) der App muss im Repository dieselbe sein.
 
+## Automatisch aktualisieren (ADR 0029)
+
+Neben jeder App mit Repository steht der Schalter **Automatisch aktualisieren**. Ist er an, holt der Workflow **Apps automatisch
+aktualisieren** (`auto-update-apps.yml`) jede Nacht um 02:41 UTC die neueste Version. Der Pull Request mergt sich selbst, sobald die
+Pflicht-Prüfungen von `main` grün sind, aber **nur, wenn die `mininode.json` gleich bleibt** (Rechte, Domains, Schlüssel, Datenmodus):
+sonst wartet er auf dich wie jedes andere Update. Bei einer App, die schon auf dem neuesten Stand ist, passiert nichts.
+
+Voraussetzungen fürs selbständige Mergen: der Schlüssel `INTEGRATE_TOKEN` (sonst laufen keine Prüfungen), **Allow auto-merge** in den
+Repository-Einstellungen und eine Regel, die auf `main` die Prüfungen verlangt. Fehlt etwas davon, bleibt der Pull Request einfach
+offen. Bedenke: Ein automatisches Update kann ändern, was die App innerhalb ihrer Rechte tut. Schalte es nur für Projekte ein, denen
+du vertraust.
+
 ## Vorher sichern
 
 Wenn dir die Daten wichtig sind, mach vor dem Mergen eine [Sicherung](wiki:sicherung). Zurückspielen geht damit auch, falls eine neue Version Daten anders deutet als erwartet.

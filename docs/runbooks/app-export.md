@@ -24,6 +24,10 @@ Export one app as its own GitHub repository, without user data or keys (ADR 0012
 Exporting the same app again adds a commit to that repository. A license is not added; choose
 one on GitHub before you share the project.
 
+As a ZIP file instead (ADR 0029): Verwaltung → Apps → *Als ZIP*. The same export, kept as the
+workflow artifact `mininode-app-<slug>-<date>` for 7 days and downloaded from the list
+*ZIP-Exporte* on the same page. The receiver installs it under Verwaltung → Hochladen.
+
 Locally, without GitHub: `pnpm mininode export hosted/<slug> --out ../export-<slug>`.
 
 ## When the export stops

@@ -1,0 +1,72 @@
+name: Apps automatisch aktualisieren
+
+# Every night, each app with automatic updates (Verwaltung → Updates, platform.apps.auto_update,
+# ADR 0029) brings in the newest version of its GitHub repository through update-app.yml. The
+# pull request merges itself once the required checks pass, unless the app's mininode.json changes
+# (rights, domains, keys): such an update waits for a person. Nothing happens for an app that is
+# already at the newest commit.
+
+on:
+  schedule:
+    # 02:41 UTC, after the Monday/Thursday all-apps deploy (01:23) on those nights.
+    - cron: '41 2 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: auto-update-apps
+  cancel-in-progress: false
+
+jobs:
+  list:
+    name: Apps with automatic updates
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    outputs:
+      slugs: ${{ steps.list.outputs.slugs }}
+    env:
+      SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/load-config
+        with:
+          environment: production
+      - id: list
+        run: |
+          set -euo pipefail
+          # Only apps whose folder is in this repository and that name a repository.
+          rows=$(curl -fsS \
+            -H "apikey: $SUPABASE_SECRET_KEY" -H "Authorization: Bearer $SUPABASE_SECRET_KEY" \
+            -H "Accept-Profile: platform" \
+            "$SUPABASE_URL/rest/v1/apps?select=slug,manifest&auto_update=eq.true&kind=neq.link")
+          slugs=$(jq -c '[.[] | select(.manifest.repository != null) | .slug
+            | select(test("^[a-z][a-z0-9-]{0,30}[a-z0-9]$"))]' <<<"$rows")
+          kept="[]"
+          for slug in $(jq -r '.[]' <<<"$slugs"); do
+            if [ -f "hosted/$slug/mininode.json" ]; then kept=$(jq -c --arg s "$slug" '. + [$s]' <<<"$kept"); fi
+          done
+          echo "slugs=$kept" >> "$GITHUB_OUTPUT"
+          echo "Apps with automatic updates: $kept" >> "$GITHUB_STEP_SUMMARY"
+
+  update:
+    name: Update
+    needs: list
+    if: needs.list.outputs.slugs != '[]' && needs.list.outputs.slugs != ''
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        slug: ${{ fromJson(needs.list.outputs.slugs) }}
+    permissions:
+      contents: write
+      pull-requests: write
+    uses: ./.github/workflows/update-app.yml
+    with:
+      slug: ${{ matrix.slug }}
+      auto: true
+    secrets: inherit

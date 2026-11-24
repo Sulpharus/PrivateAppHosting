@@ -529,6 +529,9 @@
     "repository": {
       "type": "string",
       "pattern": "^(?!\\.+\\/)[\\w.-]+\\/(?!\\.+$)[\\w.-]+$"
+    },
+    "autoUpdate": {
+      "type": "boolean"
     }
   },
   "required": [
