@@ -2,7 +2,7 @@
 
 Two kinds of exports:
 
-- **Built with the KI-Werkstatt prompt (ADR 0029):** a ZIP with real files made in Claude's code
+- **Built with the KI-Werkstatt prompt (ADR 0030):** a ZIP with real files made in Claude's code
   environment from the starter package. It already loads `/_mininode/*` and uses `mn`; integrate it
   like a static or Vite app (`static-html.md`, `vite-react.md`) and finish with the common steps.
 - **A classic artifact** (made before the composer's Claude variant, or by hand): one

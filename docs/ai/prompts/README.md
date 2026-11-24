@@ -1,6 +1,6 @@
 # Construction prompt library
 
-Building blocks for the prompt composer in *Verwaltung → KI-Werkstatt* (ADR 0003 §1, ADR 0029).
+Building blocks for the prompt composer in *Verwaltung → KI-Werkstatt* (ADR 0003 §1, ADR 0030).
 The portal bundles these files at build time; change them here, in the same PR as the platform
 feature they describe.
 
@@ -46,4 +46,4 @@ The composer puts together, in this order: the reference (spec, design system, l
 the type and the modules, each in its own tag), the task, the delivery steps of the chosen tool, the
 numbered hard rules and a closing checklist. How each tool gets its prompt (one long prompt, a short
 prompt plus `MININODE-REFERENCE.md`, a pointer into the repository, or a compact prompt for small
-models) and the starter package are in ADR 0029.
+models) and the starter package are in ADR 0030.

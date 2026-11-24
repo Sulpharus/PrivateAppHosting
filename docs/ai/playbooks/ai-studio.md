@@ -1,6 +1,6 @@
 # Playbook: Google AI Studio export
 
-Built with the KI-Werkstatt prompt (ADR 0029), an export already has `public/_mininode/` from the
+Built with the KI-Werkstatt prompt (ADR 0030), an export already has `public/_mininode/` from the
 starter package (dropped on integration), `mininode.json` and the language packages; only the steps
 below that still apply are needed. Newer AI Studio projects default to a full-stack app (a
 `server.ts` with Express, Tailwind v4, sometimes Firebase); the server is removed by

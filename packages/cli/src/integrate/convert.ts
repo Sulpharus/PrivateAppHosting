@@ -26,7 +26,7 @@ const DROP_FILES =
 const DROP_PATHS = [
   /^assets\/\.aistudio\//,
   /^\.aistudio\//,
-  // The KI-Werkstatt starter package (ADR 0029): the gate serves /_mininode/ itself, and the
+  // The KI-Werkstatt starter package (ADR 0030): the gate serves /_mininode/ itself, and the
   // reference was only for the AI that built the app.
   /^(public\/)?_mininode\//,
   /^MININODE-REFERENCE\.md$/,

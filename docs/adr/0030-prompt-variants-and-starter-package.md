@@ -1,4 +1,4 @@
-# ADR 0029: Prompt variants per tool and a starter package for building outside MiniNode
+# ADR 0030: Prompt variants per tool and a starter package for building outside MiniNode
 
 - Status: accepted
 - Date: 2026-11-24

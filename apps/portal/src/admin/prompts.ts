@@ -1,4 +1,4 @@
-// Composes the construction prompt for an app from the library in docs/ai (ADR 0003 §1, ADR 0029):
+// Composes the construction prompt for an app from the library in docs/ai (ADR 0003 §1, ADR 0030):
 // the reference (spec, design system, language packages, app type, feature modules) first, wrapped in
 // tags, then the task, the delivery steps for the chosen tool, the numbered hard rules and a closing
 // checklist. Each tool gets the shape that works best for it: one long prompt, a short prompt plus a

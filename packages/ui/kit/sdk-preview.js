@@ -1,4 +1,4 @@
-// Preview SDK for building outside MiniNode (KI-Werkstatt "Startpaket", ADR 0029). It goes into the
+// Preview SDK for building outside MiniNode (KI-Werkstatt "Startpaket", ADR 0030). It goes into the
 // starter package as _mininode/sdk.js, so an app built in Claude, ChatGPT, AI Studio or Bolt loads
 // /_mininode/sdk.js exactly like on MiniNode and works in the tool's own preview.
 //

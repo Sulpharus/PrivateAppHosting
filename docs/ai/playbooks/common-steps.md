@@ -27,7 +27,7 @@
    placeholder parity. An export without them gets a warning (`i18n-missing`) until they exist.
 8. **UI.** German and English texts (step 7), 44 px touch targets, light/dark, loading and error states. The look is
    the App Kit (`docs/ai/DESIGN-SYSTEM.md`):
-   - An app built from the KI-Werkstatt starter package (ADR 0029): `mininode integrate` already
+   - An app built from the KI-Werkstatt starter package (ADR 0030): `mininode integrate` already
      dropped `_mininode/`, `public/_mininode/`, `MININODE-REFERENCE.md` and the starter `AGENTS.md`;
      the links to `/_mininode/*` stay as they are. Check that no other copy of the kit or the preview
      SDK is left.

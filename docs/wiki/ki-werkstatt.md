@@ -5,7 +5,7 @@ order: 40
 summary: Der Prompt-Ersteller, die Varianten je KI-Werkzeug, das Startpaket und die Vorgaben dahinter
 ---
 
-Verwaltung → **KI-Werkstatt** bündelt alles, was eine KI zum Bauen einer MiniNode-App braucht (ADR 0003, ADR 0029).
+Verwaltung → **KI-Werkstatt** bündelt alles, was eine KI zum Bauen einer MiniNode-App braucht (ADR 0003, ADR 0030).
 
 ## Der Prompt-Ersteller
 
