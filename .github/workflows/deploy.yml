@@ -187,10 +187,12 @@ jobs:
 
   # Which apps this run ships, before anything is built: the program builds (MuseScore takes hours
   # on a cold cache, each patched Craft app minutes) run only for an app that ships, and such an
-  # app ships only when its own folder changed (`mininode deploy --plan`), never for a change to a
-  # shared package or another app.
+  # app ships only when its own folder (not its *.md or test/), the gate or the manifest changed
+  # (`mininode deploy --plan`), never for the SDK, kit, CLI, lockfile or another app.
   plan:
     name: Apps to ship
+    # Like the platform job: the apps ship to production only, so staging builds nothing here.
+    if: (inputs.environment || 'production') == 'production'
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment || 'production' }}
     outputs:
@@ -217,7 +219,7 @@ jobs:
           if [ "${{ inputs.all_apps }}" = "true" ]; then
             apps=$(node -e 'const fs=require("node:fs");console.log(JSON.stringify(fs.readdirSync("hosted").filter((s)=>fs.existsSync(`hosted/${s}/mininode.json`))))')
           else
-            apps=$(pnpm -s mininode deploy --since-deployed --plan --env "$DEPLOY_ENV" | tail -n 1)
+            apps=$(pnpm -s mininode deploy --since-deployed --plan --env "$DEPLOY_ENV")
           fi
           echo "$apps" | jq -e 'type == "array"' >/dev/null
           crafts=$(APPS="$apps" node -e '
@@ -278,7 +280,8 @@ jobs:
       - name: Check the Cloudflare API token
         run: scripts/ci-clean-secret.sh CLOUDFLARE_API_TOKEN
       - name: Patched Craft builds
-        if: needs.crafts.result == 'success' || needs.musescore.result == 'success'
+        # Also after a partly failed Craft matrix: the legs that passed uploaded their zips.
+        if: needs.crafts.result != 'skipped' || needs.musescore.result != 'skipped'
         uses: actions/download-artifact@v4
         with:
           pattern: craft-*
@@ -290,8 +293,9 @@ jobs:
           scripts/craft-builds.sh craft-builds
           # The apps the plan job chose: each one changed since the commit it was last deployed from
           # (its registered version in this environment), so an earlier failed run is caught up.
-          # Changes to the SDK, kit, gate, manifest or CLI count for every app except those built
-          # from source (MuseScore, patched Craft apps), which ship only for their own changes.
+          # Changes to the SDK, kit, gate, manifest or CLI count for every app; apps built from
+          # source (MuseScore, patched Craft apps) ship only for their own folder, the gate or the
+          # manifest.
           # One broken app must not keep the others from shipping: deploy all, then fail.
           failed=""
           for slug in $(jq -r '.[]' <<<"$APPS"); do
@@ -322,7 +326,10 @@ jobs:
     name: Physical server container ${{ matrix.slug }}
     needs: apps
     # Skipped until the physical server is set up (docs/runbooks/nucbox-install.md).
-    if: needs.apps.outputs.containers != '[]' && vars.NUCBOX_TUNNEL_ID != ''
+    # !cancelled(): a skipped program build earlier in the chain must not skip the rollout.
+    if: >-
+      !cancelled() && needs.apps.result == 'success' && needs.apps.outputs.containers != '[]'
+      && vars.NUCBOX_TUNNEL_ID != ''
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment || 'production' }}
     permissions:

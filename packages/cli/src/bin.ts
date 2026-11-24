@@ -519,6 +519,8 @@ async function main(args: string[]): Promise<number> {
           all,
           () => readDeployedVersions(env),
           (list, deployed) => appsToDeploy(list, deployed, ROOT),
+          // --plan prints only the JSON on stdout; the warning goes to the log.
+          args.includes('--plan') ? console.error : console.log,
         );
         dirs = withManifest(slugs);
       } else if (base) {
@@ -526,7 +528,7 @@ async function main(args: string[]): Promise<number> {
       } else {
         dirs = [resolve(process.cwd(), target)];
       }
-      // --plan: only name the apps (JSON, last line), e.g. so the workflow builds only what ships.
+      // --plan: only name the apps (JSON, the only line on stdout), so the workflow builds only what ships.
       if (args.includes('--plan')) {
         console.log(JSON.stringify(dirs.map((dir) => basename(dir))));
         return 0;

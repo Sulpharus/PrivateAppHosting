@@ -18,7 +18,7 @@ summary: Wie eine Änderung live geht und welche automatischen Abläufe es gibt
      Repository liegen, werden gelöscht, ihr Eintrag deaktiviert);
    - **nucbox:** Container-Apps und Bibliothek über SSH (nur wenn `NUCBOX_TUNNEL_ID` gesetzt ist).
 
-Ändern sich Dinge, die **jede App** betreffen (SDK, App-Kit, Gate, Manifest, CLI, Lockfile), werden **alle Apps** neu ausgeliefert (jede braucht Sekunden), **außer MuseScore und den Craft-Apps mit Patches**: Ihr Programm wird aus dem Quellcode gebaut (MuseScore bei kaltem Cache Stunden), darum gehen sie nur raus, wenn sich ihr **eigener Ordner** ändert (ohne `*.md` und `test/`). Eine SDK- oder Kit-Änderung erreicht sie mit ihrer nächsten eigenen Änderung oder einem Deploy mit *all_apps*.
+Ändern sich Dinge, die **jede App** betreffen (SDK, App-Kit, Gate, Manifest, CLI, Lockfile), werden **alle Apps** neu ausgeliefert (jede braucht Sekunden), **außer MuseScore und den Craft-Apps mit Patches**: Ihr Programm wird aus dem Quellcode gebaut (MuseScore bei kaltem Cache Stunden), darum gehen sie nur raus, wenn sich ihr **eigener Ordner** ändert (ohne `*.md` und `test/`) oder das **Gate** bzw. das **Manifest** (das Gate ist der Worker jeder App, Sicherheitskorrekturen müssen überall ankommen; dafür wird nichts neu gebaut, nur der Cache geholt). Eine SDK-, Kit-, CLI- oder Lockfile-Änderung erreicht sie mit ihrer nächsten eigenen Änderung oder einem Deploy mit *all_apps*.
 
 **Caches warm halten:** GitHub löscht einen Cache, der 7 Tage nicht benutzt wurde. Der Workflow **Keep program builds cached** (`build-cache.yml`) holt alle drei Tage die Programm-Caches einmal ab und baut nach, was fehlt, damit ein Merge nie auf einen kalten Bau wartet.
 

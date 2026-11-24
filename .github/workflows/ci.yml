@@ -100,7 +100,7 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - name: Patched program builds
-        if: needs.crafts.result == 'success' || needs.musescore.result == 'success'
+        if: needs.crafts.result != 'skipped' || needs.musescore.result != 'skipped'
         uses: actions/download-artifact@v4
         with:
           pattern: craft-*

@@ -19,18 +19,22 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # Caches saved from another branch are not visible to the Deploy on main: run this from main only.
   # The program zips: restored (counts as a use) or rebuilt when they are gone.
   crafts:
+    if: github.ref == 'refs/heads/main'
     uses: ./.github/workflows/crafts.yml
 
   musescore:
+    if: github.ref == 'refs/heads/main'
     uses: ./.github/workflows/musescore.yml
 
-  # The MuseScore build skips restoring Qt when its zip is cached, so Qt is restored here.
+  # The MuseScore build skips restoring Qt and its compiler cache when its zip is cached, so both
+  # are restored here.
   qt:
-    name: Touch the Qt cache
+    name: Touch the Qt and compiler caches
     needs: musescore
-    if: ${{ !cancelled() }}
+    if: ${{ !cancelled() && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -40,3 +44,8 @@ jobs:
             ~/qt-wasm/gcc_64
             ~/qt-wasm/wasm_singlethread
           key: musescore-qt-${{ hashFiles('hosted/musescore/toolchain/build-qt.sh', 'hosted/musescore/toolchain/env.sh', 'hosted/musescore/toolchain/qt-*.patch') }}
+      - uses: actions/cache/restore@v4
+        with:
+          path: ~/.cache/ccache
+          key: musescore-ccache-none
+          restore-keys: musescore-ccache-
