@@ -137,7 +137,7 @@ describe.skipIf(!enabled)('app export', () => {
     );
     expect(dispatches[0]?.body).toEqual({
       ref: 'main',
-      inputs: { slug: own, repo: 'eigen-app', visibility: 'private' },
+      inputs: { slug: own, target: 'github', repo: 'eigen-app', visibility: 'private' },
     });
     const { data } = await admin
       .schema('platform')
@@ -145,6 +145,10 @@ describe.skipIf(!enabled)('app export', () => {
       .select('detail')
       .eq('action', 'app.exported')
       .eq('app_slug', own);
-    expect(data?.[0]?.detail).toEqual({ repo: 'eigen-app', visibility: 'private' });
+    expect(data?.[0]?.detail).toEqual({
+      target: 'github',
+      repo: 'eigen-app',
+      visibility: 'private',
+    });
   });
 });
