@@ -139,6 +139,21 @@ test('API keys requested by apps are listed once for the admin', async ({ page }
   }
 });
 
+test('the admin sets which model the AI proxy calls', async ({ page }) => {
+  await signIn(page, adminEmail);
+  await page.goto('/admin/ai');
+  const models = page.getByRole('region', { name: 'Modelle' });
+  const haiku = models.getByRole('textbox', { name: 'Modell-ID beim Anbieter' }).nth(2);
+  await expect(haiku).toHaveValue(/^claude-haiku/);
+  const before = await haiku.inputValue();
+  await haiku.fill('Falsch Geschrieben');
+  await models.getByRole('button', { name: 'Speichern' }).nth(2).click();
+  await expect(page.getByRole('alert')).toContainText('Modell-ID');
+  await haiku.fill(before);
+  await models.getByRole('button', { name: 'Speichern' }).nth(2).click();
+  await expect(models.getByRole('status')).toContainText('claude-haiku gespeichert');
+});
+
 test('the KI-Werkstatt composes a prompt for the chosen tool, with tooltips', async ({ page }) => {
   await signIn(page, adminEmail);
   await page.goto('/admin/workshop');

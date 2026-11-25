@@ -27,7 +27,7 @@ Where things are documented:
 | Topic | Read |
 | --- | --- |
 | Architecture, phases, data model | `PLAN.md` |
-| Decisions | `docs/adr/0001`–`0030` |
+| Decisions | `docs/adr/0001`–`0031` |
 | Operations: setup, physical server, keys, Kalender, App-Bibliothek, app export, restore | `docs/runbooks/` (index in its README) |
 | Building apps with AI: spec, design system, prompt modules, playbooks | `docs/ai/` |
 | Shared data types (suite) | `docs/suite/data-types.md` |
@@ -61,6 +61,7 @@ Where things are documented:
 | Verwaltung menu | "Hochladen" is a button in Apps; Apps has a switch Apps / Gaming Hub and sorts by name, category, own drawer or status; "Hardware-Server" holds Auslastung (was NucBox), Remote-Apps and App-Bibliothek (old URLs redirect) | `apps/portal/src/admin/{Apps,Hardware,AdminLayout}.tsx` |
 | KI-Werkstatt | Features in 7 collapsible groups with search; 19 new feature modules (money, dates, editor, drag sort, AI chat/vision, roles, comments, accessibility, errors, testing, migration, game save/touch/generator/kit, container, remote program, library entry) and 2 new types (Server-Dienst, Programm) | `docs/ai/prompts/`, `apps/portal/src/admin/{Workshop,prompts}.ts(x)` |
 | KI-Werkstatt variants | Prompt per tool (coding agent in the repo, Claude, ChatGPT, AI Studio, Bolt, local models), reference first and 15 numbered hard rules last, starter package with a preview SDK (`packages/ui/kit/sdk-preview.js`, dropped by `mininode integrate`), tasks "extend" and "fix findings", plain-language tooltips (`when:`) on every type and module; library audit fixed (lists as tables everywhere, formats follow the language, no promises the platform does not keep); new modules places/maps, web-images, pdf-import, wasm, readonly-content; `hosted/AGENTS.md` | ADR 0030, `apps/portal/src/admin/{prompts.ts,Workshop.tsx}`, `docs/ai/prompts/` |
+| AI models and readonly writes | Verwaltung → KI-Proxy → Modelle edits `platform.ai_models` (model id, € per Mio. tokens, Claude effort; proxy caches 1 min, defaults in `models.ts`, `MODEL_CATALOG` still wins); readonly apps: admins insert/update/delete from the app (`<table>_admin_*` policies, existing tables retrofitted) | ADR 0031, `supabase/migrations/20261125090000_ai_models.sql`, `20261125090100_readonly_admin_writes.sql`, `apps/portal/src/admin/Ai.tsx` |
 | Language switch | Per person in Konto → "Sprache / Language" (de/en, profile + `mn-lang` cookie); every hosted app has `i18n/de.json` + `en.json`; new apps must ship both; doctor checks them; the KI-Werkstatt has a ready prompt to retrofit them (`docs/ai/RETROFIT-LANGUAGE.md`) | ADR 0017, `docs/ai/LANGUAGE-PACKAGES.md`, `packages/ui/kit/i18n.js`, `e2e/language.spec.ts` |
 | App logos | Verwaltung → Apps uploads a logo per app (bucket `app-icons`); deploy picks up `icon.svg`; prompt module "App-Logo"; tile buttons in their own row | ADR 0018, `apps/portal/src/lib/appIcon.ts`, `packages/cli/src/deploy/icon.ts`, `e2e/app-icons.spec.ts` |
 | Haushaltsinventar | Upload review `ee7721bb` (AI Studio "Steward") rebuilt on the platform: items with photo, receipt, warranty, owner, households, service dates and reminders (`mn.push`), backups that restore, Excel report; data mode `shared-account`, rose accent | `hosted/haushalts-inventar`, `e2e/haushalts-inventar.spec.ts` |

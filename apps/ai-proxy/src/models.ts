@@ -39,15 +39,50 @@ const DEFAULT_CATALOG: Record<ModelAlias, ModelEntry> = {
   },
 };
 
-export function catalog(override: string | undefined): Record<ModelAlias, ModelEntry> {
-  if (!override) return DEFAULT_CATALOG;
-  const parsed = JSON.parse(override) as Partial<Record<ModelAlias, Partial<ModelEntry>>>;
+/** Changes to some aliases: from Verwaltung → KI-Proxy (`platform.ai_models`) or `MODEL_CATALOG`. */
+export type ModelPatch = Partial<Record<ModelAlias, Partial<ModelEntry>>>;
+
+/**
+ * The effective catalog: the defaults above, then what the admin set in Verwaltung → KI-Proxy
+ * (`fromDb`), then the `MODEL_CATALOG` var (an emergency override without touching the database).
+ */
+export function catalog(
+  override: string | undefined,
+  fromDb: ModelPatch = {},
+): Record<ModelAlias, ModelEntry> {
+  const env = override ? (JSON.parse(override) as ModelPatch) : {};
   const merged = { ...DEFAULT_CATALOG };
-  for (const alias of Object.keys(DEFAULT_CATALOG) as ModelAlias[]) {
-    const patch = parsed[alias];
-    if (patch) merged[alias] = { ...DEFAULT_CATALOG[alias], ...patch };
-  }
+  for (const alias of Object.keys(DEFAULT_CATALOG) as ModelAlias[])
+    merged[alias] = { ...DEFAULT_CATALOG[alias], ...fromDb[alias], ...env[alias] };
   return merged;
+}
+
+/** A row of `platform.ai_models` as the proxy reads it. */
+export interface ModelRow {
+  alias: string;
+  model_id: string;
+  input_eur_per_mtok: number | string;
+  output_eur_per_mtok: number | string;
+  effort: 'low' | 'medium' | 'high' | null;
+}
+
+/** Rows of `platform.ai_models` as catalog changes; unknown aliases and bad prices are skipped. */
+export function patchFromRows(rows: ModelRow[]): ModelPatch {
+  const patch: ModelPatch = {};
+  for (const row of rows) {
+    if (!(row.alias in DEFAULT_CATALOG)) continue;
+    const input = Number(row.input_eur_per_mtok);
+    const output = Number(row.output_eur_per_mtok);
+    if (!row.model_id || !Number.isFinite(input) || !Number.isFinite(output)) continue;
+    const alias = row.alias as ModelAlias;
+    patch[alias] = {
+      id: row.model_id,
+      input,
+      output,
+      ...(DEFAULT_CATALOG[alias].provider === 'anthropic' ? { effort: row.effort } : {}),
+    };
+  }
+  return patch;
 }
 
 /**

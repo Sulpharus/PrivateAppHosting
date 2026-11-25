@@ -188,8 +188,8 @@ describe('compose', () => {
     expect(prompt()).toContain('<feature id="tables">');
     expect(prompt({ audience: 'team' })).toContain('<feature id="teams">');
     expect(prompt({ audience: 'readonly' })).toContain('<feature id="readonly-content">');
-    // Nobody writes a readonly table from the app (the database grants only select).
-    expect(prompt({ audience: 'readonly' })).toContain('nobody writes from the app');
+    // Readonly tables: everyone reads, only admins write (ADR 0031).
+    expect(prompt({ audience: 'readonly' })).toContain('only admins write');
     expect(prompt({ audience: 'none', type: 'werkzeug' })).not.toContain('<feature id="tables">');
     expect(impliedModules('team')).toEqual(['tables', 'teams']);
   });

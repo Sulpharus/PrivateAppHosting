@@ -11,6 +11,9 @@ import {
   costMicro,
   estimateTokens,
   type ModelAlias,
+  type ModelPatch,
+  type ModelRow,
+  patchFromRows,
   SEARCH_INPUT_ALLOWANCE,
   SEARCH_SURCHARGE_MICRO,
 } from './models.ts';
@@ -54,6 +57,8 @@ interface Deps {
   db: SupabaseClient;
   checkGrant(token: string, slug: string): Promise<boolean>;
   appAi(slug: string): Promise<AppAi | null>;
+  /** The admin's model settings (Verwaltung → KI-Proxy); empty when none can be read. */
+  models(): Promise<ModelPatch>;
   provider(kind: 'anthropic' | 'google'): Provider;
 }
 
@@ -90,6 +95,7 @@ export function isPlatformOrigin(origin: string | null, portalUrl: string): bool
 }
 
 const appCache = new Map<string, { value: AppAi | null; expires: number }>();
+let modelCache: { value: ModelPatch; expires: number } | undefined;
 let cachedDeps: { url: string; deps: Deps } | undefined;
 
 function defaultDeps(env: ProxyEnv): Deps {
@@ -142,6 +148,18 @@ function buildDeps(env: ProxyEnv): Deps {
           }
         : null;
       appCache.set(slug, { value, expires: Date.now() + 60_000 });
+      return value;
+    },
+    async models() {
+      if (modelCache && modelCache.expires > Date.now()) return modelCache.value;
+      const { data, error } = await db
+        .schema('platform')
+        .from('ai_models')
+        .select('alias, model_id, input_eur_per_mtok, output_eur_per_mtok, effort');
+      // A table that cannot be read leaves the defaults in place; try again in a minute.
+      const value = error ? {} : patchFromRows((data ?? []) as ModelRow[]);
+      if (error) console.warn('ai_models could not be read, using defaults', error.message);
+      modelCache = { value, expires: Date.now() + 60_000 };
       return value;
     },
     provider: (kind) => (kind === 'anthropic' ? anthropicProvider(keys) : geminiProvider(keys)),
@@ -228,7 +246,7 @@ export function createApp(depsFor: (env: ProxyEnv) => Deps = defaultDeps) {
           cors,
         );
       }
-      const model = catalog(c.env.MODEL_CATALOG || undefined)[alias];
+      const model = catalog(c.env.MODEL_CATALOG || undefined, await deps.models())[alias];
       const maxOutputTokens = Math.min(
         input.maxOutputTokens ?? ai.maxOutputTokens,
         ai.maxOutputTokens,

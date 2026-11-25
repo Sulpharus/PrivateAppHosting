@@ -1308,6 +1308,25 @@ code,
 .budget-row + .budget-row {
   border-top: 1px solid var(--line);
 }
+.model-row {
+  display: grid;
+  gap: 12px;
+  padding: 16px 0;
+}
+.model-row + .model-row {
+  border-top: 1px solid var(--line);
+}
+.model-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+}
+.model-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
 .budget-name {
   flex: 1 1 200px;
   min-width: 0;

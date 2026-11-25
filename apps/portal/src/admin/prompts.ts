@@ -158,10 +158,10 @@ export const AUDIENCES: Record<
     when: 'Kleine Gruppen arbeiten getrennt, etwa pro Projekt oder Reise. Jede Gruppe sieht nur ihre Daten.',
   },
   readonly: {
-    label: 'Feste Inhalte (alle lesen nur)',
+    label: 'Admin pflegt, alle lesen',
     mode: 'readonly',
-    note: 'Everyone reads the content; it ships with the app as seed data in its SQL files, and the app itself cannot change it.',
-    when: 'Die Inhalte kommen fest mit der App, etwa Regeln, eine Preisliste oder ein Nachschlagewerk. Alle lesen nur; ändern heißt, eine neue Version der App hochzuladen.',
+    note: 'Admins maintain the content in the app; everyone else reads it.',
+    when: 'Nur Admins tragen in der App ein und ändern, alle anderen lesen nur, etwa Vereinstermine, Regeln oder eine Preisliste.',
   },
   none: {
     label: 'Speichert nichts (Rechner, Werkzeug)',
@@ -393,7 +393,7 @@ export function effectiveModules(brief: Brief, lib: Library): PromptPart[] {
 export const IMPLIED_REASONS: Record<string, string> = {
   tables: 'Automatisch dabei, weil die App Daten speichert.',
   teams: 'Automatisch dabei, weil „In Teams“ gewählt ist.',
-  'readonly-content': 'Automatisch dabei, weil „Feste Inhalte“ gewählt ist.',
+  'readonly-content': 'Automatisch dabei, weil „Admin pflegt, alle lesen“ gewählt ist.',
 };
 
 /** Modules the composer adds on its own for this audience (shown in the form). */

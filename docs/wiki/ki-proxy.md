@@ -12,8 +12,7 @@ Apps rufen KI **nicht** direkt auf. `mn.ai` geht zu `ai.{{domain}}` (`apps/ai-pr
 
 - **Anmeldung und Freigabe** der aufrufenden App (die Adresse wird auf die App zurückgeführt);
 - die **Modell-Liste** aus dem Manifest (`ai.models`: `gemini-flash`, `gemini-pro`, `claude-haiku`, `claude-sonnet`) und eine Obergrenze für `max_tokens`;
-  `claude-haiku` ist Claude Haiku 5.5, `claude-sonnet` ist Claude Sonnet 5.5, beide mit niedrigem Denkaufwand (`effort: low`), damit kurze
-  Antworten in die Obergrenze passen; welche Modelle dahinterstehen, steht in `apps/ai-proxy/src/models.ts` (änderbar ohne Deploy über `MODEL_CATALOG`);
+  welches Modell des Anbieters hinter einem Namen steht, stellst du unter Verwaltung → KI-Proxy → **Modelle** ein (siehe unten);
 - das **Budget**: eine Datenbankfunktion **reserviert** vor dem Aufruf die schlimmstmöglichen Kosten und **verrechnet** danach die echten. Es gibt
   Grenzen global, je App, je Rolle und je Person; der Admin ist vom globalen Stopp ausgenommen.
 
@@ -35,6 +34,21 @@ JSON-Schema gehen nicht in einem Aufruf: erst suchen, dann das Ergebnis mit `mn.
 ## Verwaltung → KI-Proxy
 
 Kosten diesen Monat, Anfragen, Verbrauch je App und die **Budgets** zum Einstellen (in Euro). Ein Manifest kann `monthlyBudgetEur` vorschlagen.
+
+### Modelle aktuell halten (ADR 0031)
+
+Apps wählen nur einen der vier Namen `gemini-flash`, `gemini-pro`, `claude-haiku` und `claude-sonnet`. Unter **Modelle** legst du für jeden
+fest, welches Modell der Anbieter wirklich aufruft:
+
+| Feld | Bedeutung |
+| --- | --- |
+| **Modell-ID beim Anbieter** | z. B. `gemini-3.7-flash` oder `claude-haiku-5-5`; die aktuellen IDs stehen in den Modell-Listen von Google und Anthropic (Link neben jedem Modell) |
+| **Eingabe / Ausgabe, € pro Mio. Tokens** | damit rechnen die Budgets; nimm die Listenpreise des Anbieters in Dollar als Euro, dann reicht ein Budget sicher |
+| **Denkaufwand** (nur Claude) | „Niedrig“ passt für die kurzen Antworten der Apps; höher wird gründlicher, langsamer und teurer |
+
+Speichern verlangt eine frische Anmeldung. Der KI-Proxy nutzt die Änderung nach spätestens einer Minute, für alle Apps. Eine falsch
+geschriebene ID merkst du daran, dass KI-Anfragen dieses Modells fehlschlagen: dann die ID prüfen. Die Variable `MODEL_CATALOG` am
+Proxy-Worker geht weiterhin vor (nur für Notfälle).
 
 ## Einrichten
 
