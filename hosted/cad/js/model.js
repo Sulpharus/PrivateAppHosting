@@ -23,8 +23,9 @@ import {
   round,
   translate,
 } from './geom.js';
+import { cleanMaterial } from './materials.js';
 import { generateViews } from './projection.js';
-import { combine } from './solid.js';
+import { combine, METRIC_COARSE } from './solid.js';
 
 export const LIMIT = 100_000; // millimetres: anything beyond is a typo
 export const STYLES = ['solid', 'center', 'hidden', 'construction'];
@@ -51,8 +52,10 @@ export function emptyModel() {
 /** Fills in what an older or partial model lacks. */
 export function normalise(model) {
   const m = { ...emptyModel(), ...(model ?? {}) };
-  m.sketch = { entities: [...(m.sketch?.entities ?? [])] };
-  m.solids = [...(m.solids ?? [])];
+  m.sketch = {
+    entities: (Array.isArray(m.sketch?.entities) ? m.sketch.entities : []).filter(validEntity),
+  };
+  m.solids = (Array.isArray(m.solids) ? m.solids : []).filter(validSolid);
   m.sheet = { ...emptyModel().sheet, ...(m.sheet ?? {}) };
   let max = 0;
   for (const x of [...m.sketch.entities, ...m.solids]) {
@@ -61,6 +64,59 @@ export function normalise(model) {
   }
   m.seq = Math.max(m.seq ?? 0, max);
   return m;
+}
+
+const pt = (p) => Array.isArray(p) && p.length === 2 && finite(p[0]) && finite(p[1]);
+const isId = (id) => typeof id === 'string' && /^[es]\d{1,9}$/.test(id);
+
+/** True when a stored or imported entity has the shape the editor draws (bad ones are dropped). */
+function validEntity(e) {
+  if (!e || typeof e !== 'object' || !isId(e.id)) return false;
+  if (e.style !== undefined && !STYLES.includes(e.style)) return false;
+  switch (e.type) {
+    case 'line':
+    case 'rect':
+      return pt(e.a) && pt(e.b);
+    case 'dim':
+      return pt(e.a) && pt(e.b) && (e.label === undefined || typeof e.label === 'string');
+    case 'circle':
+      return pt(e.c) && positive(e.r);
+    case 'arc':
+      return pt(e.c) && positive(e.r) && finite(e.start) && finite(e.end);
+    case 'poly':
+      return Array.isArray(e.pts) && e.pts.length >= 2 && e.pts.length <= 20000 && e.pts.every(pt);
+    case 'text':
+      return pt(e.p) && typeof e.text === 'string' && e.text.length <= 200 && positive(e.size);
+    default:
+      return false;
+  }
+}
+
+function validSolid(x) {
+  if (!x || typeof x !== 'object' || !isId(x.id) || typeof x.name !== 'string') return false;
+  const v3 = (p) => Array.isArray(p) && p.length === 3 && p.every(finite);
+  if (!v3(x.pos) || !v3(x.rot) || !['add', 'subtract'].includes(x.op)) return false;
+  if (x.material !== undefined && !cleanMaterial(x.material)) return false;
+  switch (x.kind) {
+    case 'box':
+      return positive(x.w) && positive(x.d) && positive(x.h);
+    case 'cylinder':
+    case 'sphere':
+      return positive(x.r) && (x.kind === 'sphere' || positive(x.h));
+    case 'cone':
+      return positive(x.r) && finite(x.r2) && x.r2 >= 0 && positive(x.h);
+    case 'extrude':
+      return (
+        positive(x.h) && Array.isArray(x.profile) && x.profile.length >= 3 && x.profile.every(pt)
+      );
+    case 'thread':
+      return positive(x.d) && positive(x.pitch) && positive(x.h);
+    case 'mesh':
+    case 'toolpath':
+      return typeof x.file === 'string' && /^projects\/[0-9a-f-]{36}\/s\d+\.(stl|nc)$/.test(x.file);
+    default:
+      return false;
+  }
 }
 
 export const nextId = (model, prefix) => {
@@ -110,6 +166,8 @@ export function fieldsOf(x) {
       return { ...pos3(x), r: x.r };
     case 'extrude':
       return { ...pos3(x), h: x.h };
+    case 'thread':
+      return { ...pos3(x), d: x.d, pitch: x.pitch, h: x.h, clearance: x.clearance ?? 0 };
     default:
       return pos3(x);
   }
@@ -124,7 +182,10 @@ export function setFields(x, f) {
   const o = structuredClone(x);
   const has = (k) => f[k] !== undefined && f[k] !== null;
   for (const [k, v] of Object.entries(f)) {
-    if (['text', 'style', 'name', 'mode', 'kind', 'closed', 'label'].includes(k)) continue;
+    if (
+      ['text', 'style', 'name', 'mode', 'kind', 'closed', 'label', 'left', 'material'].includes(k)
+    )
+      continue;
     if (v !== undefined && v !== null) need(finite(v));
   }
   const pick = (k, cur) => (has(k) ? f[k] : cur);
@@ -180,6 +241,17 @@ export function setFields(x, f) {
       if ('r2' in o) o.r2 = pick('r2', o.r2);
       for (const k of ['w', 'd', 'h', 'r']) if (k in o) need(o[k] > 0);
       if ('r2' in o) need(o.r2 >= 0);
+      if (o.kind === 'thread') {
+        o.pitch = pick('pitch', o.pitch);
+        o.clearance = pick('clearance', o.clearance ?? 0);
+        if (typeof f.left === 'boolean') o.left = f.left;
+        validThread(o);
+      }
+      if (f.material !== undefined) {
+        const m = cleanMaterial(f.material);
+        if (m) o.material = m;
+        else delete o.material;
+      }
       if (typeof f.name === 'string' && f.name.trim()) o.name = f.name.trim().slice(0, 80);
       if (f.mode === 'add' || f.mode === 'subtract') o.op = f.mode;
   }
@@ -205,6 +277,7 @@ export const OPS = [
   'add_cylinder',
   'add_sphere',
   'add_cone',
+  'add_thread',
   'extrude',
   'move',
   'rotate',
@@ -231,7 +304,15 @@ function solidBase(model, o, kind, defName) {
     op: o.mode === 'subtract' ? 'subtract' : 'add',
     pos: [num(o, 'x', 0), num(o, 'y', 0), num(o, 'z', 0)],
     rot: [num(o, 'rx', 0), num(o, 'ry', 0), num(o, 'rz', 0)],
+    ...(cleanMaterial(o.material) ? { material: cleanMaterial(o.material) } : {}),
   };
+}
+
+function validThread(s) {
+  need(s.d >= 1 && s.d <= 200, 'invalid_value');
+  need(s.pitch > 0 && s.pitch <= s.d / 4, 'invalid_value');
+  need(s.h >= 2 * s.pitch, 'invalid_value');
+  need(s.clearance >= 0 && s.clearance <= 1, 'invalid_value');
 }
 
 const findAny = (model, id) =>
@@ -376,6 +457,19 @@ export function applyOp(model, o, ctx = {}) {
       need(s.r > 0 && s.r2 >= 0 && s.h > 0);
       return addSolid(s);
     }
+    case 'add_thread': {
+      const pitch = o.pitch ?? METRIC_COARSE[o.d];
+      const s = {
+        ...solidBase(model, o, 'thread', names.thread ?? 'Gewinde'),
+        d: num(o, 'd'),
+        pitch: num({ pitch }, 'pitch'),
+        h: num(o, 'h'),
+        clearance: num(o, 'clearance', 0),
+        left: Boolean(o.left),
+      };
+      validThread(s);
+      return addSolid(s);
+    }
     case 'extrude': {
       const e = model.sketch.entities.find((x) => x.id === o.target);
       need(e, 'unknown_target');
@@ -447,7 +541,7 @@ export function applyOp(model, o, ctx = {}) {
       return addSolid(copy);
     }
     case 'generate_views': {
-      const mesh = combine(model.solids, ctx.meshes ?? new Map());
+      const mesh = ctx.mesh ?? combine(model.solids, ctx.meshes ?? new Map());
       need(mesh.length > 0, 'no_solids');
       const views =
         Array.isArray(o.views) && o.views.length
@@ -477,9 +571,10 @@ export function applyOp(model, o, ctx = {}) {
     case 'set_sheet': {
       const s = { ...model.sheet };
       if (typeof o.title === 'string') s.title = o.title.slice(0, 120);
-      if (typeof o.material === 'string') s.material = o.material.slice(0, 80);
+      const text = typeof o.sheetMaterial === 'string' ? o.sheetMaterial : o.material;
+      if (typeof text === 'string') s.material = text.slice(0, 80);
       if (typeof o.number === 'string') s.number = o.number.slice(0, 40);
-      if (o.paper in PAPERS) s.paper = o.paper;
+      if (Object.hasOwn(PAPERS, o.paper)) s.paper = o.paper;
       if (o.orientation === 'portrait' || o.orientation === 'landscape')
         s.orientation = o.orientation;
       if (SCALES.includes(o.scale)) s.scale = o.scale;
@@ -539,6 +634,8 @@ export function describe(model) {
       ? { profile: s.profile.slice(0, 40).map((p) => [r(p[0]), r(p[1])]) }
       : {}),
     ...(s.kind === 'mesh' ? { triangles: s.tris } : {}),
+    ...(s.kind === 'thread' ? { left: Boolean(s.left) } : {}),
+    ...(s.material ? { material: s.material } : {}),
   }));
   return { units: 'mm', sheet: model.sheet, sketch: ent, generatedViewLines: generated, solids };
 }

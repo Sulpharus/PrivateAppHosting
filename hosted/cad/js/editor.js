@@ -2,7 +2,7 @@
 // bar, typed coordinates, the properties panel, the assistant, import, export and history.
 
 import { aiErrorKey, ask } from './ai.js';
-import { area, bounds, closedProfile, length } from './geom.js';
+import { area, bounds, closedProfile, dimGeometry, length } from './geom.js';
 import {
   readDxf,
   readGcode,
@@ -14,17 +14,11 @@ import {
   writeStl,
   writeSvg,
 } from './io.js';
+import { cleanMaterial, MATERIAL_IDS, materialOf } from './materials.js';
 import { applyOps, fieldsOf, nextId, normalise, STYLES } from './model.js';
+import { buildScene, geometryKey } from './scene.js';
 import { Sketch } from './sketch.js';
-import {
-  combine,
-  meshBounds,
-  openEdges,
-  overhangArea,
-  RAW_LIMIT,
-  solidMesh,
-  volume,
-} from './solid.js';
+import { METRIC_COARSE, meshBounds, RAW_LIMIT, solidMesh } from './solid.js';
 import {
   contextMenu,
   download,
@@ -79,6 +73,8 @@ export function mountEditor(root, app, project) {
       redo.length = 0;
     }
     model = next;
+    // A proposal of the assistant was computed from the model before this change: drop it.
+    preview = null;
     const ids = new Set([...model.sketch.entities, ...model.solids].map((x) => x.id));
     selection = selection.filter((id) => ids.has(id));
     sketch.setSelection(selection);
@@ -88,12 +84,19 @@ export function mountEditor(root, app, project) {
 
   /** Runs operations; shows what could not be applied. Returns the ids created. */
   function apply(ops, { silent = false } = {}) {
-    const r = applyOps(model, ops, { meshes, names: solidNames() });
+    const r = applyOps(model, ops, { meshes, names: solidNames(), mesh: currentMesh() });
     if (r.errors.length && !silent)
       window.mnui.toast(t('editor.opsSkipped', { n: r.errors.length }));
     if (r.errors.length === ops.length) return [];
     commit(r.model);
     return r.added;
+  }
+
+  /** The combined mesh when it belongs to the current solids (saves a second CSG run). */
+  function currentMesh() {
+    return sceneKey === `${geometryKey(model.solids)}|${[...meshes.keys()].join(',')}`
+      ? combined
+      : undefined;
   }
 
   function solidNames() {
@@ -103,6 +106,7 @@ export function mountEditor(root, app, project) {
       sphere: t('solid.sphere'),
       cone: t('solid.cone'),
       extrude: t('solid.extrude'),
+      thread: t('solid.thread'),
     };
   }
 
@@ -145,10 +149,7 @@ export function mountEditor(root, app, project) {
     if (!dirtySinceVersion) return;
     dirtySinceVersion = false;
     lastVersion = Date.now();
-    const counts = t('history.summary', {
-      lines: model.sketch.entities.length,
-      solids: model.solids.length,
-    });
+    const counts = `${t('count.lines', { n: model.sketch.entities.length })}, ${t('count.solids', { n: model.solids.length })}`;
     try {
       await store.addVersion({ ...project, model }, counts);
     } catch {
@@ -298,7 +299,37 @@ export function mountEditor(root, app, project) {
     ),
     iconBtn('fit', t('editor.fit'), () => view3d.fitAll()),
   );
-  const stage3d = el('div.cad-stage', {}, wrap3d, viewBtns);
+  // Fast or realistic display (shadows, reflections, materials); remembered per person.
+  const renderSeg = el('div.mn-seg.cad-render', { role: 'group', 'aria-label': t('render.label') });
+  const renderNote = el('p.mn-hint', { hidden: true }, t('render.unsupported'));
+  const setRender = async (q, save = true) => {
+    const on = view3d.ok ? view3d.setQuality(q === 'quality') : false;
+    renderNote.hidden = !(q === 'quality' && !on);
+    for (const b of renderSeg.querySelectorAll('button'))
+      b.setAttribute('aria-pressed', String(b.dataset.q === (on ? 'quality' : 'fast')));
+    if (save && store.settings.render !== q) await store.saveSettings({ render: q });
+  };
+  for (const q of ['fast', 'quality'])
+    renderSeg.append(
+      el(
+        'button',
+        {
+          type: 'button',
+          dataset: { q },
+          'aria-pressed': 'false',
+          title: t(`render.${q}Hint`),
+          onclick: () => setRender(q),
+        },
+        t(`render.${q}`),
+      ),
+    );
+  const stage3d = el(
+    'div.cad-stage',
+    {},
+    wrap3d,
+    el('div.cad-viewbar', {}, viewBtns, renderSeg),
+    renderNote,
+  );
   const panel = el('aside.cad-panel', { 'aria-label': t('editor.panel') });
   const work = el('div.cad-work', {}, el('div.cad-main-col', {}, toolbar, stage2d, stage3d), panel);
   root.append(bar, work);
@@ -334,6 +365,7 @@ export function mountEditor(root, app, project) {
     askText: (p) => askText(p),
     contextMenu: (x, y) => canvasMenu(x, y),
     spaceHeld: () => space,
+    unitScale: () => (units() === 'in' ? 25.4 : 1),
   });
 
   const view3d = new View3d(canvas3d, {
@@ -342,7 +374,7 @@ export function mountEditor(root, app, project) {
       else if (add)
         selection = selection.includes(id) ? selection.filter((x) => x !== id) : [...selection, id];
       else selection = [id];
-      view3d.setSelection(selection);
+      updateOverlays();
       renderPanel();
       renderTools();
     },
@@ -483,7 +515,7 @@ export function mountEditor(root, app, project) {
             {
               type: 'button',
               'aria-label': t('editor.delete'),
-              title: `${t('editor.delete')} (Entf)`,
+              title: `${t('editor.delete')} (${t('shortcuts.deleteKey')})`,
               onclick: () => deleteSelection(),
             },
             icon('trash'),
@@ -509,6 +541,7 @@ export function mountEditor(root, app, project) {
         add('hole', 'hole', 'h'),
         add('sphere', 'sphere'),
         add('cone', 'cone'),
+        add('thread', 'thread', 'g'),
         add('extrude', 'extrude', 'e'),
       );
       if (selection.length)
@@ -546,6 +579,7 @@ export function mountEditor(root, app, project) {
     const x = b ? Math.round(b.max[0] + 10) : 0;
     const sel = model.solids.find((s) => s.id === selection[0]);
     if (kind === 'extrude') return extrudeSheet();
+    if (kind === 'thread') return threadSheet();
     if (kind === 'hole') {
       // A hole goes through the selected solid's centre, otherwise at the origin.
       const sb = sel ? meshBounds(solidMesh(sel, meshes.get(sel.id)) ?? []) : b;
@@ -582,7 +616,7 @@ export function mountEditor(root, app, project) {
   function selectOnly(ids) {
     selection = ids;
     sketch.setSelection(mode === '2d' ? ids : []);
-    view3d.setSelection(ids);
+    updateOverlays();
     renderPanel();
     renderTools();
   }
@@ -654,6 +688,8 @@ export function mountEditor(root, app, project) {
     w: 'field.w',
     h: 'field.h',
     d: 'field.d',
+    pitch: 'field.pitch',
+    clearance: 'field.clearance',
     cx: 'field.cx',
     cy: 'field.cy',
     r: 'field.r',
@@ -674,10 +710,14 @@ export function mountEditor(root, app, project) {
     for (const [k, v] of Object.entries(f)) {
       grid.append(
         numField(
-          t(FIELD_LABELS[k]),
+          t(item.kind === 'thread' && k === 'd' ? 'thread.diameter' : FIELD_LABELS[k]),
           v,
           (nv) => apply([{ op: 'set', target: item.id, [k]: nv }]),
-          ANGLES.has(k) ? { unit: false, suffix: '°' } : {},
+          ANGLES.has(k)
+            ? { unit: false, suffix: '°' }
+            : item.kind === 'thread' && ['d', 'pitch', 'clearance'].includes(k)
+              ? { unit: false, suffix: 'mm' }
+              : {},
         ),
       );
       if (k === 'r' && item.type === 'circle')
@@ -770,7 +810,7 @@ export function mountEditor(root, app, project) {
         type: 'text',
         value: e.label ?? '',
         maxlength: '40',
-        placeholder: fmt(fieldsOf(e).x2 - fieldsOf(e).x1),
+        placeholder: fmt(toUnit(dimGeometry(e).value)),
       });
       input.addEventListener('change', () =>
         apply([{ op: 'set', target: e.id, label: input.value }]),
@@ -849,6 +889,205 @@ export function mountEditor(root, app, project) {
     return el('label.mn-field', {}, t('editor.lineStyle'), sel);
   }
 
+  /** Material, colour and (for prints) layer height of one solid. */
+  function materialFields(s) {
+    const m = materialOf(s, project.purpose);
+    const set = (patch) =>
+      apply([
+        {
+          op: 'set',
+          target: s.id,
+          material: cleanMaterial({
+            id: m.id,
+            colour: s.material?.colour,
+            layer: s.material?.layer,
+            ...patch,
+          }),
+        },
+      ]);
+    const sel = el(
+      'select',
+      { onchange: (e) => set({ id: e.target.value, colour: undefined }) },
+      ...MATERIAL_IDS.map((id) =>
+        el('option', { value: id, selected: id === m.id }, t(`material.${id}`)),
+      ),
+    );
+    const colour = el('input.cad-colour', { type: 'color', value: m.colour });
+    colour.addEventListener('change', () => set({ colour: colour.value }));
+    const fields = el(
+      'div.cad-material',
+      {},
+      el('label.mn-field', {}, t('material.label'), sel),
+      el('label.mn-field', {}, t('material.colour'), colour),
+    );
+    if (m.tex === 'layers') {
+      const layer = el('input', { type: 'text', inputmode: 'decimal', value: fmt(m.layer, 3) });
+      layer.addEventListener('change', () => {
+        const v = readNumber(layer.value);
+        if (v && v >= 0.04 && v <= 1) set({ layer: v });
+      });
+      fields.append(el('label.mn-field', {}, `${t('material.layer')} (mm)`, layer));
+    }
+    return el('div', {}, fields, el('p.mn-hint', {}, t('material.hint')));
+  }
+
+  /** Derived sizes of a thread, for checking against a table. */
+  function threadFacts(s) {
+    const minor = s.d - 1.0825317547305482 * s.pitch;
+    const pitchD = s.d - 0.649519052838329 * s.pitch;
+    const f = (v) => `${fmt(toUnit(v), 3)} ${units()}`;
+    return el(
+      'dl.mn-facts',
+      {},
+      el(
+        'div',
+        {},
+        el('dt', {}, t('thread.designation')),
+        el('dd.mn-num', {}, `M${fmt(s.d, 2)}×${fmt(s.pitch, 3)}${s.left ? ' LH' : ''}`),
+      ),
+      el('div', {}, el('dt', {}, t('thread.pitchDiameter')), el('dd.mn-num', {}, f(pitchD))),
+      el('div', {}, el('dt', {}, t('thread.minorDiameter')), el('dd.mn-num', {}, f(minor))),
+      el(
+        'div',
+        {},
+        el('dt', {}, t('thread.handed')),
+        el('dd', {}, t(s.left ? 'thread.left' : 'thread.right')),
+      ),
+    );
+  }
+
+  function threadSheet() {
+    const sel = model.solids.find((x) => x.id === selection[0] && x.op !== 'subtract');
+    const sizes = Object.keys(METRIC_COARSE).map(Number);
+    let internal = Boolean(sel);
+    const size = el(
+      'select',
+      {},
+      ...sizes.map((d) => el('option', { value: String(d), selected: d === 6 }, `M${fmt(d, 1)}`)),
+      el('option', { value: 'custom' }, t('thread.custom')),
+    );
+    const dia = el('input', {
+      type: 'text',
+      inputmode: 'decimal',
+      value: fmt(6, 3),
+      disabled: true,
+    });
+    const pitch = el('input', { type: 'text', inputmode: 'decimal', value: fmt(1, 3) });
+    const len = el('input', { type: 'text', inputmode: 'decimal', value: fmt(toUnit(16), 3) });
+    const clr = el('input', {
+      type: 'text',
+      inputmode: 'decimal',
+      value: fmt(project.purpose === 'cnc' ? 0 : 0.15, 3),
+    });
+    const left = el('input', { type: 'checkbox' });
+    size.addEventListener('change', () => {
+      const custom = size.value === 'custom';
+      dia.disabled = !custom;
+      if (!custom) {
+        dia.value = fmt(Number(size.value), 3);
+        pitch.value = fmt(METRIC_COARSE[size.value], 3);
+      }
+    });
+    const kind = el('div.mn-seg', { role: 'group', 'aria-label': t('thread.kind') });
+    for (const k of ['external', 'internal'])
+      kind.append(
+        el(
+          'button',
+          {
+            type: 'button',
+            'aria-pressed': String((k === 'internal') === internal),
+            onclick: (e) => {
+              internal = k === 'internal';
+              window.mnui.select(e.currentTarget);
+            },
+          },
+          t(`thread.${k}`),
+        ),
+      );
+    const err = el('p.mn-error', { role: 'alert', hidden: true });
+    const form = el(
+      'div.mn-form',
+      {},
+      el('div.mn-field', {}, t('thread.kind'), kind),
+      el(
+        'div.mn-grid-2',
+        {},
+        el('label.mn-field', {}, t('thread.size'), size),
+        el('label.mn-field', {}, `${t('thread.diameter')} (mm)`, dia),
+      ),
+      el(
+        'div.mn-grid-2',
+        {},
+        el('label.mn-field', {}, `${t('thread.pitch')} (mm)`, pitch),
+        el('label.mn-field', {}, `${t('thread.length')} (${units()})`, len),
+      ),
+      el(
+        'label.mn-field',
+        {},
+        `${t('thread.clearance')} (mm)`,
+        clr,
+        el('span.mn-hint', {}, t('thread.clearanceHint')),
+      ),
+      el('div.mn-checks', {}, el('label', {}, left, t('thread.leftHand'))),
+      el('p.mn-hint', {}, t(sel ? 'thread.hintSelected' : 'thread.hint')),
+      err,
+    );
+    const go = el('button.mn-btn.mn-btn--primary', { type: 'button' }, t('thread.go'));
+    go.addEventListener('click', () => {
+      const d = readNumber(dia.value);
+      const p = readNumber(pitch.value);
+      const l = readNumber(len.value);
+      const c = readNumber(clr.value);
+      if (!d || !p || !l || c === null || p > d / 4 || fromUnit(l) < 2 * p || c < 0 || c > 1) {
+        err.hidden = false;
+        err.textContent = t('thread.error');
+        return;
+      }
+      const length = fromUnit(l);
+      let pos;
+      if (sel) {
+        // Through the centre of the selected part, from 1 mm below to 1 mm above it.
+        const b = partMesh(sel)?.bounds;
+        pos = b
+          ? [
+              (b.min[0] + b.max[0]) / 2,
+              (b.min[1] + b.max[1]) / 2,
+              internal ? b.min[2] - 1 : b.max[2],
+            ]
+          : [0, 0, 0];
+      } else {
+        const b = combined.length ? meshBounds(combined) : null;
+        pos = [
+          b ? Math.round(b.max[0] + 10 + d / 2) : 0,
+          b ? Math.round((b.min[1] + b.max[1]) / 2) : 0,
+          0,
+        ];
+      }
+      const h =
+        sel && internal ? Math.max(length, (partMesh(sel)?.bounds.size[2] ?? 0) + 2) : length;
+      const ids = apply([
+        {
+          op: 'add_thread',
+          x: round3(pos[0]),
+          y: round3(pos[1]),
+          z: round3(pos[2]),
+          d,
+          pitch: p,
+          h: round3(h),
+          clearance: c,
+          left: left.checked,
+          mode: internal ? 'subtract' : 'add',
+        },
+      ]);
+      window.mnui.sheet.close();
+      if (ids.length) {
+        selectOnly(ids);
+        window.mnui.toast(t('thread.done'));
+      }
+    });
+    sheetFrame('thread.title', form, go, { tall: true });
+  }
+
   function props3d() {
     const box = el('div.cad-props');
     const items = model.solids.filter((s) => selection.includes(s.id));
@@ -880,6 +1119,8 @@ export function mountEditor(root, app, project) {
         box.append(el('div.mn-field', {}, t('props.mode'), seg));
       }
       box.append(fieldsFor(s));
+      if (s.kind === 'thread') box.append(threadFacts(s));
+      if (s.kind !== 'toolpath' && s.op !== 'subtract') box.append(materialFields(s));
       if (s.kind === 'mesh') box.append(el('p.mn-hint', {}, t('props.meshInfo', { n: s.tris })));
       if (s.kind === 'toolpath') {
         box.append(el('p.mn-hint', {}, t('props.toolpathInfo')));
@@ -976,7 +1217,7 @@ export function mountEditor(root, app, project) {
         ? selection.filter((x) => x !== id)
         : [...selection, id]
       : [id];
-    view3d.setSelection(selection);
+    updateOverlays();
     renderPanel();
     renderTools();
   }
@@ -991,16 +1232,18 @@ export function mountEditor(root, app, project) {
   function stats3d() {
     const wrap = el('div.cad-stats');
     wrap.append(el('div.mn-sect', {}, el('h2', {}, t('props.model'))));
-    const b = combined.length ? meshBounds(combined) : null;
+    const b = stats && combined.length ? meshBounds(combined) : null;
     if (!b) {
-      wrap.append(el('p.mn-note', {}, t('props.noSolids')));
+      wrap.append(
+        el('p.mn-note', {}, t(model.solids.length ? 'props.computing' : 'props.noSolids')),
+      );
       return wrap;
     }
-    const vol = volume(combined) / 1000; // cm³
+    const vol = stats.volume / 1000; // cm³
     const p = store.settings.printer;
     const fits = b.size[0] <= p.x && b.size[1] <= p.y && b.size[2] <= p.z;
-    const open = model.solids.some((s) => s.kind === 'mesh' && !s.hidden) ? openEdges(combined) : 0;
-    const over = overhangArea(combined) / 100; // cm²
+    const open = stats.open;
+    const over = stats.overhang / 100; // cm²
     wrap.append(
       el(
         'dl.mn-facts',
@@ -1048,33 +1291,105 @@ export function mountEditor(root, app, project) {
   // ---------------------------------------------------------------------------------------
   // 3D scene
 
+  // The scene is built in a worker (CSG and smooth normals off the page) and cached by geometry;
+  // without workers it is built here. Material changes only recolour, nothing is rebuilt.
+  let sceneJob = 0;
+  let sceneKey = '';
+  let stats = null;
+  const sentMeshes = new Set();
+  let worker = null;
+  try {
+    worker = new Worker(new URL('./worker.js', import.meta.url), { type: 'module' });
+  } catch {
+    worker = null;
+  }
+  const pending = new Map();
+  worker?.addEventListener('message', (e) => {
+    const done = pending.get(e.data.job);
+    pending.delete(e.data.job);
+    done?.(e.data);
+  });
+  worker?.addEventListener('error', () => {
+    worker = null;
+    for (const done of pending.values()) done({ error: 'worker' });
+    pending.clear();
+  });
+  function build(solids) {
+    if (!worker) return Promise.resolve(buildScene(solids, meshes));
+    for (const [id, polys] of meshes)
+      if (!sentMeshes.has(id)) {
+        worker.postMessage({ type: 'mesh', id, polys });
+        sentMeshes.add(id);
+      }
+    const job = ++sceneJob;
+    return new Promise((resolve) => {
+      pending.set(job, (r) => resolve(r.error ? buildScene(solids, meshes) : r));
+      worker.postMessage({ type: 'build', job, solids });
+    });
+  }
+
+  const partCache = new Map();
+  /** The placed mesh of one solid (for picking and overlays), cached by its geometry. */
+  function partMesh(s) {
+    const key = geometryKey([s]);
+    let hit = partCache.get(key);
+    if (!hit) {
+      const mesh = solidMesh(s, meshes.get(s.id) ?? null);
+      hit = mesh ? { mesh, bounds: meshBounds(mesh) } : null;
+      partCache.set(key, hit);
+      if (partCache.size > 200) partCache.delete(partCache.keys().next().value);
+    }
+    return hit;
+  }
+
+  function materialsOf(m) {
+    return new Map(m.solids.map((x) => [x.id, materialOf(x, project.purpose)]));
+  }
+
+  function updateOverlays() {
+    const m = preview?.model ?? model;
+    const solids = new Map();
+    for (const x of m.solids) {
+      if (x.hidden || x.kind === 'toolpath') continue;
+      const part = partMesh(x);
+      if (part && part.mesh.length <= RAW_LIMIT * 2) solids.set(x.id, { ...part, op: x.op });
+    }
+    view3d.setOverlays({ solids, selected: selection, preview: preview?.ids ?? [] });
+  }
+
   function updateScene() {
     clearTimeout(combineTimer);
-    combineTimer = setTimeout(() => {
+    combineTimer = setTimeout(async () => {
       const m = preview?.model ?? model;
-      combined = combine(m.solids, meshes);
-      const solids = new Map();
-      for (const s of m.solids) {
-        if (s.hidden || s.kind === 'toolpath') continue;
-        const mesh = solidMesh(s, meshes.get(s.id) ?? null);
-        if (mesh && mesh.length <= RAW_LIMIT * 2) solids.set(s.id, { mesh, op: s.op });
+      const key = `${geometryKey(m.solids)}|${[...meshes.keys()].join(',')}`;
+      const mats = materialsOf(m);
+      updateOverlays();
+      if (key === sceneKey) {
+        view3d.setMaterials(mats);
+        return;
       }
+      const job = sceneJob + 1;
+      const r = await build(m.solids);
+      // A newer change started meanwhile: its result follows.
+      if (worker && job !== sceneJob) return;
+      sceneKey = key;
+      combined = r.mesh;
+      stats = r.stats;
       const ps = m.solids
-        .filter((s) => s.kind === 'toolpath' && !s.hidden && paths.has(s.id))
-        .map((s) => {
-          const p = paths.get(s.id);
-          const move = (q) => [q[0] + s.pos[0], q[1] + s.pos[1], q[2] + s.pos[2]];
+        .filter((x) => x.kind === 'toolpath' && !x.hidden && paths.has(x.id))
+        .map((x) => {
+          const p = paths.get(x.id);
+          const move = (q) => [q[0] + x.pos[0], q[1] + x.pos[1], q[2] + x.pos[2]];
           return {
             cut: p.cut.map((l) => l.map(move)),
             rapid: p.rapid.map(([a, b]) => [move(a), move(b)]),
           };
         });
-      view3d.setScene({
-        result: combined,
-        solids,
+      const fallback = materialOf({}, project.purpose);
+      view3d.setModel({
+        groups: r.groups.map((g) => ({ ...g, material: mats.get(g.id) ?? fallback })),
+        bounds: r.bounds,
         paths: ps,
-        selected: selection,
-        preview: preview?.ids ?? [],
       });
       if (!app.state.fitted3d?.has(project.id)) {
         app.state.fitted3d ??= new Set();
@@ -1106,7 +1421,7 @@ export function mountEditor(root, app, project) {
     renderTools();
     renderPanel();
     app.setSubtitle(
-      t('editor.subtitle', { lines: model.sketch.entities.length, solids: model.solids.length }),
+      `${t('count.lines', { n: model.sketch.entities.length })} · ${t('count.solids', { n: model.solids.length })}`,
     );
   }
 
@@ -1524,7 +1839,9 @@ export function mountEditor(root, app, project) {
         'export.svgSub',
         () => {
           download(
-            new Blob([writeSvg(model.sketch.entities)], { type: 'image/svg+xml' }),
+            new Blob([writeSvg(model.sketch.entities, { num: (v) => fmt(v, 2) })], {
+              type: 'image/svg+xml',
+            }),
             `${name}.svg`,
           );
           done(`${name}.svg`);
@@ -1908,10 +2225,11 @@ export function mountEditor(root, app, project) {
             {
               type: 'button',
               onclick: () => {
-                const next = preview.model;
-                const ids = preview.ids;
+                // Applied to the model as it is now, so nothing done meanwhile is lost.
+                const r = applyOps(model, preview.operations, { meshes, names: solidNames() });
+                const ids = r.added;
                 preview = null;
-                commit(next);
+                commit(r.model);
                 selectOnly(
                   ids.filter((id) => (mode === '2d' ? id.startsWith('e') : id.startsWith('s'))),
                 );
@@ -2120,6 +2438,7 @@ export function mountEditor(root, app, project) {
       if (k === 'e' && selection.length) transformSheet();
     } else {
       if (k === 'b') add3d('box');
+      if (k === 'g') add3d('thread');
       if (k === 'z') add3d('cylinder');
       if (k === 'h') add3d('hole');
       if (k === 'e') add3d('extrude');
@@ -2174,6 +2493,7 @@ export function mountEditor(root, app, project) {
     sketch.fitAll();
     sketch.host.status(sketch.prompt());
   });
+  setRender(store.settings.render ?? 'fast', false);
   loadFiles();
   hints();
 
@@ -2186,14 +2506,6 @@ export function mountEditor(root, app, project) {
       view3d.destroy();
       if (saveTimer) await save();
       await version();
-    },
-    reloaded(row) {
-      // Synced from another device while open and nothing changed here: take it.
-      if (!saveTimer && !undo.length && row) {
-        project = row;
-        model = normalise(row.model);
-        refresh();
-      }
     },
   };
 }

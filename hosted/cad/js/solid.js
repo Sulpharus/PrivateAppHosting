@@ -186,7 +186,7 @@ export function transformMesh(mesh, pos = [0, 0, 0], rot = [0, 0, 0]) {
     [x, y] = [x * cz - y * sz, x * sz + y * cz];
     return [x + pos[0], y + pos[1], z + pos[2]];
   };
-  return mesh.map((poly) => ({ v: poly.v.map(f) }));
+  return mesh.map((poly) => ({ v: poly.v.map(f), s: poly.s }));
 }
 
 /**
@@ -218,10 +218,19 @@ export function solidMesh(s, loaded = null) {
       if (!loaded) return null;
       local = loaded;
       break;
+    case 'thread':
+      // A bolt is made smaller by the clearance, a tap (hole) larger, so printed parts fit.
+      local = thread(s.d, s.pitch, s.h, {
+        offset: (s.op === 'subtract' ? 1 : -1) * (s.clearance ?? 0),
+        left: Boolean(s.left),
+      });
+      break;
     default:
       return null;
   }
-  return transformMesh(local, s.pos, s.rot);
+  const placed = transformMesh(local, s.pos, s.rot);
+  for (const p of placed) p.s = s.id;
+  return placed;
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -232,12 +241,12 @@ const FRONT = 1;
 const BACK = 2;
 const SPANNING = 3;
 
-function makePoly(v, plane) {
-  return { v, plane: plane ?? planeOf(v) };
+function makePoly(v, plane, s) {
+  return { v, plane: plane ?? planeOf(v), s };
 }
 
 function flipPoly(p) {
-  return { v: [...p.v].reverse(), plane: { n: p.plane.n.map((x) => -x), w: -p.plane.w } };
+  return { v: [...p.v].reverse(), plane: { n: p.plane.n.map((x) => -x), w: -p.plane.w }, s: p.s };
 }
 
 function splitPolygon(plane, poly, coFront, coBack, front, back) {
@@ -277,8 +286,8 @@ function splitPolygon(plane, poly, coFront, coBack, front, back) {
           b.push([...v]);
         }
       }
-      if (f.length >= 3) front.push(makePoly(f, poly.plane));
-      if (b.length >= 3) back.push(makePoly(b, poly.plane));
+      if (f.length >= 3) front.push(makePoly(f, poly.plane, poly.s));
+      if (b.length >= 3) back.push(makePoly(b, poly.plane, poly.s));
     }
   }
 }
@@ -354,8 +363,16 @@ class Node {
 }
 
 const toCsg = (mesh) =>
-  mesh.filter((p) => p.v.length >= 3).map((p) => makePoly(p.v.map((v) => [...v])));
-const fromCsg = (polys) => polys.map((p) => ({ v: p.v }));
+  mesh
+    .filter((p) => p.v.length >= 3)
+    .map((p) =>
+      makePoly(
+        p.v.map((v) => [...v]),
+        null,
+        p.s,
+      ),
+    );
+const fromCsg = (polys) => polys.map((p) => ({ v: p.v, s: p.s }));
 
 export function union(a, b) {
   const A = new Node(toCsg(a));
@@ -421,28 +438,47 @@ export function combine(solids, meshes = new Map()) {
   const parts = [];
   const holes = [];
   const raw = [];
+  const partIds = [];
   for (const s of solids) {
     if (s.hidden) continue;
     const m = solidMesh(s, meshes.get(s.id) ?? null);
     if (!m) continue;
     // Very large imported meshes are shown and exported as they are: CSG on them would freeze.
     if (s.kind === 'mesh' && m.length > RAW_LIMIT) raw.push(m);
-    else (s.op === 'subtract' ? holes : parts).push(m);
+    else if (s.op === 'subtract') holes.push(m);
+    else {
+      parts.push(m);
+      partIds.push(s.id);
+    }
   }
-  let result = [];
-  let rb = null;
-  for (const m of parts) {
-    const mb = meshBounds(m);
-    if (!result.length || !boundsOverlap(rb, mb)) result = result.concat(m);
-    else result = union(result, m);
-    rb = meshBounds(result);
-  }
+  // Islands: groups of parts that touch. A union or a hole only works on the islands it
+  // overlaps, so separate parts never go through CSG together (same result, much less work).
+  let islands = [];
+  parts.forEach((m, k) => {
+    const b = meshBounds(m);
+    const touching = islands.filter((isl) => boundsOverlap(isl.b, b));
+    let mesh = m;
+    const members = [{ id: partIds[k], b }];
+    for (const isl of touching) {
+      mesh = union(isl.mesh, mesh);
+      members.push(...isl.members);
+    }
+    islands = islands.filter((isl) => !touching.includes(isl));
+    islands.push({ mesh, b: meshBounds(mesh), members });
+  });
   for (const h of holes) {
-    if (!result.length) break;
-    if (!boundsOverlap(rb, meshBounds(h))) continue;
-    result = subtract(result, h);
-    rb = meshBounds(result);
+    const hb = meshBounds(h);
+    for (const isl of islands) {
+      if (!boundsOverlap(isl.b, hb)) continue;
+      // The walls a hole leaves belong to (and look like) the part it cuts.
+      const owner = (isl.members.find((x) => boundsOverlap(x.b, hb)) ?? isl.members[0]).id;
+      const tool = h.map((p) => ({ v: p.v, s: owner }));
+      isl.mesh = subtract(isl.mesh, tool);
+      const nb = meshBounds(isl.mesh);
+      if (nb) isl.b = nb;
+    }
   }
+  const result = islands.flatMap((isl) => isl.mesh);
   return raw.length ? result.concat(...raw) : result;
 }
 
@@ -505,3 +541,155 @@ export function overhangArea(mesh, limitDeg = 45) {
 }
 
 export { cross, dot, sub, unit };
+
+// ---------------------------------------------------------------------------------------------
+// Threads (ISO 68-1 metric basic profile), modelled as a true helix.
+
+/** ISO metric coarse pitches by nominal diameter (mm). */
+export const METRIC_COARSE = {
+  2: 0.4,
+  2.5: 0.45,
+  3: 0.5,
+  4: 0.7,
+  5: 0.8,
+  6: 1,
+  8: 1.25,
+  10: 1.5,
+  12: 1.75,
+  14: 2,
+  16: 2,
+  20: 2.5,
+  24: 3,
+  30: 3.5,
+  36: 4,
+};
+
+/**
+ * Segments per turn so the chord error stays below `tol` millimetres: the helix is as round as
+ * the slicer or the CNC controller can tell (never coarser than 48).
+ */
+export const threadSegments = (r, tol = 0.002) =>
+  Math.max(48, Math.min(256, Math.ceil(Math.PI * Math.sqrt(r / (2 * tol)))));
+
+/**
+ * A threaded rod along Z from 0 to `length`: nominal diameter `d`, `pitch`. The flanks are 60°, the
+ * crest flat P/8 at the major diameter, the root flat P/4 at the minor diameter d − 1.0825·P (the
+ * basic profile both bolt and nut are toleranced from). `offset` moves every radius (clearance).
+ * The thread runs out over half a turn at both ends, like a cut or rolled thread, and the mesh is a
+ * closed solid (every edge shared by two triangles).
+ */
+export function thread(d, pitch, length, { offset = 0, left = false, segments } = {}) {
+  const P = pitch;
+  const rMaj = d / 2 + offset;
+  const rMin = d / 2 - 0.5412658773652741 * P + offset;
+  if (length < 2 * P || rMin <= 0) return cylinder((rMaj + rMin) / 2, length);
+  // Axial breakpoints of one pitch of the profile and the radius at each.
+  const U = [0, P / 4, (9 * P) / 16, (11 * P) / 16, P];
+  const R = [rMin, rMin, rMaj, rMaj, rMin];
+  const S = segments ?? threadSegments(rMaj);
+  const TWO_PI = 2 * Math.PI;
+  const phiMax = (TWO_PI * (length - P)) / P;
+  // Angles: S per turn plus the angle where the helix ends, repeated every turn, so adjacent
+  // turns share their vertices exactly.
+  const base = new Set(Array.from({ length: S }, (_, i) => (i * TWO_PI) / S));
+  base.add(((phiMax % TWO_PI) + TWO_PI) % TWO_PI);
+  const baseList = [...base].sort((a, b) => a - b);
+  const phis = [];
+  for (let k = 0; k * TWO_PI <= phiMax + 1e-12; k++)
+    for (const b of baseList) {
+      const phi = k * TWO_PI + b;
+      if (phi <= phiMax + 1e-9) phis.push(Math.min(phi, phiMax));
+    }
+  if (phis.at(-1) < phiMax - 1e-9) phis.push(phiMax);
+  const depth = (phi) => Math.min(1, phi / Math.PI, (phiMax - phi) / Math.PI);
+  const sign = left ? -1 : 1;
+  const at = (phi, r, z) => [r * Math.cos(sign * phi), r * Math.sin(sign * phi), z];
+  const helix = (phi, j) => {
+    const f = Math.max(0, depth(phi));
+    return at(phi, rMin + f * (R[j] - rMin), U[j] + (P * phi) / TWO_PI);
+  };
+  const out = [];
+  const tri = (a, b, c) => {
+    const ab = sub(b, a);
+    const ac = sub(c, a);
+    const n = cross(ab, ac);
+    if (n[0] * n[0] + n[1] * n[1] + n[2] * n[2] < 1e-18) return; // collapsed (skirt start)
+    out.push(left ? { v: [a, c, b] } : { v: [a, b, c] });
+  };
+  const quad = (a, b, c, d2) => {
+    tri(a, b, c);
+    tri(a, c, d2);
+  };
+  // The thread surface: one helical band, four profile segments wide.
+  for (let i = 0; i + 1 < phis.length; i++)
+    for (let j = 0; j + 1 < U.length; j++)
+      quad(
+        helix(phis[i], j),
+        helix(phis[i + 1], j),
+        helix(phis[i + 1], j + 1),
+        helix(phis[i], j + 1),
+      );
+  // Skirts: the plain core between the band and the flat ends, then the end discs.
+  const bottom = phis.filter((p) => p <= TWO_PI + 1e-9);
+  const top = phis.filter((p) => p >= phiMax - TWO_PI - 1e-9);
+  const skirtLow = (phi, j) => at(phi, rMin, (U[j] * phi) / TWO_PI);
+  const skirtHigh = (phi, j) => {
+    const zTop = P + (P * phi) / TWO_PI;
+    return at(phi, rMin, zTop + (U[j] / P) * (length - zTop));
+  };
+  for (const [list, f] of [
+    [bottom, skirtLow],
+    [top, skirtHigh],
+  ])
+    for (let i = 0; i + 1 < list.length; i++)
+      for (let j = 0; j + 1 < U.length; j++)
+        quad(f(list[i], j), f(list[i + 1], j), f(list[i + 1], j + 1), f(list[i], j + 1));
+  for (let i = 0; i + 1 < bottom.length; i++)
+    tri([0, 0, 0], skirtLow(bottom[i + 1], 0), skirtLow(bottom[i], 0));
+  const last = U.length - 1;
+  for (let i = 0; i + 1 < top.length; i++)
+    tri([0, 0, length], skirtHigh(top[i], last), skirtHigh(top[i + 1], last));
+  return out;
+}
+
+// ---------------------------------------------------------------------------------------------
+// Smooth shading: vertex normals averaged over faces that meet at less than `creaseDeg`, so round
+// surfaces look round and real edges stay sharp. Returns, per triangle, three normals.
+
+export function smoothNormals(tris, creaseDeg = 30) {
+  const cosLimit = Math.cos((creaseDeg * Math.PI) / 180);
+  const key = (p) =>
+    `${Math.round(p[0] * 1e4)},${Math.round(p[1] * 1e4)},${Math.round(p[2] * 1e4)}`;
+  const faceN = tris.map(([a, b, c]) => {
+    const n = cross(sub(b, a), sub(c, a));
+    const area = Math.hypot(n[0], n[1], n[2]);
+    return { n: area > 0 ? n.map((x) => x / area) : [0, 0, 1], area };
+  });
+  const at = new Map();
+  tris.forEach((t, i) => {
+    for (const p of t) {
+      const k = key(p);
+      let list = at.get(k);
+      if (!list) {
+        list = [];
+        at.set(k, list);
+      }
+      list.push(i);
+    }
+  });
+  return tris.map((t, i) => {
+    const own = faceN[i].n;
+    return t.map((p) => {
+      const sum = [0, 0, 0];
+      for (const j of at.get(key(p))) {
+        const f = faceN[j];
+        if (dot(f.n, own) < cosLimit) continue;
+        sum[0] += f.n[0] * f.area;
+        sum[1] += f.n[1] * f.area;
+        sum[2] += f.n[2] * f.area;
+      }
+      const l = Math.hypot(sum[0], sum[1], sum[2]);
+      return l > 0 ? [sum[0] / l, sum[1] / l, sum[2] / l] : own;
+    });
+  });
+}

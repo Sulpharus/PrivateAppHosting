@@ -2,6 +2,7 @@
 // a list of exact operations (model.js). The app validates and previews them; nothing changes
 // until the person presses "Übernehmen". Runs only on a button press, through mn.ai.
 
+import { MATERIAL_IDS } from './materials.js';
 import { describe, OPS } from './model.js';
 
 const NUM = { type: 'number' };
@@ -46,7 +47,7 @@ export const SCHEMA = {
           text: { type: 'string' },
           name: { type: 'string' },
           title: { type: 'string' },
-          material: { type: 'string' },
+          sheetMaterial: { type: 'string', description: 'material text in the title block' },
           scale: { type: 'string' },
           paper: { type: 'string', enum: ['A4', 'A3', 'A2'] },
           orientation: { type: 'string', enum: ['landscape', 'portrait'] },
@@ -56,6 +57,18 @@ export const SCHEMA = {
           axis: { type: 'string', enum: ['x', 'y'] },
           method: { type: 'string', enum: ['first', 'third'] },
           closed: { type: 'boolean' },
+          pitch: NUM,
+          clearance: NUM,
+          left: { type: 'boolean' },
+          material: {
+            type: 'object',
+            properties: {
+              id: { type: 'string', enum: MATERIAL_IDS },
+              colour: { type: 'string', description: '#rrggbb' },
+              layer: NUM,
+            },
+            required: ['id'],
+          },
           views: {
             type: 'array',
             items: { type: 'string', enum: ['front', 'top', 'left', 'right', 'iso'] },
@@ -77,9 +90,11 @@ const SYSTEM = `You are the assistant inside a CAD app for 3D printing and CNC m
 Coordinates and units: millimetres. The 2D drawing ("sketch") has X to the right and Y up. The 3D model has Z up; the build plate is z = 0. Angles are degrees, counter-clockwise.
 Sketch operations: add_line(x1,y1,x2,y2), add_rect(x,y = lower-left corner, w,h), add_circle(cx,cy,r), add_arc(cx,cy,r,start,end; counter-clockwise from start to end), add_polyline(points[{x,y}], closed), add_dimension(x1,y1,x2,y2, kind h|v|aligned, offset = distance of the dimension line), add_text(x,y,text,size). Optional style: solid, center (centre lines), hidden, construction (helper lines, not exported).
 Solids: add_box(x,y,z = minimum corner, w along X, d along Y, h along Z), add_cylinder(x,y,z = centre of the bottom face, r, h; axis Z), add_cone(x,y,z, r bottom, r2 top, h), add_sphere(x,y,z = centre, r). Optional rx,ry,rz rotate about the solid's own origin, name, and mode: "add" for material or "subtract" for holes, pockets and cut-outs (subtracted from every added solid). A through hole must be longer than the part: start it 1 mm below and end it 1 mm above.
+add_thread(x,y,z = centre of the bottom end, d = nominal diameter, pitch (omit for ISO coarse: M3 0.5, M4 0.7, M5 0.8, M6 1, M8 1.25, M10 1.5, M12 1.75), h = length, mode add = bolt or subtract = threaded hole, clearance mm for printed fits (0.1–0.2 for FDM, 0 for machining), left) makes a true ISO metric helical thread along Z. For a screw, put a head (cylinder or box) on top; for a nut or threaded hole, subtract the thread from the part.
+Materials: any solid can take material {id: pla|plaMatte|petg|abs|tpu|resin|aluminium|anodised|steel|stainless|brass|copper|wood|acrylic, colour '#rrggbb', layer (print layer height mm)} in add_* or set; it changes only how the part looks.
 extrude(target = id of a closed sketch shape: rect, circle or closed polyline, h, z) makes a prism from it.
 Edit: set(target, any field above: exact new values), move(target, dx,dy[,dz]), mirror(target, axis x|y, cx, cy: mirror line through that point; axis y = vertical line), rotate(target, angle[, cx, cy] for sketch shapes; solids turn about Z), duplicate(target, dx,dy,dz), delete(target).
-Drawing sheet: generate_views(views: front, top, left, right, iso; method first|third; optional x,y = lower-left corner of the front view, otherwise right of the existing drawing) replaces earlier generated views with orthographic views of the solids, hidden edges and overall dimensions. set_sheet(title, material, scale like "1:2", paper A4|A3|A2, orientation).
+Drawing sheet: generate_views(views: front, top, left, right, iso; method first|third; optional x,y = lower-left corner of the front view, otherwise right of the existing drawing) replaces earlier generated views with orthographic views of the solids, hidden edges and overall dimensions. set_sheet(title, sheetMaterial = material text of the title block, scale like "1:2", paper A4|A3|A2, orientation).
 
 Rules:
 - Compute every number exactly and double-check sums, centres and offsets before answering. Use the ids in the project; never invent ids. New items get ids e<n>/s<n> after the operations run, so refer only to existing ids.
@@ -138,6 +153,9 @@ export function aiErrorKey(err) {
   if (code === 'model_not_allowed') return 'ai.error.model';
   if (code === 'rate_limited') return 'ai.error.rate';
   if (code === 'preview_only') return 'ai.error.preview';
+  if (code === 'invalid_json') return 'ai.error.invalid';
+  if (code === 'provider_error') return 'ai.error.provider';
+  if (code === 'ai_disabled') return 'ai.error.disabled';
   if (err?.name === 'AbortError') return 'ai.error.cancelled';
   return 'ai.error.network';
 }

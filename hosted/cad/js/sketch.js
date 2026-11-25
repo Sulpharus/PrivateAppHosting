@@ -18,6 +18,8 @@ import {
 } from './geom.js';
 import { fmt, t } from './ui.js';
 
+const boundsCache = new WeakMap();
+
 export const TOOLS = ['select', 'line', 'poly', 'rect', 'circle', 'arc', 'dim', 'text'];
 
 const css = (name) => getComputedStyle(document.body).getPropertyValue(name).trim();
@@ -47,6 +49,8 @@ export class Sketch {
 
   destroy() {
     this.resizeObserver.disconnect();
+    if (this.raf) cancelAnimationFrame(this.raf);
+    this.raf = 0;
   }
 
   get entities() {
@@ -309,16 +313,18 @@ export class Sketch {
       const l = dist(last, this.cursor);
       dir = [(this.cursor[0] - last[0]) / l, (this.cursor[1] - last[1]) / l];
     } else if (last) dir = [1, 0];
-    // A bare number for a circle is its radius, for a rectangle "w,h" from the first corner.
+    // Typed values are in the person's unit (mm or inches); the drawing is in mm.
+    const k = this.host.unitScale();
     const v = text.trim().replace(',', '.');
     if (this.tool === 'circle' && last && /^\d*\.?\d+$/.test(v)) {
-      this.addPoint([last[0] + Number(v), last[1]]);
+      this.addPoint([last[0] + Number(v) * k, last[1]]);
       return true;
     }
-    const p = parseCoordinate(text, last, dir);
+    const lastU = last ? [last[0] / k, last[1] / k] : null;
+    const p = parseCoordinate(text, lastU, dir);
     if (!p) return false;
     if (this.tool === 'select') return false;
-    this.addPoint(p);
+    this.addPoint([p[0] * k, p[1] * k]);
     return true;
   }
 
@@ -517,7 +523,24 @@ export class Sketch {
     ctx.lineTo(w, o[1]);
     ctx.stroke();
     const previewIds = new Set(this.preview?.ids ?? []);
+    // Only what is on screen is drawn (bounds are cached per entity object; edits replace it).
+    const lo = this.toWorld(0, h);
+    const hi = this.toWorld(w, 0);
+    const pad = 20 / this.scale;
     for (const e of this.entities) {
+      let eb = boundsCache.get(e);
+      if (!eb) {
+        eb = bounds([e]);
+        boundsCache.set(e, eb);
+      }
+      if (
+        eb &&
+        (eb.maxX < lo[0] - pad ||
+          eb.minX > hi[0] + pad ||
+          eb.maxY < lo[1] - pad ||
+          eb.minY > hi[1] + pad)
+      )
+        continue;
       const sel = this.selected.has(e.id);
       const pv = previewIds.has(e.id);
       this.paintEntity(

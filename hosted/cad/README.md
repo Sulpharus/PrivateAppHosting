@@ -20,6 +20,20 @@ the MiniNode App Kit with the amber accent. Built on MiniNode (not ported from a
   material or as a hole (subtracted with CSG, `js/solid.js`). WebGL view with orbit, pan, zoom,
   presets and picking. Model facts: size, volume, weight from the density, a build-volume check,
   open edges of imported meshes and overhangs over 45°.
+- **Gewinde:** true ISO 68-1 metric threads (60° flanks, crest P/8, root P/4, minor d − 1.0825·P)
+  modelled as a helix, not a texture: external (bolt) or internal (subtracted, a tapped hole),
+  ISO coarse pitches M2–M36 or any custom size and pitch, left-hand, a print clearance (bolts get
+  thinner, holes wider), run-out over half a turn at both ends. The mesh is closed (every edge
+  shared twice; `test/solid.test.js`), with as many segments per turn as keep the chord error under
+  0.002 mm, so slicers and CAM get the real flanks.
+- **Darstellung Schnell / Realistisch:** "Schnell" is smooth shading in the material colour.
+  "Realistisch" (`js/view3d.js`, WebGL 1) is physically based lighting (GGX), soft shadows from a
+  2048² shadow map (16 samples), reflections of a studio environment on metal and gloss, a
+  mirroring floor, tone mapping, and procedural surfaces: layer lines at the layer height for
+  printed plastics, brushed or milled metal, grain, wood. 14 materials (PLA, PETG, ABS, TPU, resin,
+  aluminium milled/anodised, steel, stainless, brass, copper, wood, acrylic) with a free colour per
+  solid; hole walls take the material of the part they cut. Materials only change the look, never
+  STL or G-code.
 - **Zeichnung aus 3D:** front, top, left/right and isometric views with hidden edges dashed
   (software depth buffer), first- or third-angle placement, overall dimensions and centre lines of
   holes along Z (`js/projection.js`). Generated lines are tagged and replaced when made again.
@@ -45,6 +59,23 @@ the MiniNode App Kit with the amber accent. Built on MiniNode (not ported from a
   defaults, AI model, categories (rename, colour, order, archive), backup export/import, Papierkorb,
   delete all (type "löschen"), account link and sign-out, reset tips.
 
+## Performance (without losing quality)
+
+- The CSG, smooth normals and model facts are built in a Web Worker (`js/worker.js`, `js/scene.js`),
+  so the page never freezes; results are cached by geometry (undo, redo, materials are instant), and
+  material changes only recolour.
+- CSG works on islands: a union or a hole only touches the parts it overlaps (a separate bolt never
+  goes through the BSP with a block), which gives the same mesh in a fraction of the time.
+- The 3D view draws only on change (no render loop); the shadow map is made only when the geometry
+  changes. While the view is dragged in "Realistisch", shadows take one sample and the floor mirror
+  pauses; 150 ms after the last movement the full-quality picture is drawn. Exports always use the
+  full model.
+- Procedural detail finer than about two pixels fades into the roughness it causes instead of
+  shimmering, so a part looks the same from afar as it would in reality.
+- The 2D canvas draws only what is on screen (bounds cached per entity); placed meshes for picking are
+  cached and tested against their bounding box first.
+- WebGL contexts and buffers are released when the editor is left.
+
 ## Data
 
 `db/001_init.sql`, all private per person:
@@ -64,7 +95,7 @@ removed when the project is purged. Imports need a connection; drawing and editi
 `js/geom.js` (2D geometry, snapping, typed coordinates), `js/solid.js` (primitives, CSG, volume),
 `js/projection.js` (views and hidden lines), `js/io.js` (STL, OBJ, DXF, SVG, G-code), `js/model.js`
 (model and operations), `js/ai.js` (prompt, schema, validation) are pure and tested in `test/`.
-`js/sketch.js` (2D canvas), `js/view3d.js` (WebGL), `js/editor.js`, `js/print.js`, `js/store.js`
+`js/materials.js` (materials), `js/scene.js` (scene for the view), `js/sketch.js` (2D canvas), `js/view3d.js` (WebGL), `js/worker.js`, `js/editor.js`, `js/print.js`, `js/store.js`
 and `js/app.js` are the UI. Imported meshes above 20,000 triangles are not cut by holes (CSG would
 freeze the page); they are shown and exported as they are.
 

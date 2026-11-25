@@ -50,9 +50,17 @@
   background: var(--mn-accent-soft);
 }
 .cad-check {
+  display: grid;
+  place-items: center;
+  width: var(--mn-tap);
+  height: var(--mn-tap);
+  margin-left: var(--mn-s1);
+  cursor: pointer;
+}
+.cad-check input {
   width: 22px;
   height: 22px;
-  margin: 0 0 0 var(--mn-s3);
+  margin: 0;
   accent-color: var(--mn-accent);
 }
 /* Checkboxes show on hover, focus or while something is selected (always on touch screens). */
@@ -61,7 +69,7 @@
     opacity: 0;
   }
   .cad-project:hover .cad-check,
-  .cad-check:focus-visible {
+  .cad-check:focus-within {
     opacity: 1;
   }
 }
@@ -288,6 +296,30 @@
   flex: 1 1 100%;
   font-size: var(--mn-fs-sm);
   color: var(--mn-muted);
+}
+.cad-viewbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--mn-s2);
+}
+.cad-render {
+  min-width: 220px;
+}
+.cad-material {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--mn-s2) var(--mn-s3);
+  align-items: end;
+}
+.cad-material > :nth-child(3) {
+  grid-column: 1 / -1;
+}
+.cad-colour {
+  width: var(--mn-tap);
+  height: var(--mn-tap);
+  padding: 2px;
 }
 .cad-viewbtns {
   display: flex;

@@ -30,6 +30,9 @@ async function start() {
   const user = await mn.auth.requireLogin();
   for (const a of document.querySelectorAll('.mn-home')) a.href = mn.config.portalUrl;
   const store = createStore(mn);
+  // Each route gets a number: a view whose data arrives after the person moved on stays unused.
+  let routeSeq = 0;
+  const stale = (seq) => seq !== routeSeq;
   store.user = user;
 
   const app = {
@@ -88,6 +91,12 @@ async function start() {
     if (e.key === '?') shortcutsSheet();
   });
 
+  // Any action that fails without its own message says so, instead of doing nothing.
+  window.addEventListener('unhandledrejection', (e) => {
+    window.mnui.toast(t('common.actionError'));
+    for (const b of document.querySelectorAll('.mn-overlay button[disabled]')) b.disabled = false;
+  });
+
   route();
 
   // --- routing ---------------------------------------------------------------------------
@@ -104,6 +113,7 @@ async function start() {
 
   async function route() {
     const q = new URLSearchParams(location.search);
+    routeSeq++;
     if (app.current?.leave) await app.current.leave();
     app.current = null;
     document.body.classList.remove('cad-printing', 'cad-editing');
@@ -145,6 +155,7 @@ async function start() {
 
   // --- projects --------------------------------------------------------------------------
   async function showProjects() {
+    const seq = routeSeq;
     selectTab('projects');
     setTitle(t('nav.projects'), '');
     const main = $('#view');
@@ -171,14 +182,17 @@ async function start() {
     try {
       [projects, categories] = await Promise.all([store.projects(), store.categories()]);
     } catch {
-      main.replaceChildren(errorState(() => showProjects()));
+      if (!stale(seq)) main.replaceChildren(errorState(() => showProjects()));
       return;
     }
+    if (stale(seq)) return;
     app.current = { leave: () => document.removeEventListener('keydown', keys) };
     const byId = new Map(categories.map((c) => [c.id, c]));
     setTitle(t('nav.projects'), t('projects.count', { n: projects.length }));
     main.replaceChildren();
-    if (await store.hasSamples().catch(() => false))
+    const samples = await store.hasSamples().catch(() => false);
+    if (stale(seq)) return;
+    if (samples)
       main.append(
         el(
           'div.mn-banner.mn-banner--warn.cad-sample-banner',
@@ -281,7 +295,7 @@ async function start() {
     }
     function row(p) {
       const cat = byId.get(p.category_id);
-      const check = el('input.cad-check', {
+      const checkbox = el('input', {
         type: 'checkbox',
         checked: app.state.selected.has(p.id),
         'aria-label': t('projects.select', { name: p.name }),
@@ -290,6 +304,8 @@ async function start() {
           toggle(p.id, e.shiftKey);
         },
       });
+      // The label gives the small box a 44 px target.
+      const check = el('label.cad-check', {}, checkbox);
       const open = el(
         'button.mn-row',
         {
@@ -434,18 +450,21 @@ async function start() {
     const holder = el('span.mn-thumb.cad-thumb', { 'aria-hidden': 'true' });
     const ents = p.model.sketch.entities;
     if (ents.length) {
-      const svg = writeSvg(ents.slice(0, 1500), { margin: 2, stroke: 0 })
-        .replace('stroke="black"', 'stroke="currentColor"')
-        .replace(/fill="black"/g, 'fill="currentColor"');
-      const doc = new DOMParser().parseFromString(svg, 'image/svg+xml');
-      const node = document.importNode(doc.documentElement, true);
-      node.removeAttribute('width');
-      node.removeAttribute('height');
-      node.setAttribute('vector-effect', 'non-scaling-stroke');
-      for (const g of node.querySelectorAll('*'))
-        g.setAttribute('vector-effect', 'non-scaling-stroke');
-      node.querySelector('g')?.setAttribute('stroke-width', '1');
-      holder.append(node);
+      try {
+        const svg = writeSvg(ents.slice(0, 1500), { margin: 2, stroke: 0, num: (v) => fmt(v, 2) })
+          .replace('stroke="black"', 'stroke="currentColor"')
+          .replace(/fill="black"/g, 'fill="currentColor"');
+        const doc = new DOMParser().parseFromString(svg, 'image/svg+xml');
+        const node = document.importNode(doc.documentElement, true);
+        node.removeAttribute('width');
+        node.removeAttribute('height');
+        for (const g of node.querySelectorAll('*'))
+          g.setAttribute('vector-effect', 'non-scaling-stroke');
+        node.querySelector('g')?.setAttribute('stroke-width', '1');
+        holder.append(node);
+      } catch {
+        holder.append(icon('drawing', { size: 26 }));
+      }
     } else holder.append(icon(p.model.solids.length ? 'cube3d' : 'drawing', { size: 26 }));
     return holder;
   }
@@ -684,6 +703,7 @@ async function start() {
 
   // --- editor and print ------------------------------------------------------------------
   async function showEditor(id) {
+    const seq = routeSeq;
     selectTab('editor');
     const main = $('#view');
     main.replaceChildren(el('span.mn-sk', { style: { height: '60vh' } }));
@@ -691,9 +711,10 @@ async function start() {
     try {
       project = await store.project(id);
     } catch {
-      main.replaceChildren(errorState(() => showEditor(id)));
+      if (!stale(seq)) main.replaceChildren(errorState(() => showEditor(id)));
       return;
     }
+    if (stale(seq)) return;
     if (!project || project.deleted_at) {
       setTitle(t('nav.editor'), '');
       main.replaceChildren(
@@ -723,6 +744,7 @@ async function start() {
   }
 
   async function showPrint(id) {
+    const seq = routeSeq;
     selectTab('editor');
     const main = $('#view');
     main.replaceChildren(el('span.mn-sk', { style: { height: '60vh' } }));
@@ -730,10 +752,11 @@ async function start() {
     try {
       project = await store.project(id);
     } catch {
-      main.replaceChildren(errorState(() => showPrint(id)));
+      if (!stale(seq)) main.replaceChildren(errorState(() => showPrint(id)));
       return;
     }
-    if (!project) {
+    if (stale(seq)) return;
+    if (!project || project.deleted_at) {
       main.replaceChildren(
         emptyState('folder', 'editor.missingTitle', 'editor.missingText', 'editor.toProjects', () =>
           go({ view: 'projects' }),
@@ -748,6 +771,7 @@ async function start() {
 
   // --- settings --------------------------------------------------------------------------
   async function showSettings() {
+    const seq = routeSeq;
     selectTab('settings');
     setTitle(t('nav.settings'), '');
     const main = $('#view');
@@ -756,9 +780,10 @@ async function start() {
     try {
       categories = await store.categories();
     } catch {
-      main.replaceChildren(errorState(() => showSettings()));
+      if (!stale(seq)) main.replaceChildren(errorState(() => showSettings()));
       return;
     }
+    if (stale(seq)) return;
     const s = store.settings;
     const set = async (patch, toastKey) => {
       await store.saveSettings(patch);
@@ -1049,6 +1074,7 @@ async function start() {
       }
     });
     const hasSamples = await store.hasSamples().catch(() => false);
+    if (stale(seq)) return;
     const data = card(
       'settings.data',
       el(
@@ -1301,8 +1327,28 @@ async function start() {
       await store.saveCategory(cCnc);
       // 1. An angle bracket for the 3D printer, with holes and generated views.
       let m = applyOps(emptyModel(), [
-        { op: 'add_box', x: 0, y: 0, z: 0, w: 60, d: 40, h: 5, name: t('sample.base') },
-        { op: 'add_box', x: 0, y: 35, z: 5, w: 60, d: 5, h: 35, name: t('sample.wall') },
+        {
+          op: 'add_box',
+          x: 0,
+          y: 0,
+          z: 0,
+          w: 60,
+          d: 40,
+          h: 5,
+          name: t('sample.base'),
+          material: { id: 'petg', colour: '#d86a2b' },
+        },
+        {
+          op: 'add_box',
+          x: 0,
+          y: 35,
+          z: 5,
+          w: 60,
+          d: 5,
+          h: 35,
+          name: t('sample.wall'),
+          material: { id: 'petg', colour: '#d86a2b' },
+        },
         {
           op: 'add_cylinder',
           x: 15,
@@ -1361,6 +1407,7 @@ async function start() {
         { op: 'add_dimension', x1: 45, y1: 40, x2: 75, y2: 40, kind: 'h', offset: 24 },
         { op: 'add_text', x: 0, y: 88, text: t('sample.plateText'), size: 4 },
         { op: 'extrude', target: 'e1', h: 6 },
+        { op: 'set', target: 's13', material: { id: 'aluminium' } },
         { op: 'set_sheet', title: t('sample.plate'), material: 'AlMg3 6 mm', scale: '1:1' },
       ]).model;
       const p2 = store.newProject({
@@ -1372,6 +1419,43 @@ async function start() {
       });
       p2.notes = t('sample.plateNotes');
       await store.saveProject(p2);
+      // 3. A hex bolt M8 × 20 with a true ISO thread, in steel.
+      const hex = Array.from({ length: 6 }, (_, i) => ({
+        x: 7.5056 * Math.cos((i * Math.PI) / 3),
+        y: 7.5056 * Math.sin((i * Math.PI) / 3),
+      }));
+      const bolt = applyOps(emptyModel(), [
+        { op: 'add_polyline', points: hex, closed: true },
+        { op: 'add_circle', cx: 0, cy: 0, r: 4 },
+        {
+          op: 'add_thread',
+          x: 0,
+          y: 0,
+          z: 0,
+          d: 8,
+          h: 20,
+          name: t('sample.boltThread'),
+          material: { id: 'steel' },
+        },
+        {
+          op: 'extrude',
+          target: 'e1',
+          h: 5.3,
+          z: 20,
+          name: t('sample.boltHead'),
+          material: { id: 'steel' },
+        },
+        { op: 'set_sheet', title: t('sample.bolt'), material: '8.8', scale: '2:1' },
+      ]).model;
+      const p3 = store.newProject({
+        name: t('sample.bolt'),
+        purpose: 'print',
+        category_id: cPrint.id,
+        sample: true,
+        model: bolt,
+      });
+      p3.notes = t('sample.boltNotes');
+      await store.saveProject(p3);
       window.mnui.toast(t('sample.created'));
       app.state.mode = '3d';
       go({ project: p1.id });
@@ -1396,12 +1480,12 @@ async function start() {
       ['E', 'shortcuts.edit'],
       ['1 / 2', 'shortcuts.modes'],
       ['V L P R C A D T', 'shortcuts.tools'],
-      ['B Z H E', 'shortcuts.tools3d'],
+      ['B Z H G E', 'shortcuts.tools3d'],
       ['F', 'shortcuts.fit'],
       ['G / O', 'shortcuts.snap'],
       ['Ctrl+Z / Ctrl+Shift+Z', 'shortcuts.undo'],
       ['Ctrl+D', 'shortcuts.duplicate'],
-      ['Entf / Delete', 'shortcuts.delete'],
+      [t('shortcuts.deleteKey'), 'shortcuts.delete'],
       ['Esc', 'shortcuts.escape'],
       [t('shortcuts.spaceKey'), 'shortcuts.pan'],
     ];

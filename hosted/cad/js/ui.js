@@ -47,6 +47,7 @@ const PATHS = {
   sphere: 'M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18M3 12a9 3.5 0 0 0 18 0',
   cone: 'M12 3L5 18a7 3 0 0 0 14 0z',
   extrude: 'M5 15h10v5H5zM5 15l4-5h10l-4 5M19 10v5l-4 5',
+  thread: 'M8 3v18M16 3v18M8 6l8-2M8 10l8-2M8 14l8-2M8 18l8-2',
   hole: 'M12 7a5 5 0 1 0 0 10a5 5 0 1 0 0-10M3 3h18v18H3z',
   import: 'M12 3v12M7 10l5 5 5-5M4 20h16',
   export: 'M12 15V3M7 8l5-5 5 5M4 20h16',
@@ -178,6 +179,7 @@ export function contextMenu(x, y, items, back = document.activeElement) {
     const i = buttons.indexOf(document.activeElement);
     if (e.key === 'Escape') {
       e.preventDefault();
+      e.stopPropagation();
       closeMenu(back);
     } else if (e.key === 'ArrowDown') {
       e.preventDefault();
@@ -192,15 +194,17 @@ export function contextMenu(x, y, items, back = document.activeElement) {
   list.style.left = `${Math.max(8, Math.min(x, window.innerWidth - r.width - 8))}px`;
   list.style.top = `${Math.max(8, Math.min(y, window.innerHeight - r.height - 8))}px`;
   list.querySelector('button')?.focus();
-  setTimeout(() => document.addEventListener('pointerdown', outside, { once: true }), 0);
+  setTimeout(() => document.addEventListener('pointerdown', outside), 0);
   menu = list;
-  function outside(e) {
-    if (menu && !menu.contains(e.target)) closeMenu();
-  }
+}
+
+function outside(e) {
+  if (menu && !menu.contains(e.target)) closeMenu();
 }
 
 export function closeMenu(back) {
   if (!menu) return;
+  document.removeEventListener('pointerdown', outside);
   menu.remove();
   menu = null;
   if (back?.isConnected) back.focus();

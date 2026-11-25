@@ -43,7 +43,7 @@ test('cad: drawing, 3D with a hole, export and views', async ({ page }) => {
   await coord.press('Enter');
   await coord.fill('@80,40');
   await coord.press('Enter');
-  await expect(page.locator('#subtitle')).toHaveText('1 Zeichenelemente · 0 Körper');
+  await expect(page.locator('#subtitle')).toHaveText('1 Zeichenelement · 0 Körper');
   await expect(page.locator('.cad-panel')).toContainText('80 × 40 mm');
 
   // Extrude it, add a hole, read the volume.
@@ -53,11 +53,26 @@ test('cad: drawing, 3D with a hole, export and views', async ({ page }) => {
   await page.getByRole('button', { name: 'Körper erzeugen' }).click();
   await page.getByRole('button', { name: 'Bohrung' }).first().click();
   await expect(page.locator('.cad-panel').getByLabel('Radius (mm)')).toBeVisible();
-  await expect(page.locator('#subtitle')).toHaveText('1 Zeichenelemente · 2 Körper');
+  await expect(page.locator('#subtitle')).toHaveText('1 Zeichenelement · 2 Körper');
   // Escape clears the selection: the panel shows the whole model.
   await page.keyboard.press('Escape');
   await expect(page.locator('.cad-panel')).toContainText('80 × 40 × 5 mm');
   if (shots) await page.screenshot({ path: `${shots}/cad-3d.png`, fullPage: true });
+
+  // A true ISO thread (M6 bolt) next to the plate, in steel, shown in the realistic view.
+  await page.getByRole('button', { name: 'Gewinde' }).first().click();
+  const threadDialog = page.getByRole('dialog', { name: 'Gewinde' });
+  await threadDialog.getByRole('button', { name: 'Außengewinde' }).click();
+  await threadDialog.getByLabel('Größe (ISO metrisch)').selectOption('6');
+  await threadDialog.getByRole('button', { name: 'Gewinde erzeugen' }).click();
+  await expect(page.locator('#subtitle')).toHaveText('1 Zeichenelement · 3 Körper');
+  await expect(page.locator('.cad-panel')).toContainText('M6×1');
+  await page.locator('.cad-panel').getByLabel('Material').selectOption('steel');
+  await page.getByRole('button', { name: 'Realistisch' }).click();
+  await expect(page.getByRole('button', { name: 'Realistisch' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
 
   // STL export of the combined model.
   await page.getByRole('button', { name: 'Exportieren' }).click();
@@ -76,10 +91,10 @@ test('cad: drawing, 3D with a hole, export and views', async ({ page }) => {
   ).toHaveAttribute('aria-pressed', 'true');
 
   // Everything is still there after a reload.
-  await page.waitForTimeout(1500);
+  await expect(page.locator('.cad-save')).toHaveText('Gespeichert');
   await page.reload();
   await expect(page.getByRole('heading', { level: 1, name: 'Platte' })).toBeVisible();
-  await expect(page.locator('#subtitle')).toContainText('2 Körper');
+  await expect(page.locator('#subtitle')).toContainText('3 Körper');
 
   // The print view shows the sheet.
   await page.getByRole('button', { name: 'Drucken' }).first().click();

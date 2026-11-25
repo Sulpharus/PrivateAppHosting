@@ -349,12 +349,13 @@ export function writeDxf(entities) {
 }
 
 const f = (v) => String(round(v, 6));
-export const fmtNum = (v) => String(round(v, 2)).replace('.', ',');
+/** Default number text: a point as decimal sign (DXF; the app passes the person's format). */
+export const fmtNum = (v) => String(round(v, 2));
 
 // ---------------------------------------------------------------------------------------------
 // SVG of the drawing (model units = millimetres; for export, the print view draws its own).
 
-export function writeSvg(entities, { margin = 5, stroke = 0.35 } = {}) {
+export function writeSvg(entities, { margin = 5, stroke = 0.35, num = fmtNum } = {}) {
   const pts = entities.flatMap((e) =>
     e.type === 'dim' ? dimGeometry(e).points : e.type === 'text' ? [e.p] : outline(e, 32),
   );
@@ -367,7 +368,7 @@ export function writeSvg(entities, { margin = 5, stroke = 0.35 } = {}) {
   const maxY = Math.max(...ys) + margin;
   const w = maxX - minX;
   const h = maxY - minY;
-  const body = entities.map((e) => svgOf(e, stroke)).join('');
+  const body = entities.map((e) => svgOf(e, stroke, 1, num)).join('');
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${f(w)}mm" height="${f(h)}mm" viewBox="${f(minX)} ${f(-maxY)} ${f(w)} ${f(h)}"><g transform="scale(1,-1)" fill="none" stroke="black" stroke-width="${stroke}" stroke-linecap="round">${body}</g></svg>`;
 }
 
@@ -375,7 +376,7 @@ const esc = (s) =>
   s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 
 /** One entity as SVG in model coordinates (inside a group flipped with scale(1,-1)). */
-export function svgOf(e, stroke = 0.35, k = 1) {
+export function svgOf(e, stroke = 0.35, k = 1, num = fmtNum) {
   const dash =
     e.style === 'center'
       ? ` stroke-dasharray="${f(stroke * 20)} ${f(stroke * 5)} ${f(stroke * 3)} ${f(stroke * 5)}"`
@@ -414,7 +415,7 @@ export function svgOf(e, stroke = 0.35, k = 1) {
         const r = [p[0] - d[0] * ah - d[1] * ah * 0.3, p[1] - d[1] * ah + d[0] * ah * 0.3];
         return `<polygon points="${f(p[0])},${f(p[1])} ${f(l[0])},${f(l[1])} ${f(r[0])},${f(r[1])}" fill="black" stroke="none"/>`;
       };
-      const label = esc(e.label ?? fmtNum(g.value));
+      const label = esc(e.label ?? num(g.value));
       let ang = (g.angle * 180) / Math.PI;
       if (ang > 90 || ang <= -90) ang += 180;
       const size = e.textSize ?? 3.5 / k;

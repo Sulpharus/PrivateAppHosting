@@ -3,7 +3,6 @@
 
 import { readGcode, readStl } from './io.js';
 import { emptyModel, normalise } from './model.js';
-import { t } from './ui.js';
 
 export const DEFAULT_SETTINGS = {
   units: 'mm',
@@ -162,6 +161,15 @@ export function createStore(mn) {
 
     // --- history --------------------------------------------------------------------------
     async versions(projectId) {
+      // Online, the server returns only this project's versions; offline, the local copy.
+      if (mn.offline.online()) {
+        const { data, error } = await mn.db
+          .from('history')
+          .select('*')
+          .eq('item_id', projectId)
+          .order('at', { ascending: false });
+        if (!error && Array.isArray(data)) return data;
+      }
       return (await history.list())
         .filter((h) => h.item_id === projectId)
         .sort((a, b) => String(b.at).localeCompare(String(a.at)));
@@ -264,26 +272,28 @@ export function createStore(mn) {
     },
     async importAll(data) {
       if (data?.app !== 'cad' || !Array.isArray(data.projects)) throw new Error('invalid');
-      const existingCats = new Set((await categories.list()).map((c) => c.id));
-      let count = 0;
-      for (const c of data.categories ?? []) {
-        if (typeof c?.name !== 'string' || existingCats.has(c.id)) continue;
-        await store.saveCategory({
-          ...store.newCategory(c.name, c.colour, c.position ?? 0),
-          id: c.id,
-        });
+      // Categories get new ids: a backup of another person never touches their rows.
+      const ids = new Map();
+      const colours = ['green', 'blue', 'violet', 'amber', 'rose', 'teal', 'gray'];
+      for (const c of Array.isArray(data.categories) ? data.categories : []) {
+        const name = typeof c?.name === 'string' ? c.name.trim().slice(0, 80) : '';
+        if (!name) continue;
+        const cat = store.newCategory(
+          name,
+          colours.includes(c.colour) ? c.colour : 'gray',
+          Number.isInteger(c.position) ? c.position : 0,
+        );
+        await store.saveCategory(cat);
+        ids.set(c.id, cat.id);
       }
+      let count = 0;
       for (const p of data.projects) {
-        if (typeof p?.name !== 'string' || !p.model) continue;
-        // A new id: importing twice never overwrites what is there.
+        const name = typeof p?.name === 'string' ? p.name.trim().slice(0, 120) : '';
+        if (!name || !p.model || typeof p.model !== 'object') continue;
         const row = store.newProject({
-          name: p.name,
-          purpose: p.purpose,
-          category_id:
-            existingCats.has(p.category_id) ||
-            (data.categories ?? []).some((c) => c.id === p.category_id)
-              ? p.category_id
-              : null,
+          name,
+          purpose: ['print', 'cnc', 'drawing'].includes(p.purpose) ? p.purpose : 'print',
+          category_id: ids.get(p.category_id) ?? null,
           model: normalise(p.model),
         });
         row.notes = typeof p.notes === 'string' ? p.notes.slice(0, 5000) : '';
@@ -302,6 +312,4 @@ export function createStore(mn) {
   return store;
 }
 
-/** Name of a category in the language (sample categories carry an i18n key). */
-export const categoryName = (c) =>
-  c?.name?.startsWith('@') ? t(c.name.slice(1)) : (c?.name ?? '');
+export const categoryName = (c) => c?.name ?? '';

@@ -5,7 +5,7 @@
 import { bounds } from './geom.js';
 import { svgOf } from './io.js';
 import { PAPERS, SCALES } from './model.js';
-import { el, fmtDate, icon, t } from './ui.js';
+import { el, fmt, fmtDate, icon, t } from './ui.js';
 
 const MARGIN = 16; // @page margin in mm
 const TB_W = 180;
@@ -46,7 +46,7 @@ const esc = (s) =>
 export function sheetSvg(
   project,
   sheet,
-  { author = '', printed = new Date().toISOString().slice(0, 10), labels },
+  { author = '', printed = new Date().toISOString().slice(0, 10), labels, num },
 ) {
   const [W, H] = sheetSize(sheet.paper, sheet.orientation);
   const k = scaleFactor(sheet.scale);
@@ -58,7 +58,7 @@ export function sheetSvg(
   const mx = (b.minX + b.maxX) / 2;
   const my = (b.minY + b.maxY) / 2;
   const stroke = 0.35 / k;
-  const body = ents.map((e) => svgOf(e, stroke, k)).join('');
+  const body = ents.map((e) => svgOf(e, stroke, k, num)).join('');
   const x0 = W - TB_W;
   const y0 = H - TB_H;
   const cell = (x, y, w, h, label, value, big = false) =>
@@ -96,6 +96,7 @@ export function mountPrint(root, app, project) {
       author: app.authorName(),
       printed: fmtDate(new Date().toISOString()),
       labels,
+      num: (v) => fmt(v, 2),
     });
     // Parsed as SVG (never innerHTML); every text from people went through esc() above.
     const doc = new DOMParser().parseFromString(svg, 'image/svg+xml');

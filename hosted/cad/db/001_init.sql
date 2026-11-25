@@ -23,7 +23,6 @@ create table app_cad.categories (
 create trigger categories_touch before update on app_cad.categories
   for each row execute function platform.touch_updated_at();
 select platform.secure_table('cad', 'categories', 'private');
-create index categories_owner_id_idx on app_cad.categories (owner_id);
 
 create table app_cad.projects (
   id uuid primary key,
@@ -45,7 +44,6 @@ create table app_cad.projects (
 create trigger projects_touch before update on app_cad.projects
   for each row execute function platform.touch_updated_at();
 select platform.secure_table('cad', 'projects', 'private');
-create index projects_owner_id_idx on app_cad.projects (owner_id);
 create index projects_category_id_idx on app_cad.projects (category_id);
 create index projects_deleted_at_idx on app_cad.projects (deleted_at);
 
@@ -64,5 +62,4 @@ create table app_cad.history (
 create trigger history_touch before update on app_cad.history
   for each row execute function platform.touch_updated_at();
 select platform.secure_table('cad', 'history', 'private');
-create index history_owner_id_idx on app_cad.history (owner_id);
 create index history_item_id_at_idx on app_cad.history (item_id, at desc);

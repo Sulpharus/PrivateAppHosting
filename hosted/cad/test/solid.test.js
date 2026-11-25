@@ -29,3 +29,46 @@ describe('solids', () => {
     expect(volume(m)).toBeCloseTo(40 * 30 * 5 - Math.PI * 16 * 5, -1);
   });
 });
+
+describe('threads', () => {
+  it('an M6 × 20 thread is a closed solid between minor and major cylinder', async () => {
+    const { thread, openEdges, volume, meshBounds } = await import('../js/solid.js');
+    const m = thread(6, 1, 20);
+    expect(openEdges(m)).toBe(0);
+    const b = meshBounds(m);
+    expect(b.size[2]).toBeCloseTo(20, 6);
+    expect(b.size[0]).toBeCloseTo(6, 2);
+    const v = volume(m);
+    const rMin = 3 - 0.5412658773652741;
+    expect(v).toBeGreaterThan(Math.PI * rMin * rMin * 20);
+    expect(v).toBeLessThan(Math.PI * 9 * 20);
+  });
+
+  it('left-hand and offset threads stay closed', async () => {
+    const { thread, openEdges, meshBounds } = await import('../js/solid.js');
+    expect(openEdges(thread(8, 1.25, 13.3, { left: true }))).toBe(0);
+    const b = meshBounds(thread(8, 1.25, 10, { offset: 0.2 }));
+    expect(b.size[0]).toBeCloseTo(8.4, 2);
+  });
+
+  it('a tap cut into a block leaves an internal thread', async () => {
+    const { combine, volume } = await import('../js/solid.js');
+    const solids = [
+      { id: 'b', kind: 'box', op: 'add', pos: [-8, -8, 0], rot: [0, 0, 0], w: 16, d: 16, h: 8 },
+      {
+        id: 't',
+        kind: 'thread',
+        op: 'subtract',
+        pos: [0, 0, -1],
+        rot: [0, 0, 0],
+        d: 6,
+        pitch: 1,
+        h: 10,
+        clearance: 0,
+      },
+    ];
+    const m = combine(solids);
+    expect(volume(m)).toBeLessThan(16 * 16 * 8 - Math.PI * 2.4 * 2.4 * 8);
+    expect(m.every((p) => p.s === 'b')).toBe(true);
+  });
+});
