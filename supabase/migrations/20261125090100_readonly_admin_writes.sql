@@ -4,7 +4,11 @@
 -- every readonly table that already exists. Each policy keeps platform.app_access (ADR 0002), so an
 -- admin writes only through the app's own page.
 
-/** Insert, update and delete for admins on one readonly table (idempotent). */
+/**
+ * Insert, update and delete for admins on one readonly table (idempotent). Policy names use at most
+ * 48 characters of the table name, so they stay distinct within Postgres' 63-character limit, and
+ * sequences the table owns (serial ids) get `usage`, so an admin insert can take the next value.
+ */
 create function platform.readonly_admin_policies(p_rel regclass, p_table text, p_grant text)
 returns void
 language plpgsql
@@ -12,16 +16,26 @@ set search_path = ''
 as $$
 declare
   v_check text := format('(%s and (select platform.is_admin()))', p_grant);
+  v_name text := left(p_table, 48);
+  v_seq regclass;
 begin
-  execute format('drop policy if exists %I on %s', p_table || '_admin_insert', p_rel);
-  execute format('drop policy if exists %I on %s', p_table || '_admin_update', p_rel);
-  execute format('drop policy if exists %I on %s', p_table || '_admin_delete', p_rel);
+  execute format('drop policy if exists %I on %s', v_name || '_admin_insert', p_rel);
+  execute format('drop policy if exists %I on %s', v_name || '_admin_update', p_rel);
+  execute format('drop policy if exists %I on %s', v_name || '_admin_delete', p_rel);
   execute format('create policy %I on %s for insert to authenticated with check %s',
-    p_table || '_admin_insert', p_rel, v_check);
+    v_name || '_admin_insert', p_rel, v_check);
   execute format('create policy %I on %s for update to authenticated using %s with check %s',
-    p_table || '_admin_update', p_rel, v_check, v_check);
+    v_name || '_admin_update', p_rel, v_check, v_check);
   execute format('create policy %I on %s for delete to authenticated using %s',
-    p_table || '_admin_delete', p_rel, v_check);
+    v_name || '_admin_delete', p_rel, v_check);
+  for v_seq in
+    select d.objid::regclass
+    from pg_depend d
+    join pg_class c on c.oid = d.objid and c.relkind = 'S'
+    where d.refobjid = p_rel and d.classid = 'pg_class'::regclass and d.deptype in ('a', 'i')
+  loop
+    execute format('grant usage on sequence %s to authenticated', v_seq);
+  end loop;
 end;
 $$;
 revoke execute on function platform.readonly_admin_policies(regclass, text, text)
@@ -130,20 +144,29 @@ $$;
 revoke execute on function platform.secure_table(text, text, platform.data_mode)
   from public, anon, authenticated;
 
--- Existing readonly tables: the select policy is named <table>_readonly (secure_table above).
-do $$
+/**
+ * Adds the admin write policies to every readonly table that exists already. The select policy of
+ * such a table is named <table>_readonly (cut to 63 characters, like every Postgres identifier).
+ */
+create function platform.retrofit_readonly_admin_writes()
+returns integer
+language plpgsql
+set search_path = ''
+as $$
 declare
   r record;
   v_slug text;
+  v_count integer := 0;
 begin
   for r in
     select p.schemaname, p.tablename
     from pg_policies p
-    where p.schemaname like 'app\_%' and p.policyname = p.tablename || '_readonly'
+    where p.schemaname like 'app\_%' and p.policyname = left(p.tablename || '_readonly', 63)
   loop
     select a.slug into v_slug from platform.apps a
     where platform.app_schema_name(a.slug) = r.schemaname;
     if v_slug is null then
+      raise notice 'readonly table %.% belongs to no app, skipped', r.schemaname, r.tablename;
       continue;
     end if;
     execute format('grant insert, update, delete on %I.%I to authenticated', r.schemaname, r.tablename);
@@ -151,6 +174,11 @@ begin
       format('%I.%I', r.schemaname, r.tablename)::regclass,
       r.tablename,
       format('(select platform.app_access(%L))', v_slug));
+    v_count := v_count + 1;
   end loop;
+  return v_count;
 end;
 $$;
+revoke execute on function platform.retrofit_readonly_admin_writes() from public, anon, authenticated;
+
+select platform.retrofit_readonly_admin_writes();

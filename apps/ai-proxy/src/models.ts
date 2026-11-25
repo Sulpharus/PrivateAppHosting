@@ -1,7 +1,8 @@
 // Model aliases apps may request (see the manifest's `ai.models`) and what they cost.
 // Prices are € per 1M tokens, which equals micro-€ per token. Provider list prices in USD are
 // used as € on purpose: it slightly overestimates cost, so budgets never undershoot.
-// Gemini model ids change often — override them with the MODEL_CATALOG var without a deploy.
+// The admin keeps ids and prices current in Verwaltung → KI-Proxy → Modelle (platform.ai_models,
+// ADR 0031); these are the defaults when a row is missing. MODEL_CATALOG overrides both.
 
 export type ModelAlias = 'gemini-flash' | 'gemini-pro' | 'claude-haiku' | 'claude-sonnet';
 
@@ -101,4 +102,28 @@ export function estimateTokens(text: string): number {
 
 export function costMicro(model: ModelEntry, inputTokens: number, outputTokens: number): number {
   return Math.ceil(inputTokens * model.input + outputTokens * model.output);
+}
+
+/**
+ * Caches the admin's model settings. A successful read lasts `ttlMs`; a failed read keeps the last
+ * good settings (never silently back to the code defaults, which may name retired models or lower
+ * prices) and is retried after `retryMs`.
+ */
+export function createModelCache(
+  read: () => Promise<{ data: ModelRow[] | null; error: { message: string } | null }>,
+  options: { ttlMs?: number; retryMs?: number; now?: () => number } = {},
+) {
+  const { ttlMs = 60_000, retryMs = 10_000, now = Date.now } = options;
+  let cached: { value: ModelPatch; expires: number } | undefined;
+  return async (): Promise<ModelPatch> => {
+    if (cached && cached.expires > now()) return cached.value;
+    const { data, error } = await read();
+    if (error) {
+      console.warn('ai_models could not be read, keeping the last settings', error.message);
+      cached = { value: cached?.value ?? {}, expires: now() + retryMs };
+    } else {
+      cached = { value: patchFromRows(data ?? []), expires: now() + ttlMs };
+    }
+    return cached.value;
+  };
 }

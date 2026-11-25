@@ -72,6 +72,7 @@ Meist eine **zwischengespeicherte** PWA-Version: Seite neu laden oder die App sc
 
 | Symptom | Ursache und Schritt |
 | --- | --- |
+| KI-Anfragen schlagen nach einem Modellwechsel fehl (`provider_error`) | die Modell-ID unter Verwaltung → KI-Proxy → **Modelle** ist falsch geschrieben oder vom Anbieter abgeschaltet: mit der Modell-Liste des Anbieters vergleichen und korrigieren; wirkt nach spätestens einer Minute |
 | „Schlüssel fehlt“ in einer App | Verwaltung → API-Schlüssel: Schlüssel eintragen (oder Person trägt persönlichen ein) |
 | `budget_exceeded` | KI-Budget aufgebraucht: Verwaltung → KI-Proxy erhöhen |
 | Kalender zeigt nichts | Gemeinsame Daten genehmigen ([Gemeinsame Daten](wiki:gemeinsame-daten)) |

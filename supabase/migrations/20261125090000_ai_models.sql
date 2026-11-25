@@ -8,8 +8,9 @@ create table platform.ai_models (
     check (alias in ('gemini-flash', 'gemini-pro', 'claude-haiku', 'claude-sonnet')),
   model_id text not null check (model_id ~ '^[a-z0-9][a-z0-9._-]{1,79}$'),
   -- € per million tokens; provider list prices in USD are used as € (slightly high on purpose).
-  input_eur_per_mtok numeric(10, 4) not null check (input_eur_per_mtok between 0 and 1000),
-  output_eur_per_mtok numeric(10, 4) not null check (output_eur_per_mtok between 0 and 1000),
+  -- Never 0: a free model would never count against a budget, so the limits would not hold.
+  input_eur_per_mtok numeric(10, 4) not null check (input_eur_per_mtok > 0 and input_eur_per_mtok <= 1000),
+  output_eur_per_mtok numeric(10, 4) not null check (output_eur_per_mtok > 0 and output_eur_per_mtok <= 1000),
   -- Claude only: the effort sent with every request; null sends none.
   effort text check (effort in ('low', 'medium', 'high')),
   updated_at timestamptz not null default now(),

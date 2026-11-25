@@ -1,7 +1,7 @@
 -- The AI models the proxy calls (Verwaltung → KI-Proxy): admins read and change them with a recent
 -- sign-in; nobody else sees or changes them.
 begin;
-select plan(7);
+select plan(11);
 select tests.reset();
 
 select tests.create_user('admin@example.com', 'Admin') as admin_id \gset
@@ -33,6 +33,17 @@ select throws_ok(
 select throws_ok(
   $$update platform.ai_models set model_id = 'Bad Model!' where alias = 'gemini-pro'$$,
   '23514', null, 'model ids are checked');
+
+select throws_ok(
+  $$update platform.ai_models set input_eur_per_mtok = 0 where alias = 'gemini-pro'$$,
+  '23514', null, 'a price of 0 would switch the budgets off');
+select throws_ok(
+  $$insert into platform.ai_models (alias, model_id, input_eur_per_mtok, output_eur_per_mtok)
+    values ('gemini-flash', 'x-model', 1, 1)$$,
+  '42501', null, 'the admin cannot add aliases');
+select throws_ok($$delete from platform.ai_models$$, '42501', null, 'the admin cannot delete aliases');
+select tests.logout();
+select ok(not has_table_privilege('anon', 'platform.ai_models', 'SELECT'), 'anon gets nothing');
 
 select * from finish();
 rollback;

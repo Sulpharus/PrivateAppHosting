@@ -85,7 +85,7 @@ const DATA_MODE: Record<string, string> = {
   private: 'privat je Person',
   'shared-account': 'gemeinsames Konto',
   group: 'Gruppe',
-  readonly: 'nur lesen',
+  readonly: 'Admin pflegt, alle lesen',
   team: 'Teams',
 };
 

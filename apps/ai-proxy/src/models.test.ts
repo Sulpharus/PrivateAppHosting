@@ -1,7 +1,7 @@
 // The model catalog and the Anthropic request body: current Claude models at low effort, merged with
 // the JSON format, and no effort when an override sets it to null.
 import { describe, expect, it } from 'vitest';
-import { catalog, patchFromRows } from './models.ts';
+import { catalog, createModelCache, type ModelRow, patchFromRows } from './models.ts';
 import { anthropicParams } from './providers.ts';
 
 const request = (alias: 'claude-haiku' | 'claude-sonnet', override?: string) => ({
@@ -78,5 +78,47 @@ describe('catalog from Verwaltung → KI-Proxy', () => {
       id: 'claude-haiku-7',
       input: 0.2,
     });
+  });
+});
+
+describe('the model settings cache', () => {
+  const row = (id: string): ModelRow => ({
+    alias: 'claude-haiku',
+    model_id: id,
+    input_eur_per_mtok: 1,
+    output_eur_per_mtok: 5,
+    effort: 'low',
+  });
+
+  it('reads once a minute, keeps the last settings on an error and retries sooner', async () => {
+    let time = 0;
+    const answers: { data: ModelRow[] | null; error: { message: string } | null }[] = [
+      { data: [row('claude-haiku-6')], error: null },
+      { data: null, error: { message: 'down' } },
+      { data: [row('claude-haiku-7')], error: null },
+    ];
+    let reads = 0;
+    const models = createModelCache(
+      async () => answers[reads++] ?? { data: null, error: { message: 'none' } },
+      {
+        now: () => time,
+      },
+    );
+    expect((await models())['claude-haiku']?.id).toBe('claude-haiku-6');
+    time = 30_000;
+    await models();
+    expect(reads).toBe(1); // cached
+    time = 61_000;
+    expect((await models())['claude-haiku']?.id).toBe('claude-haiku-6'); // error: last good kept
+    time = 65_000;
+    await models();
+    expect(reads).toBe(2); // retry waits 10 s
+    time = 72_000;
+    expect((await models())['claude-haiku']?.id).toBe('claude-haiku-7');
+  });
+
+  it('starts with the code defaults when the very first read fails', async () => {
+    const models = createModelCache(async () => ({ data: null, error: { message: 'down' } }));
+    expect(await models()).toEqual({});
   });
 });

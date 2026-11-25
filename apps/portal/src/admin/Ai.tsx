@@ -74,6 +74,7 @@ export function Ai() {
     setUsage((u.data as UsageRow[] | null) ?? []);
     setBudgets((b.data as BudgetRow[] | null) ?? []);
     setModels((m.data as ModelRow[] | null) ?? []);
+    if (m.error) setError('Die Modelle konnten nicht geladen werden. Lade die Seite neu.');
   }, []);
 
   useEffect(() => {
@@ -101,17 +102,26 @@ export function Ai() {
     setError(null);
     setSaved('');
     const modelId = String(form.get('model') ?? '').trim();
-    const input = Number(String(form.get('input') ?? '').replace(',', '.'));
-    const output = Number(String(form.get('output') ?? '').replace(',', '.'));
+    // An empty field must not count as 0: a free model would never touch a budget.
+    const price = (name: string) => {
+      const text = String(form.get(name) ?? '')
+        .trim()
+        .replace(',', '.');
+      return text === '' ? Number.NaN : Number(text);
+    };
+    const input = price('input');
+    const output = price('output');
     const effort = String(form.get('effort') ?? '');
     if (!MODEL_ID.test(modelId)) {
       setError(
-        'Die Modell-ID besteht nur aus Kleinbuchstaben, Ziffern, Punkt und Bindestrich, z. B. claude-haiku-5-5.',
+        'Die Modell-ID besteht nur aus Kleinbuchstaben, Ziffern, Punkt, Unterstrich und Bindestrich, z. B. claude-haiku-5-5.',
       );
       return;
     }
-    if (!(input >= 0 && input <= 1000 && output >= 0 && output <= 1000)) {
-      setError('Gib die Preise in Euro pro Million Tokens an, zwischen 0 und 1000.');
+    if (!(input > 0 && input <= 1000 && output > 0 && output <= 1000)) {
+      setError(
+        'Gib beide Preise in Euro pro Million Tokens an, größer als 0 und höchstens 1000 (z. B. 0,5).',
+      );
       return;
     }
     try {
@@ -255,7 +265,7 @@ export function Ai() {
                 )}
               </div>
               <div className="row" style={{ flexWrap: 'wrap' }}>
-                <span className="muted small-text" style={{ flex: 1 }}>
+                <span className="muted" style={{ flex: 1, fontSize: 14 }}>
                   Zuletzt geändert{' '}
                   {new Date(row.updated_at).toLocaleString('de-DE', {
                     dateStyle: 'medium',

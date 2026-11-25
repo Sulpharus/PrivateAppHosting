@@ -9,11 +9,11 @@ import { z } from 'zod';
 import {
   catalog,
   costMicro,
+  createModelCache,
   estimateTokens,
   type ModelAlias,
   type ModelPatch,
   type ModelRow,
-  patchFromRows,
   SEARCH_INPUT_ALLOWANCE,
   SEARCH_SURCHARGE_MICRO,
 } from './models.ts';
@@ -95,7 +95,6 @@ export function isPlatformOrigin(origin: string | null, portalUrl: string): bool
 }
 
 const appCache = new Map<string, { value: AppAi | null; expires: number }>();
-let modelCache: { value: ModelPatch; expires: number } | undefined;
 let cachedDeps: { url: string; deps: Deps } | undefined;
 
 function defaultDeps(env: ProxyEnv): Deps {
@@ -150,18 +149,13 @@ function buildDeps(env: ProxyEnv): Deps {
       appCache.set(slug, { value, expires: Date.now() + 60_000 });
       return value;
     },
-    async models() {
-      if (modelCache && modelCache.expires > Date.now()) return modelCache.value;
+    models: createModelCache(async () => {
       const { data, error } = await db
         .schema('platform')
         .from('ai_models')
         .select('alias, model_id, input_eur_per_mtok, output_eur_per_mtok, effort');
-      // A table that cannot be read leaves the defaults in place; try again in a minute.
-      const value = error ? {} : patchFromRows((data ?? []) as ModelRow[]);
-      if (error) console.warn('ai_models could not be read, using defaults', error.message);
-      modelCache = { value, expires: Date.now() + 60_000 };
-      return value;
-    },
+      return { data: data as ModelRow[] | null, error };
+    }),
     provider: (kind) => (kind === 'anthropic' ? anthropicProvider(keys) : geminiProvider(keys)),
   };
 }

@@ -1,7 +1,7 @@
 -- Data mode readonly (ADR 0031): everyone with the app reads, only admins write, and only from
 -- the app's own page.
 begin;
-select plan(9);
+select plan(13);
 select tests.reset();
 
 select tests.create_user('admin@example.com', 'Admin') as admin_id \gset
@@ -52,6 +52,30 @@ select ok(
   (select count(*) = 4 from pg_policies
    where schemaname = 'app_vereinsregeln' and tablename = 'rules'),
   'one read and three admin write policies');
+
+-- A readonly table made before ADR 0031 (select only, serial id) gets the admin writes from the
+-- retrofit the migration runs.
+insert into platform.apps (slug, name, description, kind, target, manifest, data_mode, owner_id, status)
+values ('preise', 'Preise', 'Prices', 'spa', 'cloudflare', '{}', 'readonly', null, 'online');
+insert into platform.app_grants (user_id, app_slug) values (:'admin_id', 'preise');
+select platform.create_app_schema('preise');
+create table app_preise.items (id serial primary key, title text not null);
+alter table app_preise.items enable row level security;
+grant select on app_preise.items to authenticated;
+create policy items_readonly on app_preise.items for select to authenticated
+  using ((select platform.app_access('preise')));
+select ok(platform.retrofit_readonly_admin_writes() >= 1, 'the retrofit finds the old table');
+select is(
+  (select count(*)::int from pg_policies where schemaname = 'app_preise' and tablename = 'items'),
+  4, 'the old table now has the admin write policies');
+select tests.login(:'admin_id');
+select tests.as_app('preise');
+select lives_ok($$insert into app_preise.items (title) values ('Kaffee')$$,
+  'an admin adds a row to a table with a serial id');
+select tests.logout();
+select ok(
+  not has_table_privilege('anon', 'app_preise.items', 'SELECT'),
+  'anon gets nothing on readonly tables');
 
 select * from finish();
 rollback;

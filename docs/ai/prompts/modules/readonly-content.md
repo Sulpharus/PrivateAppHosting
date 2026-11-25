@@ -15,7 +15,8 @@ rules, a price list, a family recipe collection, a reference work.
 - Data mode `readonly` in `mininode.json`: everyone with the app reads every row; **only admins
   write** (insert, update, delete). The database enforces it (ADR 0031), and a write works only from
   the app's own page.
-- Tables as usual (`platform.secure_table('<slug>', '<table>', 'readonly')`, no `owner_id` needed);
+- Tables as usual (`platform.secure_table('<slug>', '<table>', 'readonly')`, no `owner_id` needed,
+  ids as `uuid` made by the app);
   read with `mn.table('<table>').list()` (offline too) or `mn.db` for filters and search; admins
   write with `mn.table('<table>').upsert(row)` and `.remove(id)`.
 - `await mn.auth.role()` decides what to show: admins see "Neu", "Bearbeiten" and the editor
