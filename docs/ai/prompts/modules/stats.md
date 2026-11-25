@@ -2,6 +2,7 @@
 id: stats
 title: Statistik und Diagramme
 summary: Kennzahlen, Balken, Jahresübersicht, Heatmap
+when: Nimm das, wenn die App Zahlen, Diagramme oder Jahresübersichten zeigen soll.
 order: 90
 group: daten
 ---

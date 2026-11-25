@@ -2,6 +2,7 @@
 id: api-keys
 title: Externe APIs mit Schlüssel
 summary: Wetter, Karten & Co. über Host-Schlüssel, die der Admin einmal einträgt
+when: Nimm das, wenn die App Daten von einem fremden Dienst braucht, etwa Wetter, Filme oder Übersetzungen. Den Schlüssel trägst du einmal in der Verwaltung ein.
 order: 36
 group: anbindungen
 ---
@@ -62,8 +63,9 @@ Apps that declare the same API `id` share one key.
   - `api_not_declared`: the `apis` block is missing or not deployed yet. This is a developer
     error, so log it.
 - **Be economical:**
-  - cache answers in `mn.kv` with a timestamp and reuse them while fresh (e.g. weather 30 min,
-    geocoding forever);
+  - reuse answers while they are fresh: the latest answer of a kind in one `mn.kv` key with a
+    timestamp (`cache:weather`, 30 min), results that belong to an entry on its row (coordinates
+    of an address, kept forever);
   - debounce search-as-you-type (≥ 300 ms, ≥ 3 characters);
   - never poll in a loop;
   - keep bodies under 1 MB.

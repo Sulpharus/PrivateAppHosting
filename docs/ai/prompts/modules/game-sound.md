@@ -2,6 +2,7 @@
 id: game-sound
 title: Sound und Vibration
 summary: Kurze Soundeffekte, Musik und haptisches Feedback, jederzeit stumm schaltbar
+when: Nimm das, wenn das Spiel Töne, Musik oder Vibration haben soll.
 order: 105
 group: spiele
 ---

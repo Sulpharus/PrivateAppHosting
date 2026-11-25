@@ -2,6 +2,7 @@
 id: push
 title: Push-Benachrichtigungen
 summary: Nachrichten aufs Handy und den PC, auch wenn die App geschlossen ist, geplante Erinnerungen
+when: Nimm das, wenn Erinnerungen zu einer festen Zeit aufs Handy kommen sollen, auch wenn die App geschlossen ist.
 order: 62
 group: offline
 ---

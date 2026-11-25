@@ -79,6 +79,9 @@ const KV_COLLECTION = [
   /\bkv\s*\??\.\s*list\s*(?:<[^>()]*>)?\s*\(/,
 ];
 
+/** First line of packages/ui/kit/sdk-preview.js (ADR 0030); never part of an app. */
+export const PREVIEW_SDK_MARK = 'mininode-preview-sdk';
+
 /** `class FallbackMiniNodeClient`, `LocalMiniNodeShim`, `const mockMininode = …`. */
 const STAND_IN =
   /\b(?:class|function|const|let)\s+(?:\w*(?:Fallback|Shim|Mock|Fake|Stub|Local)\w*(?:MiniNode|Mininode)\w*|\w*(?:MiniNode|Mininode)\w*(?:Fallback|Shim|Mock|Fake|Stub)\w*)\b/;
@@ -115,6 +118,16 @@ function checkSources(
     if (!SOURCE_EXTENSIONS.test(file)) continue;
     const code = file.endsWith('.html') ? text : stripComments(text);
 
+    if (text.includes(PREVIEW_SDK_MARK)) {
+      findings.push({
+        severity: 'error',
+        rule: 'preview-sdk',
+        file: rel,
+        message:
+          'is the preview SDK of the KI-Werkstatt starter package: it fakes the login and keeps data in the browser; delete it (the platform serves the real /_mininode/sdk.js)',
+      });
+      continue;
+    }
     if (/@mininode\/sdk|\/_mininode\/sdk\.js/.test(code)) usesSdk = true;
     if (/window\.mininode/.test(code)) readsWindowSdk = true;
     if (clientSide && STAND_IN.test(code)) {
@@ -268,7 +281,7 @@ function checkReservedPaths(dir: string, findings: Finding[]): void {
         rule: 'reserved-path',
         file: reserved,
         message:
-          'the platform serves /_mininode/ (SDK, App Kit, language helper) itself; delete this folder, a copy here is a stand-in that fakes the login and the data',
+          'the platform serves /_mininode/ (SDK, App Kit, language helper) itself; delete this folder (the KI-Werkstatt starter package puts a preview copy there, the upload removes it), a copy here is a stand-in that fakes the login and the data',
       });
     }
   }

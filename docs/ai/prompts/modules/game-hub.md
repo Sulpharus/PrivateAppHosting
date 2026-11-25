@@ -2,6 +2,7 @@
 id: game-hub
 title: Gaming Hub anbinden
 summary: Spielzeit, Ergebnisse, Rekorde und Bestenliste, ein Spielername für alle Spiele
+when: Für jedes Spiel: Spielzeit, Ergebnisse und Bestenliste erscheinen dann im Gaming Hub.
 order: 101
 group: spiele
 ---

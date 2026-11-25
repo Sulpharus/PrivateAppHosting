@@ -2,6 +2,7 @@
 id: keyboard
 title: Tastatur und Desktop
 summary: Tastenkürzel, Mehrfachauswahl, Kontextmenü, breite Layouts
+when: Nimm das, wenn die App vor allem am PC benutzt wird und Tastenkürzel und Mehrfachauswahl braucht.
 order: 97
 group: qualitaet
 ---

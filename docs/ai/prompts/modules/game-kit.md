@@ -2,6 +2,7 @@
 id: game-kit
 title: Spiele im Repository (mnGame-Helfer)
 summary: Login, Spielzeit, Ergebnis und Bestenliste mit window.mnGame statt eigenem Code
+when: Nur wenn das Spiel direkt im Repository gebaut wird: der fertige Helfer übernimmt Anmeldung, Spielzeit und Bestenliste.
 group: spiele
 order: 109
 ---

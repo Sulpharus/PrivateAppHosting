@@ -2,6 +2,7 @@
 id: files
 title: Fotos und Dateien
 summary: Bilder, Belege und Anhänge in mn.files, mit Vorschaubildern
+when: Nimm das, wenn Leute Fotos, Belege oder Dokumente hochladen und später wieder ansehen sollen.
 order: 10
 group: daten
 ---

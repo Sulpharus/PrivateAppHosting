@@ -2,6 +2,7 @@
 id: ai
 title: KI-Funktionen
 summary: Zusammenfassen, Vorschläge, Extraktion über mn.ai
+when: Nimm das, wenn die App per Knopfdruck KI nutzen soll, etwa zum Zusammenfassen, für Vorschläge oder um Daten aus Text zu ziehen.
 order: 20
 group: anbindungen
 ---
@@ -11,6 +12,8 @@ group: anbindungen
 - Every AI call goes through `mn.ai`: `chat(prompt, { model, system })`, `stream(messages)`,
   `json(prompt, jsonSchema)`. Declare the models in `mininode.json` under `ai.models` with a
   small `monthlyBudgetEur` (1 to 5) and `maxOutputTokens`.
+- Every prompt that expects a written answer says the language (`mnI18n.lang`). Messages are
+  text only.
 - Default model `gemini-flash`; use `claude-sonnet` only where quality matters and say so in
   the README.
 - AI runs only when the user presses a button with a clear label ("Mit KI zusammenfassen",
@@ -21,9 +24,9 @@ group: anbindungen
   `model_not_allowed`, `rate_limited`, network → a short message and a retry button.
 - Mark AI output as such (a `mn-chip--plain` "KI-Vorschlag") until the user accepts it.
 - Facts that must be exact and current (service intervals, part numbers, opening hours) use
-  `mn.ai.search(messages)`: it returns `{ text, sources }`. Add `"search": true` to the `ai` block
+  `mn.ai.search(prompt)` (a text or a messages array): it returns `{ text, sources }`. Add `"search": true` to the `ai` block
   of `mininode.json`, show the sources as links next to every number, mark the result
-  "KI-Vorschlag mit Quellen" until the person confirms it, and cache it in your own table. To get
+  "KI-Vorschlag mit Quellen" until the person confirms it, and store it in your own table. To get
   structured data out of the found text, call `mn.ai.json` afterwards (search and a JSON schema
   do not work in one call).
 - Never send personal data (contacts, health, finance) without the user pressing the button

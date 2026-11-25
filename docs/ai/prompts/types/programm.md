@@ -2,7 +2,10 @@
 id: programm
 title: Programm für PC/Server
 summary: Vorhandenes Desktop-Programm im Browser nutzen, ohne es neu zu schreiben
+when: Nimm das, wenn es ein fertiges Windows- oder Android-Programm gibt, das du übers Handy oder den Browser benutzen willst, ohne es neu zu programmieren.
 accent: violet
+audience: household
+modules: remote-program
 order: 86
 ---
 

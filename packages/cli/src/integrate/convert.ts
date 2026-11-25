@@ -1,6 +1,7 @@
 import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
 import { MANIFEST_FILENAME, type ManifestInput, manifestSchema } from '@mininode/manifest';
+import { PREVIEW_SDK_MARK } from '../doctor.ts';
 import { anonymiseEmails, NON_TEXT } from '../export.ts';
 import type { Inspection, PackageJson } from './inspect.ts';
 
@@ -23,7 +24,16 @@ export interface Converted {
 /** Server, secrets, lockfiles and the generator's own notes never enter hosted/. */
 const DROP_FILES =
   /^(\.env(\..*)?|package-lock\.json|yarn\.lock|pnpm-lock\.yaml|bun\.lockb?|metadata\.json|mininode-assistant\.md|\.gitignore|\.DS_Store)$/i;
-const DROP_PATHS = [/^assets\/\.aistudio\//, /^\.aistudio\//];
+const DROP_PATHS = [
+  /^assets\/\.aistudio\//,
+  /^\.aistudio\//,
+  // The KI-Werkstatt starter package (ADR 0030): the gate serves /_mininode/ itself, and the
+  // reference was only for the AI that built the app.
+  /^(public\/)?_mininode\//,
+  /^MININODE-REFERENCE\.md$/,
+];
+/** Marks a file of the starter package (its AGENTS.md); kept in sync with the portal's STARTER_MARK. */
+const STARTER_MARK = '<!-- mininode-starter: removed on upload -->';
 /** Dependencies of the dev server and of provider SDKs: the platform provides these. */
 const DROP_DEPS = new Set([
   'express',
@@ -39,13 +49,66 @@ const DROP_DEPS = new Set([
   '@types/cors',
 ]);
 
-function copyTree(inspection: Inspection, outDir: string, drop: (file: string) => boolean) {
+/** A file of the starter package: its AGENTS.md, or the preview SDK wherever the AI moved it. */
+function isStarterFile(inspection: Inspection, file: string): boolean {
+  if (file === 'AGENTS.md')
+    return readFileSync(join(inspection.root, file), 'utf8').startsWith(STARTER_MARK);
+  return (
+    /\.(m?[jt]sx?|cjs|cts)$/.test(file) &&
+    readFileSync(join(inspection.root, file), 'utf8').includes(PREVIEW_SDK_MARK)
+  );
+}
+
+/** Copies the export without what the platform provides; returns the starter files it left out. */
+function copyTree(
+  inspection: Inspection,
+  outDir: string,
+  drop: (file: string) => boolean,
+): Set<string> {
+  const starter = new Set<string>();
   for (const file of inspection.files) {
+    if (isStarterFile(inspection, file)) {
+      starter.add(file);
+      continue;
+    }
     if (DROP_FILES.test(basename(file)) || DROP_PATHS.some((p) => p.test(file)) || drop(file))
       continue;
     mkdirSync(dirname(join(outDir, file)), { recursive: true });
     cpSync(join(inspection.root, file), join(outDir, file));
   }
+  return starter;
+}
+
+/**
+ * A copy of the preview SDK the AI moved out of `_mininode/` was left out by copyTree: remove the
+ * page's `<script src>` tags that point at it, so the page still starts. An import from code cannot
+ * be rewritten safely, so it is reported for review.
+ */
+function dropStarterScripts(ctx: ConvertContext, starter: Set<string>, converted: Converted) {
+  const moved = [...starter].filter(
+    (file) => !/^(public\/)?_mininode\//.test(file) && file !== 'AGENTS.md',
+  );
+  if (moved.length === 0) return;
+  const pages = ctx.inspection.files.filter((file) => /\.html?$/.test(file));
+  for (const page of pages) {
+    const path = join(ctx.outDir, page);
+    if (!existsSync(path)) continue;
+    const base = dirname(page);
+    const html = readFileSync(path, 'utf8').replace(
+      /<script\b[^>]*\bsrc=["']([^"']+)["'][^>]*>\s*<\/script>\s*/gi,
+      (tag: string, src: string) => {
+        const target = src.startsWith('/') ? src.slice(1) : join(base, src).replace(/^\.\//, '');
+        return moved.includes(target) ? '' : tag;
+      },
+    );
+    writeFileSync(path, html);
+  }
+  converted.actions.push(
+    `Vorschau-SDK des Startpakets entfernt (${moved.join(', ')}); die Plattform liefert /_mininode/sdk.js`,
+  );
+  converted.warnings.push(
+    `Kopie des Vorschau-SDK entfernt (${moved.join(', ')}): prüfen, dass kein Code sie noch importiert`,
+  );
 }
 
 /** The manifest the script writes: private data, login required, reviewed by the admin. */
@@ -267,10 +330,14 @@ export function convertVite(ctx: ConvertContext): Converted {
   const serverFiles = new Set(
     inspection.files.filter((file) => /^server\.(ts|js|mjs|cjs)$/.test(file)),
   );
-  copyTree(
-    inspection,
-    outDir,
-    (file) => serverFiles.has(file) || /^server\//.test(file) || /^vite\.config\.\w+$/.test(file),
+  dropStarterScripts(
+    ctx,
+    copyTree(
+      inspection,
+      outDir,
+      (file) => serverFiles.has(file) || /^server\//.test(file) || /^vite\.config\.\w+$/.test(file),
+    ),
+    converted,
   );
   if (serverFiles.size > 0)
     converted.actions.push(
@@ -316,7 +383,11 @@ export function convertVite(ctx: ConvertContext): Converted {
 export function convertStatic(ctx: ConvertContext): Converted {
   const { inspection, outDir } = ctx;
   const converted: Converted = { actions: [], warnings: [...inspection.warnings] };
-  copyTree(inspection, outDir, () => false);
+  dropStarterScripts(
+    ctx,
+    copyTree(inspection, outDir, () => false),
+    converted,
+  );
   const htmlPath = join(outDir, 'index.html');
   let html = readFileSync(htmlPath, 'utf8');
   let inline = 0;
@@ -440,13 +511,14 @@ export function convertNative(ctx: ConvertContext): Converted {
   const serverFiles = new Set(
     vite ? inspection.files.filter((file) => /^server\.(ts|js|mjs|cjs)$/.test(file)) : [],
   );
-  copyTree(
+  const starter = copyTree(
     inspection,
     ctx.outDir,
     (file) =>
       serverFiles.has(file) ||
       (vite && (/^server\//.test(file) || /^vite\.config\.\w+$/.test(file))),
   );
+  dropStarterScripts(ctx, starter, converted);
   if (vite) {
     // The same clean-up as for a Vite export without a manifest: the generator's package.json
     // (server, provider SDKs, a name shared by every export: "react-example") and its dev-server

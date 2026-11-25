@@ -2,6 +2,7 @@
 id: teams
 title: Teams und Projekte
 summary: Daten nur mit ausgewählten Personen teilen, Rollen, Dateien und Hinweise je Team
+when: Nimm das, wenn kleine Gruppen getrennt arbeiten, etwa pro Projekt oder Reise, und jede Gruppe nur ihre eigenen Daten sieht.
 order: 81
 group: teilen
 ---

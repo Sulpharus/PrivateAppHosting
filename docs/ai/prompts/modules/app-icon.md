@@ -2,6 +2,7 @@
 id: app-icon
 title: App-Logo
 summary: Ein quadratisches SVG-Logo, das beim Deploy automatisch als Kachel-Symbol erscheint
+when: Nimm das, wenn die KI gleich ein passendes Logo für die Kachel auf der Startseite zeichnen soll.
 group: qualitaet
 order: 95
 ---

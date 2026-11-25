@@ -2,6 +2,7 @@
 id: suite
 title: Gemeinsame Daten
 summary: Termine, Aufgaben und Co. mit anderen Apps teilen, etwa für den Kalender
+when: Nimm das, wenn andere Apps die Daten sehen sollen, etwa Termine oder Aufgaben im Kalender.
 order: 81
 group: anbindungen
 ---
@@ -9,7 +10,7 @@ group: anbindungen
 ## Feature: shared suite data (ADR 0002)
 
 - Use it when other apps should see the data. Anything with a date shows in the Kalender app.
-  Everything private to this app stays in `mn.kv`.
+  Everything private to this app stays in its own tables (lists) and `mn.kv` (settings).
 - Declare what the app needs; the admin approves it before it works:
   ```json
   "suite": { "uses": [
@@ -30,7 +31,7 @@ group: anbindungen
   - The result has `merged` and `rejectedFields`. Show a short note when fields were
     rejected: another app owns them.
 - Remove what no longer exists with `mn.suite.type(t).delete(id)` (it goes to a 30-day bin).
-  Keep a map `sourceKey → id` in `mn.kv` to find the id.
+  Keep the returned id in a `suite_id uuid` column of your own row to find it again.
 - Read with `mn.suite.range({ from, to })` or `mn.suite.type(t).list()`. The result only
   contains types the admin granted for reading.
 - Sharing uses collections, not the app:
@@ -38,4 +39,5 @@ group: anbindungen
   - `createCollection(name, family)` creates one;
   - `setMember(id, userId, 'editor' | 'viewer' | null)` manages members, with people from
     `mn.people()`.
-- The suite is online only. When offline, keep the change in kv and sync it later.
+- The suite is online only. When offline, mark the row (`suite_pending boolean`) and sync it after
+  `mn.offline.onSynced`.

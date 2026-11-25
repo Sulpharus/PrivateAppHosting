@@ -3,24 +3,26 @@
 
 ## You are building an app for MiniNode
 
-MiniNode is a private, invite-only platform. Every app runs at `https://<slug>.mininode.app`
-behind a shared login. The platform provides accounts, a database, file storage, realtime and
-AI access through one small SDK. **Build a normal web app and use the SDK for everything that
+MiniNode is a private, invite-only platform. Every app runs at `https://<slug>.<domain>` (the
+domain of the installation, e.g. `mininode.app`) behind a shared login. The platform provides
+accounts, a database, file storage, realtime and AI access through one small SDK. **Build a normal web app and use the SDK for everything that
 needs a backend. Do not build your own login, backend or API-key handling.**
 
 ### Hard rules
 
 1. **Stack:** a static site (HTML/CSS/JS) or a Vite + React (TypeScript preferred) single-page
    app. Everything must be bundled at build time: no CDN `<script>` tags, no import maps,
-   no `esm.sh`. Tailwind via `@tailwindcss/vite`, not the CDN.
+   no `esm.sh`, no Google Fonts. Style with the App Kit (rule 5); do not add Tailwind or a
+   component library (an existing app that already uses Tailwind keeps it via
+   `@tailwindcss/vite`, never the CDN).
 2. **No secrets in the app:** never put API keys in code, env files or `process.env.*`. For AI,
    call `mn.ai` (below). Never import `@google/genai`, `@anthropic-ai/sdk` or `openai` in the
    browser. Other APIs that need a key (weather, maps, …) are declared under `apis` in
    `mininode.json` and called with `mn.api(id)`; the admin enters the key on MiniNode.
 3. **No custom auth:** the page is only served to signed-in users. Call
    `await mn.auth.requireLogin()` once at start-up. There is no sign-up/login UI in the app.
-4. **Persistence:** never use `localStorage` or `IndexedDB` for user data (it does not sync
-   across devices). **A list of entries (bookings, items, plans, contacts, …) is a table** (below,
+4. **Persistence:** `localStorage` and `IndexedDB` are never the place where user data lives (they
+   do not sync across devices; IndexedDB may only queue an upload until it is sent). **A list of entries (bookings, items, plans, contacts, …) is a table** (below,
    `mn.table`; also offline); `mn.kv` is for settings and small state only (ADR 0022).
    Do not add a service worker, web manifest or push code: the platform makes
    every app installable and offline-capable and delivers notifications (`mn.notify`,
@@ -31,11 +33,14 @@ needs a backend. Do not build your own login, backend or API-key handling.**
    the key (`data-i18n="app.title"`), script uses `mnI18n.t('list.count', { n })` from
    `/_mininode/i18n.js`. German uses the informal "du", English a plain "you". Both files have
    the same keys and placeholders (`mininode doctor` checks it); follow `LANGUAGE-PACKAGES.md`.
+   Dates, numbers and amounts follow the language (`mnI18n.locale`, `mnui.date.format`); never
+   hard-code `'de-DE'`.
    Mobile-first, works from 360 px wide, touch targets
    at least 44 px, light and dark mode (`prefers-color-scheme`), WCAG AA contrast.
    **Look:** use the MiniNode App Kit (`DESIGN-SYSTEM.md`): link `/_mininode/ui.css` and
    `/_mininode/ui.js` (and `/_mininode/i18n.js`), put `class="mn-app"` on `<body>`, pick a `data-accent` and build from
-   its `mn-*` components and `--mn-*` tokens.
+   its `mn-*` components and `--mn-*` tokens. The shell's "Alle Apps" link points to
+   `mn.config.portalUrl`; never write a domain into the app.
 6. Deliver a **ZIP** containing the project (source, `package.json` if any, `mininode.json`).
 7. **Details that make an upload fail the check** (the integration script and `mininode doctor`
    stop on each of them):
@@ -46,8 +51,10 @@ needs a backend. Do not build your own login, backend or API-key handling.**
    - **The platform API is `@mininode/sdk` (or `window.mininode` in plain HTML) and nothing else.**
      There is no `window.MiniNode`, no host object to probe for and no "standalone fallback": do
      not write a bridge or a localStorage mode for "when MiniNode is not there". Import the SDK
-     and use `mn.auth`, `mn.kv`, `mn.files` directly; data mode `private`, `shared-account` or
-     `group` requires it.
+     and use `mn.auth`, `mn.table`, `mn.kv`, `mn.files` directly; every data mode except `none`
+     requires it. Built outside MiniNode, the starter package's `_mininode/` folder (preview SDK
+     and App Kit) is the only stand-in: keep its paths, never edit or imitate it; the upload
+     removes it.
    - **Sample data uses `@example.com` addresses** (`max@example.com`), never real-looking or
      localised ones (`@beispiel.de`, `@gmail.com`): such addresses stop the export of the app.
 
@@ -164,7 +171,7 @@ create index on app_<slug_with_underscores>.recipes (cooked_on);
 {
   "$schema": "https://mininode.app/schema/mininode.json",
   "specVersion": 1,
-  "slug": "rezepte",                        // lowercase, digits, dashes; becomes rezepte.mininode.app
+  "slug": "rezepte",                        // lowercase, digits, dashes; becomes rezepte.<domain>
   "name": "Rezepte",
   "description": "Rezepte und Wochenplan",  // max 120 chars, shown on the start page
   "kind": "spa",                            // "static" (plain HTML) or "spa" (Vite build)
@@ -191,7 +198,7 @@ create index on app_<slug_with_underscores>.recipes (cooked_on);
 
 Data modes: `private` = each user their own data · `shared-account` = trusted users work on the
 owner's data (e.g. a shared household budget) · `group` = everyone with the app shares all data ·
-`readonly` = users read, only the admin writes · `team` = data per team: the people in a team (2 to 6, with
+`readonly` = everyone reads, nobody writes from the app (the content ships in its `db/*.sql` files) · `team` = data per team: the people in a team (2 to 6, with
 roles viewer, editor, owner) see that team's rows and files, nobody else (`mn.team`, tables with `team_id`,
 ADR 0023).
 

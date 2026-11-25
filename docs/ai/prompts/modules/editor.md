@@ -2,6 +2,7 @@
 id: editor
 title: Notizen und Texteditor
 summary: Mehrzeilige Texte, Markdown, Checklisten, sicheres Anzeigen, Entwurf sichern
+when: Nimm das, wenn längere Texte geschrieben werden, etwa Notizen mit Listen, Links und Formatierung.
 group: daten
 order: 61
 ---
@@ -14,10 +15,11 @@ order: 61
   `innerHTML` with user text, never allow `javascript:` links, open links with
   `rel="noopener noreferrer"`. Another user of a shared app must not be able to run script in
   your session.
-- Autosave a draft to `mn.kv` (`draft:<id>`) after about 800 ms without typing, and save the real
-  item on blur or on "Fertig". After a reload, offer "Entwurf wiederherstellen".
+- Autosave a draft of the note being edited to one `mn.kv` key (`draft`: `{ id, text }`) after
+  about 800 ms without typing, and save the real row on blur or on "Fertig". After a reload, offer
+  "Entwurf wiederherstellen".
 - Checklists: `- [ ]` and `- [x]` lines toggle from the rendered view without opening the editor.
 - Show the character or word count when a limit exists, and say what is cut when it is exceeded.
 - Search finds notes by title and body; highlight hits with `<mark>` built from text nodes.
-- Long notes: keep the list light by storing a short `preview` with each note and loading the
-  full body only when it is opened.
+- Notes are rows of a table (`notes`: `id`, `title`, `body text`, `preview text`); keep the list
+  light by reading `preview` for lists and the full body only when a note is opened.

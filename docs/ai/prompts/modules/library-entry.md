@@ -2,6 +2,7 @@
 id: library-entry
 title: Eintrag für die App-Bibliothek
 summary: Selbst gehostetes Programm als fest verdrahteten Katalogeintrag aufnehmen
+when: Nimm das, wenn ein bekanntes Programm (etwa Jellyfin) per Klick aus der App-Bibliothek installierbar werden soll.
 group: server
 order: 112
 ---

@@ -2,6 +2,7 @@
 id: google
 title: Gmail und Google Kalender
 summary: Mails und Termine des angemeldeten Nutzers lesen und schreiben
+when: Nimm das, wenn die App deine Gmail-Mails, deinen Google Kalender oder Dateien in Google Drive nutzen soll.
 order: 35
 group: anbindungen
 ---

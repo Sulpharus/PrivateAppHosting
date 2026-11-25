@@ -1,6 +1,13 @@
 # Playbook: Google AI Studio export
 
-Typical export: `index.html` with an import map (`esm.sh`) and the Tailwind CDN script,
+Built with the KI-Werkstatt prompt (ADR 0030), an export already has `public/_mininode/` from the
+starter package (dropped on integration), `mininode.json` and the language packages; only the steps
+below that still apply are needed. Newer AI Studio projects default to a full-stack app (a
+`server.ts` with Express, Tailwind v4, sometimes Firebase); the server is removed by
+`mininode integrate`, Firebase calls become `mn.table`/`mn.auth` (step 7), Tailwind stays only if
+the app has no App Kit styling.
+
+Older typical export: `index.html` with an import map (`esm.sh`) and the Tailwind CDN script,
 `index.tsx`, `App.tsx`, `components/`, `services/geminiService.ts` using `@google/genai`
 with `process.env.API_KEY` (or `GEMINI_API_KEY`), `metadata.json`, sometimes `vite.config.ts`
 with `define: { 'process.env.API_KEY': … }`.

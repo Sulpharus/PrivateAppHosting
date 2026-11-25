@@ -2,6 +2,7 @@
 id: container
 title: Server-Dienst als Container
 summary: Dauerlaufender Prozess, Gesundheitspfad, Anmeldung über Header, Speicherbedarf
+when: Nur wenn eine normale Web-App nicht reicht: ein dauerhaft laufender Server-Prozess auf der Server-Hardware.
 group: server
 order: 110
 ---

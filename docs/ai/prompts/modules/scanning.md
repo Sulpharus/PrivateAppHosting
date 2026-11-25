@@ -2,6 +2,7 @@
 id: scanning
 title: Kamera und Scannen
 summary: Barcodes und QR-Codes per Foto erkennen, Dokumente fotografieren
+when: Nimm das, wenn Leute mit dem Handy Barcodes, QR-Codes oder Dokumente fotografieren sollen.
 order: 18
 group: daten
 ---

@@ -12,6 +12,8 @@ Apps rufen KI **nicht** direkt auf. `mn.ai` geht zu `ai.{{domain}}` (`apps/ai-pr
 
 - **Anmeldung und Freigabe** der aufrufenden App (die Adresse wird auf die App zurückgeführt);
 - die **Modell-Liste** aus dem Manifest (`ai.models`: `gemini-flash`, `gemini-pro`, `claude-haiku`, `claude-sonnet`) und eine Obergrenze für `max_tokens`;
+  `claude-haiku` ist Claude Haiku 5.5, `claude-sonnet` ist Claude Sonnet 5.5, beide mit niedrigem Denkaufwand (`effort: low`), damit kurze
+  Antworten in die Obergrenze passen; welche Modelle dahinterstehen, steht in `apps/ai-proxy/src/models.ts` (änderbar ohne Deploy über `MODEL_CATALOG`);
 - das **Budget**: eine Datenbankfunktion **reserviert** vor dem Aufruf die schlimmstmöglichen Kosten und **verrechnet** danach die echten. Es gibt
   Grenzen global, je App, je Rolle und je Person; der Admin ist vom globalen Stopp ausgenommen.
 

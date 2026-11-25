@@ -2,6 +2,7 @@
 id: print
 title: Drucken und PDF
 summary: Druckansicht, Listen und Berichte als PDF über den Browser
+when: Nimm das, wenn du Listen oder Berichte ausdrucken oder als PDF speichern willst.
 order: 52
 group: daten
 ---

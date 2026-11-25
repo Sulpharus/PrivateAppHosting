@@ -10,13 +10,33 @@ export interface ModelEntry {
   id: string;
   input: number;
   output: number;
+  /**
+   * Anthropic only: the effort level sent with every request. App calls are short (summaries,
+   * extraction) and the output budget is small, so thinking stays low and leaves room for the
+   * answer. Set it to null when MODEL_CATALOG points an alias at a model without effort.
+   */
+  effort?: 'low' | 'medium' | 'high' | null;
 }
 
 const DEFAULT_CATALOG: Record<ModelAlias, ModelEntry> = {
   'gemini-flash': { provider: 'google', id: 'gemini-3.7-flash', input: 0.75, output: 3.75 },
   'gemini-pro': { provider: 'google', id: 'gemini-3.1-pro', input: 2, output: 12 },
-  'claude-haiku': { provider: 'anthropic', id: 'claude-haiku-4-5', input: 1, output: 5 },
-  'claude-sonnet': { provider: 'anthropic', id: 'claude-sonnet-5', input: 2, output: 10 },
+  // Claude Haiku 5.5 costs $0.10/$0.50 up to 100K input tokens and $0.50/$2.50 above; the higher
+  // rate is used so a budget never undershoots.
+  'claude-haiku': {
+    provider: 'anthropic',
+    id: 'claude-haiku-5-5',
+    input: 0.5,
+    output: 2.5,
+    effort: 'low',
+  },
+  'claude-sonnet': {
+    provider: 'anthropic',
+    id: 'claude-sonnet-5-5',
+    input: 2,
+    output: 10,
+    effort: 'low',
+  },
 };
 
 export function catalog(override: string | undefined): Record<ModelAlias, ModelEntry> {

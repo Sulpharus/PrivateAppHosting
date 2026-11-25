@@ -61,8 +61,12 @@ Updates.
 `mininode integrate` runs the checks that CI runs, so a red pull request is the exception:
 
 - `mininode doctor`, including **export-scan** (secrets, instance identifiers, personal email
-  addresses such as sample people in demo data) and **reserved-path** (a stand-in `/_mininode/`
-  folder with a fake SDK or kit inside the app).
+  addresses such as sample people in demo data), **reserved-path** (a stand-in `/_mininode/`
+  folder with a fake SDK or kit inside the app) and **preview-sdk** (a copy of the KI-Werkstatt
+  starter package's preview SDK left anywhere in the app, found by its marker line; ADR 0030).
+- Before that, the starter package itself is removed: `_mininode/`, `public/_mininode/`,
+  `MININODE-REFERENCE.md`, its marked `AGENTS.md`, marked copies of the preview SDK and the page's
+  `<script>` tags pointing at them.
 - The build, and Biome: code Biome cannot read (for example Tailwind 4 `@variant` in CSS) takes
   the whole folder out of Biome, because switching the linter off does not stop a syntax error.
 
