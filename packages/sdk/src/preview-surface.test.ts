@@ -4,6 +4,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import * as bundle from './browser.ts';
 import { createMininode } from './index.ts';
 
 const config = {
@@ -35,12 +36,22 @@ describe('the starter package preview SDK', () => {
   it('has the same surface as the real client', async () => {
     const real = createMininode(config) as unknown as Record<string, unknown>;
     const source = readFileSync(join(import.meta.dirname, '../../ui/kit/sdk-preview.js'), 'utf8');
-    type Host = { mininode?: { mininode(): Promise<unknown> } };
+    type Host = { mininode?: { mininode(): Promise<unknown> } & Record<string, unknown> };
     const host = () => window as unknown as Host;
     delete host().mininode;
     new Function(source)();
+    const globals = Object.keys(host().mininode ?? {});
     const preview = (await host().mininode?.mininode()) as Record<string, unknown>;
     delete host().mininode;
+
+    // window.mininode: what an app may use, and nothing the real bundle does not have. The compat
+    // layers (installMiniNodeCompat, installLocalStorageSync) are left out on purpose: new apps
+    // never use them.
+    expect(globals.filter((k) => k !== 'preview').sort()).toEqual(
+      Object.keys(bundle)
+        .filter((k) => !k.startsWith('install'))
+        .sort(),
+    );
 
     expect(surface(preview)).toEqual(surface(real));
     const realSuite = real.suite as { type(t: string): object };

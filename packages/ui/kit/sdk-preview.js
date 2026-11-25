@@ -132,6 +132,15 @@
   // The query builder of mn.db over the same rows: select with filters, sorting and paging, and
   // insert, upsert, update and delete, each awaitable and chainable like supabase-js. A method the
   // preview does not know answers `{ data: null, error }` instead of throwing.
+  /** A LIKE pattern as a RegExp: everything literal except `%` (any text) and `_` (one character). */
+  const pattern = (value, flags) =>
+    new RegExp(
+      `^${String(value)
+        .replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+        .replaceAll('%', '.*')
+        .replaceAll('_', '.')}$`,
+      `s${flags}`,
+    );
   const OPS = {
     eq: (a, b) => a === b,
     neq: (a, b) => a !== b,
@@ -139,8 +148,8 @@
     gte: (a, b) => a >= b,
     lt: (a, b) => a < b,
     lte: (a, b) => a <= b,
-    like: (a, b) => new RegExp(`^${String(b).replaceAll('%', '.*')}$`).test(String(a ?? '')),
-    ilike: (a, b) => new RegExp(`^${String(b).replaceAll('%', '.*')}$`, 'i').test(String(a ?? '')),
+    like: (a, b) => pattern(b, '').test(String(a ?? '')),
+    ilike: (a, b) => pattern(b, 'i').test(String(a ?? '')),
     is: (a, b) => (a ?? null) === (b === 'null' ? null : b),
     in: (a, b) =>
       (Array.isArray(b)
@@ -337,7 +346,13 @@
       signOut: async () => undefined,
       accountUrl: () => '#konto',
     },
-    db: { from: query, rpc: () => query('rpc') },
+    db: {
+      from: query,
+      rpc: async (fn) => ({
+        data: null,
+        error: { message: `rpc ${fn} is not available in the preview` },
+      }),
+    },
     kv: {
       get: async (key, scope = 'user') => store.get(`kv:${scope}:${key}`),
       set: async (key, value, scope = 'user') => store.set(`kv:${scope}:${key}`, value),
@@ -495,6 +510,7 @@
 
   window.mininode = {
     mininode: async () => client,
+    createMininode: () => client,
     AiError,
     ExternalApiError,
     GoogleError,

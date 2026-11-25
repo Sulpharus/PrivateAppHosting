@@ -1854,7 +1854,7 @@ code,
     left: 16px;
     right: 16px;
     top: auto;
-    bottom: 16px;
+    bottom: calc(16px + env(safe-area-inset-bottom));
     width: auto;
     max-width: none;
   }

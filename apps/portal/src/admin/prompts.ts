@@ -197,8 +197,10 @@ interface BuilderInfo {
   output: Output;
   /** Where the starter package puts _mininode/ and i18n/: the root (static) or public/ (Vite). */
   layout: 'static' | 'vite' | null;
-  /** The delivery section for the AI (English). */
+  /** The delivery section for the AI (English), for a new app. */
   text: string;
+  /** How the result is handed over (English), used when an existing app is extended or fixed. */
+  deliver: string;
 }
 
 const SDK_LOAD =
@@ -216,6 +218,7 @@ export const BUILDERS: Record<Builder, BuilderInfo> = {
       'Den kurzen Prompt einfügen. Bei Copilot geht er auch als Issue, das du Copilot zuweist.',
       'Pull Request prüfen und mergen.',
     ],
+    deliver: '',
     output: 'pointer',
     layout: null,
     text: '',
@@ -228,6 +231,7 @@ export const BUILDERS: Record<Builder, BuilderInfo> = {
       'Startpaket (ZIP) herunterladen und an die Nachricht hängen.',
       'Prompt einfügen und senden. Das fertige ZIP lädst du unter Hochladen hoch.',
     ],
+    deliver: `Hand over one ZIP of the whole app (no \`node_modules\`) as a downloadable file. ${FILE_FALLBACK}`,
     output: 'full',
     layout: 'static',
     text: `Work in your code environment (file creation).
@@ -245,6 +249,7 @@ For a quick look you may also show \`index.html\` as an artifact; the preview ke
       'In ChatGPT das ZIP und die Referenzdatei anhängen.',
       'Prompt einfügen und senden. Das fertige ZIP lädst du unter Hochladen hoch.',
     ],
+    deliver: `Create one ZIP of the whole app and offer it as a download. ${FILE_FALLBACK}`,
     output: 'split',
     layout: 'static',
     text: `1. The starter package and \`MININODE-REFERENCE.md\` are attached. Read the reference completely before you start: it is the specification (platform, design system, language packages, app type, features). Unpack the starter package in your Python environment and copy its files with code, never retype them.
@@ -261,6 +266,7 @@ Do not stop to ask questions unless the brief is empty; choose the simpler optio
       'Prompt einfügen und senden.',
       'Projekt als ZIP herunterladen und unter Hochladen hochladen.',
     ],
+    deliver: 'Hand over by "Download app" as a ZIP.',
     output: 'full',
     layout: 'vite',
     text: `AI Studio's default is a full-stack app (React, Vite, Tailwind, a Node server, Firebase, Gemini calls with a key). MiniNode needs a client-only app:
@@ -277,6 +283,8 @@ Do not stop to ask questions unless the brief is empty; choose the simpler optio
       'Startpaket (ZIP) entpackt ins Projekt ziehen, MININODE-REFERENCE.md gehört dazu.',
       'Prompt senden. Am Ende das Projekt als ZIP herunterladen und hochladen.',
     ],
+    deliver:
+      'The owner downloads the project as a ZIP; keep `node_modules` and build output out of it.',
     output: 'split',
     layout: 'vite',
     text: `1. The project contains the starter package: \`public/_mininode/\` (App Kit and a preview SDK), \`public/i18n/\`, \`mininode.json\`, \`index.html\`, \`AGENTS.md\` and \`MININODE-REFERENCE.md\`. Read \`MININODE-REFERENCE.md\` completely first: it is the specification.
@@ -292,6 +300,7 @@ Do not stop to ask questions unless the brief is empty; choose the simpler optio
       'Prompt einfügen. Nach jedem Schritt „weiter“ schreiben.',
       'Dateien in einen Ordner speichern, das Startpaket dazulegen, als ZIP hochladen.',
     ],
+    deliver: 'Print every changed or new file completely in its own code block headed by its path.',
     output: 'compact',
     layout: 'static',
     text: `Work in steps and wait for "weiter" after each:
@@ -308,6 +317,7 @@ Print every file completely in its own code block headed by its path. Static HTM
       'Prompt einfügen und senden.',
       'Ergebnis als ZIP unter Hochladen hochladen.',
     ],
+    deliver: `Deliver a ZIP of the whole app. ${FILE_FALLBACK}`,
     output: 'full',
     layout: 'static',
     text: `1. If the starter package is attached, keep its files and paths (\`_mininode/\`, \`i18n/\`, \`mininode.json\`, \`index.html\`) and never retype \`_mininode/\` files. Without it, link the same paths anyway: MiniNode serves them.
@@ -477,7 +487,9 @@ export function hardRules(brief: Brief, lib: Library): string[] {
     ctx.brief.audience === 'none'
       ? 'The app stores no data on the platform (data mode `none`); keep state in memory.'
       : 'Every list of entries is a table: SQL in `db/001_init.sql` (schema `app_<slug>`, `platform.secure_table` for every table) and `mn.table` in the app. `mn.kv` holds only settings and small state, never one key per entry.',
-    `\`mininode.json\` has ${ctx.named ? `slug \`${ctx.slug}\`` : 'the slug and name you chose (never "neue-app" or "Neue App")'}, data mode \`${ctx.audience.mode}\`, a German \`description\` of one line (at most 120 characters) and only keys the spec documents (the accent is \`data-accent\` in the HTML, never a key there).`,
+    ctx.brief.task === 'new'
+      ? `\`mininode.json\` has ${ctx.named ? `slug \`${ctx.slug}\`` : 'the slug and name you chose (never "neue-app" or "Neue App")'}, data mode \`${ctx.audience.mode}\`, a German \`description\` of one line (at most 120 characters) and only keys the spec documents (the accent is \`data-accent\` in the HTML, never a key there).`
+      : 'Keep the slug, name and data mode of the app’s existing `mininode.json` (a new slug makes a different app, a new data mode changes who sees the data); add only keys the spec documents and the new features need.',
     '`localStorage` and `IndexedDB` are never where data lives; no service worker, web manifest or push code of your own.',
     'Load `/_mininode/ui.css`, `/_mininode/ui.js`, `/_mininode/i18n.js` and `/_mininode/sdk.js` by exactly these paths. Everything else is bundled with the app: no CDN scripts, import maps, `esm.sh` or Google Fonts.',
     `Look: only the App Kit. \`<html lang="de" data-accent="${ctx.brief.accent}">\`, \`<body class="mn-app">\`, the shell (\`mn-nav\`, \`mn-top\`, \`mn-main\`), \`mn-*\` components and \`--mn-*\` tokens. No Tailwind, component libraries, gradients, emoji, raw colours or font names.`,
@@ -500,8 +512,12 @@ export function hardRules(brief: Brief, lib: Library): string[] {
 
 function checklist(ctx: Context): string[] {
   const manifest = [
-    ctx.named ? `slug \`${ctx.slug}\`` : 'the chosen slug and name',
-    `data mode \`${ctx.audience.mode}\``,
+    ...(ctx.brief.task === 'new'
+      ? [
+          ctx.named ? `slug \`${ctx.slug}\`` : 'the chosen slug and name',
+          `data mode \`${ctx.audience.mode}\``,
+        ]
+      : ['the app’s own slug, name and data mode, unchanged']),
     'the `i18n` block (de, en)',
     ...(has(ctx, 'ai', 'ai-chat', 'ai-vision')
       ? [
@@ -575,6 +591,18 @@ function briefSection(ctx: Context): string[] {
   }
   if (brief.extra.trim()) lines.push('', '**Further requirements:**', '', brief.extra.trim());
   return lines;
+}
+
+/** Delivery for an app that already exists: its own files stay, the kit only serves the preview. */
+function changeText(ctx: Context): string {
+  return [
+    '1. The app’s code is attached. Keep its own files and structure (`mininode.json`, `index.html`, `i18n/`, `db/`, sources) and change only what the task needs; never replace the manifest or the page with new ones.',
+    ctx.starter
+      ? '2. The attached starter package holds only `_mininode/` (App Kit and a preview SDK, so the app runs in your preview), `AGENTS.md` and `MININODE-REFERENCE.md`. Put `_mininode/` next to the app’s `index.html` (Vite apps: into `public/`) and copy it with commands, never retype it.'
+      : '2. MiniNode serves `/_mininode/*`; keep the app’s links to it as they are.',
+    `3. ${SDK_LOAD.replace('Load the platform with', 'The app loads the platform with')} Keep how it does it today.`,
+    `4. ${ctx.builder.deliver}`,
+  ].join('\n');
 }
 
 function taskIntro(ctx: Context): string {
@@ -717,13 +745,12 @@ export function compose(brief: Brief, lib: Library): Composed {
     '',
     ...briefSection(ctx),
   );
-  lines.push('', '## How to build and deliver', '');
-  if (brief.task !== 'new' && ctx.starter)
-    lines.push(
-      'The app already exists: keep its own files (`mininode.json`, `index.html`, `i18n/`, `db/`, sources) and change only what the task needs. From the starter package use only `_mininode/` (for the preview), `AGENTS.md` and `MININODE-REFERENCE.md`; never replace the app’s manifest or page with new ones.',
-      '',
-    );
-  lines.push(ctx.builder.text);
+  lines.push(
+    '',
+    '## How to build and deliver',
+    '',
+    brief.task === 'new' ? ctx.builder.text : changeText(ctx),
+  );
   lines.push('', '## Hard rules', '', ...rules.map((r, i) => `${i + 1}. ${r}`));
   lines.push('', '## Before you hand it over', '', ...checklist(ctx).map((c) => `- ${c}`));
   lines.push(
@@ -764,7 +791,10 @@ export function starterFiles(brief: Brief, lib: Library, composed: Composed): St
   const name = ctx.name || 'Neue App';
   // The upload refuses "neue-app" and "Neue App", so a nameless package never goes live as such.
   const idea = brief.idea.trim().split(/\r?\n/)[0] ?? '';
-  const description = (idea || name).slice(0, 120);
+  const text = idea || name;
+  // At most 120 characters, cut at a word boundary.
+  const description =
+    text.length <= 120 ? text : `${text.slice(0, 117).replace(/\s+\S*$/, '')} …`.slice(0, 120);
   const manifest = {
     ...(typeof location === 'undefined'
       ? {}

@@ -46,7 +46,14 @@ Ein ZIP für alle Werkzeuge außerhalb des Repositorys: der Ordner `_mininode/` 
 **Vorschau-SDK**, leere Sprachpakete, `mininode.json`, eine Startseite, `AGENTS.md` mit den Regeln und
 `MININODE-REFERENCE.md`. Damit läuft die App schon in der Vorschau des Werkzeugs (Daten bleiben dort im Browser, KI, Google
 und Push sind aus), und die KI muss keinen eigenen Ersatz für MiniNode erfinden. Beim **Hochladen** entfernt MiniNode diese
-Teile wieder; auf MiniNode kommen die echten Dateien vom Gate.
+Teile wieder, auch eine Kopie des Vorschau-SDK, die die KI woandershin gelegt hat (sie trägt eine feste Markierung); bleibt eine
+übrig, meldet die Prüfung `preview-sdk`. Auf MiniNode kommen die echten Dateien vom Gate.
+
+- Bei **Bestehende App erweitern** und **Prüfbefunde beheben** enthält das Startpaket nur `_mininode/`, `AGENTS.md` und die Referenz:
+  die `mininode.json` und die Startseite der App bleiben, wie sie sind, und der Prompt sagt der KI, Adresse, Name und Datenmodus nicht
+  zu ändern.
+- Ohne Namen heißt die App im Startpaket `neue-app`. Diesen Platzhalter nimmt der Upload nicht als Adresse: gib der App vorher einen
+  Namen, sonst benennt der Upload sie nach ihrem Titel oder Dateinamen.
 
 ## Die Dateien dahinter
 

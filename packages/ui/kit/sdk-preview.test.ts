@@ -46,6 +46,7 @@ interface Query extends PromiseLike<Result> {
   order(c: string, o?: { ascending: boolean }): Query;
   single(): Query;
   textSearch(c: string, q: string): Query;
+  ilike(c: string, p: string): Query;
 }
 type Global = { mininode?: { mininode(): Promise<Client>; preview?: boolean } };
 
@@ -106,6 +107,17 @@ describe('preview SDK', () => {
     });
     await mn.db.from('moves').delete().eq('id', 'a');
     expect((await mn.db.from('moves').select()).data).toEqual([]);
+    // LIKE patterns: only % and _ are wildcards; a search for "(" must not throw.
+    await mn.db.from('notes').insert([
+      { id: 'n1', title: 'Rezept (alt)' },
+      { id: 'n2', title: 'a+b' },
+    ]);
+    expect(
+      ((await mn.db.from('notes').select().ilike('title', '%(%')).data as Row[]).map((r) => r.id),
+    ).toEqual(['n1']);
+    expect(((await mn.db.from('notes').select().ilike('title', 'a_b')).data as Row[]).length).toBe(
+      1,
+    );
     // A method the preview does not know answers with an error instead of throwing.
     expect((await mn.db.from('moves').select().textSearch('t', 'x')).error?.message).toMatch(
       /preview/,

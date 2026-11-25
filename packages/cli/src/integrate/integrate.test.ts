@@ -217,7 +217,9 @@ describe('integrate: other shapes', () => {
         target: 'cloudflare',
         data: { mode: 'none' },
       }),
-      'index.html': '<html><head><script src="/_mininode/sdk.js"></script></head></html>',
+      'index.html':
+        '<html><head><script src="/_mininode/sdk.js"></script></head><body><script src="vendor/mn.js"></script><script src="app.js"></script></body></html>',
+      'app.js': 'console.log(1);',
       'README.md': '# Startpaket\n',
       '_mininode/sdk.js': '/* mininode-preview-sdk */ (() => { window.mininode = {}; })();',
       // The AI moved a copy of the preview SDK: found by its marker, not by its path.
@@ -231,6 +233,12 @@ describe('integrate: other shapes', () => {
     const out = join(hosted, 'startpaket');
     expect(existsSync(join(out, '_mininode'))).toBe(false);
     expect(existsSync(join(out, 'vendor/mn.js'))).toBe(false);
+    // The page still starts: no script tag or boot entry points at the removed copy.
+    const page = readFileSync(join(out, 'index.html'), 'utf8');
+    const boot = existsSync(join(out, 'mininode-boot.js'))
+      ? readFileSync(join(out, 'mininode-boot.js'), 'utf8')
+      : '';
+    expect(`${page}${boot}`).not.toContain('vendor/mn.js');
     expect(existsSync(join(out, 'AGENTS.md'))).toBe(false);
     expect(existsSync(join(out, 'MININODE-REFERENCE.md'))).toBe(false);
     expect(existsSync(join(out, 'index.html'))).toBe(true);

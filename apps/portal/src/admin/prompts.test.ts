@@ -322,7 +322,7 @@ describe('starter package', () => {
         (f) => f.path === 'mininode.json',
       )?.content ?? '{}',
     );
-    // The upload refuses this slug, so a nameless package is never hosted as is.
+    // The upload treats this slug as a placeholder and names the app after its title or file.
     expect(placeholder.slug).toBe('neue-app');
   });
 
@@ -340,7 +340,13 @@ describe('starter package', () => {
       expect(paths).toContain('_mininode/sdk.js');
       expect(paths).not.toContain('mininode.json');
       expect(paths).not.toContain('index.html');
-      expect(compose(b, library).prompt).toContain('keep its own files');
+      const text = compose(b, library).prompt;
+      expect(text).toContain('Keep its own files');
+      expect(text).toContain('Keep the slug, name and data mode');
+      expect(text.slice(text.indexOf('## How to build and deliver'))).not.toContain(
+        'i18n/de.json`, `i18n/en.json`, `mininode.json`',
+      );
+      expect(text).not.toContain('Build a static app');
     }
   });
 

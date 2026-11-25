@@ -48,9 +48,14 @@ those audiences). Every type and module has a `when:` line in plain German, show
 and a preview SDK, `packages/ui/kit/sdk-preview.js`), empty language packages, a manifest, a page
 skeleton, `AGENTS.md` with the rules and `MININODE-REFERENCE.md`. The preview SDK implements the
 client's surface on this browser's storage, so the app runs in the tool's preview without code of its
-own for "when MiniNode is not there". It is the only allowed stand-in: `mininode integrate` drops
-`_mininode/`, `public/_mininode/`, `MININODE-REFERENCE.md` and the marked `AGENTS.md`, and
-`mininode doctor` still refuses an app that ships `_mininode/` (`reserved-path`).
+own for "when MiniNode is not there". Its surface follows the real client
+(`packages/sdk/src/preview-surface.test.ts`). It is the only allowed stand-in and carries a marker
+line (`mininode-preview-sdk`): `mininode integrate` drops `_mininode/`, `public/_mininode/`,
+`MININODE-REFERENCE.md`, the marked `AGENTS.md` and every file with the marker wherever the AI moved
+it (and the page's `<script>` tags pointing at it), and `mininode doctor` refuses an app that still
+ships `_mininode/` (`reserved-path`) or a marked file (`preview-sdk`). For *extend* and *fix* the
+package holds only `_mininode/`, `AGENTS.md` and the reference, and the rules say to keep the app's
+slug, name and data mode.
 
 **Tasks besides new apps:** "extend an existing app" and "fix check findings" use the same blocks.
 
