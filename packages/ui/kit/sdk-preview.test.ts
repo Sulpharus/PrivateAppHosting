@@ -24,15 +24,28 @@ interface Client {
     upsert(row: Row): Promise<Row>;
     remove(id: string): Promise<void>;
   };
-  db: {
-    from(name: string): PromiseLike<{ data: Row[] }> & {
-      gt(c: string, v: number): PromiseLike<{ data: Row[] }>;
-      insert(row: Row): Promise<{ error: { code: string } | null }>;
-    };
-  };
+  db: { from(name: string): Query };
   ai: { chat(prompt: string): Promise<string>; json(p: string, s: object): Promise<unknown> };
   api(id: string): { json(path: string): Promise<unknown> };
-  config: { portalUrl: string; preview: boolean };
+  config: { portalUrl: string };
+  team: { create(name: string): Promise<string>; members(id: string): Promise<{ id: string }[]> };
+  suite: {
+    type(t: string): { upsert(f: object): Promise<{ record: { id: string }; merged: boolean }> };
+    createCollection(name: string, family: string): Promise<string>;
+  };
+  files: { upload(p: string, b: Blob): Promise<string>; list(prefix?: string): Promise<string[]> };
+}
+type Result = { data: unknown; error: { code?: string; message: string } | null };
+interface Query extends PromiseLike<Result> {
+  select(columns?: string): Query;
+  insert(row: Row | Row[]): Query;
+  update(values: Partial<Row>): Query;
+  delete(): Query;
+  eq(c: string, v: unknown): Query;
+  gt(c: string, v: number): Query;
+  order(c: string, o?: { ascending: boolean }): Query;
+  single(): Query;
+  textSearch(c: string, q: string): Query;
 }
 type Global = { mininode?: { mininode(): Promise<Client>; preview?: boolean } };
 
@@ -61,7 +74,6 @@ describe('preview SDK', () => {
     const user = await mn?.auth.requireLogin();
     expect(user?.id).toMatch(/^[0-9a-f-]{36}$/);
     expect(await mn?.auth.role()).toBe('admin');
-    expect(mn?.config.preview).toBe(true);
     expect(document.body.textContent).toContain('Vorschau ohne MiniNode');
   });
 
@@ -76,15 +88,44 @@ describe('preview SDK', () => {
     await recipes.upsert({ id, title: 'Suppe', n: 30 });
     await recipes.upsert({ id: recipes.newId(), title: 'Brot', n: 10 });
     expect((await recipes.get(id))?.owner_id).toBeTruthy();
-    expect((await mn.db.from('recipes').gt('n', 20)).data.map((r) => r.title)).toEqual(['Suppe']);
+    expect(
+      ((await mn.db.from('recipes').select('*').gt('n', 20)).data as Row[]).map((r) => r.title),
+    ).toEqual(['Suppe']);
     await recipes.remove(id);
     expect(await recipes.list()).toHaveLength(1);
   });
 
-  it('refuses a second row with the same id on insert, like a unique key', async () => {
+  it('chains writes like supabase-js and refuses a duplicate key on insert', async () => {
     const mn = (await load()?.mininode()) as Client;
-    expect((await mn.db.from('moves').insert({ id: 'a' })).error).toBeNull();
+    const inserted = await mn.db.from('moves').insert({ id: 'a', n: 1 }).select().single();
+    expect(inserted).toMatchObject({ data: { id: 'a', n: 1 }, error: null });
     expect((await mn.db.from('moves').insert({ id: 'a' })).error?.code).toBe('23505');
+    await mn.db.from('moves').update({ n: 2 }).eq('id', 'a');
+    expect((await mn.db.from('moves').select().eq('id', 'a').single()).data).toMatchObject({
+      n: 2,
+    });
+    await mn.db.from('moves').delete().eq('id', 'a');
+    expect((await mn.db.from('moves').select()).data).toEqual([]);
+    // A method the preview does not know answers with an error instead of throwing.
+    expect((await mn.db.from('moves').select().textSearch('t', 'x')).error?.message).toMatch(
+      /preview/,
+    );
+  });
+
+  it('returns what the real client returns for teams, suite records and files', async () => {
+    const mn = (await load()?.mininode()) as Client;
+    expect(typeof (await mn.team.create('Urlaub'))).toBe('string');
+    expect((await mn.team.members('x'))[0]).toHaveProperty('id');
+    const write = await mn.suite.type('event').upsert({ title: 'x' });
+    expect(write).toMatchObject({ merged: false, record: { title: 'x' } });
+    expect(typeof (await mn.suite.createCollection('Familie', 'calendar'))).toBe('string');
+    await mn.files.upload('fotos/a/1.jpg', new Blob(['x']));
+    await mn.files.upload('fotos/b.jpg', new Blob(['y']));
+    expect((await mn.files.list('fotos')).sort()).toEqual(['a', 'b.jpg']);
+  });
+
+  it('carries the marker that integrate and doctor look for', () => {
+    expect(source.split('\n')[0]).toContain('mininode-preview-sdk');
   });
 
   it('answers AI with a placeholder and reports external APIs as not set up', async () => {

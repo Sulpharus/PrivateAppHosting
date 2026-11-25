@@ -7,7 +7,7 @@
    - personal tools → `private`
    - one household/family account used by trusted people → `shared-account`
    - collaborative boards, lists, games → `group`
-   - reference content → `readonly`
+   - fixed reference content that ships in the app's SQL files (nobody writes from the app) → `readonly`
 3. **Login.** The app calls `await mn.auth.requireLogin()` once before rendering. Remove any
    own login/sign-up UI, user pickers or "enter your name" prompts (use `mn.auth.user()` and
    `platform.profiles.display_name` instead).

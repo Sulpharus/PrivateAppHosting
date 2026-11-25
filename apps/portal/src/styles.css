@@ -1847,6 +1847,18 @@ code,
     transform: translateY(-4px);
   }
 }
+/* Phones: a hint near the right edge would leave the screen, so it sits as a bar at the bottom. */
+@media (max-width: 640px) {
+  .tip-text {
+    position: fixed;
+    left: 16px;
+    right: 16px;
+    top: auto;
+    bottom: 16px;
+    width: auto;
+    max-width: none;
+  }
+}
 .tip[data-hidden] > .tip-text {
   display: none;
   transition: none;

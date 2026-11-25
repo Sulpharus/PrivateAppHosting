@@ -72,36 +72,38 @@ function gatewayHeaders(keys: ProviderKeys): Record<string, string> {
 // Anthropic (official SDK, base URL pointed at the gateway)
 // ---------------------------------------------------------------------------
 
+/**
+ * The Messages API body for a chat request: the effort of the model entry (low for short app calls,
+ * none when MODEL_CATALOG sets it to null) and, with a schema, the JSON output format.
+ */
+export const anthropicParams = (request: ChatRequest) => ({
+  model: request.model.id,
+  max_tokens: request.maxOutputTokens,
+  messages: request.messages,
+  ...(request.system ? { system: request.system } : {}),
+  ...(request.schema || request.model.effort
+    ? {
+        output_config: {
+          ...(request.model.effort ? { effort: request.model.effort } : {}),
+          ...(request.schema
+            ? { format: { type: 'json_schema' as const, schema: request.schema } }
+            : {}),
+        },
+      }
+    : {}),
+  ...(request.search
+    ? {
+        tools: [{ type: 'web_search_20250305' as const, name: 'web_search' as const, max_uses: 5 }],
+      }
+    : {}),
+});
+
 export function anthropicProvider(keys: ProviderKeys): Provider {
   const client = new Anthropic({
     apiKey: keys.anthropicKey ?? 'gateway-byok',
     baseURL: `${keys.gatewayBase}/anthropic`,
     defaultHeaders: gatewayHeaders(keys),
     maxRetries: 1,
-  });
-
-  const params = (request: ChatRequest) => ({
-    model: request.model.id,
-    max_tokens: request.maxOutputTokens,
-    messages: request.messages,
-    ...(request.system ? { system: request.system } : {}),
-    ...(request.schema || request.model.effort
-      ? {
-          output_config: {
-            ...(request.model.effort ? { effort: request.model.effort } : {}),
-            ...(request.schema
-              ? { format: { type: 'json_schema' as const, schema: request.schema } }
-              : {}),
-          },
-        }
-      : {}),
-    ...(request.search
-      ? {
-          tools: [
-            { type: 'web_search_20250305' as const, name: 'web_search' as const, max_uses: 5 },
-          ],
-        }
-      : {}),
   });
 
   const textOf = (message: Anthropic.Message) =>
@@ -132,7 +134,7 @@ export function anthropicProvider(keys: ProviderKeys): Provider {
   return {
     async complete(request) {
       try {
-        const message = await client.messages.create(params(request));
+        const message = await client.messages.create(anthropicParams(request));
         guard(message);
         const sources = sourcesOf(message);
         return {
@@ -149,7 +151,7 @@ export function anthropicProvider(keys: ProviderKeys): Provider {
     },
 
     async stream(request) {
-      const stream = client.messages.stream(params(request));
+      const stream = client.messages.stream(anthropicParams(request));
       const encoder = new TextEncoder();
       let resolveUsage: (usage: Usage) => void = () => {};
       let rejectUsage: (error: unknown) => void = () => {};

@@ -219,7 +219,9 @@ describe('integrate: other shapes', () => {
       }),
       'index.html': '<html><head><script src="/_mininode/sdk.js"></script></head></html>',
       'README.md': '# Startpaket\n',
-      '_mininode/sdk.js': '(() => { window.mininode = {}; })();',
+      '_mininode/sdk.js': '/* mininode-preview-sdk */ (() => { window.mininode = {}; })();',
+      // The AI moved a copy of the preview SDK: found by its marker, not by its path.
+      'vendor/mn.js': '/* mininode-preview-sdk */ (() => { window.mininode = {}; })();',
       '_mininode/ui.css': 'body{}',
       'AGENTS.md': '<!-- mininode-starter: removed on upload -->\n# Rules\n',
       'MININODE-REFERENCE.md': '# MiniNode reference\n',
@@ -228,6 +230,7 @@ describe('integrate: other shapes', () => {
     expect(result).toMatchObject({ status: 'integrated', slug: 'startpaket' });
     const out = join(hosted, 'startpaket');
     expect(existsSync(join(out, '_mininode'))).toBe(false);
+    expect(existsSync(join(out, 'vendor/mn.js'))).toBe(false);
     expect(existsSync(join(out, 'AGENTS.md'))).toBe(false);
     expect(existsSync(join(out, 'MININODE-REFERENCE.md'))).toBe(false);
     expect(existsSync(join(out, 'index.html'))).toBe(true);

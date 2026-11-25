@@ -226,6 +226,16 @@ describe('doctor: what the export and the platform refuse', () => {
     expect(rules(dir)).toContain('reserved-path');
   });
 
+  it('refuses the starter package preview SDK wherever it was moved', () => {
+    const dir = app({
+      ...healthy,
+      'src/lib/sdk.js':
+        '/* mininode-preview-sdk: the KI-Werkstatt preview stand-in */\n(() => {})();',
+    });
+    expect(rules(dir)).toContain('preview-sdk');
+    expect(rules(app(healthy))).not.toContain('preview-sdk');
+  });
+
   it('does not scan images, fonts or dependencies', () => {
     const dir = app({
       ...healthy,

@@ -158,10 +158,10 @@ export const AUDIENCES: Record<
     when: 'Kleine Gruppen arbeiten getrennt, etwa pro Projekt oder Reise. Jede Gruppe sieht nur ihre Daten.',
   },
   readonly: {
-    label: 'Admin pflegt, alle lesen',
+    label: 'Feste Inhalte (alle lesen nur)',
     mode: 'readonly',
-    note: 'Admins maintain the content; everyone else reads it.',
-    when: 'Nur du (als Admin) trägst ein, alle anderen lesen nur, etwa Vereinstermine oder Regeln.',
+    note: 'Everyone reads the content; it ships with the app as seed data in its SQL files, and the app itself cannot change it.',
+    when: 'Die Inhalte kommen fest mit der App, etwa Regeln, eine Preisliste oder ein Nachschlagewerk. Alle lesen nur; ändern heißt, eine neue Version der App hochzuladen.',
   },
   none: {
     label: 'Speichert nichts (Rechner, Werkzeug)',
@@ -379,6 +379,13 @@ export function effectiveModules(brief: Brief, lib: Library): PromptPart[] {
   return lib.modules.filter((m) => ids.has(m.id));
 }
 
+/** Why the composer adds a module on its own (shown next to the locked checkbox). */
+export const IMPLIED_REASONS: Record<string, string> = {
+  tables: 'Automatisch dabei, weil die App Daten speichert.',
+  teams: 'Automatisch dabei, weil „In Teams“ gewählt ist.',
+  'readonly-content': 'Automatisch dabei, weil „Feste Inhalte“ gewählt ist.',
+};
+
 /** Modules the composer adds on its own for this audience (shown in the form). */
 export function impliedModules(audience: Audience): string[] {
   return [
@@ -459,6 +466,9 @@ function context(brief: Brief, lib: Library): Context {
 
 const has = (ctx: Context, ...ids: string[]) => ctx.modules.some((m) => ids.includes(m.id));
 
+const SCOPE_RULE =
+  'Build what the brief and the chosen features ask, nothing more: no extra views, features or libraries. When something is unclear, take the simpler option and list your assumptions at the end.';
+
 /** The numbered rules every app must keep, most often broken first. */
 export function hardRules(brief: Brief, lib: Library): string[] {
   const ctx = context(brief, lib);
@@ -467,7 +477,7 @@ export function hardRules(brief: Brief, lib: Library): string[] {
     ctx.brief.audience === 'none'
       ? 'The app stores no data on the platform (data mode `none`); keep state in memory.'
       : 'Every list of entries is a table: SQL in `db/001_init.sql` (schema `app_<slug>`, `platform.secure_table` for every table) and `mn.table` in the app. `mn.kv` holds only settings and small state, never one key per entry.',
-    `\`mininode.json\` has ${ctx.named ? `slug \`${ctx.slug}\`` : 'the slug and name you chose (never "neue-app" or "Neue App")'}, data mode \`${ctx.audience.mode}\` and only keys the spec documents (the accent is \`data-accent\` in the HTML, never a key there).`,
+    `\`mininode.json\` has ${ctx.named ? `slug \`${ctx.slug}\`` : 'the slug and name you chose (never "neue-app" or "Neue App")'}, data mode \`${ctx.audience.mode}\`, a German \`description\` of one line (at most 120 characters) and only keys the spec documents (the accent is \`data-accent\` in the HTML, never a key there).`,
     '`localStorage` and `IndexedDB` are never where data lives; no service worker, web manifest or push code of your own.',
     'Load `/_mininode/ui.css`, `/_mininode/ui.js`, `/_mininode/i18n.js` and `/_mininode/sdk.js` by exactly these paths. Everything else is bundled with the app: no CDN scripts, import maps, `esm.sh` or Google Fonts.',
     `Look: only the App Kit. \`<html lang="de" data-accent="${ctx.brief.accent}">\`, \`<body class="mn-app">\`, the shell (\`mn-nav\`, \`mn-top\`, \`mn-main\`), \`mn-*\` components and \`--mn-*\` tokens. No Tailwind, component libraries, gradients, emoji, raw colours or font names.`,
@@ -482,7 +492,7 @@ export function hardRules(brief: Brief, lib: Library): string[] {
       ? 'AI runs only when the person presses a button for it, through `mn.ai`, with the models and a small monthly budget declared under `ai` in `mininode.json`.'
       : 'No AI calls: the brief did not ask for them.',
     'Sample data uses `@example.com` addresses only.',
-    'Build what the brief and the chosen features ask, nothing more: no extra views, features or libraries. When something is unclear, take the simpler option and list your assumptions at the end.',
+    SCOPE_RULE,
     'Deliver exactly as the section "How to build and deliver" says.',
   ];
   return rules;
@@ -669,7 +679,7 @@ function pointerPrompt(ctx: Context, lib: Library): string {
     '3. The app has a README; `docs/wiki/neuigkeiten.md` has a dated line about it (CLAUDE.md, "Knowledge").',
     '4. Commit with Conventional Commits on your branch and open a draft pull request. Show the output of the checks in your summary.',
     '',
-    `Work through it without asking for a plan approval. ${hardRules(brief, lib).at(-2)} If something blocks you, stop and report what you tried.`,
+    `Work through it without asking for a plan approval. ${SCOPE_RULE} If something blocks you, stop and report what you tried.`,
   );
   return `${lines.join('\n')}\n`;
 }
@@ -707,7 +717,13 @@ export function compose(brief: Brief, lib: Library): Composed {
     '',
     ...briefSection(ctx),
   );
-  lines.push('', '## How to build and deliver', '', ctx.builder.text);
+  lines.push('', '## How to build and deliver', '');
+  if (brief.task !== 'new' && ctx.starter)
+    lines.push(
+      'The app already exists: keep its own files (`mininode.json`, `index.html`, `i18n/`, `db/`, sources) and change only what the task needs. From the starter package use only `_mininode/` (for the preview), `AGENTS.md` and `MININODE-REFERENCE.md`; never replace the app’s manifest or page with new ones.',
+      '',
+    );
+  lines.push(ctx.builder.text);
   lines.push('', '## Hard rules', '', ...rules.map((r, i) => `${i + 1}. ${r}`));
   lines.push('', '## Before you hand it over', '', ...checklist(ctx).map((c) => `- ${c}`));
   lines.push(
@@ -745,19 +761,21 @@ export function starterFiles(brief: Brief, lib: Library, composed: Composed): St
   const ctx = context(brief, lib);
   const layout = ctx.builder.layout ?? 'static';
   const base = layout === 'vite' ? 'public/' : '';
-  const name = escapeHtml(ctx.name || 'Neue App');
+  const name = ctx.name || 'Neue App';
+  // The upload refuses "neue-app" and "Neue App", so a nameless package never goes live as such.
+  const idea = brief.idea.trim().split(/\r?\n/)[0] ?? '';
+  const description = (idea || name).slice(0, 120);
   const manifest = {
     ...(typeof location === 'undefined'
       ? {}
       : { $schema: `${location.origin}/schema/mininode.json` }),
     specVersion: 1,
-    slug: ctx.slug || 'bitte-waehlen',
+    slug: ctx.slug || 'neue-app',
     name,
-    description: '',
+    description,
     kind: layout === 'vite' ? 'spa' : 'static',
     target: 'cloudflare',
     i18n: { languages: ['de', 'en'], default: 'de' },
-    access: { default: true },
     data: { mode: ctx.audience.mode },
     ...(layout === 'vite' ? { build: { command: 'pnpm build', output: 'dist' } } : {}),
   };
@@ -768,7 +786,7 @@ export function starterFiles(brief: Brief, lib: Library, composed: Composed): St
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title data-i18n="app.title">${name}</title>
+  <title data-i18n="app.title">${escapeHtml(name)}</title>
   <link rel="stylesheet" href="/_mininode/ui.css">
   <script src="/_mininode/ui.js"></script>
   <script src="/_mininode/i18n.js"></script>
@@ -809,20 +827,26 @@ ${rules.map((r, i) => `${i + 1}. ${r}`).join('\n')}
 \`${base}_mininode/\` holds the App Kit and a preview SDK so the app runs in this tool; MiniNode
 serves the real files under the same paths and the upload removes this folder.
 `;
-  return [
+  const kit = [
     { path: `${base}_mininode/ui.css`, content: lib.kitCss },
     { path: `${base}_mininode/ui.js`, content: lib.kitJs },
     { path: `${base}_mininode/i18n.js`, content: lib.i18nJs },
     { path: `${base}_mininode/sdk.js`, content: lib.previewSdk },
-    { path: `${base}i18n/de.json`, content: `${JSON.stringify(de, null, 2)}\n` },
-    { path: `${base}i18n/en.json`, content: `${JSON.stringify(en, null, 2)}\n` },
-    { path: 'mininode.json', content: `${JSON.stringify(manifest, null, 2)}\n` },
-    { path: 'index.html', content: index },
     { path: 'AGENTS.md', content: agents },
     {
       path: 'MININODE-REFERENCE.md',
       content: `${STARTER_MARK}\n${composed.reference ?? ''}`,
     },
+  ];
+  // Extending or fixing an existing app: only the kit, the rules and the reference, never a
+  // second manifest or page that would replace the app's own.
+  if (brief.task !== 'new') return kit;
+  return [
+    ...kit,
+    { path: `${base}i18n/de.json`, content: `${JSON.stringify(de, null, 2)}\n` },
+    { path: `${base}i18n/en.json`, content: `${JSON.stringify(en, null, 2)}\n` },
+    { path: 'mininode.json', content: `${JSON.stringify(manifest, null, 2)}\n` },
+    { path: 'index.html', content: index },
   ];
 }
 

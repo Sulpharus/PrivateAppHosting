@@ -1,5 +1,6 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { manifestSchema } from '@mininode/manifest';
 import { describe, expect, it } from 'vitest';
 import {
   AUDIENCES,
@@ -187,6 +188,8 @@ describe('compose', () => {
     expect(prompt()).toContain('<feature id="tables">');
     expect(prompt({ audience: 'team' })).toContain('<feature id="teams">');
     expect(prompt({ audience: 'readonly' })).toContain('<feature id="readonly-content">');
+    // Nobody writes a readonly table from the app (the database grants only select).
+    expect(prompt({ audience: 'readonly' })).toContain('nobody writes from the app');
     expect(prompt({ audience: 'none', type: 'werkzeug' })).not.toContain('<feature id="tables">');
     expect(impliedModules('team')).toEqual(['tables', 'teams']);
   });
@@ -306,6 +309,44 @@ describe('starter package', () => {
       data: { mode: 'private' },
     });
     expect(files.find((f) => f.path === 'AGENTS.md')?.content).toContain(STARTER_MARK);
+  });
+
+  it('ships a manifest the platform accepts, never under a placeholder name', () => {
+    const files = starterFiles({ ...brief, builder: 'claude' }, library, compose(brief, library));
+    const manifest = JSON.parse(files.find((f) => f.path === 'mininode.json')?.content ?? '{}');
+    expect(manifestSchema.safeParse(manifest).success).toBe(true);
+    expect(manifest.description).toBe('Gelesene Bücher mit Bewertung.');
+    const unnamed = { ...brief, name: '', builder: 'claude' as const };
+    const placeholder = JSON.parse(
+      starterFiles(unnamed, library, compose(unnamed, library)).find(
+        (f) => f.path === 'mininode.json',
+      )?.content ?? '{}',
+    );
+    // The upload refuses this slug, so a nameless package is never hosted as is.
+    expect(placeholder.slug).toBe('neue-app');
+  });
+
+  it('escapes the name only in HTML, not in JSON', () => {
+    const named = { ...brief, name: 'Tom & Jerry', builder: 'claude' as const };
+    const files = starterFiles(named, library, compose(named, library));
+    expect(files.find((f) => f.path === 'i18n/de.json')?.content).toContain('"Tom & Jerry"');
+    expect(files.find((f) => f.path === 'index.html')?.content).toContain('Tom &amp; Jerry');
+  });
+
+  it('never replaces the manifest or page of an app that is being extended or fixed', () => {
+    for (const task of ['extend', 'fix'] as const) {
+      const b = { ...brief, task, builder: 'claude' as const };
+      const paths = starterFiles(b, library, compose(b, library)).map((f) => f.path);
+      expect(paths).toContain('_mininode/sdk.js');
+      expect(paths).not.toContain('mininode.json');
+      expect(paths).not.toContain('index.html');
+      expect(compose(b, library).prompt).toContain('keep its own files');
+    }
+  });
+
+  it('uses the same marker as the upload that removes the package again', () => {
+    expect(read('packages/cli/src/integrate/convert.ts')).toContain(`'${STARTER_MARK}'`);
+    expect(library.previewSdk.split('\n')[0]).toContain('mininode-preview-sdk');
   });
 
   it('uses public/ for Vite tools', () => {

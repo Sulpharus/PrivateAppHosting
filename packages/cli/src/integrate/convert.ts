@@ -1,6 +1,7 @@
 import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
 import { MANIFEST_FILENAME, type ManifestInput, manifestSchema } from '@mininode/manifest';
+import { PREVIEW_SDK_MARK } from '../doctor.ts';
 import { anonymiseEmails, NON_TEXT } from '../export.ts';
 import type { Inspection, PackageJson } from './inspect.ts';
 
@@ -48,10 +49,13 @@ const DROP_DEPS = new Set([
   '@types/cors',
 ]);
 
-function isStarterNote(inspection: Inspection, file: string): boolean {
+/** A file of the starter package: its AGENTS.md, or the preview SDK wherever the AI moved it. */
+function isStarterFile(inspection: Inspection, file: string): boolean {
+  if (file === 'AGENTS.md')
+    return readFileSync(join(inspection.root, file), 'utf8').startsWith(STARTER_MARK);
   return (
-    file === 'AGENTS.md' &&
-    readFileSync(join(inspection.root, file), 'utf8').startsWith(STARTER_MARK)
+    /\.(m?js|cjs|ts)$/.test(file) &&
+    readFileSync(join(inspection.root, file), 'utf8').includes(PREVIEW_SDK_MARK)
   );
 }
 
@@ -60,7 +64,7 @@ function copyTree(inspection: Inspection, outDir: string, drop: (file: string) =
     if (
       DROP_FILES.test(basename(file)) ||
       DROP_PATHS.some((p) => p.test(file)) ||
-      isStarterNote(inspection, file) ||
+      isStarterFile(inspection, file) ||
       drop(file)
     )
       continue;

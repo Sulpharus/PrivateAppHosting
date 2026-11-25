@@ -1,4 +1,4 @@
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -10,7 +10,9 @@ describe('zip', () => {
     expect(crc32(new TextEncoder().encode('123456789'))).toBe(0xcbf43926);
   });
 
-  it('writes an archive that unzip reads back, with folders and umlauts', () => {
+  const hasUnzip = spawnSync('unzip', ['-v']).status === 0;
+
+  it.skipIf(!hasUnzip)('writes an archive that unzip reads back, with folders and umlauts', () => {
     const dir = mkdtempSync(join(tmpdir(), 'zip-'));
     try {
       const archive = join(dir, 'start.zip');

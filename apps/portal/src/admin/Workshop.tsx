@@ -11,6 +11,7 @@ import {
   type Builder,
   compose,
   groupModules,
+  IMPLIED_REASONS,
   impliedModules,
   type PromptPart,
   slugify,
@@ -336,7 +337,9 @@ export function Workshop() {
                                 <span>
                                   {m.title}
                                   <small className="muted">
-                                    {auto ? 'Automatisch dabei. ' : ''}
+                                    {auto
+                                      ? `${IMPLIED_REASONS[m.id] ?? 'Automatisch dabei.'} `
+                                      : ''}
                                     {m.summary}
                                   </small>
                                 </span>
@@ -477,7 +480,13 @@ export function Workshop() {
                 {tokens.claude.toLocaleString('de-DE')} bei Claude
               </span>
               {builder.layout !== null && (
-                <Tip text="Ein ZIP mit App Kit, Vorschau-SDK, Sprachdateien, mininode.json, Startseite, Regeln und Referenz. Damit läuft die App schon im Werkzeug, ohne dass die KI etwas nachbaut.">
+                <Tip
+                  text={
+                    brief.task === 'new'
+                      ? 'Ein ZIP mit App Kit, Vorschau-SDK, Sprachdateien, mininode.json, Startseite, Regeln und Referenz. Damit läuft die App schon im Werkzeug, ohne dass die KI etwas nachbaut.'
+                      : 'Ein ZIP mit App Kit, Vorschau-SDK, Regeln und Referenz, ohne neue mininode.json oder Startseite: die Dateien der bestehenden App bleiben, wie sie sind.'
+                  }
+                >
                   {(describedBy) => (
                     <button
                       type="button"

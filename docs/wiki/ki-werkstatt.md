@@ -17,8 +17,8 @@ Aufgabe (oder wählst sie mit der Tastatur), erklärt ein Hinweis in einfachen W
 | --- | --- |
 | **Aufgabe** | *Neue App bauen*; *Bestehende App erweitern* (die KI baut die gewählten Funktionen ein und lässt den Rest gleich, den Code hängst du an); *Prüfbefunde beheben* (du fügst die Meldungen von `mininode doctor` oder vom Upload ein) |
 | **Typ** | Organisation, Archiv, Finanzen, … Er wählt Farbe, **für wen** und **passende Funktionen** vor; du kannst alles ändern |
-| **Funktionen** | Fotos, KI, Karten, Push, Offline, Teilen, Spiele, PDFs einlesen, WebAssembly, … in klappbaren Gruppen. *Eigene Tabellen* ist immer dabei, sobald die App etwas speichert; bei Teams und „Admin pflegt“ kommt der passende Baustein von selbst dazu |
-| **Für wen** | `Nur für mich` → private Daten je Person; `Haushalt` → gemeinsames Konto; `Gruppe` → alle sehen alles; `Teams`; `Admin pflegt, alle lesen`; `Speichert nichts` (Rechner) |
+| **Funktionen** | Fotos, KI, Karten, Push, Offline, Teilen, Spiele, PDFs einlesen, WebAssembly, … in klappbaren Gruppen. *Eigene Tabellen* ist immer dabei, sobald die App etwas speichert; bei Teams und „Feste Inhalte“ kommt der passende Baustein von selbst dazu |
+| **Für wen** | `Nur für mich` → private Daten je Person; `Haushalt` → gemeinsames Konto; `Gruppe` → alle sehen alles; `Teams`; `Feste Inhalte` (kommen mit der App, alle lesen nur); `Speichert nichts` (Rechner) |
 | **Womit du baust** | passt Form und Anweisungen an das Werkzeug an (Tabelle unten); darunter steht **So gehst du vor** |
 | **Kurzfassung** | kürzt Designsystem und Sprachanleitung für Werkzeuge mit kleinem Prompt-Limit |
 

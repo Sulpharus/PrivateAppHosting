@@ -21,9 +21,11 @@ group: anbindungen
   encodeURIComponent(text))`. At most one search per second and only after the person stops
   typing (500 ms, at least 3 characters); store the result on the row, never search again for the
   same place. For heavier use declare a keyed provider (e.g. `geoapify`) like the Kalender app.
-- **Show a map** with OpenStreetMap tiles (`https://tile.openstreetmap.org/{z}/{x}/{y}.png`; images
-  from https hosts are allowed). Bundle a small map library (Leaflet or MapLibre GL from npm) or
-  draw the tiles yourself; never load a map script from a CDN. Show "© OpenStreetMap-Mitwirkende"
+- **Show a map** with OpenStreetMap tiles (`https://tile.openstreetmap.org/{z}/{x}/{y}.png`) loaded
+  as `<img>` elements (pictures from https hosts are allowed; `fetch` to other hosts and workers from
+  `blob:` URLs are not). Bundle **Leaflet** from npm, which draws tiles as images, or place the tile
+  images yourself; do not use WebGL map libraries (MapLibre, Mapbox), which load tiles with `fetch`
+  and start blob workers, and never load a map script from a CDN. Show "© OpenStreetMap-Mitwirkende"
   linked to `https://www.openstreetmap.org/copyright`. Pins use `--mn-accent`; a list of the same
   places next to or below the map keeps it usable with keyboard and screen readers.
 - **Routes and travel times** through `mn.api` with the free OSRM service of FOSSGIS
