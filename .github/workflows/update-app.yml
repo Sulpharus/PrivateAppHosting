@@ -7,10 +7,14 @@ name: App aktualisieren
 # `mininode update app` copies the repository's files over hosted/<slug>. The data of the app is
 # in Supabase and is not touched; an already applied migration in db/ is never changed (such a
 # repository stops here). The result is a pull request (branch auto/update-<slug>-…): the normal
-# checks run on it, and merging it deploys the app. It is never merged automatically: the app
-# brings code and manifest from outside this repository, so a person reads it first. The checks
-# start by themselves only when the secret INTEGRATE_TOKEN is set (pushes with the default token
-# do not start workflows).
+# checks run on it, and merging it deploys the app. Started by hand it is never merged
+# automatically: the app brings code and manifest from outside this repository, so a person reads
+# it first. Started by auto-update-apps.yml for an app with automatic updates (ADR 0029), it is set
+# to merge itself once the required checks pass, but only when nothing of the update runs with the
+# deploy's keys: the app's mininode.json (rights, domains, keys, data mode) stays the same apart
+# from `repository`, the app has no build step, and no database migration, package.json,
+# lockfile or tool config changes. Otherwise it waits for a person. The checks start by themselves only when the secret INTEGRATE_TOKEN is set (pushes with
+# the default token do not start workflows); without it nothing is merged automatically.
 
 on:
   workflow_dispatch:
@@ -19,6 +23,15 @@ on:
         description: App (hosted/<slug>)
         type: string
         required: true
+  workflow_call:
+    inputs:
+      slug:
+        type: string
+        required: true
+      auto:
+        description: Merge by itself when the checks pass and the manifest stays the same
+        type: boolean
+        default: false
 
 run-name: App aktualisieren ${{ inputs.slug }}
 
@@ -34,6 +47,8 @@ jobs:
     name: Update ${{ inputs.slug }}
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    # The key that reads private app repositories lives in this environment.
+    environment: production
     permissions:
       contents: write
       pull-requests: write
@@ -41,6 +56,7 @@ jobs:
       SLUG: ${{ inputs.slug }}
       # Whether the pull request can start the checks (a push with the default token cannot).
       HAS_TOKEN: ${{ secrets.INTEGRATE_TOKEN != '' }}
+      AUTO: ${{ inputs.auto == true }}
     steps:
       - name: Check the address
         run: |
@@ -59,7 +75,7 @@ jobs:
         id: source
         env:
           # A private app repository needs a key that can read it.
-          CLONE_TOKEN: ${{ secrets.EXPORT_REPO_TOKEN || secrets.INTEGRATE_TOKEN || github.token }}
+          CLONE_TOKEN: ${{ secrets.APP_READ_TOKEN || secrets.EXPORT_REPO_TOKEN || secrets.INTEGRATE_TOKEN || github.token }}
         run: |
           set -euo pipefail
           [ -f "hosted/$SLUG/mininode.json" ] || { echo "::error::hosted/$SLUG does not exist"; exit 1; }
@@ -84,10 +100,22 @@ jobs:
             echo "changed=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
+          # The manifest before, without the fields that only say where updates come from.
+          jq -S 'del(.repository, .autoUpdate)' "hosted/$SLUG/mininode.json" > "$RUNNER_TEMP/before.json"
+          auto_flag=$(jq '.autoUpdate // false' "hosted/$SLUG/mininode.json")
           pnpm mininode update app "$SLUG" --from "$RUNNER_TEMP/clone" --repository "$REPOSITORY" --commit "$COMMIT" | tee "$RUNNER_TEMP/plan.txt"
-          # The repository's manifest is kept as it is, plus the link back to the repository.
-          jq --arg r "$REPOSITORY" '.repository = $r' "hosted/$SLUG/mininode.json" > "$RUNNER_TEMP/mininode.json"
+          # The repository's manifest is kept as it is, plus the link back to the repository (and
+          # this installation's wish for automatic updates).
+          jq --arg r "$REPOSITORY" --argjson a "$auto_flag" \
+            '.repository = $r | if $a then .autoUpdate = true else del(.autoUpdate) end' \
+            "hosted/$SLUG/mininode.json" > "$RUNNER_TEMP/mininode.json"
           mv "$RUNNER_TEMP/mininode.json" "hosted/$SLUG/mininode.json"
+          jq -S 'del(.repository, .autoUpdate)' "hosted/$SLUG/mininode.json" > "$RUNNER_TEMP/after.json"
+          if cmp -s "$RUNNER_TEMP/before.json" "$RUNNER_TEMP/after.json"; then
+            echo "manifest_same=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "manifest_same=false" >> "$GITHUB_OUTPUT"
+          fi
           pnpm exec biome format --write "hosted/$SLUG/mininode.json"
           pnpm install --lockfile-only --ignore-scripts
           pnpm mininode doctor "hosted/$SLUG"
@@ -98,6 +126,7 @@ jobs:
           GH_TOKEN: ${{ secrets.INTEGRATE_TOKEN || github.token }}
           REPOSITORY: ${{ steps.source.outputs.repository }}
           COMMIT: ${{ steps.source.outputs.commit }}
+          MANIFEST_SAME: ${{ steps.apply.outputs.manifest_same }}
         run: |
           set -euo pipefail
           open=$(gh pr list --state open --json headRefName --jq "[.[] | select(.headRefName | startswith(\"auto/update-$SLUG-\"))] | length")
@@ -113,6 +142,11 @@ jobs:
           git add -A
           bad=$(git diff --cached --name-only | grep -vE "^(hosted/$SLUG/|pnpm-lock\.yaml$)" || true)
           [ -z "$bad" ] || { echo "unexpected files: $bad" >&2; exit 1; }
+          # What would run with the deploy's keys (Cloudflare, database owner): a build step, a
+          # migration, dependencies or tool configs. Any of these needs a person's eyes.
+          runs_code=$(git diff --cached --name-only | grep -E \
+            "^hosted/$SLUG/db/|(^|/)package\.json$|^pnpm-lock\.yaml$|\.config\.[a-z]+$|(^|/)\.npmrc$|(^|/)\.pnpmfile|(^|/)build\.mjs$" || true)
+          has_build=$(jq -r 'if .build or (.target != "cloudflare") then "true" else "false" end' "hosted/$SLUG/mininode.json")
           git commit -q -m "chore($SLUG): update to ${COMMIT:0:7}" \
             -m "Brought in from $REPOSITORY with mininode update app."
           git push -q origin "$branch"
@@ -120,9 +154,44 @@ jobs:
 
           $(cat "$RUNNER_TEMP/plan.txt")
 
-          Die Daten der App liegen in Supabase und bleiben unverändert. Bereits angewendete Migrationen in \`db/\` werden nie geändert, nur neue kommen dazu. Die Änderungen (auch an der \`mininode.json\`: Rechte, Domains) bitte lesen und erst mergen, wenn die Prüfungen grün sind; danach deployt der normale Ablauf die App. Dieser Pull Request wird nie automatisch gemergt."
+          Die Daten der App liegen in Supabase und bleiben unverändert. Bereits angewendete Migrationen in \`db/\` werden nie geändert, nur neue kommen dazu."
+          # Auto-merge waits for required checks only if main requires some; otherwise it would merge
+          # at once, before anything was checked.
+          required=$(gh api "repos/$GITHUB_REPOSITORY/rules/branches/main" \
+            --jq '[.[] | select(.type == "required_status_checks")] | length' 2>/dev/null || echo 0)
+          # Classic branch protection instead of a ruleset.
+          if [ "$required" = "0" ]; then
+            required=$(gh api "repos/$GITHUB_REPOSITORY/branches/main/protection/required_status_checks" \
+              --jq '(.contexts // []) + [(.checks // [])[] | .context] | length' 2>/dev/null || echo 0)
+          fi
+          if [ "$AUTO" = "true" ] && [ "$HAS_TOKEN" = "true" ] && [ "$MANIFEST_SAME" = "true" ] \
+            && [ -z "$runs_code" ] && [ "$has_build" = "false" ] && [ "$required" != "0" ]; then
+            merge=auto
+            body="$body
+
+          Automatisches Update (ADR 0029): Die \`mininode.json\` bleibt gleich, die App hat keinen Build-Schritt, und es ändern sich weder Migrationen noch Abhängigkeiten oder Werkzeug-Konfigurationen. Darum mergt sich dieser Pull Request selbst, sobald die Pflicht-Prüfungen grün sind; danach deployt der normale Ablauf die App."
+          else
+            merge=manual
+            reason=""
+            if [ "$AUTO" = "true" ]; then
+              if [ "$MANIFEST_SAME" != "true" ]; then reason=" Die App hat automatische Updates, aber die \`mininode.json\` (Rechte, Domains, Schlüssel) ändert sich: darum wartet er auf dich."
+              elif [ "$has_build" = "true" ]; then reason=" Die App hat automatische Updates, aber einen Build-Schritt (oder läuft nicht auf Cloudflare), der beim Deploy mit den Schlüsseln läuft: darum wartet er auf dich."
+              elif [ -n "$runs_code" ]; then reason=" Die App hat automatische Updates, aber Migrationen, Abhängigkeiten oder Werkzeug-Konfigurationen ändern sich (sie laufen beim Deploy mit den Schlüsseln): darum wartet er auf dich."
+              elif [ "$required" = "0" ]; then reason=" Die App hat automatische Updates, aber \`main\` verlangt keine Prüfungen (Settings → Rules): darum wartet er auf dich."
+              fi
+            fi
+            body="$body
+
+          Die Änderungen (auch an der \`mininode.json\`: Rechte, Domains) bitte lesen und erst mergen, wenn die Prüfungen grün sind; danach deployt der normale Ablauf die App. Dieser Pull Request wird nicht automatisch gemergt.$reason"
+          fi
           pr=$(gh pr create --base main --head "$branch" --title "chore($SLUG): update to ${COMMIT:0:7}" --body "$body")
-          # Never merged by itself: the app brings code and a manifest (permissions, domains) from
-          # outside this repository, so a person reads the diff first.
+          # Merged by itself only for automatic updates with an unchanged manifest: anything that
+          # changes permissions or domains is read by a person first.
           [ "$HAS_TOKEN" = "true" ] || echo "::warning::INTEGRATE_TOKEN is not set: the pull request gets no checks. Do not merge it unchecked."
+          if [ "$merge" = "auto" ]; then
+            # Waits for the required checks of main (checked above). Without "Allow auto-merge" this
+            # fails and the pull request just stays open.
+            gh pr merge "$pr" --auto --merge --match-head-commit "$(git rev-parse HEAD)" \
+              || echo "::warning::auto-merge is not available; the pull request stays open"
+          fi
           echo "Pull request: $pr" >> "$GITHUB_STEP_SUMMARY"

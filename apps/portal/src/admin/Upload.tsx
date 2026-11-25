@@ -16,7 +16,8 @@ import { dateTime } from './AdminLayout.tsx';
 
 // Verwaltung → Hochladen (ADR 0013). One box for both kinds: a ZIP is a web app that a script
 // integrates (and hands to an AI review when it cannot), .exe/.msi is a program that is installed
-// on the PC/server. Both end in this list, with what was done and what is left.
+// on the PC/server. A GitHub link is integrated like a ZIP and can keep the app updated (ADR 0029).
+// All end in this list, with what was done and what is left.
 
 interface UploadConfig {
   webapp: boolean;
@@ -46,6 +47,9 @@ export function Upload() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
+  const [repoUrl, setRepoUrl] = useState('');
+  const [autoUpdate, setAutoUpdate] = useState(false);
+  const [installing, setInstalling] = useState(false);
   const input = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
@@ -136,6 +140,30 @@ export function Upload() {
       setError(err instanceof ApiError ? err.message : 'Der Upload hat nicht geklappt.');
     } finally {
       setProgress(null);
+      await load();
+    }
+  };
+
+  const installFromGithub = async () => {
+    if (!repoUrl.trim() || installing) return;
+    setError(null);
+    setNotice(null);
+    setInstalling(true);
+    try {
+      await run(() =>
+        api<Submission>('/admin/submissions/github', {
+          method: 'POST',
+          body: { url: repoUrl.trim(), autoUpdate },
+        }),
+      );
+      setNotice(
+        'Das Projekt wird geholt und eingebaut; das dauert etwa zwei Minuten. Danach wartet ein Pull Request auf dich.',
+      );
+      setRepoUrl('');
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Das hat nicht geklappt.');
+    } finally {
+      setInstalling(false);
       await load();
     }
   };
@@ -284,6 +312,57 @@ export function Upload() {
             {notice}
           </p>
         )}
+      </section>
+
+      <section className="card" aria-labelledby="github-title">
+        <h2 id="github-title" style={{ fontSize: 18 }}>
+          Von GitHub installieren
+        </h2>
+        <form
+          className="stack"
+          style={{ gap: 12 }}
+          onSubmit={(event) => {
+            event.preventDefault();
+            void installFromGithub();
+          }}
+        >
+          <p className="muted">
+            Eine Web-App aus einem GitHub-Projekt, eingebaut wie eine ZIP-Datei. Für private
+            Projekte braucht GitHub den Schlüssel APP_READ_TOKEN mit Lesezugriff.
+          </p>
+          <label className="field">
+            Adresse des Projekts
+            <input
+              type="text"
+              inputMode="url"
+              value={repoUrl}
+              onChange={(event) => setRepoUrl(event.target.value)}
+              placeholder="https://github.com/name/projekt"
+              required
+              maxLength={300}
+              spellCheck={false}
+              autoComplete="off"
+            />
+          </label>
+          <label className="check-row">
+            <input
+              type="checkbox"
+              checked={autoUpdate}
+              onChange={(event) => setAutoUpdate(event.target.checked)}
+            />
+            Automatisch aktualisieren (neue Versionen kommen von selbst, wenn dabei nichts mit den
+            Schlüsseln läuft; nur für MiniNode-Apps mit eigener mininode.json)
+          </label>
+          <div className="row" style={{ gap: 12 }}>
+            <button
+              type="submit"
+              className="button primary"
+              disabled={!repoUrl.trim() || installing || config?.webapp === false}
+            >
+              {installing ? 'Wird gestartet …' : 'Installieren'}
+            </button>
+          </div>
+        </form>
       </section>
 
       <div className="stack" style={{ gap: 12 }}>

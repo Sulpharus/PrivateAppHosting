@@ -65,6 +65,32 @@ export function submissionPatch(
   };
 }
 
+/**
+ * Where an upload comes from: `{ repository, autoUpdate }` for an app installed from a GitHub link
+ * (ADR 0029; the workflow clones it), `{}` for a stored ZIP (`fetchSubmission`).
+ */
+export async function submissionSource(
+  envName: DeployEnv,
+  id: string,
+): Promise<{ repository?: string; autoUpdate?: boolean }> {
+  const { data: row, error } = await client(envName)
+    .schema('platform')
+    .from('submissions')
+    .select('repository, auto_update, kind')
+    .eq('id', id)
+    .maybeSingle<{ repository: string | null; auto_update: boolean; kind: string }>();
+  if (error) throw new Error(`looking up the upload failed: ${error.message}`);
+  if (!row) throw new Error(`no upload ${id}`);
+  if (row.kind !== 'webapp') throw new Error(`upload ${id} is not a web app`);
+  if (!row.repository) return {};
+  if (
+    !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(row.repository) ||
+    /(^|\/)\.+(\/|$)/.test(row.repository)
+  )
+    throw new Error(`upload ${id} has an invalid repository`);
+  return { repository: row.repository, autoUpdate: row.auto_update };
+}
+
 export async function fetchSubmission(
   envName: DeployEnv,
   id: string,
@@ -80,6 +106,8 @@ export async function fetchSubmission(
   if (error) throw new Error(`looking up the upload failed: ${error.message}`);
   if (!row) throw new Error(`no upload ${id}`);
   if (row.kind !== 'webapp') throw new Error(`upload ${id} is not a web app`);
+  if (row.storage_path.startsWith('github:'))
+    throw new Error(`upload ${id} comes from GitHub: clone it (mininode submission source)`);
   const file = await db.storage.from(BUCKET).download(row.storage_path);
   if (file.error) throw new Error(`downloading the upload failed: ${file.error.message}`);
   writeFileSync(out, Buffer.from(await file.data.arrayBuffer()));

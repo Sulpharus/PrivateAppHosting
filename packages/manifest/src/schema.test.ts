@@ -276,4 +276,10 @@ describe('repository', () => {
     for (const bad of ['notes', '../x', 'https://github.com/me/notes', 'me/notes/extra'])
       expect(parseManifest({ ...base, repository: bad }).ok, bad).toBe(false);
   });
+
+  it('updates itself only from a repository', () => {
+    expect(parseManifest({ ...base, repository: 'me/notes', autoUpdate: true }).ok).toBe(true);
+    expect(parseManifest({ ...base, autoUpdate: true }).ok).toBe(false);
+    expect(parseManifest({ ...base, autoUpdate: false }).ok).toBe(true);
+  });
 });

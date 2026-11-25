@@ -8,7 +8,8 @@ import { type UpdatesView, updateLabel } from '../lib/updates.ts';
 // Verwaltung → Updates (ADR 0028). The platform and every app with a GitHub repository can be
 // brought up to date with one click. The click starts a GitHub workflow that opens a pull
 // request; the checks run on it and merging it deploys. Data stays in Supabase, and a database
-// migration that was already applied is never changed.
+// migration that was already applied is never changed. An app can also update itself every night
+// (ADR 0029): the pull request merges itself when the checks pass and its manifest stays the same.
 
 const PULLS = repoUrl() ? `${repoUrl()}/pulls` : '';
 
@@ -42,6 +43,27 @@ export function Updates() {
       setNotice(
         `${label}: Das Update läuft. In ein bis zwei Minuten liegt bei GitHub ein Pull Request bereit. Sind die Prüfungen grün, mergen (oder es merged sich selbst) und es wird deployt.`,
       );
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Das hat nicht geklappt.');
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const setAuto = async (slug: string, name: string, enabled: boolean) => {
+    setBusy(`auto-${slug}`);
+    setError(null);
+    setNotice(null);
+    try {
+      await run(() =>
+        api(`/admin/updates/apps/${slug}/auto`, { method: 'PUT', body: { enabled } }),
+      );
+      setNotice(
+        enabled
+          ? `${name} aktualisiert sich jetzt jede Nacht selbst. Ändern sich dabei Rechte, Migrationen, Abhängigkeiten oder hat die App einen Build-Schritt, wartet der Pull Request auf dich.`
+          : `${name} aktualisiert sich nicht mehr selbst.`,
+      );
+      await load();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Das hat nicht geklappt.');
     } finally {
@@ -174,6 +196,16 @@ export function Updates() {
                   {busy === row.slug ? 'Startet …' : 'Aktualisieren'}
                 </button>
               </div>
+              <label className="check-row">
+                <input
+                  type="checkbox"
+                  checked={row.autoUpdate}
+                  disabled={busy !== null}
+                  onChange={(event) => void setAuto(row.slug, row.name, event.target.checked)}
+                />
+                Automatisch aktualisieren (jede Nacht; mergt sich selbst, wenn die Prüfungen grün
+                sind und beim Deploy nichts aus dem Projekt mit den Schlüsseln läuft)
+              </label>
             </section>
           );
         })}

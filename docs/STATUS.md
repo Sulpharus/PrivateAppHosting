@@ -27,7 +27,7 @@ Where things are documented:
 | Topic | Read |
 | --- | --- |
 | Architecture, phases, data model | `PLAN.md` |
-| Decisions | `docs/adr/0001`–`0029` |
+| Decisions | `docs/adr/0001`–`0030` |
 | Operations: setup, physical server, keys, Kalender, App-Bibliothek, app export, restore | `docs/runbooks/` (index in its README) |
 | Building apps with AI: spec, design system, prompt modules, playbooks | `docs/ai/` |
 | Shared data types (suite) | `docs/suite/data-types.md` |
@@ -80,6 +80,7 @@ Where things are documented:
 | Anywhere-installable | `mininode.config.json` holds the domain, Cloudflare account, Supabase references and repository (`mininode init`, `configure`, workflows via `load-config`; CI checks `configure --check`). **Desktop edition**: `apps/desktop-host` (the platform Workers in workerd via Miniflare) + Supabase in Docker (`infra/desktop`), `install.sh`/`install.ps1`, `mininode-desktop` (start, add, backup, restore, update, password), `mininode deploy --env desktop`. Optional Proxmox in nucbox-control (plain Docker host works). **Starter package** (`scripts/make-starter.sh`, no apps, leak-checked). Three setup runbooks (`getting-started`, `setup-cloudflare`, `setup-desktop`, `setup-both`). Login hardening (AI-proxy CORS, ES256-only verification, 10 sign-ins / 5 min, 12-character passwords) | ADR 0026, `docs/runbooks/`, `apps/desktop-host`, `infra/desktop`, `scripts/make-starter.sh`, CI jobs *Starter package* and *Desktop edition* |
 | Wunschliste sort, categories, PDF | Sort by priority/name/price/website/category, category filter, free-text category per wish (`db/005`); PDF in two columns following the view; image links embedded via new `GET /image` + `mn.image`; desktop Workers reach only public addresses | `hosted/wunschliste/{sort,wishlist-pdf}.js`, `apps/api/src/routes/image.ts`, `packages/sdk/src/image.ts`, `apps/desktop-host/src/edge.ts` |
 | Fast merges | Deploy plans first (`deploy --plan`); MuseScore and patched Craft apps build and ship only for changes to their own folder (gate and manifest still count; not SDK, kit, lockfile, `*.md`, `test/`); `apps` no longer waits for skipped builds; PR CI builds only the changed Craft app; a scheduled all-apps deploy (Mon/Thu 01:23 UTC) keeps caches warm and ships SDK/kit changes to them; `scripts/mark-program-apps.sh` for urgent cases | `.github/workflows/{deploy,ci,crafts}.yml`, `packages/cli/src/changed.ts`, `scripts/ci-changes.sh` |
+| Apps as ZIP, from GitHub, auto-updates | Verwaltung → Apps → Als ZIP (export-app.yml `target: zip`, artifact 7 days, `/admin/app-zips`); Hochladen → Von GitHub installieren (submission with `repository`, integrate.yml clones); `platform.apps.auto_update` + nightly `auto-update-apps.yml` (auto-merge only with unchanged manifest) | ADR 0029, `supabase/migrations/20261124090000_github_install_auto_update.sql`, `apps/api/src/routes/{exports,submissions,updates}.ts`, `apps/portal/src/admin/{AppZips,Upload,Updates}.tsx` |
 | German formats | Date, month and time inputs as German parts in every browser; full dates as "01. Okt. 2026"; German numbers | `packages/ui/kit/ui.js`, `docs/ai/DESIGN-SYSTEM.md` §8 |
 
 The Sportplaner map (tab "Karte") and course mode (editor step "Zeiten" → "Kurs") are live
@@ -182,6 +183,11 @@ since the PR #12 deploy. Earlier deploys stopped at medialog and never shipped t
 
 ## Open and proposed work
 
+- **Wunschliste: photos of whitelist-only lists.** Uploaded photos live under
+  `wunschliste/shared/wishes/<uuid>.jpg`, readable by everyone with the app (`may_access_app_file`).
+  The whitelist (db/006) hides wishes, not these files. Fix: store photos of whitelist-only lists in
+  a path whose storage policy asks `app_wunschliste.can_see`, and move them when the visibility
+  changes. The sheet tells users meanwhile.
 - **MuseScore Studio (`hosted/musescore`), in progress since 2026-11-03.** The owner wants the full
   desktop editor in the browser (Chrome/Edge desktop, as an installed app window; no mobile),
   original name, MS Basic SoundFont, scores private per person in Supabase (`mn.files`) with

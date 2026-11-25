@@ -12,6 +12,7 @@ import { appHost } from '../lib/host.ts';
 import { platform } from '../lib/supabase.ts';
 import { useArrangement } from '../lib/useArrangement.ts';
 import { dateTime } from './AdminLayout.tsx';
+import { AppZips } from './AppZips.tsx';
 
 const STATUS: Record<string, [string, string]> = {
   online: ['Online', 'ok'],
@@ -85,6 +86,8 @@ export function Apps() {
   const [exportError, setExportError] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
   const [exported, setExported] = useState<{ text: string; runs: string } | null>(null);
+  const [zipVersion, setZipVersion] = useState(0);
+  const [zipping, setZipping] = useState<string | null>(null);
   const [removeFor, setRemoveFor] = useState<AppRow | null>(null);
   const [removeOpen, setRemoveOpen] = useState(false);
   const [removeError, setRemoveError] = useState<string | null>(null);
@@ -260,6 +263,29 @@ export function Apps() {
       setExportError(err instanceof ApiError ? err.message : 'Das hat nicht geklappt.');
     } finally {
       setExporting(false);
+    }
+  };
+
+  const startZip = async (app: AppRow) => {
+    if (zipping) return;
+    setError(null);
+    setZipping(app.slug);
+    try {
+      const { runs } = await run(() =>
+        api<{ runs: string }>(`/admin/apps/${app.slug}/export`, {
+          method: 'POST',
+          body: { target: 'zip' },
+        }),
+      );
+      setExported({
+        runs,
+        text: `${app.name} wird als ZIP gepackt. Das dauert etwa eine Minute; die Datei erscheint unten unter „ZIP-Exporte“.`,
+      });
+      setZipVersion((v) => v + 1);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Das hat nicht geklappt.');
+    } finally {
+      setZipping(null);
     }
   };
 
@@ -558,6 +584,17 @@ export function Apps() {
                           Als GitHub-Projekt
                         </button>
                       )}
+                      {app.kind !== 'link' && !app.library && (
+                        <button
+                          type="button"
+                          className="button small"
+                          aria-label={`${app.name} als ZIP-Datei exportieren`}
+                          disabled={zipping !== null}
+                          onClick={() => void startZip(app)}
+                        >
+                          {zipping === app.slug ? 'Wird gestartet …' : 'Als ZIP'}
+                        </button>
+                      )}
                       <button
                         type="button"
                         className="button small"
@@ -650,6 +687,8 @@ export function Apps() {
           </div>
         </section>
       )}
+
+      <AppZips version={zipVersion} names={new Map(apps.map((app) => [app.slug, app.name]))} />
 
       <Dialog
         open={exportOpen}

@@ -183,5 +183,42 @@
   "editor.category": "Category",
   "editor.categoryPlaceholder": "e.g. Books",
   "editor.categoryHint": "Your own words, for sorting and filtering",
-  "view.label": "List view"
+  "view.label": "List view",
+  "pdf.continued": "continued",
+  "pdf.taken": "Taken",
+  "pdf.hint": "Tip: in most PDF programs on a computer (Chrome, Firefox, Acrobat) tap a wish to tick it off as taken, then save the file. Whoever gets it next sees what is already being bought.",
+  "access.label": "Who sees your list?",
+  "access.public": "Everyone with the app",
+  "access.whitelist": "Whitelist only",
+  "access.edit": "Whitelist ({n})",
+  "access.publicHint": "Everyone who uses the wishlist sees your list.",
+  "access.whitelistHint": {
+    "one": "Only {n} chosen person sees your list.",
+    "other": "Only {n} chosen people see your list."
+  },
+  "access.whitelistEmpty": "Nobody on the whitelist yet: right now nobody sees your list.",
+  "access.title": "Whitelist",
+  "access.intro": "Only these people see your list and can reserve something. Search by name (parts, initials, typos are fine) or enter an e-mail address exactly. Uploaded photos sit in the app's shared folder: anyone with a link to one can open it.",
+  "access.search": "Find a person",
+  "access.searchPlaceholder": "Name or e-mail address",
+  "access.add": "Add",
+  "access.addAria": "Add {name} to the whitelist",
+  "access.added": "On the whitelist",
+  "access.remove": "Remove",
+  "access.removeAria": "Remove {name} from the whitelist",
+  "access.current": "On the whitelist",
+  "access.nobody": "Nobody yet.",
+  "access.noMatch": "Nobody with this name uses the wishlist.",
+  "access.noEmail": "Nobody with this address uses the wishlist.",
+  "access.done": "Done",
+  "access.unknown": "No longer here",
+  "toast.whitelistOn": "Only the whitelist sees your list now",
+  "toast.publicOn": "Everyone with the app sees your list",
+  "toast.viewerAdded": "{name} sees your list now",
+  "toast.viewerRemoved": "{name} no longer sees your list",
+  "access.matches": {
+    "one": "{n} match",
+    "other": "{n} matches"
+  },
+  "access.unavailable": "Who sees your list could not be loaded right now. Reload the page to change it."
 }

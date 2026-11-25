@@ -15,7 +15,7 @@ mininode update platform|app|list ...      Bring a newer platform release, or an
 mininode integrate <zip|dir> [--slug x] [--build] [--tidy] [--json f] [--report f]  Export → hosted/<slug> by script; exit 2 = needs review (ADR 0013)
 mininode uninstall <slug> [--purge] [--env]  Take an app offline, with --purge delete its data, files and registry entry (ADR 0020)
 mininode backup create --out <dir> | verify <dir> | restore <dir> [--yes]  Full backup folder and restore (ADR 0019)
-mininode submission fetch|status <id> …    Uploads from Verwaltung (used by integrate.yml)
+mininode submission fetch|source|status <id> …    Uploads from Verwaltung (used by integrate.yml)
 mininode library check|install <entry> <slug> [--env]  App-Bibliothek: check, register (ADR 0011)
 mininode library remove <slug> <entry> [--env]  App-Bibliothek: disable a removed program
 ```

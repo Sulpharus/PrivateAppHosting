@@ -10,6 +10,8 @@ export interface UpdatesView {
     slug: string;
     name: string;
     repository: string;
+    /** New versions come in by themselves (auto-update-apps.yml, ADR 0029). */
+    autoUpdate: boolean;
     installedCommit: string | null;
     latestCommit: string | null;
     upToDate: boolean | null;

@@ -21,6 +21,18 @@ The list under the upload box shows every step, the reasons when something needs
 and links to the run, the pull request and the issue. "Prüfauftrag kopieren" puts a ready request
 for a Claude session on the clipboard.
 
+## From a GitHub link (ADR 0029)
+
+Verwaltung → Hochladen → *Von GitHub installieren* (`POST /admin/submissions/github`) stores an
+upload with `repository` and no file. The fetch job of `integrate.yml` clones the repository in a
+step without the database key, with `APP_READ_TOKEN` (Contents: read, environment `production`;
+needed for private projects) or the workflow token, refuses symbolic links and more than 40 MB,
+packs it as `upload.zip` and continues as for a ZIP. `repository` and `autoUpdate` that an upload
+brings itself are always removed. For a MiniNode
+app whose own `mininode.json` has the same address, the publish job adds `repository` (and
+`autoUpdate` when the box was ticked) and `.mininode-source.json`, so the app shows up under
+Updates.
+
 ## Setup (once)
 
 1. **Start key.** The workflow is started with the same token as the App-Bibliothek

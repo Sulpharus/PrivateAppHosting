@@ -26,6 +26,9 @@ Eine Person kann eine App nur öffnen, wenn sie eine **Freigabe** (*Grant*) daf�
 3. **Von Hand** in Verwaltung → Apps → *Zugriff* einer App. Dort gibt es auch die **Nur-ausgewählte-Personen**-Liste
    (*Whitelist*): dann sehen nur du und die Gewählten die App, alle anderen verlieren den Zugriff.
 
+Davon getrennt ist die **Whitelist einer Wunschliste**: Dort entscheidet jede Person selbst, wer *ihre* Liste sieht; die App selbst
+bleibt für alle, die Zugriff haben, offen.
+
 Eine neue App hat zunächst für niemanden Zugriff, außer sie ist eine Standard-App. Nach dem [Hochladen](wiki:hochladen)
 musst du sie also freigeben.
 

@@ -36,6 +36,19 @@ the newest).
 2. Verwaltung → Updates → *Aktualisieren* next to the app, or Actions → *App aktualisieren*.
 3. Merge the pull request `chore(<slug>): update to <commit>` when the checks are green.
 
+## Automatic app updates (ADR 0029)
+
+Verwaltung → Updates → *Automatisch aktualisieren* next to the app (`platform.apps.auto_update`; an
+app installed from a GitHub link with the box ticked starts with it on). Every night at 02:41 UTC
+`auto-update-apps.yml` runs `update-app.yml` for those apps. The pull request is set to merge
+itself (`gh pr merge --auto`) only when nothing of it runs with the deploy's keys: the app's
+`mininode.json` is unchanged apart from `repository` and `autoUpdate`, the app has no `build` and
+targets Cloudflare, and no `db/`, `package.json`, lockfile, `*.config.*`, `.npmrc`, `.pnpmfile*` or
+`build.mjs` changes. Otherwise it waits like a manual update. Needs `INTEGRATE_TOKEN`, "Allow
+auto-merge" and a rule on `main` that requires status checks (checked before merging);
+`APP_READ_TOKEN` for private repositories. Run it by hand under Actions →
+*Apps automatisch aktualisieren*.
+
 ## When it stops
 
 | Message | Meaning |

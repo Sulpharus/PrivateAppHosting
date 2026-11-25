@@ -15,6 +15,14 @@ persönliche Adressen, Datenfiles, Binärdateien, Bild-Metadaten), und nennt `Da
 
 Einrichtung: `EXPORT_REPO_TOKEN` (Administration + Contents: write, alle Repositories) in der GitHub-Umgebung `production`.
 
+## Eine App als ZIP-Datei (ADR 0029)
+
+Verwaltung → Apps → **Als ZIP** packt eine selbst gehostete App mit derselben Prüfung wie beim GitHub-Projekt (nur der Code, nichts
+Privates) in eine ZIP-Datei, ohne ein Repository anzulegen. Nach etwa einer Minute erscheint sie unten auf der Seite unter
+**ZIP-Exporte** mit **Herunterladen** (nach kurzer Bestätigung deiner Anmeldung). GitHub hält die Datei **7 Tage** bereit; wer selbst
+MiniNode betreibt, installiert sie unter Verwaltung → **Hochladen** ([Hochladen](wiki:hochladen)). Eine Kopie, die länger hält,
+legst du selbst ab.
+
 ## Releases (ADR 0016)
 
 Ein Release enthält das **Starter-Paket** (Tag `vX.Y.Z`) oder die **Cloudflare-Ausgabe** (Tag `cloudflare-vX.Y.Z`, `mininode-cloudflare-<Version>.zip`: dasselbe ohne Desktop-Installer und Heimserver-Teil, nur Cloudflare und Supabase). Das **Starter-Paket** (`mininode-starter-<Version>.zip`) mit Prüfsumme (`SHA256SUMS`). Damit beginnt man ein eigenes MiniNode: die ganze Plattform ohne Apps und ohne Kennungen einer Installation, mit Cloudflare-Einrichtung, Desktop-Installer für Docker, Heimserver-Teil und allen Anleitungen (ADR 0026; Anleitung: [Einrichten](wiki:einrichten)).
