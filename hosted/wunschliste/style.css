@@ -202,3 +202,13 @@
   font-size: var(--mn-fs-sm);
   color: var(--mn-muted);
 }
+
+/* Choosing the wishes for the PDF */
+.pdf-pick-all {
+  font-weight: 600;
+}
+.pdf-pick-count {
+  margin: 0;
+  color: var(--mn-muted);
+  font-size: var(--mn-fs-sm);
+}

@@ -140,7 +140,7 @@ describe('wishlist pdf', () => {
   });
 });
 
-describe('wishlist pdf: sections and ticking off', () => {
+describe('wishlist pdf: sections and links', () => {
   const wish = (title, category) => ({
     title,
     category,
@@ -178,38 +178,10 @@ describe('wishlist pdf: sections and ticking off', () => {
     expect(s).toContain('(B\xfccher \\(Fortsetzung\\)) Tj');
   });
 
-  it('gives every card a small check box in its corner, links still on top', () => {
-    const plain = build([wish('A', ''), wish('B', '')]);
-    expect(plain).not.toContain('/AcroForm');
-    const { s, objects } = checkStructure(
-      bytes([wish('A', ''), wish('B', '')], {
-        crossOut: { hint: 'Tipp: abhaken' },
-      }),
-    );
-    expect(objects).toBeGreaterThan(10);
-    expect(s).toMatch(/\/AcroForm << \/Fields \[\d+ 0 R \d+ 0 R\]/);
-    expect(s).toContain('/T (wish-1)');
-    expect(s).toContain('/T (wish-2)');
-    expect(s).toContain('/AS /Off');
-    // The widget is only the 13 pt circle, never the whole card.
-    const rects = [...s.matchAll(/\/Subtype \/Widget .*?\/Rect \[([^\]]+)\]/g)].map((m) =>
-      m[1].split(' ').map(Number),
-    );
-    expect(rects).toHaveLength(2);
-    for (const [x1, y1, x2, y2] of rects) {
-      expect(x2 - x1).toBeCloseTo(13);
-      expect(y2 - y1).toBeCloseTo(13);
-    }
-    expect(s).toContain('(Tipp: abhaken) Tj');
-    // In each page's list the widgets come before the links, so a link lies on top.
-    const annots = /\/Annots \[([^\]]+)\]/
-      .exec(s)?.[1]
-      ?.trim()
-      .split(/ 0 R ?/)
-      .filter(Boolean);
-    const kinds = (annots ?? []).map(
-      (id) => new RegExp(`\\n${id} 0 obj\\n<< /Type /Annot /Subtype /(\\w+)`).exec(s)?.[1],
-    );
-    expect(kinds).toEqual(['Widget', 'Widget', 'Link', 'Link']);
+  it('has no form fields, only links to the shops', () => {
+    const { s } = checkStructure(bytes([wish('A', ''), wish('B', '')]));
+    expect(s).not.toContain('/AcroForm');
+    expect(s).not.toContain('/Widget');
+    expect(s.match(/\/Subtype \/Link/g)).toHaveLength(2);
   });
 });
