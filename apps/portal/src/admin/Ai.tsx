@@ -19,6 +19,36 @@ interface BudgetRow {
   monthly_limit_micro: number;
 }
 
+const GEMINI_DOCS = 'https://ai.google.dev/gemini-api/docs/models';
+const CLAUDE_DOCS = 'https://docs.claude.com/en/docs/about-claude/models/overview';
+
+interface ModelRow {
+  alias: 'gemini-flash' | 'gemini-pro' | 'claude-haiku' | 'claude-sonnet';
+  model_id: string;
+  input_eur_per_mtok: number | string;
+  output_eur_per_mtok: number | string;
+  effort: 'low' | 'medium' | 'high' | null;
+  updated_at: string;
+}
+
+/** The aliases apps declare in mininode.json, in the order of the table. */
+const ALIASES: { alias: ModelRow['alias']; label: string; docs: string }[] = [
+  { alias: 'gemini-flash', label: 'Gemini Flash (schnell, günstig)', docs: GEMINI_DOCS },
+  { alias: 'gemini-pro', label: 'Gemini Pro', docs: GEMINI_DOCS },
+  { alias: 'claude-haiku', label: 'Claude Haiku (schnell, günstig)', docs: CLAUDE_DOCS },
+  { alias: 'claude-sonnet', label: 'Claude Sonnet', docs: CLAUDE_DOCS },
+];
+
+const EFFORTS: [string, string][] = [
+  ['', 'Standard des Modells'],
+  ['low', 'Niedrig'],
+  ['medium', 'Mittel'],
+  ['high', 'Hoch'],
+];
+
+/** Model ids: lowercase letters, digits, dots, dashes and underscores (checked again in the database). */
+const MODEL_ID = /^[a-z0-9][a-z0-9._-]{1,79}$/;
+
 const SCOPE_LABEL: Record<string, string> = {
   'global:*': 'Gesamtbudget (hartes Limit, außer für dich)',
   'role:user': 'Standard pro User',
@@ -29,15 +59,22 @@ export function Ai() {
   const { run } = useStepUp();
   const [usage, setUsage] = useState<UsageRow[]>([]);
   const [budgets, setBudgets] = useState<BudgetRow[]>([]);
+  const [models, setModels] = useState<ModelRow[]>([]);
+  const [saved, setSaved] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    const [u, b] = await Promise.all([
+    const [u, b, m] = await Promise.all([
       platform().rpc('admin_ai_usage'),
       platform().from('ai_budgets').select('scope, scope_key, monthly_limit_micro').order('scope'),
+      platform()
+        .from('ai_models')
+        .select('alias, model_id, input_eur_per_mtok, output_eur_per_mtok, effort, updated_at'),
     ]);
     setUsage((u.data as UsageRow[] | null) ?? []);
     setBudgets((b.data as BudgetRow[] | null) ?? []);
+    setModels((m.data as ModelRow[] | null) ?? []);
+    if (m.error) setError('Die Modelle konnten nicht geladen werden. Lade die Seite neu.');
   }, []);
 
   useEffect(() => {
@@ -58,6 +95,52 @@ export function Ai() {
       await load();
     } catch {
       setError('Budget konnte nicht gespeichert werden.');
+    }
+  };
+
+  const saveModel = async (alias: ModelRow['alias'], form: FormData) => {
+    setError(null);
+    setSaved('');
+    const modelId = String(form.get('model') ?? '').trim();
+    // An empty field must not count as 0: a free model would never touch a budget.
+    const price = (name: string) => {
+      const text = String(form.get(name) ?? '')
+        .trim()
+        .replace(',', '.');
+      return text === '' ? Number.NaN : Number(text);
+    };
+    const input = price('input');
+    const output = price('output');
+    const effort = String(form.get('effort') ?? '');
+    if (!MODEL_ID.test(modelId)) {
+      setError(
+        'Die Modell-ID besteht nur aus Kleinbuchstaben, Ziffern, Punkt, Unterstrich und Bindestrich, z. B. claude-haiku-5-5.',
+      );
+      return;
+    }
+    if (!(input > 0 && input <= 1000 && output > 0 && output <= 1000)) {
+      setError(
+        'Gib beide Preise in Euro pro Million Tokens an, größer als 0 und höchstens 1000 (z. B. 0,5).',
+      );
+      return;
+    }
+    try {
+      await run(async () => {
+        const { error: updateError } = await platform()
+          .from('ai_models')
+          .update({
+            model_id: modelId,
+            input_eur_per_mtok: input,
+            output_eur_per_mtok: output,
+            ...(alias.startsWith('claude-') ? { effort: effort || null } : {}),
+          })
+          .eq('alias', alias);
+        if (updateError) throw updateError;
+      });
+      await load();
+      setSaved(`${alias} gespeichert. Der KI-Proxy nutzt es spätestens in einer Minute.`);
+    } catch {
+      setError('Das Modell konnte nicht gespeichert werden.');
     }
   };
 
@@ -103,6 +186,103 @@ export function Ai() {
           <strong>{usage.reduce((sum, row) => sum + Number(row.requests), 0)}</strong>
         </div>
       </div>
+
+      <section className="card" aria-labelledby="models-title">
+        <h2 id="models-title" className="section-title">
+          Modelle
+        </h2>
+        <p className="muted">
+          Apps wählen eines von vier Modellen (in ihrer <code>mininode.json</code>). Hier legst du
+          fest, welches Modell der Anbieter dafür wirklich aufruft und was es kostet. Wenn ein
+          Anbieter ein neues Modell herausbringt, trägst du hier seine ID und die Preise ein; das
+          gilt nach spätestens einer Minute für alle Apps. Die Preise rechnen die Budgets: nimm die
+          Listenpreise des Anbieters in Dollar als Euro, dann reicht ein Budget sicher.
+        </p>
+        <p className="muted" role="status" aria-live="polite">
+          {saved}
+        </p>
+        {ALIASES.map(({ alias, label, docs }) => {
+          const row = models.find((m) => m.alias === alias);
+          if (!row) return null;
+          const claude = alias.startsWith('claude-');
+          return (
+            <form
+              key={`${alias}:${row.updated_at}`}
+              className="model-row"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void saveModel(alias, new FormData(event.currentTarget));
+              }}
+            >
+              <div className="model-head">
+                <strong>{label}</strong>
+                <span className="mono muted">{alias}</span>
+                <a href={docs} target="_blank" rel="noopener noreferrer">
+                  Modelle des Anbieters
+                </a>
+              </div>
+              <div className="model-fields">
+                <label className="field">
+                  <span>Modell-ID beim Anbieter</span>
+                  <input
+                    name="model"
+                    defaultValue={row.model_id}
+                    autoComplete="off"
+                    spellCheck={false}
+                    required
+                  />
+                </label>
+                <label className="field">
+                  <span>Eingabe, € pro Mio. Tokens</span>
+                  <input
+                    name="input"
+                    inputMode="decimal"
+                    defaultValue={String(Number(row.input_eur_per_mtok))}
+                    required
+                  />
+                </label>
+                <label className="field">
+                  <span>Ausgabe, € pro Mio. Tokens</span>
+                  <input
+                    name="output"
+                    inputMode="decimal"
+                    defaultValue={String(Number(row.output_eur_per_mtok))}
+                    required
+                  />
+                </label>
+                {claude && (
+                  <label className="field">
+                    <span>Denkaufwand</span>
+                    <select name="effort" defaultValue={row.effort ?? ''}>
+                      {EFFORTS.map(([value, text]) => (
+                        <option key={value} value={value}>
+                          {text}
+                        </option>
+                      ))}
+                    </select>
+                    <small className="muted">Niedrig passt für kurze App-Antworten</small>
+                  </label>
+                )}
+              </div>
+              <div className="row" style={{ flexWrap: 'wrap' }}>
+                <span className="muted" style={{ flex: 1, fontSize: 14 }}>
+                  Zuletzt geändert{' '}
+                  {new Date(row.updated_at).toLocaleString('de-DE', {
+                    dateStyle: 'medium',
+                    timeStyle: 'short',
+                  })}
+                </span>
+                <button type="submit" className="button small">
+                  Speichern
+                </button>
+              </div>
+            </form>
+          );
+        })}
+        {models.length === 0 && (
+          <p className="muted">Die Modelle werden geladen oder sind noch nicht eingerichtet.</p>
+        )}
+      </section>
 
       <section className="card" aria-labelledby="budgets-title">
         <h2 id="budgets-title" className="section-title">

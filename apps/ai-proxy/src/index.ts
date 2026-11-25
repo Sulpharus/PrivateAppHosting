@@ -9,8 +9,11 @@ import { z } from 'zod';
 import {
   catalog,
   costMicro,
+  createModelCache,
   estimateTokens,
   type ModelAlias,
+  type ModelPatch,
+  type ModelRow,
   SEARCH_INPUT_ALLOWANCE,
   SEARCH_SURCHARGE_MICRO,
 } from './models.ts';
@@ -54,6 +57,8 @@ interface Deps {
   db: SupabaseClient;
   checkGrant(token: string, slug: string): Promise<boolean>;
   appAi(slug: string): Promise<AppAi | null>;
+  /** The admin's model settings (Verwaltung → KI-Proxy); empty when none can be read. */
+  models(): Promise<ModelPatch>;
   provider(kind: 'anthropic' | 'google'): Provider;
 }
 
@@ -144,6 +149,13 @@ function buildDeps(env: ProxyEnv): Deps {
       appCache.set(slug, { value, expires: Date.now() + 60_000 });
       return value;
     },
+    models: createModelCache(async () => {
+      const { data, error } = await db
+        .schema('platform')
+        .from('ai_models')
+        .select('alias, model_id, input_eur_per_mtok, output_eur_per_mtok, effort');
+      return { data: data as ModelRow[] | null, error };
+    }),
     provider: (kind) => (kind === 'anthropic' ? anthropicProvider(keys) : geminiProvider(keys)),
   };
 }
@@ -228,7 +240,7 @@ export function createApp(depsFor: (env: ProxyEnv) => Deps = defaultDeps) {
           cors,
         );
       }
-      const model = catalog(c.env.MODEL_CATALOG || undefined)[alias];
+      const model = catalog(c.env.MODEL_CATALOG || undefined, await deps.models())[alias];
       const maxOutputTokens = Math.min(
         input.maxOutputTokens ?? ai.maxOutputTokens,
         ai.maxOutputTokens,

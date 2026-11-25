@@ -198,7 +198,7 @@ create index on app_<slug_with_underscores>.recipes (cooked_on);
 
 Data modes: `private` = each user their own data · `shared-account` = trusted users work on the
 owner's data (e.g. a shared household budget) · `group` = everyone with the app shares all data ·
-`readonly` = everyone reads, nobody writes from the app (the content ships in its `db/*.sql` files) · `team` = data per team: the people in a team (2 to 6, with
+`readonly` = everyone reads, only admins write (the database enforces it) · `team` = data per team: the people in a team (2 to 6, with
 roles viewer, editor, owner) see that team's rows and files, nobody else (`mn.team`, tables with `team_id`,
 ADR 0023).
 

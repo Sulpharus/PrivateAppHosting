@@ -138,7 +138,7 @@ DNS is explicit: CI creates one record per app. There is no wildcard catch-all.
   - `private`: the owner is `auth.uid()`.
   - `shared-account`: the owner is `effective_owner()`.
   - `group`: all users with a grant.
-  - `readonly`: read-only for users with a grant.
+  - `readonly`: users with a grant read; admins write from the app (ADR 0031).
 - **pgTAP tests:**
   - A meta-test fails if any `app_*` table lacks RLS or a policy lacks the grant check.
   - Negative tests: a user reading another app's schema; a `user` calling admin RPCs; the AI

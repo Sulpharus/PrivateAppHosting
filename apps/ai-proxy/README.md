@@ -19,8 +19,9 @@ Per request:
 Errors: `401 unauthenticated`, `403 origin_mismatch | forbidden | ai_disabled | model_not_allowed`,
 `402 budget_exceeded`, `502 provider_error | invalid_json`.
 
-Model ids and prices live in `src/models.ts` (`claude-haiku` → Claude Haiku 5.5, `claude-sonnet` →
-Claude Sonnet 5.5, both sent with `output_config.effort: 'low'` so thinking leaves room for the short
-answers apps ask for); override without a deploy via the `MODEL_CATALOG` var. An override that
-points a Claude alias at a model without effort must also set `"effort": null`. Secrets: `SUPABASE_SECRET_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, optional
+Model ids, prices and the Claude effort come from `platform.ai_models`, edited in Verwaltung →
+KI-Proxy → Modelle (ADR 0031) and cached for a minute. `src/models.ts` holds the defaults used when
+a row is missing or the table cannot be read; the `MODEL_CATALOG` var overrides both (emergencies
+only). An override that points a Claude alias at a model without effort must also set
+`"effort": null`. Secrets: `SUPABASE_SECRET_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, optional
 `AI_GATEWAY_TOKEN` (authenticated gateway). Gemini model ids should be re-checked when setting up.

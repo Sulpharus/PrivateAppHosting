@@ -1,13 +1,25 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { describe, expect, it } from 'vitest';
 import { createApp, isPlatformOrigin, originMatchesApp, type ProxyEnv } from './index.ts';
-import { catalog, costMicro, SEARCH_INPUT_ALLOWANCE, SEARCH_SURCHARGE_MICRO } from './models.ts';
+import {
+  catalog,
+  costMicro,
+  type ModelPatch,
+  SEARCH_INPUT_ALLOWANCE,
+  SEARCH_SURCHARGE_MICRO,
+} from './models.ts';
 import type { Provider } from './providers.ts';
 
 type Call = { fn: string; args: Record<string, unknown> };
 
 function harness(
-  options: { reserveError?: string; providerText?: string; grant?: boolean; search?: boolean } = {},
+  options: {
+    reserveError?: string;
+    providerText?: string;
+    grant?: boolean;
+    search?: boolean;
+    models?: ModelPatch;
+  } = {},
 ) {
   const calls: Call[] = [];
   const db = {
@@ -23,9 +35,11 @@ function harness(
   } as unknown as SupabaseClient;
 
   const searches: (boolean | undefined)[] = [];
+  const modelIds: string[] = [];
   const provider: Provider = {
     async complete(request) {
       searches.push(request.search);
+      modelIds.push(request.model.id);
       return {
         text: options.providerText ?? 'Hallo!',
         usage: { input: 100, output: 20 },
@@ -59,6 +73,7 @@ function harness(
             search: options.search === true,
           }
         : null,
+    models: async () => options.models ?? {},
     provider: () => provider,
   }));
 
@@ -86,7 +101,7 @@ function harness(
       ctx,
     );
 
-  return { post, calls, waits, searches };
+  return { post, calls, waits, searches, modelIds };
 }
 
 const chat = { app: 'rezepte', messages: [{ role: 'user', content: 'Hi' }] };
@@ -103,6 +118,18 @@ describe('ai proxy', () => {
     expect(calls.map((c) => c.fn)).toEqual(['ai_reserve', 'ai_settle']);
     const flash = catalog(undefined)['gemini-flash'];
     expect(calls[1]?.args.p_cost_micro).toBe(costMicro(flash, 100, 20));
+  });
+
+  it('calls the model the admin set in Verwaltung and charges its price', async () => {
+    const models: ModelPatch = {
+      'gemini-flash': { id: 'gemini-4-flash', input: 1, output: 10 },
+    };
+    const { post, calls, modelIds } = harness({ models });
+    expect((await post('/v1/chat', chat)).status).toBe(200);
+    expect(modelIds).toEqual(['gemini-4-flash']);
+    expect(calls[1]?.args.p_cost_micro).toBe(
+      costMicro(catalog(undefined, models)['gemini-flash'], 100, 20),
+    );
   });
 
   it('caps output tokens at the app limit', async () => {

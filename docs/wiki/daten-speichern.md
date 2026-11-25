@@ -30,7 +30,7 @@ bekommen beim Einbau eine Schicht, die `localStorage` im Konto hält (`installLo
 | `private` | jede Person hat ihre **eigenen** Daten |
 | `shared-account` | vertraute Personen (`trusted`) arbeiten mit dem Konto des Eigentümers; jede Änderung steht mit der echten Person im Protokoll. Die App braucht einen Admin als Besitzer |
 | `group` | alle mit Freigabe teilen alles |
-| `readonly` | alle mit Freigabe dürfen nur lesen |
+| `readonly` | alle mit Freigabe lesen; nur Admins legen an, ändern und löschen, direkt in der App (ADR 0031) |
 | `team` | Daten gehören zu **Teams** (Projekt, Reisegruppe, Band): nur die Personen im Team sehen sie, je nach Rolle *Ansehen*, *Bearbeiten* oder *Verwalten* (ADR 0023) |
 
 Die Vorlagen für Tabellen (`platform.secure_table`) setzen die Zeilenschutz-Regeln passend zum Modus. Eine Selbstprüfung (pgTAP) schlägt

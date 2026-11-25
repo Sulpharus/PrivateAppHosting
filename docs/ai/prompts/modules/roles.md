@@ -14,9 +14,8 @@ order: 83
   mode in `mininode.json` and the database rules.
 - Pick the data mode that already says who may write: `shared-account` (trusted people work on the
   owner's data), `group` (everyone with the app), `private` (each their own), `team` (members by
-  role) or `readonly` (nobody writes from the app; the content ships in the app's SQL files, module
-  *Feste Inhalte*). There is no mode in which only admins write from the app: hiding edit controls
-  from non-admins is a convenience, not a protection; say so in the README.
+  role) or `readonly` (everyone reads, only admins write; module *Admin pflegt, alle lesen*). Only
+  these modes protect data; hiding edit controls by role alone is a convenience, not a protection.
 - Hide what a person may not do; do not show disabled controls without a reason. Where it helps,
   show a short note ("Nur Admins können Kategorien ändern").
 - Handle a refused write (the server says no) with a clear message and reload the item; the UI
