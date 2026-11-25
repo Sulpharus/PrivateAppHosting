@@ -85,11 +85,12 @@ three users.
   priority tag, category, two lines of note, link to the shop), laid out by `wishlist-pdf.js` on
   `pdf.js`, a small PDF writer (standard fonts, JPEG pictures, links, check boxes; no library).
   Sorted by category, the cards come in sections with a heading per category (repeated with
-  "Fortsetzung" after a page break; the cards then leave the category out). Every card is a form
-  check box: tapping it in a PDF viewer (most desktop viewers: Chrome, Firefox, Acrobat; phone
-  viewers often cannot) crosses the wish out
-  (veil, line through the title, stamp "Vergeben"); saved and passed on, the file shows people
-  without an account what is already taken. Shop links lie above the check box and stay clickable. Uploaded photos come
+  "Fortsetzung" after a page break; the cards then leave the category out). Every card has a form
+  check box, only the small circle in its top right corner: ticking it in a PDF viewer (most
+  desktop viewers: Chrome, Firefox, Acrobat; phone viewers often cannot) fills the circle with a
+  check; saved and passed on, the file shows people without an account what is already taken. The
+  box covers only the circle, because many viewers give form fields priority over links: the shop
+  links stay clickable. Uploaded photos come
   from storage; image links through `mn.image` (`GET /image` on api.<domain>), because the page's CSP
   and most shops' missing CORS headers keep the browser from reading them. Every picture is shrunk to
   480 px and embedded; one that cannot be read gets the initial. `test/pdf.test.js` checks the file

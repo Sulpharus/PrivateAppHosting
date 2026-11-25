@@ -178,12 +178,12 @@ describe('wishlist pdf: sections and ticking off', () => {
     expect(s).toContain('(B\xfccher \\(Fortsetzung\\)) Tj');
   });
 
-  it('makes every card a check box that crosses the wish out, links still on top', () => {
+  it('gives every card a small check box in its corner, links still on top', () => {
     const plain = build([wish('A', ''), wish('B', '')]);
     expect(plain).not.toContain('/AcroForm');
     const { s, objects } = checkStructure(
       bytes([wish('A', ''), wish('B', '')], {
-        crossOut: { label: 'Vergeben', hint: 'Tipp: abhaken' },
+        crossOut: { hint: 'Tipp: abhaken' },
       }),
     );
     expect(objects).toBeGreaterThan(10);
@@ -191,7 +191,15 @@ describe('wishlist pdf: sections and ticking off', () => {
     expect(s).toContain('/T (wish-1)');
     expect(s).toContain('/T (wish-2)');
     expect(s).toContain('/AS /Off');
-    expect(s).toContain('(Vergeben) Tj');
+    // The widget is only the 13 pt circle, never the whole card.
+    const rects = [...s.matchAll(/\/Subtype \/Widget .*?\/Rect \[([^\]]+)\]/g)].map((m) =>
+      m[1].split(' ').map(Number),
+    );
+    expect(rects).toHaveLength(2);
+    for (const [x1, y1, x2, y2] of rects) {
+      expect(x2 - x1).toBeCloseTo(13);
+      expect(y2 - y1).toBeCloseTo(13);
+    }
     expect(s).toContain('(Tipp: abhaken) Tj');
     // In each page's list the widgets come before the links, so a link lies on top.
     const annots = /\/Annots \[([^\]]+)\]/

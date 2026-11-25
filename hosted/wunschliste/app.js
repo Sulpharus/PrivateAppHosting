@@ -1090,7 +1090,7 @@ async function exportPdf() {
           ? { none: t('filter.none'), continued: t('pdf.continued') }
           : undefined,
       // Every wish can be ticked off in a PDF viewer, for people without an account.
-      crossOut: { label: t('pdf.taken'), hint: t('pdf.hint') },
+      crossOut: { hint: t('pdf.hint') },
       now: today,
     });
     const slug =
