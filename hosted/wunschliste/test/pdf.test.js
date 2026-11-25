@@ -140,7 +140,7 @@ describe('wishlist pdf', () => {
   });
 });
 
-describe('wishlist pdf: sections and ticking off', () => {
+describe('wishlist pdf: sections and links', () => {
   const wish = (title, category) => ({
     title,
     category,
@@ -178,30 +178,10 @@ describe('wishlist pdf: sections and ticking off', () => {
     expect(s).toContain('(B\xfccher \\(Fortsetzung\\)) Tj');
   });
 
-  it('makes every card a check box that crosses the wish out, links still on top', () => {
-    const plain = build([wish('A', ''), wish('B', '')]);
-    expect(plain).not.toContain('/AcroForm');
-    const { s, objects } = checkStructure(
-      bytes([wish('A', ''), wish('B', '')], {
-        crossOut: { label: 'Vergeben', hint: 'Tipp: abhaken' },
-      }),
-    );
-    expect(objects).toBeGreaterThan(10);
-    expect(s).toMatch(/\/AcroForm << \/Fields \[\d+ 0 R \d+ 0 R\]/);
-    expect(s).toContain('/T (wish-1)');
-    expect(s).toContain('/T (wish-2)');
-    expect(s).toContain('/AS /Off');
-    expect(s).toContain('(Vergeben) Tj');
-    expect(s).toContain('(Tipp: abhaken) Tj');
-    // In each page's list the widgets come before the links, so a link lies on top.
-    const annots = /\/Annots \[([^\]]+)\]/
-      .exec(s)?.[1]
-      ?.trim()
-      .split(/ 0 R ?/)
-      .filter(Boolean);
-    const kinds = (annots ?? []).map(
-      (id) => new RegExp(`\\n${id} 0 obj\\n<< /Type /Annot /Subtype /(\\w+)`).exec(s)?.[1],
-    );
-    expect(kinds).toEqual(['Widget', 'Widget', 'Link', 'Link']);
+  it('has no form fields, only links to the shops', () => {
+    const { s } = checkStructure(bytes([wish('A', ''), wish('B', '')]));
+    expect(s).not.toContain('/AcroForm');
+    expect(s).not.toContain('/Widget');
+    expect(s.match(/\/Subtype \/Link/g)).toHaveLength(2);
   });
 });

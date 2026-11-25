@@ -634,7 +634,7 @@ function renderMine(main, tools) {
       ),
       h(
         'button',
-        { type: 'button', class: 'mn-btn', 'data-pdf': true, onclick: () => void exportPdf() },
+        { type: 'button', class: 'mn-btn', 'data-pdf': true, onclick: choosePdfWishes },
         icon('download'),
         t('mine.pdf'),
       ),
@@ -1033,10 +1033,102 @@ async function pictureForPdf(wish) {
   }
 }
 
+// Wishes left out of the PDF last time (for this visit): the next export starts from that choice.
+const leftOutOfPdf = new Set();
+
+/**
+ * Before the export: a sheet with every wish on screen (same order and category), all ticked
+ * unless left out last time, plus "select all". The PDF holds only the ticked ones, so one list
+ * makes several smaller ones.
+ */
+function choosePdfWishes() {
+  if (exporting) return;
+  const wishes = visible(S.wishes);
+  if (wishes.length === 0) return;
+  const boxes = wishes.map((wish) =>
+    h('input', { type: 'checkbox', checked: !leftOutOfPdf.has(wish.id), 'data-id': wish.id }),
+  );
+  const all = h('input', { type: 'checkbox' });
+  const status = h('p', { class: 'mn-grow pdf-pick-count', 'aria-live': 'polite' });
+  const create = h(
+    'button',
+    { type: 'button', class: 'mn-btn mn-btn--primary', onclick: () => void go() },
+    icon('download'),
+    t('pdfPick.create'),
+  );
+  const update = () => {
+    const n = boxes.filter((box) => box.checked).length;
+    all.checked = n === boxes.length;
+    all.indeterminate = n > 0 && n < boxes.length;
+    status.textContent = t('pdfPick.count', { n, total: boxes.length });
+    create.disabled = n === 0;
+  };
+  all.addEventListener('change', () => {
+    for (const box of boxes) box.checked = all.checked;
+    update();
+  });
+  for (const box of boxes) box.addEventListener('change', update);
+  const go = async () => {
+    const chosen = new Set();
+    wishes.forEach((wish, index) => {
+      if (boxes[index].checked) {
+        chosen.add(wish.id);
+        leftOutOfPdf.delete(wish.id);
+      } else leftOutOfPdf.add(wish.id);
+    });
+    if (chosen.size === 0) return;
+    window.mnui.sheet.close();
+    await exportPdf(wishes.filter((wish) => chosen.has(wish.id)));
+  };
+  update();
+
+  const content = document.createDocumentFragment();
+  content.append(
+    h(
+      'div',
+      { class: 'mn-sheet-bar' },
+      h(
+        'button',
+        { type: 'button', class: 'mn-btn mn-btn--ghost', 'data-mn-close': true },
+        t('editor.cancel'),
+      ),
+      h('h2', {}, t('pdfPick.title')),
+      h('span', {}),
+    ),
+    h(
+      'div',
+      { class: 'mn-sheet-body' },
+      h('p', { class: 'mn-hint' }, t('pdfPick.intro')),
+      h(
+        'div',
+        { class: 'mn-checks' },
+        h('label', { class: 'pdf-pick-all' }, all, t('pdfPick.all')),
+        wishes.map((wish, index) => {
+          const details = [
+            wish.price_cents !== null && wish.price_cents !== undefined
+              ? euro(wish.price_cents)
+              : '',
+            wish.category ?? '',
+          ].filter(Boolean);
+          return h(
+            'label',
+            {},
+            boxes[index],
+            h('span', {}, wish.title, details.length ? h('small', {}, details.join(' · ')) : null),
+          );
+        }),
+      ),
+    ),
+    h('div', { class: 'mn-sheet-foot' }, status, create),
+  );
+  window.mnui.sheet.open(content, { tall: true, modal: true });
+  all.focus();
+}
+
 let exporting = false;
-/** The own list as a PDF with pictures, downloaded. */
-async function exportPdf() {
-  if (exporting || S.wishes.length === 0) return;
+/** The chosen wishes as a PDF with pictures, downloaded. */
+async function exportPdf(wishes) {
+  if (exporting || wishes.length === 0) return;
   exporting = true;
   const button = document.querySelector('[data-pdf]');
   button?.setAttribute('aria-busy', 'true');
@@ -1046,8 +1138,6 @@ async function exportPdf() {
     const user = await mn.auth.user();
     const meta = user?.user_metadata ?? {};
     const name = String(meta.display_name || meta.name || user?.email?.split('@')[0] || '').trim();
-    // The PDF shows the list as it is on screen: same order, same category.
-    const wishes = visible(S.wishes);
     // Four at a time: gentle on the API (and its per-minute limit) with long lists.
     const pictures = new Array(wishes.length).fill(null);
     let nextPicture = 0;
@@ -1089,8 +1179,6 @@ async function exportPdf() {
         S.view.key === 'category'
           ? { none: t('filter.none'), continued: t('pdf.continued') }
           : undefined,
-      // Every wish can be ticked off in a PDF viewer, for people without an account.
-      crossOut: { label: t('pdf.taken'), hint: t('pdf.hint') },
       now: today,
     });
     const slug =

@@ -1,11 +1,10 @@
 // Lays a wishlist out on A4 pages with pdf.js: a header, then the wishes as cards in two columns,
 // as many rows per page as fit. A card holds the picture (or the initial on a tint), title, price,
 // priority, a short note and a link to the shop. Sorted by category, the cards come in sections
-// with a heading per category (repeated with "continued" after a page break). Every card is a
-// check box: tapping it in a PDF viewer crosses the wish out, so people without an account can
-// see what is already taken once the file is passed on. Pure: it gets the data and the finished
-// texts, and returns the bytes of the PDF.
-import { A4, boxOps, FONTS, PdfDocument, textWidth, wrap } from './pdf.js';
+// with a heading per category (repeated with "continued" after a page break). Which wishes it
+// holds is chosen in the app before the export. Pure: it gets the data and the finished texts, and
+// returns the bytes of the PDF.
+import { A4, FONTS, PdfDocument, textWidth, wrap } from './pdf.js';
 
 const INK = '#17160f';
 const MUTED = '#6b6a63';
@@ -27,7 +26,6 @@ const GAP = 10;
 const TITLE = { font: FONTS.bold, size: 10.5, line: 12.5, max: 2 };
 const NOTE = { font: FONTS.italic, size: 8.5, line: 10.5, max: 2 };
 const SECTION = { size: 13, height: 30 };
-const TICK = 13; // the circle in a card's corner that shows it can be ticked
 
 /**
  * @param {object} input
@@ -42,8 +40,6 @@ const TICK = 13; // the circle in a card's corner that shows it can be ticked
  * @param {{ none: string, continued: string }} [input.sections]  sections per category (the
  *   wishes come sorted by it): the heading of wishes without one, and the word after a heading
  *   that is repeated on the next page
- * @param {{ label: string, hint: string }} [input.crossOut]  every card can be ticked off in a
- *   PDF viewer: the stamp on a ticked card, and a line under the title that says so
  * @param {string} [input.author]
  * @param {Date} [input.now]
  */
@@ -55,7 +51,6 @@ export function buildWishlistPdf({
   pageLabel,
   empty,
   sections,
-  crossOut,
   author,
   now,
 }) {
@@ -72,14 +67,6 @@ export function buildWishlistPdf({
   top += 18;
   page.text(subtitle, MARGIN, top, { size: 10, colour: MUTED });
   top += 14;
-  if (crossOut?.hint && wishes.length > 0) {
-    for (const line of wrap(crossOut.hint, FONTS.italic, 8.5, right - MARGIN, 2)) {
-      top += 2;
-      page.text(line, MARGIN, top + 8, { font: FONTS.italic, size: 8.5, colour: MUTED });
-      top += 11;
-    }
-    top += 2;
-  }
   page.line(MARGIN, top, right, top, { stroke: RULE });
   top += 12;
 
@@ -87,10 +74,9 @@ export function buildWishlistPdf({
     page.text(empty, MARGIN, top + 12, { font: FONTS.italic, size: 11, colour: MUTED });
 
   // In sections the heading names the category: the cards leave it out.
-  const cards = wishes.map((wish, index) => ({
+  const cards = wishes.map((wish) => ({
     ...layoutCard(sections ? { ...wish, category: '' } : wish, cardWidth),
     wish,
-    index,
   }));
   // Consecutive wishes with the same category form a section (one section without headings).
   const groups = [];
@@ -122,7 +108,6 @@ export function buildWishlistPdf({
       row.forEach((card, column) => {
         const x = MARGIN + column * (cardWidth + COLUMN_GAP);
         drawCard(doc, page, card, x, top, rowHeight);
-        if (crossOut) tickable(page, card, x, top, rowHeight, crossOut.label);
       });
       top += rowHeight + ROW_GAP;
     }
@@ -259,55 +244,4 @@ function drawSection(page, name, count, continued, top) {
     colour: INK,
   });
   page.text(String(count), MARGIN + 10 + width + 8, top + 16, { size: 10, colour: MUTED });
-}
-
-/**
- * The card as a check box: an empty circle in its corner says it can be ticked; ticked, a white
- * veil, a line through the title and a stamp cross the wish out.
- */
-function tickable(page, card, x, top, height, label) {
-  const cx = x + card.width - PAD - TICK / 2;
-  const cy = top + PAD + TICK / 2;
-  page.roundRect(cx - TICK / 2, cy - TICK / 2, TICK, TICK, TICK / 2, {
-    stroke: RULE,
-    lineWidth: 1,
-  });
-  const w = card.width;
-  const h = height;
-  // In the box's own coordinates: origin at the bottom left.
-  const titleY = h - PAD - 9 + 3.5;
-  const textLeft = PAD + PICTURE + GAP;
-  const stampWidth = textWidth(label, FONTS.bold, 8) + 16;
-  const stampY = PAD + 6;
-  const stampX = PAD + Math.max(0, (PICTURE - stampWidth) / 2);
-  const tick = (r) =>
-    [
-      boxOps.pill(w - PAD - TICK, h - PAD - TICK, TICK, TICK, ACCENT),
-      boxOps.line(
-        w - PAD - TICK + 3.5,
-        h - PAD - r,
-        w - PAD - TICK / 2 - 0.5,
-        h - PAD - TICK + 3.5,
-        '#ffffff',
-        1.6,
-      ),
-      boxOps.line(
-        w - PAD - TICK / 2 - 0.5,
-        h - PAD - TICK + 3.5,
-        w - PAD - 3,
-        h - PAD - 3.5,
-        '#ffffff',
-        1.6,
-      ),
-    ].join('\n');
-  const on = [
-    boxOps.veil(w, h, '#ffffff'),
-    boxOps.line(textLeft - 2, titleY, w - PAD - TICK - 6, titleY, ACCENT, 1.6),
-    boxOps.line(PAD, PAD, PAD + PICTURE, PAD + PICTURE, ACCENT, 1.6),
-    // The stamp sits on the picture, which the veil covers anyway, and never on the text.
-    boxOps.pill(stampX, stampY, stampWidth, 15, ACCENT),
-    boxOps.text(label, stampX + 8, stampY + 4.5, FONTS.bold, 8, '#ffffff'),
-    tick(TICK / 2 + 0.5),
-  ].join('\n');
-  page.checkbox(`wish-${card.index + 1}`, x, top, w, h, on);
 }

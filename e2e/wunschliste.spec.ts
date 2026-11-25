@@ -194,6 +194,10 @@ test('a wish with an uploaded photo: others see it, and the list exports as a PD
   // The PDF: a real file with the title, the price and the picture inside.
   const download = lena.waitForEvent('download');
   await lena.getByRole('button', { name: 'Als PDF' }).click();
+  await lena
+    .getByRole('dialog', { name: 'Wünsche fürs PDF' })
+    .getByRole('button', { name: 'PDF erstellen' })
+    .click();
   const file = await download;
   expect(file.suggestedFilename()).toMatch(/^wunschliste-.*\.pdf$/);
   const path = await file.path();
@@ -335,13 +339,35 @@ test('sort by price or name, filter by category, and the PDF follows the view', 
   await expect.poll(titles).toEqual(['Buch Alpha', 'Buch Omega']);
 
   // The PDF holds what is shown, in this order.
+  // Before the export a sheet lists the wishes shown, all selected.
+  const { readFileSync } = await import('node:fs');
   const download = mia.waitForEvent('download');
   await mia.getByRole('button', { name: 'Als PDF' }).click();
-  const { readFileSync } = await import('node:fs');
+  const pick = mia.getByRole('dialog', { name: 'Wünsche fürs PDF' });
+  await expect(pick.getByLabel('Alle auswählen')).toBeChecked();
+  await expect(pick.getByText('2 von 2 ausgewählt')).toBeVisible();
+  await pick.getByRole('button', { name: 'PDF erstellen' }).click();
   const pdf = readFileSync(await (await download).path()).toString('latin1');
   expect(pdf.indexOf('(Buch Alpha)')).toBeGreaterThan(-1);
   expect(pdf.indexOf('(Buch Alpha)')).toBeLessThan(pdf.indexOf('(Buch Omega)'));
   expect(pdf).not.toContain('(Zelt)');
+
+  // Only some wishes: nothing selected cannot be exported, a single one can.
+  await mia.getByRole('button', { name: 'Als PDF' }).click();
+  await pick.getByLabel('Alle auswählen').uncheck();
+  await expect(pick.getByRole('button', { name: 'PDF erstellen' })).toBeDisabled();
+  await pick.getByLabel(/Buch Omega/).check();
+  await expect(pick.getByText('1 von 2 ausgewählt')).toBeVisible();
+  expect(
+    await pick
+      .getByLabel('Alle auswählen')
+      .evaluate((el: { indeterminate: boolean }) => el.indeterminate),
+  ).toBe(true);
+  const single = mia.waitForEvent('download');
+  await pick.getByRole('button', { name: 'PDF erstellen' }).click();
+  const one = readFileSync(await (await single).path()).toString('latin1');
+  expect(one).toContain('(Buch Omega)');
+  expect(one).not.toContain('(Buch Alpha)');
 
   // The sort order is kept for the next visit.
   await mia.reload();

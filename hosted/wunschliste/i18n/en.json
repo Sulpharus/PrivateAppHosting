@@ -185,8 +185,6 @@
   "editor.categoryHint": "Your own words, for sorting and filtering",
   "view.label": "List view",
   "pdf.continued": "continued",
-  "pdf.taken": "Taken",
-  "pdf.hint": "Tip: in most PDF programs on a computer (Chrome, Firefox, Acrobat) tap a wish to tick it off as taken, then save the file. Whoever gets it next sees what is already being bought.",
   "access.label": "Who sees your list?",
   "access.public": "Everyone with the app",
   "access.whitelist": "Whitelist only",
@@ -220,5 +218,10 @@
     "one": "{n} match",
     "other": "{n} matches"
   },
-  "access.unavailable": "Who sees your list could not be loaded right now. Reload the page to change it."
+  "access.unavailable": "Who sees your list could not be loaded right now. Reload the page to change it.",
+  "pdfPick.title": "Wishes for the PDF",
+  "pdfPick.intro": "Choose which wishes go into the PDF. That way one list becomes several smaller ones, say one per person.",
+  "pdfPick.all": "Select all",
+  "pdfPick.count": "{n} of {total} selected",
+  "pdfPick.create": "Create PDF"
 }

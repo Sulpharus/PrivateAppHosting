@@ -80,20 +80,19 @@ three users.
   `wishes.image_path` and returns it from `wishlist()`. A photo wins over an image link; replacing or
   removing it, or deleting the wish, deletes the file. Signed addresses expire after an hour: they are
   made on demand and kept for 50 minutes (`pictureUrl`). The shopping list still shows initials.
-- **PDF export** ("Als PDF" on *Meine Liste*): the list as it is on screen (same order and category)
-  on A4 pages: two cards side by side and as many rows as fit (picture or initial, title, price,
-  priority tag, category, two lines of note, link to the shop), laid out by `wishlist-pdf.js` on
-  `pdf.js`, a small PDF writer (standard fonts, JPEG pictures, links, check boxes; no library).
+- **PDF export** ("Als PDF" on *Meine Liste*): first a sheet lists the wishes on screen (same
+  order and category) with a check box each and "Alle auswählen"; all are ticked, except the ones
+  left out last time in this visit. Only the ticked wishes go into the PDF, so one list becomes
+  several smaller ones (say one per person). The PDF has A4 pages: two cards side by side and as
+  many rows as fit (picture or initial, title, price, priority tag, category, two lines of note,
+  link to the shop), laid out by `wishlist-pdf.js` on
+  `pdf.js`, a small PDF writer (standard fonts, JPEG pictures, links; no library, no form fields).
   Sorted by category, the cards come in sections with a heading per category (repeated with
-  "Fortsetzung" after a page break; the cards then leave the category out). Every card is a form
-  check box: tapping it in a PDF viewer (most desktop viewers: Chrome, Firefox, Acrobat; phone
-  viewers often cannot) crosses the wish out
-  (veil, line through the title, stamp "Vergeben"); saved and passed on, the file shows people
-  without an account what is already taken. Shop links lie above the check box and stay clickable. Uploaded photos come
+  "Fortsetzung" after a page break; the cards then leave the category out). Uploaded photos come
   from storage; image links through `mn.image` (`GET /image` on api.<domain>), because the page's CSP
   and most shops' missing CORS headers keep the browser from reading them. Every picture is shrunk to
   480 px and embedded; one that cannot be read gets the initial. `test/pdf.test.js` checks the file
-  structure and the two columns, `e2e/wunschliste.spec.ts` the download.
+  structure and the two columns, `e2e/wunschliste.spec.ts` the selection and the download.
 
 ## Languages
 

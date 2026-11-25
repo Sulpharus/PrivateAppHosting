@@ -11,6 +11,7 @@ Jede Änderung am System bekommt hier eine Zeile (siehe [Wissen aktuell halten](
 
 | Datum | Neu | Wo |
 | --- | --- | --- |
+| 25.11. | **Wunschliste: Wünsche fürs PDF auswählen**: „Als PDF“ zeigt erst alle Wünsche der Ansicht zum An- und Abwählen (mit „Alle auswählen“); ins PDF kommen nur die ausgewählten, so machst du aus einer Liste eigene kleinere Listen. Das Abhaken im PDF gibt es nicht mehr, dafür sind die Shop-Links im PDF wieder in jedem PDF-Programm klickbar | App Wunschliste → Meine Liste → Als PDF |
 | 25.11. | **KI-Modelle selbst einstellen**: Verwaltung → KI-Proxy → *Modelle* legt fest, welches Modell von Google oder Anthropic hinter `gemini-flash`, `gemini-pro`, `claude-haiku` und `claude-sonnet` steht, mit Preisen und Denkaufwand; gilt nach spätestens einer Minute für alle Apps | Wissen → KI-Proxy, ADR 0031 |
 | 25.11. | **„Admin pflegt, alle lesen“ funktioniert in der App**: In Apps mit Datenmodus `readonly` können Admins jetzt direkt in der App anlegen, ändern und löschen; alle anderen lesen nur. Bestehende Apps bekommen das automatisch | Wissen → Daten speichern, ADR 0031 |
 | 24.11. | **KI-Proxy**: `claude-haiku` und `claude-sonnet` nutzen jetzt Claude Haiku 5.5 und Sonnet 5.5 (vorher Haiku 4.5 und Sonnet 5), mit niedrigem Denkaufwand; Haiku wird zum höheren Preis (über 100.000 Tokens) verrechnet, damit Budgets nie zu knapp sind | Wissen → KI-Proxy |
