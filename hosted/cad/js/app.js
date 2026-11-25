@@ -92,9 +92,8 @@ async function start() {
   });
 
   // Any action that fails without its own message says so, instead of doing nothing.
-  window.addEventListener('unhandledrejection', (e) => {
+  window.addEventListener('unhandledrejection', () => {
     window.mnui.toast(t('common.actionError'));
-    for (const b of document.querySelectorAll('.mn-overlay button[disabled]')) b.disabled = false;
   });
 
   route();
@@ -1288,7 +1287,14 @@ async function start() {
     });
     go2.addEventListener('click', async () => {
       go2.disabled = true;
-      await store.deleteAll();
+      try {
+        await store.deleteAll();
+      } catch {
+        // Partly deleted: say so; the button stays usable for another try (the word is typed).
+        go2.disabled = false;
+        window.mnui.toast(t('common.actionError'));
+        return;
+      }
       window.mnui.sheet.close();
       window.mnui.toast(t('data.deleted'));
       go({ view: 'projects' });
@@ -1406,8 +1412,7 @@ async function start() {
         { op: 'add_dimension', x1: 0, y1: 0, x2: 0, y2: 80, kind: 'v', offset: 12 },
         { op: 'add_dimension', x1: 45, y1: 40, x2: 75, y2: 40, kind: 'h', offset: 24 },
         { op: 'add_text', x: 0, y: 88, text: t('sample.plateText'), size: 4 },
-        { op: 'extrude', target: 'e1', h: 6 },
-        { op: 'set', target: 's13', material: { id: 'aluminium' } },
+        { op: 'extrude', target: 'e1', h: 6, material: { id: 'aluminium' } },
         { op: 'set_sheet', title: t('sample.plate'), material: 'AlMg3 6 mm', scale: '1:1' },
       ]).model;
       const p2 = store.newProject({

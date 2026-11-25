@@ -72,3 +72,55 @@ describe('applyOps', () => {
     expect(applyOps(m, [{ op: 'add_line', x1: 0, y1: 0, x2: 1, y2: 0 }]).added).toEqual(['e8']);
   });
 });
+
+describe('normalise keeps what it can', () => {
+  it('drops an unknown material but keeps the solid', () => {
+    const m = normalise({
+      solids: [
+        {
+          id: 's1',
+          name: 'A',
+          kind: 'box',
+          op: 'add',
+          pos: [0, 0, 0],
+          rot: [0, 0, 0],
+          w: 1,
+          d: 1,
+          h: 1,
+          material: { id: 'unobtainium' },
+        },
+      ],
+    });
+    expect(m.solids).toHaveLength(1);
+    expect(m.solids[0].material).toBeUndefined();
+  });
+
+  it('drops a thread with bad values or one too fine to build', () => {
+    const base = {
+      name: 'T',
+      kind: 'thread',
+      op: 'add',
+      pos: [0, 0, 0],
+      rot: [0, 0, 0],
+      d: 6,
+      pitch: 1,
+      h: 10,
+    };
+    const m = normalise({
+      solids: [
+        { ...base, id: 's1', clearance: 'x' },
+        { ...base, id: 's2', pitch: 0.01 },
+        { ...base, id: 's3', h: 5000 },
+        { ...base, id: 's4', clearance: 0.1 },
+      ],
+    });
+    expect(m.solids.map((s) => s.id)).toEqual(['s4']);
+  });
+
+  it('refuses an add_thread that would be too complex', () => {
+    const { errors } = applyOps(emptyModel(), [
+      { op: 'add_thread', x: 0, y: 0, z: 0, d: 6, pitch: 1, h: 4000 },
+    ]);
+    expect(errors[0].code).toBe('too_complex');
+  });
+});

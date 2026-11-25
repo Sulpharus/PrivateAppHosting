@@ -571,84 +571,113 @@ export const METRIC_COARSE = {
 export const threadSegments = (r, tol = 0.002) =>
   Math.max(48, Math.min(256, Math.ceil(Math.PI * Math.sqrt(r / (2 * tol)))));
 
+/** Rough triangle count of a thread (for limits before anything is built). */
+export const threadTriangles = (d, pitch, length) =>
+  Math.ceil((length / pitch) * threadSegments(d / 2) * 8 + threadSegments(d / 2) * 16);
+export const THREAD_MAX_TRIANGLES = 400_000;
+
 /**
  * A threaded rod along Z from 0 to `length`: nominal diameter `d`, `pitch`. The flanks are 60°, the
  * crest flat P/8 at the major diameter, the root flat P/4 at the minor diameter d − 1.0825·P (the
  * basic profile both bolt and nut are toleranced from). `offset` moves every radius (clearance).
- * The thread runs out over half a turn at both ends, like a cut or rolled thread, and the mesh is a
- * closed solid (every edge shared by two triangles).
+ * The thread runs out over half a turn at both ends, like a cut or rolled thread. The mesh is a
+ * closed solid: every vertex is computed once and shared by all triangles that use it, so every
+ * edge is shared by exactly two triangles, also in the exported STL.
  */
 export function thread(d, pitch, length, { offset = 0, left = false, segments } = {}) {
   const P = pitch;
   const rMaj = d / 2 + offset;
   const rMin = d / 2 - 0.5412658773652741 * P + offset;
-  if (length < 2 * P || rMin <= 0) return cylinder((rMaj + rMin) / 2, length);
+  if (length < 2 * P || rMin <= 0 || threadTriangles(d, P, length) > THREAD_MAX_TRIANGLES)
+    return cylinder((rMaj + rMin) / 2, length);
   // Axial breakpoints of one pitch of the profile and the radius at each.
   const U = [0, P / 4, (9 * P) / 16, (11 * P) / 16, P];
   const R = [rMin, rMin, rMaj, rMaj, rMin];
+  const J = U.length - 1;
   const S = segments ?? threadSegments(rMaj);
   const TWO_PI = 2 * Math.PI;
-  const phiMax = (TWO_PI * (length - P)) / P;
-  // Angles: S per turn plus the angle where the helix ends, repeated every turn, so adjacent
-  // turns share their vertices exactly.
-  const base = new Set(Array.from({ length: S }, (_, i) => (i * TWO_PI) / S));
-  base.add(((phiMax % TWO_PI) + TWO_PI) % TWO_PI);
-  const baseList = [...base].sort((a, b) => a - b);
-  const phis = [];
-  for (let k = 0; k * TWO_PI <= phiMax + 1e-12; k++)
-    for (const b of baseList) {
-      const phi = k * TWO_PI + b;
-      if (phi <= phiMax + 1e-9) phis.push(Math.min(phi, phiMax));
-    }
-  if (phis.at(-1) < phiMax - 1e-9) phis.push(phiMax);
-  const depth = (phi) => Math.min(1, phi / Math.PI, (phiMax - phi) / Math.PI);
+  // Angles of one turn: S even steps plus the angle where the helix ends, unless that is (almost)
+  // one of them: then the end snaps onto it (the length changes by less than a millionth of a mm).
+  let phiMax = (TWO_PI * (length - P)) / P;
+  const base = Array.from({ length: S }, (_, i) => (i * TWO_PI) / S);
+  const endTurn = Math.floor(phiMax / TWO_PI + 1e-9);
+  let end = phiMax - endTurn * TWO_PI;
+  const near = base.findIndex((b) => Math.abs(b - end) < 1e-6 || Math.abs(b + TWO_PI - end) < 1e-6);
+  if (near >= 0) {
+    end = base[near];
+    phiMax =
+      endTurn * TWO_PI +
+      end +
+      (Math.abs(base[near] + TWO_PI - (phiMax - endTurn * TWO_PI)) < 1e-6 ? TWO_PI : 0);
+  } else {
+    base.push(end);
+    base.sort((a, b) => a - b);
+  }
+  const n = base.length;
+  const phiOf = (g) => Math.floor(g / n) * TWO_PI + base[g % n];
+  const gMax = Math.round((phiMax - base[base.indexOf(end)]) / TWO_PI) * n + base.indexOf(end);
+  const depth = (phi) => Math.max(0, Math.min(1, phi / Math.PI, (phiMax - phi) / Math.PI));
   const sign = left ? -1 : 1;
-  const at = (phi, r, z) => [r * Math.cos(sign * phi), r * Math.sin(sign * phi), z];
-  const helix = (phi, j) => {
-    const f = Math.max(0, depth(phi));
-    return at(phi, rMin + f * (R[j] - rMin), U[j] + (P * phi) / TWO_PI);
+  const cs = base.map((b) => [Math.cos(sign * b), Math.sin(sign * b)]);
+  const at = (g, r, z) => {
+    const [c, sn] = cs[g % n];
+    return [r * c, r * sn, z];
+  };
+  const cache = new Map();
+  const memo = (key, make) => {
+    let v = cache.get(key);
+    if (!v) {
+      v = make();
+      cache.set(key, v);
+    }
+    return v;
+  };
+  // The thread surface; row J of one turn is row 0 of the next.
+  const vertex = (g, j) =>
+    j === J
+      ? vertex(g + n, 0)
+      : memo(`h${g},${j}`, () => {
+          const phi = phiOf(g);
+          return at(g, rMin + depth(phi) * (R[j] - rMin), U[j] + (P * phi) / TWO_PI);
+        });
+  // Skirts: the plain core between the band and the flat ends. Their outer edges are the band's
+  // first and last profile edges; where they shrink to nothing they reuse one point.
+  const low = (g, j) => {
+    if (j === J) return vertex(g, 0);
+    if (g === 0) return vertex(0, 0);
+    if (g === n) return vertex(0, j);
+    return memo(`l${g},${j}`, () => at(g, rMin, (U[j] * phiOf(g)) / TWO_PI));
+  };
+  const high = (g, j) => {
+    if (j === 0) return vertex(g, J);
+    if (g === gMax) return vertex(gMax, J);
+    if (g === gMax - n) return vertex(gMax, j);
+    return memo(`t${g},${j}`, () => {
+      const zTop = P + (P * phiOf(g)) / TWO_PI;
+      return at(g, rMin, zTop + (U[j] / P) * (length - zTop));
+    });
   };
   const out = [];
   const tri = (a, b, c) => {
-    const ab = sub(b, a);
-    const ac = sub(c, a);
-    const n = cross(ab, ac);
-    if (n[0] * n[0] + n[1] * n[1] + n[2] * n[2] < 1e-18) return; // collapsed (skirt start)
+    if (a === b || b === c || a === c) return; // a skirt shrinking to a point
     out.push(left ? { v: [a, c, b] } : { v: [a, b, c] });
   };
-  const quad = (a, b, c, d2) => {
+  const quad = (a, b, c, e) => {
     tri(a, b, c);
-    tri(a, c, d2);
+    tri(a, c, e);
   };
-  // The thread surface: one helical band, four profile segments wide.
-  for (let i = 0; i + 1 < phis.length; i++)
-    for (let j = 0; j + 1 < U.length; j++)
-      quad(
-        helix(phis[i], j),
-        helix(phis[i + 1], j),
-        helix(phis[i + 1], j + 1),
-        helix(phis[i], j + 1),
-      );
-  // Skirts: the plain core between the band and the flat ends, then the end discs.
-  const bottom = phis.filter((p) => p <= TWO_PI + 1e-9);
-  const top = phis.filter((p) => p >= phiMax - TWO_PI - 1e-9);
-  const skirtLow = (phi, j) => at(phi, rMin, (U[j] * phi) / TWO_PI);
-  const skirtHigh = (phi, j) => {
-    const zTop = P + (P * phi) / TWO_PI;
-    return at(phi, rMin, zTop + (U[j] / P) * (length - zTop));
-  };
-  for (const [list, f] of [
-    [bottom, skirtLow],
-    [top, skirtHigh],
-  ])
-    for (let i = 0; i + 1 < list.length; i++)
-      for (let j = 0; j + 1 < U.length; j++)
-        quad(f(list[i], j), f(list[i + 1], j), f(list[i + 1], j + 1), f(list[i], j + 1));
-  for (let i = 0; i + 1 < bottom.length; i++)
-    tri([0, 0, 0], skirtLow(bottom[i + 1], 0), skirtLow(bottom[i], 0));
-  const last = U.length - 1;
-  for (let i = 0; i + 1 < top.length; i++)
-    tri([0, 0, length], skirtHigh(top[i], last), skirtHigh(top[i + 1], last));
+  for (let g = 0; g < gMax; g++)
+    for (let j = 0; j < J; j++)
+      quad(vertex(g, j), vertex(g + 1, j), vertex(g + 1, j + 1), vertex(g, j + 1));
+  for (let g = 0; g < n; g++)
+    for (let j = 0; j < J; j++) quad(low(g, j), low(g + 1, j), low(g + 1, j + 1), low(g, j + 1));
+  for (let g = gMax - n; g < gMax; g++)
+    for (let j = 0; j < J; j++)
+      quad(high(g, j), high(g + 1, j), high(g + 1, j + 1), high(g, j + 1));
+  const bottomCentre = [0, 0, 0];
+  for (let g = 0; g < n; g++) tri(bottomCentre, low(g + 1, 0), low(g, 0));
+  const topCentre = [0, 0, length];
+  for (let g = gMax - n; g < gMax; g++) tri(topCentre, high(g, J), high(g + 1, J));
   return out;
 }
 

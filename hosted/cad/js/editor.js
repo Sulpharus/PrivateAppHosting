@@ -18,7 +18,15 @@ import { cleanMaterial, MATERIAL_IDS, materialOf } from './materials.js';
 import { applyOps, fieldsOf, nextId, normalise, STYLES } from './model.js';
 import { buildScene, geometryKey } from './scene.js';
 import { Sketch } from './sketch.js';
-import { METRIC_COARSE, meshBounds, RAW_LIMIT, solidMesh } from './solid.js';
+import {
+  combine,
+  METRIC_COARSE,
+  meshBounds,
+  RAW_LIMIT,
+  solidMesh,
+  THREAD_MAX_TRIANGLES,
+  threadTriangles,
+} from './solid.js';
 import {
   contextMenu,
   download,
@@ -97,6 +105,11 @@ export function mountEditor(root, app, project) {
     return sceneKey === `${geometryKey(model.solids)}|${[...meshes.keys()].join(',')}`
       ? combined
       : undefined;
+  }
+
+  /** The model to export: the shown one when it is current, otherwise built now (never stale). */
+  function exportMesh() {
+    return currentMesh() ?? combine(model.solids, meshes);
   }
 
   function solidNames() {
@@ -922,11 +935,15 @@ export function mountEditor(root, app, project) {
     );
     if (m.tex === 'layers') {
       const layer = el('input', { type: 'text', inputmode: 'decimal', value: fmt(m.layer, 3) });
+      const layerErr = el('p.mn-error', { role: 'alert', hidden: true }, t('material.layerError'));
       layer.addEventListener('change', () => {
         const v = readNumber(layer.value);
-        if (v && v >= 0.04 && v <= 1) set({ layer: v });
+        const ok = v !== null && v >= 0.04 && v <= 1;
+        layerErr.hidden = ok;
+        layer.setAttribute('aria-invalid', String(!ok));
+        if (ok) set({ layer: v });
       });
-      fields.append(el('label.mn-field', {}, `${t('material.layer')} (mm)`, layer));
+      fields.append(el('label.mn-field', {}, `${t('material.layer')} (mm)`, layer, layerErr));
     }
     return el('div', {}, fields, el('p.mn-hint', {}, t('material.hint')));
   }
@@ -1038,9 +1055,24 @@ export function mountEditor(root, app, project) {
       const p = readNumber(pitch.value);
       const l = readNumber(len.value);
       const c = readNumber(clr.value);
-      if (!d || !p || !l || c === null || p > d / 4 || fromUnit(l) < 2 * p || c < 0 || c > 1) {
+      if (
+        !d ||
+        !p ||
+        !l ||
+        c === null ||
+        p < 0.2 ||
+        p > d / 4 ||
+        fromUnit(l) < 2 * p ||
+        c < 0 ||
+        c > 1
+      ) {
         err.hidden = false;
         err.textContent = t('thread.error');
+        return;
+      }
+      if (threadTriangles(d, p, fromUnit(l)) > THREAD_MAX_TRIANGLES) {
+        err.hidden = false;
+        err.textContent = t('thread.tooComplex');
         return;
       }
       const length = fromUnit(l);
@@ -1294,8 +1326,12 @@ export function mountEditor(root, app, project) {
   // The scene is built in a worker (CSG and smooth normals off the page) and cached by geometry;
   // without workers it is built here. Material changes only recolour, nothing is rebuilt.
   let sceneJob = 0;
-  let sceneKey = '';
+  let sceneKey = ''; // geometry the 3D view shows
+  let wantedKey = ''; // geometry it should show
   let stats = null;
+  let busy = false;
+  let queued = null;
+  let destroyed = false;
   const sentMeshes = new Set();
   let worker = null;
   try {
@@ -1309,23 +1345,56 @@ export function mountEditor(root, app, project) {
     pending.delete(e.data.job);
     done?.(e.data);
   });
-  worker?.addEventListener('error', () => {
+  const fail = () => {
     worker = null;
     for (const done of pending.values()) done({ error: 'worker' });
     pending.clear();
-  });
+  };
+  worker?.addEventListener('error', fail);
+  worker?.addEventListener('messageerror', fail);
   function build(solids) {
-    if (!worker) return Promise.resolve(buildScene(solids, meshes));
+    if (!worker) return Promise.resolve().then(() => buildScene(solids, meshes));
     for (const [id, polys] of meshes)
       if (!sentMeshes.has(id)) {
         worker.postMessage({ type: 'mesh', id, polys });
         sentMeshes.add(id);
       }
     const job = ++sceneJob;
-    return new Promise((resolve) => {
-      pending.set(job, (r) => resolve(r.error ? buildScene(solids, meshes) : r));
+    return new Promise((resolve, reject) => {
+      pending.set(job, (r) => {
+        if (!r.error) return resolve(r);
+        // The worker failed: build here instead.
+        try {
+          resolve(buildScene(solids, meshes));
+        } catch (err) {
+          reject(err);
+        }
+      });
       worker.postMessage({ type: 'build', job, solids });
     });
+  }
+
+  /** One build at a time; while it runs only the newest request waits (older ones are dropped). */
+  function request(key, m) {
+    queued = { key, m };
+    if (!busy) pump();
+  }
+  async function pump() {
+    const job = queued;
+    queued = null;
+    if (!job || destroyed) return;
+    busy = true;
+    let r = null;
+    try {
+      r = await build(job.m.solids);
+    } catch {
+      window.mnui.toast(t('common.actionError'));
+    }
+    busy = false;
+    if (destroyed) return;
+    if (r && job.key === wantedKey) showScene(r, job.key, job.m);
+    if (queued && queued.key !== sceneKey) pump();
+    else queued = null;
   }
 
   const partCache = new Map();
@@ -1359,45 +1428,48 @@ export function mountEditor(root, app, project) {
 
   function updateScene() {
     clearTimeout(combineTimer);
-    combineTimer = setTimeout(async () => {
+    combineTimer = setTimeout(() => {
+      if (destroyed) return;
       const m = preview?.model ?? model;
       const key = `${geometryKey(m.solids)}|${[...meshes.keys()].join(',')}`;
-      const mats = materialsOf(m);
+      wantedKey = key;
       updateOverlays();
       if (key === sceneKey) {
-        view3d.setMaterials(mats);
+        queued = null;
+        view3d.setMaterials(materialsOf(m));
         return;
       }
-      const job = sceneJob + 1;
-      const r = await build(m.solids);
-      // A newer change started meanwhile: its result follows.
-      if (worker && job !== sceneJob) return;
-      sceneKey = key;
-      combined = r.mesh;
-      stats = r.stats;
-      const ps = m.solids
-        .filter((x) => x.kind === 'toolpath' && !x.hidden && paths.has(x.id))
-        .map((x) => {
-          const p = paths.get(x.id);
-          const move = (q) => [q[0] + x.pos[0], q[1] + x.pos[1], q[2] + x.pos[2]];
-          return {
-            cut: p.cut.map((l) => l.map(move)),
-            rapid: p.rapid.map(([a, b]) => [move(a), move(b)]),
-          };
-        });
-      const fallback = materialOf({}, project.purpose);
-      view3d.setModel({
-        groups: r.groups.map((g) => ({ ...g, material: mats.get(g.id) ?? fallback })),
-        bounds: r.bounds,
-        paths: ps,
-      });
-      if (!app.state.fitted3d?.has(project.id)) {
-        app.state.fitted3d ??= new Set();
-        app.state.fitted3d.add(project.id);
-        view3d.fitAll();
-      }
-      if (mode === '3d' && panelTab === 'props' && !selection.length) renderPanel();
+      request(key, m);
     }, 60);
+  }
+
+  function showScene(r, key, m) {
+    const mats = materialsOf(m);
+    sceneKey = key;
+    combined = r.mesh;
+    stats = r.stats;
+    const ps = m.solids
+      .filter((x) => x.kind === 'toolpath' && !x.hidden && paths.has(x.id))
+      .map((x) => {
+        const p = paths.get(x.id);
+        const move = (q) => [q[0] + x.pos[0], q[1] + x.pos[1], q[2] + x.pos[2]];
+        return {
+          cut: p.cut.map((l) => l.map(move)),
+          rapid: p.rapid.map(([a, b]) => [move(a), move(b)]),
+        };
+      });
+    const fallback = materialOf({}, project.purpose);
+    view3d.setModel({
+      groups: r.groups.map((g) => ({ ...g, material: mats.get(g.id) ?? fallback })),
+      bounds: r.bounds,
+      paths: ps,
+    });
+    if (!app.state.fitted3d?.has(project.id)) {
+      app.state.fitted3d ??= new Set();
+      app.state.fitted3d.add(project.id);
+      view3d.fitAll();
+    }
+    if (mode === '3d' && panelTab === 'props' && !selection.length) renderPanel();
   }
 
   async function loadFiles() {
@@ -1806,7 +1878,7 @@ export function mountEditor(root, app, project) {
         'export.stlSub',
         () => {
           download(
-            new Blob([writeStl(combined, project.name)], { type: 'model/stl' }),
+            new Blob([writeStl(exportMesh(), project.name)], { type: 'model/stl' }),
             `${name}.stl`,
           );
           done(`${name}.stl`);
@@ -1817,7 +1889,7 @@ export function mountEditor(root, app, project) {
         'export.obj',
         'export.objSub',
         () => {
-          download(new Blob([writeObj(combined)], { type: 'text/plain' }), `${name}.obj`);
+          download(new Blob([writeObj(exportMesh())], { type: 'text/plain' }), `${name}.obj`);
           done(`${name}.obj`);
         },
         !has3d,
@@ -2502,6 +2574,11 @@ export function mountEditor(root, app, project) {
       document.removeEventListener('keydown', onKey);
       document.removeEventListener('keyup', onKey);
       aiBusy?.abort();
+      destroyed = true;
+      clearTimeout(combineTimer);
+      worker?.terminate();
+      worker = null;
+      pending.clear();
       sketch.destroy();
       view3d.destroy();
       if (saveTimer) await save();

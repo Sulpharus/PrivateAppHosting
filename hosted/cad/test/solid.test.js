@@ -72,3 +72,36 @@ describe('threads', () => {
     expect(m.every((p) => p.s === 'b')).toBe(true);
   });
 });
+
+describe('thread closure', () => {
+  const exactOpen = (mesh) => {
+    const key = (p) => p.join(',');
+    const count = new Map();
+    for (const { v } of mesh)
+      for (let i = 0; i < v.length; i++) {
+        const a = key(v[i]);
+        const b = key(v[(i + 1) % v.length]);
+        const k = a < b ? `${a}|${b}` : `${b}|${a}`;
+        count.set(k, (count.get(k) ?? 0) + 1);
+      }
+    return [...count.values()].filter((c) => c !== 2).length;
+  };
+  for (const [d, p, l] of [
+    [3, 0.5, 10],
+    [3, 0.5, 12],
+    [4, 0.7, 12],
+    [6, 1, 20],
+    [8, 1.25, 20],
+    [10, 1.5, 30],
+    [12, 1.75, 25],
+    [6, 1, 2],
+    [6, 1, 2 + 1e-7],
+    [5, 0.8, 7.3],
+  ])
+    for (const offset of [0, 0.15])
+      for (const left of [false, true])
+        it(`M${d}×${p}×${l} offset ${offset}${left ? ' LH' : ''} shares every edge exactly`, async () => {
+          const { thread } = await import('../js/solid.js');
+          expect(exactOpen(thread(d, p, l, { offset, left }))).toBe(0);
+        });
+});

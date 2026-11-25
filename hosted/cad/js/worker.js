@@ -26,14 +26,12 @@ self.addEventListener('message', (e) => {
       results.delete(key);
       results.set(key, r);
     }
-    // Copies of the buffers go back, so the cache keeps its own.
-    self.postMessage({
-      job: msg.job,
-      mesh: r.mesh,
-      bounds: r.bounds,
-      stats: r.stats,
-      groups: r.groups.map((g) => ({ id: g.id, data: g.data.slice() })),
-    });
+    // Copies of the buffers are handed over (transferred, not copied again); the cache keeps its own.
+    const groups = r.groups.map((g) => ({ id: g.id, data: g.data.slice() }));
+    self.postMessage(
+      { job: msg.job, mesh: r.mesh, bounds: r.bounds, stats: r.stats, groups },
+      groups.map((g) => g.data.buffer),
+    );
   } catch (err) {
     self.postMessage({ job: msg.job, error: String(err?.message ?? err) });
   }

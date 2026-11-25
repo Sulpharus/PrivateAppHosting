@@ -608,7 +608,7 @@
   "thread.hintSelected": "An internal thread goes straight through the centre of the selected part; an external thread stands on top of it.",
   "thread.go": "Make thread",
   "thread.done": "Thread made",
-  "thread.error": "Check the values: the pitch is at most a quarter of the diameter, the length at least two pitches, the clearance between 0 and 1 mm.",
+  "thread.error": "Check the values: the pitch is between 0.2 mm and a quarter of the diameter, the length at least two pitches, the clearance between 0 and 1 mm.",
   "thread.designation": "Designation",
   "thread.pitchDiameter": "Pitch diameter",
   "thread.minorDiameter": "Minor diameter",
@@ -620,5 +620,8 @@
   "sample.bolt": "Hex bolt M8 × 20",
   "sample.boltThread": "Thread M8",
   "sample.boltHead": "Head 13 mm AF",
-  "sample.boltNotes": "Example of a real thread: ISO profile M8 × 1.25 as a helix, head 13 mm across flats. Switch the 3D model to “Realistic” to see steel, reflections and shadows."
+  "sample.boltNotes": "Example of a real thread: ISO profile M8 × 1.25 as a helix, head 13 mm across flats. Switch the 3D model to “Realistic” to see steel, reflections and shadows.",
+  "opError.too_complex": "too fine for a thread of this length",
+  "thread.tooComplex": "At this length the thread gets too fine to show smoothly (over 400,000 triangles). Split it into shorter pieces or choose a larger pitch.",
+  "material.layerError": "Enter a layer height between 0.04 and 1 mm."
 }

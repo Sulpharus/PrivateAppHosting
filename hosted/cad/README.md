@@ -23,9 +23,12 @@ the MiniNode App Kit with the amber accent. Built on MiniNode (not ported from a
 - **Gewinde:** true ISO 68-1 metric threads (60° flanks, crest P/8, root P/4, minor d − 1.0825·P)
   modelled as a helix, not a texture: external (bolt) or internal (subtracted, a tapped hole),
   ISO coarse pitches M2–M36 or any custom size and pitch, left-hand, a print clearance (bolts get
-  thinner, holes wider), run-out over half a turn at both ends. The mesh is closed (every edge
-  shared twice; `test/solid.test.js`), with as many segments per turn as keep the chord error under
-  0.002 mm, so slicers and CAM get the real flanks.
+  thinner, holes wider; pitch 0.2 mm up to a quarter of the diameter, at most 400,000 triangles),
+  run-out over half a turn at both ends. As many segments per turn as keep the chord error under
+  0.002 mm, so slicers and CAM get the real flanks. The thread mesh is closed with every vertex
+  shared exactly (each edge used twice, checked for 40 size, length, hand and clearance
+  combinations in `test/solid.test.js`); after CSG (a thread cut into a block) the STL can contain
+  T-junctions, which slicers weld as usual.
 - **Darstellung Schnell / Realistisch:** "Schnell" is smooth shading in the material colour.
   "Realistisch" (`js/view3d.js`, WebGL 1) is physically based lighting (GGX), soft shadows from a
   2048² shadow map (16 samples), reflections of a studio environment on metal and gloss, a

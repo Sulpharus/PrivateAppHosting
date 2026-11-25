@@ -608,7 +608,7 @@
   "thread.hintSelected": "Ein Innengewinde geht senkrecht durch die Mitte des ausgewählten Teils; ein Außengewinde steht oben darauf.",
   "thread.go": "Gewinde erzeugen",
   "thread.done": "Gewinde erzeugt",
-  "thread.error": "Prüfe die Werte: Die Steigung ist höchstens ein Viertel des Durchmessers, die Länge mindestens zwei Steigungen, das Spiel zwischen 0 und 1 mm.",
+  "thread.error": "Prüfe die Werte: Die Steigung liegt zwischen 0,2 mm und einem Viertel des Durchmessers, die Länge ist mindestens zwei Steigungen, das Spiel liegt zwischen 0 und 1 mm.",
   "thread.designation": "Bezeichnung",
   "thread.pitchDiameter": "Flankendurchmesser",
   "thread.minorDiameter": "Kerndurchmesser",
@@ -620,5 +620,8 @@
   "sample.bolt": "Sechskantschraube M8 × 20",
   "sample.boltThread": "Gewinde M8",
   "sample.boltHead": "Kopf SW 13",
-  "sample.boltNotes": "Beispiel für ein echtes Gewinde: ISO-Profil M8 × 1,25 als Schraubenlinie, Kopf mit Schlüsselweite 13. Schalte im 3D-Modell auf „Realistisch“, um Stahl, Spiegelungen und Schatten zu sehen."
+  "sample.boltNotes": "Beispiel für ein echtes Gewinde: ISO-Profil M8 × 1,25 als Schraubenlinie, Kopf mit Schlüsselweite 13. Schalte im 3D-Modell auf „Realistisch“, um Stahl, Spiegelungen und Schatten zu sehen.",
+  "opError.too_complex": "zu fein für ein Gewinde dieser Länge",
+  "thread.tooComplex": "So lang wird das Gewinde zu fein für eine flüssige Darstellung (über 400.000 Dreiecke). Teile es in kürzere Stücke oder wähle eine größere Steigung.",
+  "material.layerError": "Gib eine Schichthöhe zwischen 0,04 und 1 mm ein."
 }

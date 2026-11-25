@@ -25,7 +25,7 @@ import {
 } from './geom.js';
 import { cleanMaterial } from './materials.js';
 import { generateViews } from './projection.js';
-import { combine, METRIC_COARSE } from './solid.js';
+import { combine, METRIC_COARSE, THREAD_MAX_TRIANGLES, threadTriangles } from './solid.js';
 
 export const LIMIT = 100_000; // millimetres: anything beyond is a typo
 export const STYLES = ['solid', 'center', 'hidden', 'construction'];
@@ -96,7 +96,12 @@ function validSolid(x) {
   if (!x || typeof x !== 'object' || !isId(x.id) || typeof x.name !== 'string') return false;
   const v3 = (p) => Array.isArray(p) && p.length === 3 && p.every(finite);
   if (!v3(x.pos) || !v3(x.rot) || !['add', 'subtract'].includes(x.op)) return false;
-  if (x.material !== undefined && !cleanMaterial(x.material)) return false;
+  // An unknown material (a newer backup) is dropped, never the whole solid.
+  if (x.material !== undefined) {
+    const m = cleanMaterial(x.material);
+    if (m) x.material = m;
+    else delete x.material;
+  }
   switch (x.kind) {
     case 'box':
       return positive(x.w) && positive(x.d) && positive(x.h);
@@ -110,7 +115,12 @@ function validSolid(x) {
         positive(x.h) && Array.isArray(x.profile) && x.profile.length >= 3 && x.profile.every(pt)
       );
     case 'thread':
-      return positive(x.d) && positive(x.pitch) && positive(x.h);
+      try {
+        validThread({ ...x, clearance: x.clearance ?? 0 });
+        return true;
+      } catch {
+        return false;
+      }
     case 'mesh':
     case 'toolpath':
       return typeof x.file === 'string' && /^projects\/[0-9a-f-]{36}\/s\d+\.(stl|nc)$/.test(x.file);
@@ -310,9 +320,11 @@ function solidBase(model, o, kind, defName) {
 
 function validThread(s) {
   need(s.d >= 1 && s.d <= 200, 'invalid_value');
-  need(s.pitch > 0 && s.pitch <= s.d / 4, 'invalid_value');
-  need(s.h >= 2 * s.pitch, 'invalid_value');
-  need(s.clearance >= 0 && s.clearance <= 1, 'invalid_value');
+  need(finite(s.pitch) && s.pitch >= 0.2 && s.pitch <= s.d / 4, 'invalid_value');
+  need(finite(s.h) && s.h >= 2 * s.pitch, 'invalid_value');
+  need(finite(s.clearance) && s.clearance >= 0 && s.clearance <= 1, 'invalid_value');
+  // Keeps one thread under 400 000 triangles (a 3 m long M6 would freeze any computer).
+  need(threadTriangles(s.d, s.pitch, s.h) <= THREAD_MAX_TRIANGLES, 'too_complex');
 }
 
 const findAny = (model, id) =>
