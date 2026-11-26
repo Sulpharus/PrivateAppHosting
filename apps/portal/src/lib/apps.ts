@@ -47,7 +47,7 @@ export interface RemoteStatus {
 export function forgetOfflineCopies(): void {
   try {
     for (const key of Object.keys(localStorage))
-      if (key.startsWith('mn-apps:')) localStorage.removeItem(key);
+      if (key.startsWith('mn-apps:') || key === 'mn-viewer-apps') localStorage.removeItem(key);
   } catch {
     // Storage blocked: nothing was stored either.
   }

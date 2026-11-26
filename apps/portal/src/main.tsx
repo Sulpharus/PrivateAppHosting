@@ -13,6 +13,7 @@ import { StepUpProvider } from './auth/StepUp.tsx';
 import { OfflineBanner } from './components/OfflineBanner.tsx';
 import { loadConfig, setRuntimeConfig } from './config.ts';
 import { initApi } from './lib/api.ts';
+import { listApps } from './lib/apps.ts';
 import { listenForRenewals, registerServiceWorker } from './lib/push.ts';
 import { initSupabase } from './lib/supabase.ts';
 import { applyStoredTheme } from './lib/theme.ts';
@@ -59,7 +60,10 @@ function RequireSession() {
   const location = useLocation();
   const signedIn = Boolean(session) && !codePending;
   useEffect(() => {
-    if (signedIn) void loadInstanceSettings().catch(() => undefined);
+    if (!signedIn) return;
+    void loadInstanceSettings().catch(() => undefined);
+    // The viewer opens only apps the gate serves; the list is known before Home loads it.
+    void listApps().catch(() => undefined);
   }, [signedIn]);
   if (loading) return null;
   // Without the authenticator code the database shows nothing yet; the login page asks for it.

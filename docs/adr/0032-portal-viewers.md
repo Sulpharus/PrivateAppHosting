@@ -23,8 +23,8 @@ relies on (cookies, storage, service workers, ADR 0001, ADR 0002).
 **The installed portal shows apps itself.** When the portal runs as an installed app (display mode
 `standalone`, `fullscreen`, `minimal-ui` or `window-controls-overlay`), a click on a link to an app
 the gate serves (kind `static`, `spa` or `nextjs`, from the app list the portal loads; not remote
-programs, containers on the hardware server, `api.` or `ai.`) opens `/a/<slug>/<path>` in the portal: the app in a full-screen frame, without any bar. In a
-browser tab nothing changes. The address stays the app's own origin inside the frame, so login,
+programs, containers on the hardware server, `api.` or `ai.`) opens `/a/<slug>/<path>` in the
+portal: the app in a full-screen frame, without any bar. In a browser tab nothing changes. The address stays the app's own origin inside the frame, so login,
 data, storage and service worker work as before (portal and apps are the same site, so nothing is
 partitioned). The gate's CSP allows exactly the portal's origin as `frame-ancestors` (before:
 `'none'`); the portal allows `frame-src https:`.
@@ -72,5 +72,7 @@ page the viewer was opened from. The frame has no top navigation at all, so a si
   further on may refuse the frame. The check covers only the first page; "Im Browser öffnen" is always
   there. Google, GitHub, banks and most social networks refuse frames and keep opening under Chrome's
   bar.
+- "Schließen" in the web viewer replaces only its own entry: pages visited inside the site stay in
+  the history, so "back" after closing passes them again before reaching the page before.
 - If Chrome on Android one day supports `scope_extensions` with wildcards, the manifest can list
   `https://*.<domain>` and the app viewer becomes unnecessary; the switch for outside sites stays.
