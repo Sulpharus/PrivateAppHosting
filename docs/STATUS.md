@@ -3,7 +3,7 @@
 Where things stand, what the owner still has to do, and what a new session should know.
 Update it at the end of every working session; history belongs in git, not here.
 
-Last updated: 2026-11-26 (logos for the last three apps without one; before: new app CAD, Spoolman in the App-Bibliothek; before: instance config, desktop edition, starter package, login hardening; ADR 0026).
+Last updated: 2026-11-26 (new app Rechnungen; logos for the last three apps without one; before: new app CAD, Spoolman in the App-Bibliothek; before: instance config, desktop edition, starter package, login hardening; ADR 0026).
 
 ## Start here
 
@@ -84,6 +84,7 @@ Where things are documented:
 | Apps as ZIP, from GitHub, auto-updates | Verwaltung → Apps → Als ZIP (export-app.yml `target: zip`, artifact 7 days, `/admin/app-zips`); Hochladen → Von GitHub installieren (submission with `repository`, integrate.yml clones); `platform.apps.auto_update` + nightly `auto-update-apps.yml` (auto-merge only with unchanged manifest) | ADR 0029, `supabase/migrations/20261124090000_github_install_auto_update.sql`, `apps/api/src/routes/{exports,submissions,updates}.ts`, `apps/portal/src/admin/{AppZips,Upload,Updates}.tsx` |
 | Typetrainer | Touch typing, chording and fast coding: layouts as data (QWERTZ, QWERTY, Neo 2, Bone, Noted from xkb), a learning tree per layout (basics → fast typing, chording with per-layout chord tables, code characters → Python, JavaScript, Java), daily challenge, weak keys, own texts with categories, statistics; tables `sessions`, `texts`, `categories` | `hosted/typetrainer`, `e2e/typetrainer.spec.ts` |
 | CAD | New app `hosted/cad` (static, amber, private): 2D drawing with typed coordinates and exact properties, 3D solids with CSG holes, views from 3D with hidden lines, print to scale with title block, STL/OBJ/DXF/G-code import, STL/OBJ/DXF/SVG/G-code export, AI assistant proposing validated operations (`claude-sonnet`/`gemini-flash`, 5 €), true ISO threads (helix, closed mesh), realistic WebGL view (PBR, shadow map, reflections, procedural materials), CSG in a Web Worker with islands and caching, assemblies (parts, multi-file import, insert project, fit check, part export), welded watertight STL/OBJ export, tables `projects`, `categories`, `history`; App-Bibliothek entry Spoolman | `hosted/cad`, `e2e/cad.spec.ts`, `infra/nucbox/library.json` |
+| Rechnungen | New app `hosted/rechnungen` (static, blue, private): invoicing for DE/AT sole traders; legal checks per seller country (§ 14 UStG DE, § 11 UStG AT), tax modes (standard, small business, reverse charge, intra-EU, export), numbering format, issued invoices frozen with seller/customer snapshot and cancelled by Stornorechnung, own PDF layouts (DIN 5008, Modern, Kompakt) with own EPC/GiroCode QR encoder, PDFs in `mn.files`, Gmail send and payment reminder (`gmail: write`), bell + scheduled push when overdue, statistics per business year, ZIP year export; tables `customers`, `items`, `invoices`, `payments`, `history` | `hosted/rechnungen`, `e2e/rechnungen.spec.ts` |
 | German formats | Date, month and time inputs as German parts in every browser; full dates as "01. Okt. 2026"; German numbers | `packages/ui/kit/ui.js`, `docs/ai/DESIGN-SYSTEM.md` §8 |
 
 The Sportplaner map (tab "Karte") and course mode (editor step "Zeiten" → "Kurs") are live
@@ -185,6 +186,11 @@ since the PR #12 deploy. Earlier deploys stopped at medialog and never shipped t
 5. Exported apps carry no license of their own: add one before sharing.
 
 ## Open and proposed work
+
+- **Rechnungen, not yet checked against the real stack.** The app ran only against the preview SDK in
+  headless Chromium (no Docker in that session): run `pnpm db:test` for `hosted/rechnungen/db/001_init.sql`
+  and `pnpm e2e e2e/rechnungen.spec.ts`. Gmail sending and push need a real Google connection and device.
+  Not built: e-invoices (XRechnung/ZUGFeRD), needed for German B2B invoices from 2027/2028.
 
 - **CAD, not yet checked against the real stack.** The app and `e2e/cad.spec.ts` ran only against the
   preview SDK in headless Chromium (no local Supabase in that session); run `pnpm e2e e2e/cad.spec.ts`

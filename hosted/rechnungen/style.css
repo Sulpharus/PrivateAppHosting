@@ -1,0 +1,469 @@
+/* Rechnungen: only what the App Kit (/_mininode/ui.css) does not cover. Colours, type and spacing
+   come from the kit's --mn-* tokens; the accent is blue (data-accent on <html>). */
+
+/* Amounts blur when "Beträge ausblenden" is on. */
+.hide-amounts .amount,
+.hide-amounts .mn-big.amount {
+  filter: blur(7px);
+  user-select: none;
+}
+
+.sample {
+  margin-inline-end: var(--mn-s1);
+  vertical-align: middle;
+}
+
+#banner .mn-banner {
+  margin: 0 var(--mn-gutter) var(--mn-s3);
+}
+
+/* list tools */
+.listbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: var(--mn-s3);
+  margin-top: var(--mn-s3);
+}
+.listbar .sortfield {
+  min-width: 10rem;
+}
+.modeswitch {
+  margin-bottom: var(--mn-s3);
+}
+.modeswitch svg {
+  width: 18px;
+  height: 18px;
+  margin-inline-end: var(--mn-s1);
+}
+.mn-search + .mn-chips {
+  margin-top: var(--mn-s3);
+}
+
+/* rows with an action beside them */
+.duerow,
+.calrow {
+  display: flex;
+  align-items: center;
+  gap: var(--mn-s2);
+}
+.duerow > .mn-row,
+.calrow > .mn-row {
+  flex: 1;
+  min-width: 0;
+}
+.duerow > .mn-btn {
+  margin-inline-end: var(--mn-s3);
+  flex: none;
+}
+.calrow > .mn-chip {
+  margin-inline-start: var(--mn-s3);
+  flex: none;
+}
+
+/* multi-select */
+.pickrow {
+  display: flex;
+  align-items: center;
+}
+.pickrow > .mn-row {
+  flex: 1;
+  min-width: 0;
+}
+.pickbox {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--mn-tap);
+  min-height: var(--mn-tap);
+  flex: none;
+}
+.pickbox input {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--mn-accent);
+}
+.selectable.selecting .pickbox {
+  display: flex;
+}
+@media (hover: hover) and (min-width: 960px) {
+  .selectable .pickbox {
+    display: flex;
+  }
+  .selectable:not(.selecting) .pickrow:not(:hover) .pickbox input:not(:focus-visible) {
+    opacity: 0;
+  }
+}
+.selbar {
+  position: sticky;
+  bottom: calc(var(--mn-s4) + env(safe-area-inset-bottom));
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--mn-s2);
+  margin-top: var(--mn-s4);
+  padding: var(--mn-s3);
+  background: var(--mn-surface);
+  border: 1px solid var(--mn-line-strong);
+  border-radius: var(--mn-r-xl);
+  box-shadow: var(--mn-shadow);
+}
+
+/* calendar legend */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--mn-s1);
+}
+.legend .mn-dots {
+  display: inline-flex;
+}
+
+/* forms */
+.fieldbox {
+  display: grid;
+  gap: var(--mn-s1);
+}
+.checkline {
+  display: flex;
+  align-items: center;
+  gap: var(--mn-s3);
+  min-height: var(--mn-tap);
+  font-weight: 600;
+}
+.checkline input {
+  width: 22px;
+  height: 22px;
+  flex: none;
+  accent-color: var(--mn-accent);
+}
+.stepbody {
+  margin-top: var(--mn-s4);
+}
+.lineedit + .lineedit {
+  margin-top: var(--mn-s3);
+}
+.lineactions {
+  display: flex;
+  align-items: center;
+  gap: var(--mn-s1);
+}
+.linetotal {
+  font-weight: 600;
+}
+.lineadd {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: var(--mn-s3);
+  margin-top: var(--mn-s4);
+}
+.lineadd .mn-field {
+  flex: 1 1 14rem;
+}
+.lineadd svg,
+.detail-actions svg,
+.mn-btn > svg {
+  width: 18px;
+  height: 18px;
+  margin-inline-end: var(--mn-s1);
+}
+.totals .mn-facts .grand dt,
+.totals .mn-facts .grand dd,
+.mn-facts .grand dt,
+.mn-facts .grand dd {
+  font-weight: 700;
+  font-size: var(--mn-fs-lg);
+}
+.totals {
+  margin-top: var(--mn-s4);
+}
+.mn-facts dd.mn-num,
+.mn-facts .mn-num {
+  font-variant-numeric: tabular-nums;
+}
+.discard {
+  margin: var(--mn-s3) var(--mn-s4) 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--mn-s2);
+}
+.is-disabled {
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+/* Markdown field */
+.mdbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--mn-s2);
+}
+.mdtools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mn-s1);
+}
+.mdpreview {
+  min-height: 6rem;
+  padding: var(--mn-s3);
+  border: 1px solid var(--mn-line-strong);
+  border-radius: var(--mn-r-md);
+  background: var(--mn-bg);
+}
+.md p {
+  margin: 0 0 var(--mn-s2);
+}
+.md ul {
+  margin: 0 0 var(--mn-s2);
+  padding-inline-start: var(--mn-s5);
+}
+.md a {
+  color: var(--mn-accent-text);
+}
+.md .md-check {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: var(--mn-s2);
+  margin-inline-start: calc(-1 * var(--mn-s5));
+}
+.md-box {
+  width: var(--mn-tap);
+  height: var(--mn-tap);
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  border-radius: var(--mn-r-sm);
+  cursor: pointer;
+}
+.md-box::before {
+  content: "";
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--mn-line-strong);
+  border-radius: 5px;
+}
+.md-box[data-done="true"]::before {
+  background: var(--mn-accent);
+  border-color: var(--mn-accent);
+  box-shadow: inset 0 0 0 3px var(--mn-surface);
+}
+.md-check:has(.md-box[data-done="true"]) > span {
+  text-decoration: line-through;
+  color: var(--mn-muted);
+}
+
+/* detail sheets */
+.detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mn-s2);
+  margin: var(--mn-s4) 0;
+}
+.detail-danger {
+  margin-top: var(--mn-s8);
+  padding-top: var(--mn-s4);
+  border-top: 1px solid var(--mn-line);
+}
+.mn-sheet-body h3 {
+  margin: var(--mn-s6) 0 var(--mn-s2);
+  font-family: var(--mn-font-display);
+  font-size: var(--mn-fs-lg);
+}
+.history {
+  margin: 0;
+  padding-inline-start: var(--mn-s5);
+  display: grid;
+  gap: var(--mn-s1);
+}
+.customer-head {
+  display: flex;
+  align-items: center;
+  gap: var(--mn-s3);
+}
+.mn-thumb img,
+.logo-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+}
+.attachments {
+  display: grid;
+  gap: var(--mn-s2);
+  margin-bottom: var(--mn-s3);
+}
+.logo-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--mn-s3);
+}
+.logo-preview {
+  width: 120px;
+  height: 56px;
+  border-radius: var(--mn-r-md);
+  background: var(--mn-surface-2);
+  overflow: hidden;
+}
+.logo-preview img {
+  object-fit: contain;
+}
+.trash-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mn-s2);
+  justify-content: flex-end;
+}
+kbd {
+  font-family: var(--mn-font-mono);
+  padding: 0 var(--mn-s2);
+  border: 1px solid var(--mn-line-strong);
+  border-radius: var(--mn-r-sm);
+}
+
+/* settings */
+.setcard + .setcard {
+  margin-top: var(--mn-s4);
+}
+.setcard h2 {
+  margin: 0 0 var(--mn-s3);
+  font-family: var(--mn-font-display);
+  font-size: var(--mn-fs-xl);
+}
+.setcard h3 {
+  margin: var(--mn-s5) 0 var(--mn-s2);
+  font-size: var(--mn-fs-md);
+}
+.mapgrid {
+  display: grid;
+  gap: var(--mn-s3);
+  grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+}
+
+/* statistics */
+.chartcard .chart {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.chart .axis {
+  stroke: var(--mn-line-strong);
+}
+.chart .s1,
+.chartlegend .s1 {
+  fill: var(--mn-chart-1);
+  background: var(--mn-chart-1);
+}
+.chart .s2,
+.chartlegend .s2 {
+  fill: var(--mn-chart-2);
+  background: var(--mn-chart-2);
+}
+.chart .tick {
+  fill: var(--mn-muted);
+  font-size: 12px;
+  font-family: var(--mn-font-text);
+}
+.chartlegend .key {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+}
+.tablewrap {
+  overflow-x: auto;
+}
+.numtable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--mn-fs-sm);
+}
+.numtable th,
+.numtable td {
+  padding: var(--mn-s2);
+  border-bottom: 1px solid var(--mn-line);
+  text-align: start;
+  white-space: nowrap;
+}
+.numtable td:has(.amount),
+.numtable td {
+  font-variant-numeric: tabular-nums;
+}
+.printtable td:nth-child(n + 4):nth-child(-n + 6),
+.printtable tfoot td {
+  text-align: end;
+}
+.printtable tfoot th,
+.printtable tfoot td {
+  font-weight: 700;
+  border-top: 2px solid var(--mn-ink);
+}
+.heatcard {
+  overflow-x: auto;
+}
+.yearheat {
+  grid-template-columns: none;
+  grid-template-rows: repeat(7, 12px);
+  grid-auto-flow: column;
+  grid-auto-columns: 12px;
+  gap: 3px;
+  width: max-content;
+}
+.yearheat > i.blank {
+  background: transparent;
+}
+
+/* print: the report only, black on white */
+.print-only-head {
+  margin-bottom: var(--mn-s4);
+}
+@page {
+  margin: 16mm;
+}
+@media print {
+  .mn-nav,
+  .mn-top-tools,
+  .mn-fab,
+  .mn-home,
+  #banner,
+  .mn-toast {
+    display: none !important;
+  }
+  .mn-app {
+    background: none;
+    color: black;
+  }
+  .mn-page {
+    margin: 0;
+  }
+  .numtable thead {
+    display: table-header-group;
+  }
+  .numtable tr,
+  .mn-card {
+    break-inside: avoid;
+  }
+  .hide-amounts .amount {
+    filter: none;
+  }
+}
+
+/* An amount inside a KPI value keeps the value's type (the kit styles every span in a KPI as a caption). */
+.mn-kpi b .amount {
+  display: inline;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+}
+.mn-row-sub .mn-num {
+  margin-inline-end: var(--mn-s2);
+}

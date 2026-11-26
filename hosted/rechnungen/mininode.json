@@ -1,0 +1,22 @@
+{
+  "$schema": "../../packages/manifest/schema.json",
+  "specVersion": 1,
+  "slug": "rechnungen",
+  "name": "Rechnungen",
+  "description": "Rechnungen für Selbstständige in DE und AT: Kunden, Bausteine, QR-Zahlung, Mahnungen und Jahresexport",
+  "kind": "static",
+  "target": "cloudflare",
+  "access": {
+    "default": true
+  },
+  "data": {
+    "mode": "private"
+  },
+  "google": {
+    "gmail": "write"
+  },
+  "i18n": {
+    "languages": ["de", "en"],
+    "default": "de"
+  }
+}
