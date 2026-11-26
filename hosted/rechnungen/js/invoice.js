@@ -107,7 +107,7 @@ export function validNumberFormat(format) {
 export function businessYear(year, startMonth = 1) {
   const m = String(startMonth).padStart(2, '0');
   const from = `${year}-${m}-01`;
-  const to = addDays(`${startMonth === 1 ? year + 1 : year + 1}-${m}-01`, -1);
+  const to = addDays(`${year + 1}-${m}-01`, -1);
   return { from, to };
 }
 
@@ -151,4 +151,16 @@ export function cancellationOf(invoice, id, number, day) {
     is_sample: invoice.is_sample ?? false,
     deleted_at: null,
   });
+}
+
+/**
+ * The lines of an invoice copied into a new draft (new ids). A copy of a cancellation turns its
+ * prices positive again; a normal copy keeps every sign (a discount line stays negative).
+ */
+export function copyLines(lines, kind, newId) {
+  return (lines ?? []).map((line) => ({
+    ...line,
+    id: newId(),
+    price_cents: kind === 'cancellation' ? -line.price_cents : line.price_cents,
+  }));
 }

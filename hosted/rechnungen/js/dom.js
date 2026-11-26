@@ -201,6 +201,7 @@ export function download(name, data, type) {
 export function safeName(text) {
   return String(text ?? '')
     .replace(/[\\/:*?"<>|\n\r]+/g, '-')
+    .replace(/\.{2,}/g, '.')
     .trim()
     .slice(0, 80);
 }

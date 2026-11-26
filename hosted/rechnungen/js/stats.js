@@ -451,6 +451,19 @@ function ratesCsv(data) {
   return toCsv([head, ...rows], lang);
 }
 
+/** The PDF as it was stored when issued (what the customer got); made again only when missing. */
+async function storedPdf(inv) {
+  if (inv.pdf_path) {
+    try {
+      const res = await fetch(await app.mn.files.url(inv.pdf_path));
+      if (res.ok) return new Uint8Array(await res.arrayBuffer());
+    } catch {
+      // Offline or gone: make it from the frozen content.
+    }
+  }
+  return pdfBytes(inv);
+}
+
 function exportCard(data) {
   const label = yearLabel(data.year, data.start);
   const status = h('p', { class: 'mn-hint', 'aria-live': 'polite' });
@@ -481,7 +494,7 @@ function exportCard(data) {
             let name = pdfName(inv);
             while (used.has(name)) name = name.replace(/\.pdf$/, '-1.pdf');
             used.add(name);
-            files.push({ name: `${t('export.pdfFolder')}/${name}`, bytes: await pdfBytes(inv) });
+            files.push({ name: `${t('export.pdfFolder')}/${name}`, bytes: await storedPdf(inv) });
           }
           download(`${fileBase}.zip`, new Blob([zip(files)], { type: 'application/zip' }));
           status.textContent = '';

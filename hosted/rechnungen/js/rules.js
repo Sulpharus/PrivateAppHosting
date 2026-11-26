@@ -17,7 +17,7 @@ export const SMALL_AMOUNT_CENTS = { DE: 25000, AT: 40000 };
 export const AT_CUSTOMER_UID_FROM_CENTS = 1000000;
 
 /** Tax treatments; every one except `standard` puts a legal note on the invoice and charges no VAT. */
-export const TAX_MODES = ['standard', 'small', 'reverse', 'intra', 'export'];
+export const TAX_MODES = ['standard', 'small', 'reverse', 'intra', 'export', 'nontaxable'];
 
 export function ratesFor(country) {
   return RATES[country] ?? RATES.DE;
@@ -37,6 +37,7 @@ export function taxNoteKey(mode, country) {
   if (mode === 'reverse') return 'doc.note.reverse';
   if (mode === 'intra') return 'doc.note.intra';
   if (mode === 'export') return 'doc.note.export';
+  if (mode === 'nontaxable') return 'doc.note.nontaxable';
   return null;
 }
 

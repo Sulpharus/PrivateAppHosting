@@ -127,8 +127,11 @@ export async function idFrom(text) {
 export function toCsv(rows, lang) {
   const delimiter = lang === 'en' ? ',' : ';';
   const cell = (value) => {
-    const text = value === null || value === undefined ? '' : String(value);
-    return /[";,\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+    let text = value === null || value === undefined ? '' : String(value);
+    // Spreadsheet programs run cells that start with = + - @ as formulas; numbers stay numbers.
+    if (/^[=+\-@\t\r]/.test(text) && !/^-?\d+([.,]\d+)?$/.test(text)) text = `'${text}`;
+    const special = text.includes(delimiter) || /["\n\r]/.test(text);
+    return special ? `"${text.replace(/"/g, '""')}"` : text;
   };
   return `﻿${rows.map((row) => row.map(cell).join(delimiter)).join('\r\n')}\r\n`;
 }

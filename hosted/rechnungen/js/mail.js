@@ -12,7 +12,8 @@ const utf8 = (text) => new TextEncoder().encode(text);
 /** A header value with non-ASCII characters as an RFC 2047 encoded word. */
 export function encodeHeader(text) {
   const clean = String(text ?? '').replace(/[\r\n]+/g, ' ');
-  if (/^[\x20-\x7e]*$/.test(clean)) return clean;
+  // Plain ASCII without quotes or backslashes stays as it is (it also goes inside "…").
+  if (/^[\x20-\x7e]*$/.test(clean) && !/["\\]/.test(clean)) return clean;
   return `=?UTF-8?B?${toBase64(utf8(clean))}?=`;
 }
 

@@ -1,8 +1,16 @@
 // Einstellungen: company profile, reminders, business year, backup (JSON) and CSV import, the bin,
 // sample data, hints, and deleting everything.
-import { cancelReminder, setPush } from './actions.js';
+import { cancelReminder, setPush, uploadMissingPdfs } from './actions.js';
+import { originalsFirst, planImport } from './backup.js';
 import { decodeText, guessMapping, IMPORT_FIELDS, idFrom, parseCsv } from './csv.js';
-import { app, companyReady, hasSamples, saveSettings } from './ctx.js';
+import {
+  app,
+  companyReady,
+  DEFAULT_COMPANY,
+  hasSamples,
+  saveCompany,
+  saveSettings,
+} from './ctx.js';
 import { date, download, field, h, icon, locale, t } from './dom.js';
 import { openCompanyEditor } from './editors.js';
 import { removeFiles } from './files.js';
@@ -10,7 +18,7 @@ import { openShortcuts, resetHints } from './help.js';
 import { addDays, emptyLine, today, withTotals } from './invoice.js';
 import { maskIban, parseCents, parseRate } from './money.js';
 import { ratesFor } from './rules.js';
-import { shape, TABLES } from './store.js';
+import { TABLES } from './store.js';
 
 // ---------- start-up chores ----------
 export async function purgeOld() {
@@ -144,11 +152,18 @@ export async function addSampleData() {
 
 export async function removeSampleData() {
   const s = app.store;
-  for (const p of s.all('payments')) if (p.is_sample) await s.remove('payments', p.id);
-  for (const table of ['invoices', 'customers', 'items'])
-    for (const row of s.all(table, { deleted: true }))
-      if (row.is_sample) await s.purgeOne(table, row.id);
-  window.mnui.toast(t('sample.removed'));
+  try {
+    for (const p of s.all('payments')) if (p.is_sample) await s.remove('payments', p.id);
+    // Cancellations before the invoices they cancel.
+    const invoices = originalsFirst(s.all('invoices', { deleted: true })).reverse();
+    for (const row of invoices) if (row.is_sample) await s.purgeOne('invoices', row.id);
+    for (const table of ['customers', 'items'])
+      for (const row of s.all(table, { deleted: true }))
+        if (row.is_sample) await s.purgeOne(table, row.id);
+    window.mnui.toast(t('sample.removed'));
+  } catch {
+    window.mnui.toast(t('common.saveError'));
+  }
 }
 
 // ---------- backup ----------
@@ -166,59 +181,6 @@ function exportBackup() {
   window.mnui.toast(t('backup.exported'));
 }
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const DAY = /^\d{4}-\d{2}-\d{2}$/;
-
-/** Checks and cleans one imported row; null when it cannot be used. */
-export function cleanRow(table, raw) {
-  if (!raw || typeof raw !== 'object' || !UUID.test(String(raw.id))) return null;
-  const row = shape(table, raw);
-  const str = (v, max = 200) =>
-    typeof v === 'string'
-      ? v.slice(0, max)
-      : v === null || v === undefined
-        ? null
-        : String(v).slice(0, max);
-  const int = (v) => (Number.isSafeInteger(Number(v)) ? Number(v) : 0);
-  const day = (v) => (typeof v === 'string' && DAY.test(v) ? v : null);
-  for (const [k, v] of Object.entries(row)) {
-    if (k === 'id' || typeof v === 'boolean' || (v !== null && typeof v === 'object')) continue;
-    if (typeof v === 'number') row[k] = int(v);
-    else if (k.endsWith('_date') || k === 'service_end' || k === 'paid_on' || k === 'reminded_on')
-      row[k] = day(v);
-    else if (v !== null)
-      row[k] = str(v, k === 'notes' ? 20000 : ['intro', 'closing'].includes(k) ? 4000 : 2000);
-  }
-  if (table === 'customers' && !row.name) return null;
-  if (table === 'items' && !row.title) return null;
-  if (
-    table === 'payments' &&
-    (!UUID.test(String(row.invoice_id)) || !row.paid_on || !row.amount_cents)
-  )
-    return null;
-  if (table === 'history' && !UUID.test(String(row.item_id))) return null;
-  if (table === 'invoices') {
-    if (!Array.isArray(row.lines)) row.lines = [];
-    row.lines = row.lines.slice(0, 200).map((l) => ({
-      id: UUID.test(String(l?.id)) ? l.id : crypto.randomUUID(),
-      item_id: UUID.test(String(l?.item_id)) ? l.item_id : null,
-      title: str(l?.title) ?? '',
-      description: str(l?.description, 2000) ?? '',
-      unit: str(l?.unit, 20) ?? '',
-      qty_milli: int(l?.qty_milli) || 1000,
-      price_cents: int(l?.price_cents),
-      tax_bp: Math.min(10000, Math.max(0, int(l?.tax_bp))),
-      discount_bp: Math.min(10000, Math.max(0, int(l?.discount_bp))),
-    }));
-    if (!Array.isArray(row.attachments)) row.attachments = [];
-    if (row.status !== 'draft' && (!row.number || !row.issue_date)) row.status = 'draft';
-    for (const key of ['customer', 'seller'])
-      if (!row[key] || typeof row[key] !== 'object' || Array.isArray(row[key])) row[key] = {};
-    return withTotals(row);
-  }
-  return row;
-}
-
 async function importBackup(file) {
   let data;
   try {
@@ -231,25 +193,30 @@ async function importBackup(file) {
     window.mnui.toast(t('backup.invalid'));
     return;
   }
+  const plan = planImport(data, (table, id) => Boolean(app.store.get(table, id)));
   let count = 0;
-  // Parents first, so foreign keys hold.
-  for (const table of ['customers', 'items', 'invoices', 'payments', 'history']) {
-    const rows = (Array.isArray(data[table]) ? data[table] : [])
-      .map((r) => cleanRow(table, r))
-      .filter(Boolean);
-    // Payments and history only for invoices that exist (saved just before).
-    const known = rows.filter((r) =>
-      table === 'payments'
-        ? app.store.get('invoices', r.invoice_id)
-        : table === 'history'
-          ? app.store.get('invoices', r.item_id)
-          : true,
+  let failed = 0;
+  for (const [table, rows] of Object.entries(plan))
+    for (const row of rows) {
+      try {
+        await app.store.save(table, row);
+        if (table !== 'history') count += 1;
+      } catch {
+        failed += 1;
+      }
+    }
+  // The company profile comes back only where none is filled in yet.
+  if (!app.company.name && data.company && typeof data.company === 'object') {
+    const company = Object.fromEntries(
+      Object.keys(DEFAULT_COMPANY).map((key) => [key, data.company[key] ?? DEFAULT_COMPANY[key]]),
     );
-    await app.store.saveMany(table, known);
-    if (table !== 'history') count += known.length;
+    if (typeof company.name === 'string') await saveCompany({ ...company, logo: null });
   }
-  window.mnui.toast(t('backup.imported', { n: count }));
+  window.mnui.toast(
+    failed ? t('backup.importedSome', { n: count, failed }) : t('backup.imported', { n: count }),
+  );
   app.render();
+  void uploadMissingPdfs();
 }
 
 // ---------- CSV import ----------
@@ -286,6 +253,8 @@ function openCsvImport(kind) {
   let header = [];
   let map = {};
   const buildRows = async () => {
+    // The user's id is part of the hash: the same row of two people never gets the same id.
+    const owner = (await app.mn.auth.user())?.id ?? '';
     const out = [];
     for (const r of rows) {
       const get = (f) => (map[f] >= 0 ? (r[map[f]] ?? '').trim() : '');
@@ -294,7 +263,7 @@ function openCsvImport(kind) {
         if (!name) continue;
         const code = get('country').toUpperCase();
         out.push({
-          id: await idFrom(`customer|${name}|${get('zip')}|${get('email')}`),
+          id: await idFrom(`${owner}|customer|${name}|${get('zip')}|${get('email')}`),
           name,
           contact: get('contact'),
           email: get('email'),
@@ -312,7 +281,7 @@ function openCsvImport(kind) {
         if (!title || price === null) continue;
         const rate = parseRate(get('tax'));
         out.push({
-          id: await idFrom(`item|${title}|${price}`),
+          id: await idFrom(`${owner}|item|${title}|${price}`),
           kind: 'service',
           title,
           description: get('description'),
@@ -400,9 +369,21 @@ function openCsvImport(kind) {
     save.textContent = t('csvImport.importN', { n: fresh.length });
     save.onclick = async () => {
       save.disabled = true;
-      await app.store.saveMany(kind, fresh);
+      let done = 0;
+      for (const row of fresh) {
+        try {
+          await app.store.save(kind, row);
+          done += 1;
+        } catch {
+          // counted below
+        }
+      }
       window.mnui.sheet.close();
-      window.mnui.toast(t('csvImport.done', { n: fresh.length }));
+      window.mnui.toast(
+        done < fresh.length
+          ? t('backup.importedSome', { n: done, failed: fresh.length - done })
+          : t('csvImport.done', { n: done }),
+      );
       app.render();
     };
   };
@@ -554,9 +535,17 @@ function openDeleteAll() {
       await cancelReminder(inv.id);
     }
     files.push(app.company.logo);
-    for (const table of ['history', 'payments', 'invoices', 'items', 'customers'])
-      for (const row of app.store.all(table, { deleted: true }))
-        await app.store.remove(table, row.id);
+    try {
+      for (const table of ['history', 'payments', 'invoices', 'items', 'customers']) {
+        let rows = app.store.all(table, { deleted: true });
+        if (table === 'invoices') rows = originalsFirst(rows).reverse();
+        for (const row of rows) await app.store.remove(table, row.id);
+      }
+    } catch {
+      go.disabled = false;
+      box.setError(t('danger.failed'));
+      return;
+    }
     await removeFiles(files);
     for (const key of ['company', 'settings', 'draft:invoice']) await app.mn.kv.delete(key);
     window.mnui.sheet.close();

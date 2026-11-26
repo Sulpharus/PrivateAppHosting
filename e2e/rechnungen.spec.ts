@@ -68,5 +68,16 @@ test('rechnungen issues an invoice with a number and books its payment', async (
   await page.reload();
   await page.getByRole('button', { name: 'Rechnungen', exact: true }).last().click();
   await expect(page.getByText(`RE-${year}-0001`)).toBeVisible();
+
+  // Cancelling makes a cancellation invoice with the next number; the original stays, cancelled.
+  await page.getByRole('button', { name: new RegExp(`Kunde GmbH.*RE-${year}-0001`) }).click();
+  await dialog.getByRole('button', { name: 'Rechnung stornieren' }).click();
+  await dialog.getByRole('button', { name: 'Zum Stornieren erneut tippen' }).click();
+  await expect(dialog.getByRole('heading', { name: `RE-${year}-0002` })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await page.reload();
+  await page.getByRole('button', { name: 'Rechnungen', exact: true }).last().click();
+  await expect(page.getByText('Storniert', { exact: true })).toBeVisible();
+  await expect(page.getByText('Stornorechnung', { exact: true })).toBeVisible();
   expect(errors).toEqual([]);
 });

@@ -1,6 +1,14 @@
 // Detail sheets: an invoice (status, payments, PDF, e-mail, cancellation, history, attachments)
 // and a customer (facts, notes with checklists, their invoices and what they still owe).
-import { addPayment, cancel, mailDraft, openPdf, removePayment, sendMail } from './actions.js';
+import {
+  addPayment,
+  cancel,
+  mailDraft,
+  openPdf,
+  pdfName,
+  removePayment,
+  sendMail,
+} from './actions.js';
 import { app } from './ctx.js';
 import { amount, date, field, h, icon, locale, money, statusChip, t } from './dom.js';
 import { openCustomerEditor, openInvoiceEditor } from './editors.js';
@@ -242,7 +250,8 @@ export function openInvoiceDetail(id) {
       )
     : null;
 
-  // Cancellation (issued, not paid in full) or deletion (drafts), at the end.
+  // Cancellation (any issued invoice, also a paid one: the money is then refunded outside the app)
+  // or deletion (drafts), at the end.
   let danger = null;
   if (isDraft) {
     danger = h(
@@ -280,10 +289,21 @@ export function openInvoiceDetail(id) {
             e.currentTarget.textContent = t('detail.cancelConfirm');
             return;
           }
-          busy(e.currentTarget, true);
-          const storno = await cancel(inv);
-          window.mnui.toast(t('detail.cancelled', { number: storno.number }));
+          const button = e.currentTarget;
+          busy(button, true);
+          let storno = null;
+          try {
+            storno = await cancel(inv);
+          } catch (error) {
+            busy(button, false);
+            window.mnui.toast(
+              error?.code === 'offline' ? t('offline.notPossible') : t('common.saveError'),
+            );
+            return;
+          }
           app.render();
+          if (!storno) return;
+          window.mnui.toast(t('detail.cancelled', { number: storno.number }));
           openInvoiceDetail(storno.id);
         },
       },
@@ -423,11 +443,17 @@ function openPaymentSheet(inv, open) {
     ]);
     if (!ok) return;
     busy(save, true);
-    await addPayment(inv, {
-      paid_on: day.value,
-      amount_cents: cents,
-      note: note.value.trim() || null,
-    });
+    try {
+      await addPayment(inv, {
+        paid_on: day.value,
+        amount_cents: cents,
+        note: note.value.trim() || null,
+      });
+    } catch {
+      busy(save, false);
+      window.mnui.toast(t('common.saveError'));
+      return;
+    }
     window.mnui.toast(t('payments.saved'));
     app.render();
     openInvoiceDetail(inv.id);
@@ -505,7 +531,7 @@ async function openSendSheet(inv, kind) {
           { class: 'mn-hint' },
           icon('paperclip'),
           ' ',
-          t('mail.attachment', { name: `${inv.number}.pdf` }),
+          t('mail.attachment', { name: pdfName(inv) }),
         ),
         (inv.attachments ?? []).length
           ? h(

@@ -392,3 +392,113 @@ describe('csv, zip, mail, markdown', () => {
     expect(mdToPlain('Hallo **du**\n- eins')).toBe('Hallo du\n• eins');
   });
 });
+
+describe('review fixes', () => {
+  it('cuts text to the exact column limits and drops unknown enum values', async () => {
+    const { shape } = await import('../js/store.js');
+    const c = shape('customers', {
+      id: 'x',
+      name: 'n'.repeat(300),
+      phone: '1'.repeat(80),
+      zip: '9'.repeat(30),
+      country: 'de',
+    });
+    expect(c.name).toHaveLength(200);
+    expect(c.phone).toHaveLength(60);
+    expect(c.zip).toHaveLength(20);
+    expect(c.country).toBe('DE');
+    const p = shape('payments', { id: 'p', note: 'x'.repeat(400) });
+    expect(p.note).toHaveLength(300);
+    const inv = shape('invoices', {
+      id: 'i',
+      status: 'weird',
+      layout: 'fancy',
+      reference: 'r'.repeat(200),
+    });
+    expect(inv).toMatchObject({ status: 'draft', layout: 'din' });
+    expect(inv.reference).toHaveLength(120);
+  });
+
+  it('keeps the signs of a normal copy and flips a cancellation back', async () => {
+    const { copyLines } = await import('../js/invoice.js');
+    let n = 0;
+    const id = () => {
+      n += 1;
+      return `n${n}`;
+    };
+    const lines = [line(), line({ id: 'd', title: 'Rabatt', price_cents: -5000 })];
+    expect(copyLines(lines, 'invoice', id).map((l) => l.price_cents)).toEqual([10000, -5000]);
+    expect(copyLines(lines, 'cancellation', id).map((l) => l.price_cents)).toEqual([-10000, 5000]);
+  });
+
+  it('dates an old draft today and keeps the length of its payment term', async () => {
+    const { issueDates } = await import('../js/actions.js');
+    expect(issueDates({ issue_date: '2026-10-01', due_date: '2026-10-15' }, '2026-11-26')).toEqual({
+      issue_date: '2026-11-26',
+      due_date: '2026-12-10',
+    });
+    expect(issueDates({ issue_date: '2026-11-26', due_date: null }, '2026-11-26')).toEqual({
+      issue_date: '2026-11-26',
+      due_date: null,
+    });
+  });
+
+  it('imports a backup without overwriting, originals before cancellations, without stored PDFs', async () => {
+    const { planImport } = await import('../js/backup.js');
+    const a = '11111111-1111-4111-8111-111111111111';
+    const b = '22222222-2222-4222-8222-222222222222';
+    const c = '33333333-3333-4333-8333-333333333333';
+    const data = {
+      customers: [
+        { id: c, name: 'Kunde' },
+        { id: 'not-a-uuid', name: 'X' },
+      ],
+      invoices: [
+        {
+          id: b,
+          kind: 'cancellation',
+          status: 'issued',
+          number: 'RE-2',
+          issue_date: '2026-01-02',
+          cancels_id: a,
+          lines: [],
+        },
+        {
+          id: a,
+          kind: 'invoice',
+          status: 'issued',
+          number: 'RE-1',
+          issue_date: '2026-01-01',
+          lines: [line()],
+          pdf_path: 'rechnungen/2026/RE-1.pdf',
+        },
+      ],
+      payments: [
+        {
+          id: '44444444-4444-4444-8444-444444444444',
+          invoice_id: a,
+          paid_on: '2026-01-05',
+          amount_cents: 100,
+        },
+        {
+          id: '55555555-5555-4555-8555-555555555555',
+          invoice_id: c,
+          paid_on: '2026-01-05',
+          amount_cents: 100,
+        },
+      ],
+    };
+    const plan = planImport(data, (table, id) => table === 'customers' && id === c);
+    expect(plan.customers).toEqual([]);
+    expect(plan.invoices.map((i) => i.id)).toEqual([a, b]);
+    expect(plan.invoices[0].pdf_path).toBeNull();
+    expect(plan.payments).toHaveLength(1);
+  });
+
+  it('escapes spreadsheet formulas but not numbers, and quotes in file names', () => {
+    expect(toCsv([['=HYPERLINK("x")', '-12,50', '@sum']], 'de')).toBe(
+      '﻿"\'=HYPERLINK(""x"")";-12,50;\'@sum\r\n',
+    );
+    expect(encodeHeader('Rechnung "A".pdf')).toMatch(/^=\?UTF-8\?B\?/);
+  });
+});

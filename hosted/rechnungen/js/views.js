@@ -1,6 +1,6 @@
 // The views behind the tabs: Übersicht, Rechnungen (list and calendar), Kunden, Bausteine.
 // Statistik and Einstellungen live in their own modules.
-import { addPayment } from './actions.js';
+import { payOpen } from './actions.js';
 import { app, companyReady, hasSamples, saveSettings } from './ctx.js';
 import { openCustomerDetail, openInvoiceDetail } from './detail.js';
 import {
@@ -288,9 +288,13 @@ function renderOverview(main) {
               {
                 class: 'mn-btn',
                 type: 'button',
-                onclick: async () => {
-                  await addPayment(x.inv, { paid_on: day, amount_cents: x.st.open, note: null });
-                  window.mnui.toast(t('payments.markedPaid'));
+                onclick: async (event) => {
+                  event.currentTarget.disabled = true;
+                  try {
+                    if (await payOpen(x.inv, day)) window.mnui.toast(t('payments.markedPaid'));
+                  } catch {
+                    window.mnui.toast(t('common.saveError'));
+                  }
                   app.render();
                 },
               },
@@ -561,10 +565,15 @@ function selectionBar(shown) {
           {
             class: 'mn-btn',
             type: 'button',
-            onclick: async () => {
-              for (const x of payable)
-                await addPayment(x.inv, { paid_on: today(), amount_cents: x.st.open, note: null });
-              window.mnui.toast(t('payments.markedPaidMany', { n: payable.length }));
+            onclick: async (event) => {
+              event.currentTarget.disabled = true;
+              let done = 0;
+              try {
+                for (const x of payable) if (await payOpen(x.inv)) done += 1;
+                window.mnui.toast(t('payments.markedPaidMany', { n: done }));
+              } catch {
+                window.mnui.toast(t('common.saveError'));
+              }
               selection.clear();
               app.render();
             },

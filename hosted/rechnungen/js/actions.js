@@ -2,7 +2,7 @@
 // payments, cancellation, reminders (bell and scheduled push) and sending by Gmail.
 import { app, saveSettings } from './ctx.js';
 import { safeName, t } from './dom.js';
-import { addDays, cancellationOf, nextNumber, statusOf, today } from './invoice.js';
+import { addDays, cancellationOf, daysBetween, nextNumber, statusOf, today } from './invoice.js';
 import { invoicePdf } from './invoice-pdf.js';
 import { buildMessage } from './mail.js';
 import { checkInvoice } from './rules.js';
@@ -128,7 +128,7 @@ export async function uploadPdf(invoice) {
   await app.mn.files.upload(path, new Blob([bytes], { type: 'application/pdf' }), {
     contentType: 'application/pdf',
   });
-  return app.store.save('invoices', { ...invoice, pdf_path: path });
+  return app.store.save('invoices', { id: invoice.id, pdf_path: path });
 }
 
 /** Uploads PDFs that were issued offline. */
@@ -152,22 +152,42 @@ export function issuesOf(invoice) {
   return checkInvoice({ seller: app.company, customer, invoice });
 }
 
-/** Gives the invoice its number and freezes it. Returns the issued row. */
-export async function issue(invoice) {
-  const issueDate = invoice.issue_date ?? today();
-  const numbers = app.store
+/** The number format: sample invoices count in their own range, never in the real one. */
+function numberFormat(invoice) {
+  return invoice.is_sample ? `${t('sample.numberPrefix')}-{YYYY}-{NNN}` : app.company.number_format;
+}
+
+function takenNumbers() {
+  return app.store
     .all('invoices', { deleted: true })
     .map((i) => i.number)
     .filter(Boolean);
-  const number = nextNumber(app.company.number_format, issueDate, numbers);
+}
+
+/** The dates an invoice gets when it is issued today: the payment term keeps its length. */
+export function issueDates(invoice, day = today()) {
+  if (!invoice.issue_date || invoice.issue_date === day)
+    return { issue_date: day, due_date: invoice.due_date };
+  const term = invoice.due_date ? daysBetween(invoice.issue_date, invoice.due_date) : null;
+  return { issue_date: day, due_date: term === null ? null : addDays(day, Math.max(0, term)) };
+}
+
+/**
+ * Gives the invoice its number and freezes it; dated today (an invoice is dated the day it is
+ * issued). Online only: two devices issuing offline could pick the same number.
+ */
+export async function issue(invoice) {
+  if (!app.mn.offline.online()) throw Object.assign(new Error('offline'), { code: 'offline' });
+  const dates = issueDates(invoice);
+  const number = nextNumber(numberFormat(invoice), dates.issue_date, takenNumbers());
   const customer = invoice.customer_id
     ? customerSnapshot(app.store.get('customers', invoice.customer_id))
     : invoice.customer;
   let row = await app.store.save('invoices', {
-    ...invoice,
+    id: invoice.id,
     status: 'issued',
     number,
-    issue_date: issueDate,
+    ...dates,
     customer,
     seller: sellerSnapshot(),
   });
@@ -183,18 +203,17 @@ export async function issue(invoice) {
 
 /** Cancels an issued invoice with a cancellation invoice; returns the cancellation. */
 export async function cancel(invoice) {
+  if (!app.mn.offline.online()) throw Object.assign(new Error('offline'), { code: 'offline' });
+  const current = app.store.get('invoices', invoice.id) ?? invoice;
+  if (current.status !== 'issued' || current.kind !== 'invoice') return null;
   const day = today();
-  const numbers = app.store
-    .all('invoices', { deleted: true })
-    .map((i) => i.number)
-    .filter(Boolean);
-  const number = nextNumber(app.company.number_format, day, numbers);
-  let storno = cancellationOf(invoice, app.store.newId(), number, day);
+  const number = nextNumber(numberFormat(current), day, takenNumbers());
+  let storno = cancellationOf(current, app.store.newId(), number, day);
   storno = await app.store.save('invoices', storno);
-  await app.store.save('invoices', { ...invoice, status: 'cancelled' });
-  await app.store.log(invoice.id, 'cancelled', { number });
+  await app.store.save('invoices', { id: current.id, status: 'cancelled' });
+  await app.store.log(current.id, 'cancelled', { number });
   await app.store.log(storno.id, 'issued', { number });
-  await cancelReminder(invoice.id);
+  await cancelReminder(current.id);
   try {
     storno = await uploadPdf(storno);
   } catch {
@@ -215,6 +234,18 @@ export async function addPayment(invoice, { paid_on, amount_cents, note }) {
   await app.store.log(invoice.id, 'payment', { amount_cents, paid_on });
   if (statusOf(invoice, app.store.all('payments')).key === 'paid') await cancelReminder(invoice.id);
   return row;
+}
+
+/**
+ * Books what is still open on an invoice as paid today. Works from the current payments, so a
+ * second tap finds nothing open and books nothing. Returns false when nothing was open.
+ */
+export async function payOpen(invoice, day = today()) {
+  const current = app.store.get('invoices', invoice.id) ?? invoice;
+  const status = statusOf(current, app.store.all('payments'), day);
+  if (!['open', 'partial', 'overdue'].includes(status.key) || status.open <= 0) return false;
+  await addPayment(current, { paid_on: day, amount_cents: status.open, note: null });
+  return true;
 }
 
 export async function removePayment(payment) {
@@ -294,7 +325,7 @@ export async function remindOverdue() {
     const path = due.length === 1 ? `/?view=invoices&id=${due[0].id}` : '/?view=invoices&f=overdue';
     try {
       await app.mn.notify(title, t('notify.overdueBody'), path);
-      for (const inv of due) await app.store.save('invoices', { ...inv, reminded_on: day });
+      for (const inv of due) await app.store.save('invoices', { id: inv.id, reminded_on: day });
     } catch {
       // try again next time
     }
@@ -392,10 +423,10 @@ export async function sendMail(invoice, { to, subject, text, withAttachments, ki
     error.status = res.status;
     throw error;
   }
-  const row = await app.store.save('invoices', {
-    ...invoice,
-    sent_at: kind === 'invoice' ? new Date().toISOString() : invoice.sent_at,
-  });
+  const row =
+    kind === 'invoice'
+      ? await app.store.save('invoices', { id: invoice.id, sent_at: new Date().toISOString() })
+      : app.store.get('invoices', invoice.id);
   await app.store.log(invoice.id, kind === 'reminder' ? 'reminderSent' : 'sent', { to });
   return row;
 }

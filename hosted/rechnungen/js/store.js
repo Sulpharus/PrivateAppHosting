@@ -68,7 +68,40 @@ const COLUMNS = {
   history: { item_id: null, at: null, changes: {} },
 };
 
-const STRING_LIMITS = { notes: 20000, intro: 4000, closing: 4000, description: 2000 };
+// The length limits of the text columns, exactly as in db/001_init.sql: a longer text would be
+// refused by the database (and an offline change refused at sync is lost).
+export const LIMITS = {
+  customers: {
+    name: 200,
+    contact: 200,
+    email: 200,
+    phone: 60,
+    street: 200,
+    zip: 20,
+    city: 120,
+    vat_id: 20,
+    number: 40,
+    notes: 20000,
+  },
+  items: { title: 200, description: 2000, unit: 20, number: 40 },
+  invoices: { number: 40, reference: 120, intro: 4000, closing: 4000, pdf_path: 200 },
+  payments: { note: 300 },
+  history: {},
+};
+
+const ENUMS = {
+  customers: {},
+  items: { kind: ['service', 'product'] },
+  invoices: {
+    kind: ['invoice', 'cancellation'],
+    status: ['draft', 'issued', 'cancelled'],
+    tax_mode: ['standard', 'small', 'reverse', 'intra', 'export', 'nontaxable'],
+    lang: ['de', 'en'],
+    layout: ['din', 'modern', 'compact'],
+  },
+  payments: {},
+  history: {},
+};
 
 /** A row with exactly the table's columns, unknown fields dropped and defaults filled in. */
 export function shape(table, row) {
@@ -76,11 +109,15 @@ export function shape(table, row) {
   for (const [column, fallback] of Object.entries(COLUMNS[table])) {
     let value = row[column] === undefined ? fallback : row[column];
     if (typeof value === 'string') {
-      value = value.slice(0, STRING_LIMITS[column] ?? 200);
+      const limit = LIMITS[table][column];
+      if (limit) value = value.slice(0, limit);
       if (value === '' && fallback === null) value = null;
     }
+    const allowed = ENUMS[table][column];
+    if (allowed && !allowed.includes(value)) value = fallback;
     out[column] = value;
   }
+  if (table === 'customers' && !/^[A-Z]{2}$/.test(String(out.country))) out.country = 'DE';
   if (table === 'invoices') return withTotals(out);
   return out;
 }

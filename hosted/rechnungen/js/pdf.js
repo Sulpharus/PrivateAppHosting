@@ -61,7 +61,7 @@ export function winAnsi(char) {
 function charWidth(font, char) {
   const code = char.codePointAt(0) ?? 63;
   if (code >= 32 && code <= 126) return font.widths[code - 32];
-  if (char === 'ß') return font === FONTS.bold ? 611 : 611;
+  if (char === 'ß') return 611;
   if (char === '€') return 556;
   const base = char.normalize('NFD')[0] ?? '?';
   const baseCode = base.codePointAt(0) ?? 63;

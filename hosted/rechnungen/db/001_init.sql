@@ -4,9 +4,10 @@
 -- (2000 = 20 %). Related rows point at their parent together with owner_id, so a row can never
 -- hang on someone else's invoice even if its id were known.
 --
--- Issued invoices are never deleted or changed: they are cancelled with a cancellation invoice
--- (kind 'cancellation'). Drafts, customers and items are deleted softly (deleted_at) and purged
--- by the app after 30 days.
+-- Issued invoices are never changed: they are cancelled with a cancellation invoice (kind
+-- 'cancellation'); the trigger invoices_freeze keeps their content, whatever a device sends. They
+-- are only deleted by "Alle Daten löschen" (or with the sample data). Drafts, customers and items
+-- are deleted softly (deleted_at) and purged by the app after 30 days.
 
 select platform.create_app_schema('rechnungen');
 
@@ -69,7 +70,7 @@ create table app_rechnungen.invoices (
   seller jsonb not null default '{}' check (jsonb_typeof(seller) = 'object'),
   -- [{ id, item_id, title, description, unit, qty_milli, price_cents, tax_bp, discount_bp }]
   lines jsonb not null default '[]' check (jsonb_typeof(lines) = 'array' and jsonb_array_length(lines) <= 200),
-  tax_mode text not null default 'standard' check (tax_mode in ('standard', 'small', 'reverse', 'intra', 'export')),
+  tax_mode text not null default 'standard' check (tax_mode in ('standard', 'small', 'reverse', 'intra', 'export', 'nontaxable')),
   lang text not null default 'de' check (lang in ('de', 'en')),
   layout text not null default 'din' check (layout in ('din', 'modern', 'compact')),
   issue_date date,
@@ -102,9 +103,56 @@ create table app_rechnungen.invoices (
   foreign key (owner_id, customer_id) references app_rechnungen.customers (owner_id, id)
     on delete set null (customer_id),
   foreign key (owner_id, cancels_id) references app_rechnungen.invoices (owner_id, id)
+    on delete set null (cancels_id)
 );
 create trigger invoices_touch before update on app_rechnungen.invoices
   for each row execute function platform.touch_updated_at();
+
+-- An issued invoice keeps its content. Devices write whole rows (also from an old offline copy),
+-- so the database decides: only the move issued -> cancelled is allowed (never back), the stored
+-- PDF, the sending time and the reminder day only ever get filled in or later, and a purged
+-- customer may still clear customer_id.
+create function app_rechnungen.freeze_issued() returns trigger
+language plpgsql
+set search_path = ''
+as $$
+begin
+  if old.status = 'draft' then
+    return new;
+  end if;
+  new.kind := old.kind;
+  new.number := old.number;
+  new.customer_id := case when new.customer_id is null then null else old.customer_id end;
+  new.customer := old.customer;
+  new.seller := old.seller;
+  new.lines := old.lines;
+  new.tax_mode := old.tax_mode;
+  new.lang := old.lang;
+  new.layout := old.layout;
+  new.issue_date := old.issue_date;
+  new.service_date := old.service_date;
+  new.service_end := old.service_end;
+  new.due_date := old.due_date;
+  new.net_cents := old.net_cents;
+  new.tax_cents := old.tax_cents;
+  new.gross_cents := old.gross_cents;
+  new.reference := old.reference;
+  new.intro := old.intro;
+  new.closing := old.closing;
+  new.cancels_id := case when new.cancels_id is null then null else old.cancels_id end;
+  new.attachments := old.attachments;
+  new.is_sample := old.is_sample;
+  new.deleted_at := null;
+  new.status := case when old.status = 'cancelled' or new.status = 'cancelled' then 'cancelled' else old.status end;
+  new.pdf_path := coalesce(old.pdf_path, new.pdf_path);
+  new.sent_at := greatest(old.sent_at, new.sent_at);
+  new.reminded_on := greatest(old.reminded_on, new.reminded_on);
+  return new;
+end;
+$$;
+revoke execute on function app_rechnungen.freeze_issued() from public;
+create trigger invoices_freeze before update on app_rechnungen.invoices
+  for each row execute function app_rechnungen.freeze_issued();
 select platform.secure_table('rechnungen', 'invoices', 'private');
 create unique index invoices_number_idx on app_rechnungen.invoices (owner_id, number)
   where number is not null;
@@ -131,7 +179,7 @@ create index on app_rechnungen.payments (owner_id, invoice_id);
 create index on app_rechnungen.payments (owner_id, paid_on);
 
 -- What happened to an invoice (created, edited, issued, sent, paid, cancelled); the app keeps the
--- last 20 per invoice.
+-- last 20 per invoice. item_id is the invoice.
 create table app_rechnungen.history (
   id uuid primary key,
   owner_id uuid,

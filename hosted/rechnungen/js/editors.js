@@ -1,5 +1,5 @@
 // Editor sheets: invoice (four steps), customer, product/service (Baustein) and the company profile.
-import { issue, issuesOf, openPdf } from './actions.js';
+import { issue, issueDates, issuesOf, openPdf } from './actions.js';
 import { app, companyReady, DEFAULT_COMPANY, saveCompany } from './ctx.js';
 import { field, h, icon, locale, money, t } from './dom.js';
 import {
@@ -22,7 +22,16 @@ import {
   showErrors,
   steps,
 } from './forms.js';
-import { addDays, emptyLine, nextNumber, today, validNumberFormat, withTotals } from './invoice.js';
+import {
+  addDays,
+  copyLines,
+  daysBetween,
+  emptyLine,
+  nextNumber,
+  today,
+  validNumberFormat,
+  withTotals,
+} from './invoice.js';
 import { LAYOUTS } from './invoice-pdf.js';
 import {
   formatQuantity,
@@ -34,6 +43,7 @@ import {
   validIban,
 } from './money.js';
 import { COUNTRIES, chargesNoTax, plausibleVatId, ratesFor, TAX_MODES } from './rules.js';
+import { LIMITS } from './store.js';
 
 // Countries a customer can be in (a short list; the name comes from the browser in each language).
 export const CUSTOMER_COUNTRIES = [
@@ -90,9 +100,7 @@ export function openInvoiceEditor({ id = null, copyOf = null, customerId = null 
     status: 'draft',
     customer_id: source?.customer_id ?? customerId,
     customer: {},
-    lines: source
-      ? source.lines.map((l) => ({ ...l, id: store.newId(), price_cents: Math.abs(l.price_cents) }))
-      : [],
+    lines: source ? copyLines(source.lines, source.kind, () => store.newId()) : [],
     tax_mode: source?.tax_mode ?? (company.small_business ? 'small' : 'standard'),
     lang: source?.lang ?? company.lang ?? 'de',
     layout: source?.layout ?? company.layout ?? 'din',
@@ -109,6 +117,12 @@ export function openInvoiceEditor({ id = null, copyOf = null, customerId = null 
   const customerOf = (cid) => (cid ? store.get('customers', cid) : null);
   const days = () => customerOf(base.customer_id)?.payment_days ?? company.payment_days ?? 14;
   if (!base.due_date) base.due_date = addDays(base.issue_date, days());
+  // A draft from an earlier day is issued today: date it today and keep the length of its term.
+  if (existing && base.issue_date < day) {
+    const keepService = base.service_date === base.issue_date;
+    Object.assign(base, issueDates(base, day));
+    if (keepService) base.service_date = base.issue_date;
+  }
   if (!base.lines.length) base.lines.push(emptyLine(store.newId(), ratesFor(country)[0]));
 
   let draft = structuredClone(base);
@@ -256,7 +270,7 @@ export function openInvoiceEditor({ id = null, copyOf = null, customerId = null 
       newCustomer ??= { name: '', email: '', street: '', zip: '', city: '', country, vat_id: '' };
       const nc = newCustomer;
       const bind = (key, attrs = {}) => {
-        const el = input({ value: nc[key] ?? '', ...attrs });
+        const el = input({ value: nc[key] ?? '', maxlength: LIMITS.customers[key], ...attrs });
         el.addEventListener('input', () => {
           nc[key] = el.value;
         });
@@ -547,6 +561,14 @@ export function openInvoiceEditor({ id = null, copyOf = null, customerId = null 
         draft.service_date = draft.issue_date;
         serviceDate.value = draft.issue_date ?? '';
       }
+      // The payment term keeps its length.
+      if (before && draft.issue_date && draft.due_date) {
+        draft.due_date = addDays(
+          draft.issue_date,
+          Math.max(0, daysBetween(before, draft.due_date)),
+        );
+        dueDate.value = draft.due_date;
+      }
     });
     serviceDate.addEventListener('change', () => {
       draft.service_date = serviceDate.value || null;
@@ -632,6 +654,10 @@ export function openInvoiceEditor({ id = null, copyOf = null, customerId = null 
     closing.input.addEventListener('input', () => {
       draft.closing = closing.read();
     });
+    const dueBox = field(t('editor.dueDate'), dueDate);
+    dueBox.dataset.check = 'dueDate';
+    const endBox = field(t('editor.serviceEnd'), serviceEnd, { hint: t('editor.serviceEndHint') });
+    endBox.dataset.check = 'serviceEnd';
     const issueBox = field(t('editor.issueDate'), issueDate, { required: true });
     issueBox.dataset.check = 'issueDate';
     const serviceBox = field(t('editor.serviceDate'), serviceDate, { required: true });
@@ -641,14 +667,9 @@ export function openInvoiceEditor({ id = null, copyOf = null, customerId = null 
         'fieldset',
         {},
         h('legend', {}, t('editor.dates')),
-        h('div', { class: 'mn-grid-2' }, issueBox, field(t('editor.dueDate'), dueDate)),
+        h('div', { class: 'mn-grid-2' }, issueBox, dueBox),
         quick,
-        h(
-          'div',
-          { class: 'mn-grid-2' },
-          serviceBox,
-          field(t('editor.serviceEnd'), serviceEnd, { hint: t('editor.serviceEndHint') }),
-        ),
+        h('div', { class: 'mn-grid-2' }, serviceBox, endBox),
       ),
       h(
         'fieldset',
@@ -953,6 +974,8 @@ export function openInvoiceEditor({ id = null, copyOf = null, customerId = null 
           class: 'mn-btn mn-btn--primary',
           type: 'button',
           onclick: () => doIssue(issueBtn, errors),
+          disabled: !app.mn.offline.online(),
+          title: app.mn.offline.online() ? null : t('offline.notPossible'),
         },
         t('editor.issue'),
       );
@@ -980,9 +1003,23 @@ export function openInvoiceEditor({ id = null, copyOf = null, customerId = null 
     if (i === 2) {
       const issueBox = body.querySelector('[data-check=issueDate]');
       const serviceBox = body.querySelector('[data-check=serviceDate]');
+      const dueBox = body.querySelector('[data-check=dueDate]');
+      const endBox = body.querySelector('[data-check=serviceEnd]');
       return showErrors([
         [issueBox, draft.issue_date ? null : t('form.requiredField')],
+        [
+          dueBox,
+          draft.due_date && draft.issue_date && draft.due_date < draft.issue_date
+            ? t('check.dueBeforeIssue')
+            : null,
+        ],
         [serviceBox, draft.service_date ? null : t('form.requiredField')],
+        [
+          endBox,
+          draft.service_end && draft.service_date && draft.service_end < draft.service_date
+            ? t('check.servicePeriod')
+            : null,
+        ],
       ]);
     }
     return true;
@@ -1010,8 +1047,22 @@ export function openInvoiceEditor({ id = null, copyOf = null, customerId = null 
     return row;
   }
 
+  /** Dates the database would refuse (a refused offline draft would be lost). */
+  function datesInvalid() {
+    return (
+      (draft.due_date && draft.issue_date && draft.due_date < draft.issue_date) ||
+      (draft.service_end && draft.service_date && draft.service_end < draft.service_date)
+    );
+  }
+
   async function saveDraft(button) {
     if (!validStep(step)) return;
+    if (datesInvalid()) {
+      step = 2;
+      draw();
+      validStep(2);
+      return;
+    }
     busy(button, true);
     try {
       await persist();
@@ -1049,9 +1100,12 @@ export function openInvoiceEditor({ id = null, copyOf = null, customerId = null 
       sheet.close();
       window.mnui.toast(t('editor.issued', { number: issued.number }));
       app.render();
-    } catch {
+    } catch (error) {
       busy(button, false);
-      window.mnui.toast(t('common.saveError'));
+      window.mnui.toast(
+        error?.code === 'offline' ? t('editor.issueOffline') : t('common.saveError'),
+      );
+      app.render();
     }
   }
 
@@ -1074,7 +1128,7 @@ export function openCustomerEditor(id = null, { onSaved } = {}) {
   });
   const fields = {};
   const text = (key, label, attrs = {}, opts = {}) => {
-    const el = input({ value: values[key] ?? '', ...attrs });
+    const el = input({ value: values[key] ?? '', maxlength: LIMITS.customers[key], ...attrs });
     el.addEventListener('input', () => {
       values[key] = el.value;
     });

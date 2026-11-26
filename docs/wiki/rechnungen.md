@@ -18,15 +18,16 @@ Zum Ausprobieren gibt es „Mit Beispieldaten ausprobieren“; die Beispiele sin
 ## Ausstellen, stornieren, bezahlt
 
 - **Ausstellen** gibt die fortlaufende Nummer, friert die Rechnung ein und speichert das PDF auf MiniNode (offline ausgestellt: sobald du wieder online bist).
-- Ausgestellte Rechnungen werden nie gelöscht oder geändert, sondern **storniert**: Eine Stornorechnung mit eigener Nummer hebt sie auf.
+- Ausgestellte Rechnungen lassen sich nicht mehr ändern (das sichert auch die Datenbank ab) und werden **storniert** statt gelöscht: Eine Stornorechnung mit eigener Nummer hebt sie auf. Entfernt werden sie nur mit *Einstellungen → Alle Daten löschen*.
+- Ausstellen geht nur online, damit zwei Geräte nie dieselbe Nummer vergeben. Ein älterer Entwurf wird beim Ausstellen auf heute datiert; das Zahlungsziel behält seine Länge.
 - **Zahlungen** (auch Teilzahlungen) erfasst du in der Rechnung oder mit „Bezahlt“ in der Übersicht.
-- Steuerarten: mit Umsatzsteuer, Kleinunternehmer (§ 19 UStG / § 6 Abs. 1 Z 27 UStG), Reverse Charge, innergemeinschaftliche Lieferung, Ausfuhr; der passende Hinweis steht auf der Rechnung.
+- Steuerarten: mit Umsatzsteuer, Kleinunternehmer (§ 19 UStG / § 6 Abs. 1 Z 27 UStG), Reverse Charge, innergemeinschaftliche Lieferung, Ausfuhr von Waren, Leistung an Kunden außerhalb der EU; der passende Hinweis steht auf der Rechnung.
 
 ## PDF, QR-Code und E-Mail
 
 - Drei Layouts: **DIN 5008** (Anschrift im Fensterumschlag, Falzmarken), **Modern** und **Kompakt**, auf Deutsch oder Englisch, möglichst auf einer Seite.
 - Mit IBAN trägt jede Rechnung einen **Zahlungs-QR-Code** (GiroCode/EPC), den Banking-Apps in Deutschland und Österreich lesen.
-- **Per E-Mail senden** und **Zahlungserinnerung senden** gehen über dein Gmail. Dafür verbindest du Google einmal im Portal; die App fragt nur das Senden von Mails an (`gmail: write`).
+- **Per E-Mail senden** und **Zahlungserinnerung senden** gehen über dein Gmail. Dafür verbindest du Google einmal im Portal. Die App bekommt dafür Gmail-Schreibzugriff (`gmail: write`, bei Google „Lesen, Verfassen und Senden“), weil MiniNode keinen reinen Sende-Zugriff anbietet; sie selbst sendet nur Mails und liest keine.
 
 ## Erinnerungen
 
@@ -34,7 +35,7 @@ Ist das Zahlungsziel abgelaufen und das Geld nicht da, meldet die App das einmal
 
 ## Statistik und Jahresexport
 
-*Statistik* zeigt je Geschäftsjahr (Beginn einstellbar) **netto in Rechnung gestellt (geschätzt)** und **brutto eingegangen (tatsächlich)**, je Monat, größte Kunden und Summen je Steuersatz. Der **Jahresexport** lädt ein ZIP mit allen Rechnungs-PDFs, dem Rechnungsausgangsbuch, den Zahlungseingängen und den Summen je Steuersatz (CSV) für die Steuererklärung; dazu gibt es einen druckbaren Jahresbericht.
+*Statistik* zeigt je Geschäftsjahr (Beginn einstellbar) **netto in Rechnung gestellt (geschätzt)** und **brutto eingegangen (tatsächlich)**, je Monat, größte Kunden und Summen je Steuersatz. Der **Jahresexport** lädt ein ZIP mit allen Rechnungs-PDFs (so, wie sie beim Ausstellen gespeichert wurden), dem Rechnungsausgangsbuch, den Zahlungseingängen und den Summen je Steuersatz (CSV) für die Steuererklärung; dazu gibt es einen druckbaren Jahresbericht.
 
 ## Gut zu wissen
 
