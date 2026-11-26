@@ -25,7 +25,14 @@ import {
 } from './geom.js';
 import { cleanMaterial } from './materials.js';
 import { generateViews } from './projection.js';
-import { combine, METRIC_COARSE, THREAD_MAX_TRIANGLES, threadTriangles } from './solid.js';
+import {
+  combine,
+  METRIC_COARSE,
+  meshBounds,
+  solidMesh,
+  THREAD_MAX_TRIANGLES,
+  threadTriangles,
+} from './solid.js';
 
 export const LIMIT = 100_000; // millimetres: anything beyond is a typo
 export const STYLES = ['solid', 'center', 'hidden', 'construction'];
@@ -38,6 +45,7 @@ export function emptyModel() {
     seq: 0,
     sketch: { entities: [] },
     solids: [],
+    groups: [],
     sheet: {
       title: '',
       paper: 'A4',
@@ -56,9 +64,17 @@ export function normalise(model) {
     entities: (Array.isArray(m.sketch?.entities) ? m.sketch.entities : []).filter(validEntity),
   };
   m.solids = (Array.isArray(m.solids) ? m.solids : []).filter(validSolid);
+  // Parts of an assembly: a solid may belong to one; unknown references are dropped.
+  m.groups = (Array.isArray(m.groups) ? m.groups : []).filter(
+    (g) => g && /^g\d{1,9}$/.test(g.id) && typeof g.name === 'string' && g.name.trim(),
+  );
+  const groupIds = new Set(m.groups.map((g) => g.id));
+  m.solids = m.solids.map((x) =>
+    x.group === undefined || groupIds.has(x.group) ? x : { ...x, group: undefined },
+  );
   m.sheet = { ...emptyModel().sheet, ...(m.sheet ?? {}) };
   let max = 0;
-  for (const x of [...m.sketch.entities, ...m.solids]) {
+  for (const x of [...m.sketch.entities, ...m.solids, ...m.groups]) {
     const n = Number.parseInt(String(x.id).slice(1), 10);
     if (Number.isFinite(n)) max = Math.max(max, n);
   }
@@ -297,6 +313,12 @@ export const OPS = [
   'duplicate',
   'generate_views',
   'set_sheet',
+  'make_group',
+  'ungroup',
+  'move_group',
+  'rotate_group',
+  'set_group',
+  'delete_group',
 ];
 
 const num = (o, k, def) => {
@@ -580,6 +602,98 @@ export function applyOp(model, o, ctx = {}) {
       model.sketch.entities.push(...gen);
       return gen.map((e) => e.id);
     }
+    case 'make_group': {
+      const ids = Array.isArray(o.targets)
+        ? o.targets.filter((id) => model.solids.some((x) => x.id === id))
+        : [];
+      need(ids.length > 0, 'unknown_target');
+      const g = {
+        id: nextId(model, 'g'),
+        name:
+          typeof o.name === 'string' && o.name.trim()
+            ? o.name.trim().slice(0, 80)
+            : (names.group ?? 'Teil'),
+      };
+      model.groups.push(g);
+      model.solids = model.solids.map((x) => (ids.includes(x.id) ? { ...x, group: g.id } : x));
+      return [g.id];
+    }
+    case 'ungroup': {
+      need(
+        model.groups.some((g) => g.id === o.target),
+        'unknown_target',
+      );
+      model.groups = model.groups.filter((g) => g.id !== o.target);
+      model.solids = model.solids.map((x) =>
+        x.group === o.target ? { ...x, group: undefined } : x,
+      );
+      return [];
+    }
+    case 'delete_group': {
+      need(
+        model.groups.some((g) => g.id === o.target),
+        'unknown_target',
+      );
+      model.groups = model.groups.filter((g) => g.id !== o.target);
+      model.solids = model.solids.filter((x) => x.group !== o.target);
+      return [];
+    }
+    case 'set_group': {
+      const g = model.groups.find((x) => x.id === o.target);
+      need(g, 'unknown_target');
+      if (typeof o.name === 'string' && o.name.trim()) g.name = o.name.trim().slice(0, 80);
+      const material = o.material !== undefined ? cleanMaterial(o.material) : undefined;
+      model.solids = model.solids.map((x) => {
+        if (x.group !== g.id) return x;
+        const y = { ...x };
+        if (typeof o.hidden === 'boolean') y.hidden = o.hidden;
+        if (material && y.op !== 'subtract' && y.kind !== 'toolpath') y.material = material;
+        return y;
+      });
+      return [];
+    }
+    case 'move_group': {
+      need(
+        model.groups.some((g) => g.id === o.target),
+        'unknown_target',
+      );
+      const d = [num(o, 'dx', 0), num(o, 'dy', 0), num(o, 'dz', 0)];
+      model.solids = model.solids.map((x) =>
+        x.group === o.target ? { ...x, pos: x.pos.map((v, k) => v + d[k]) } : x,
+      );
+      return [];
+    }
+    case 'rotate_group': {
+      need(
+        model.groups.some((g) => g.id === o.target),
+        'unknown_target',
+      );
+      const a = num(o, 'angle');
+      const members = model.solids.filter((x) => x.group === o.target);
+      // About the vertical axis through the centre of the part (or a given cx, cy).
+      let c = [o.cx, o.cy];
+      if (!finite(c[0]) || !finite(c[1])) {
+        const b = meshBounds(
+          members.flatMap((x) => solidMesh(x, ctx.meshes?.get(x.id) ?? null) ?? []),
+        );
+        need(b, 'unknown_target');
+        c = [(b.min[0] + b.max[0]) / 2, (b.min[1] + b.max[1]) / 2];
+      }
+      const r = rad(a);
+      const cos = Math.cos(r);
+      const sin = Math.sin(r);
+      model.solids = model.solids.map((x) => {
+        if (x.group !== o.target) return x;
+        const dx = x.pos[0] - c[0];
+        const dy = x.pos[1] - c[1];
+        return {
+          ...x,
+          pos: [c[0] + dx * cos - dy * sin, c[1] + dx * sin + dy * cos, x.pos[2]],
+          rot: [x.rot[0], x.rot[1], x.rot[2] + a],
+        };
+      });
+      return [];
+    }
     case 'set_sheet': {
       const s = { ...model.sheet };
       if (typeof o.title === 'string') s.title = o.title.slice(0, 120);
@@ -648,6 +762,14 @@ export function describe(model) {
     ...(s.kind === 'mesh' ? { triangles: s.tris } : {}),
     ...(s.kind === 'thread' ? { left: Boolean(s.left) } : {}),
     ...(s.material ? { material: s.material } : {}),
+    ...(s.group ? { part: s.group } : {}),
   }));
-  return { units: 'mm', sheet: model.sheet, sketch: ent, generatedViewLines: generated, solids };
+  return {
+    units: 'mm',
+    sheet: model.sheet,
+    sketch: ent,
+    generatedViewLines: generated,
+    parts: model.groups.map((g) => ({ id: g.id, name: g.name })),
+    solids,
+  };
 }

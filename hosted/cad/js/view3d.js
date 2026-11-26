@@ -470,8 +470,8 @@ export class View3d {
     const gl = this.gl;
     if (!gl) return;
     this.solidMeshes = solids;
-    for (const b of this.buffers.filter((x) => x.overlay)) gl.deleteBuffer(b.buf);
-    this.buffers = this.buffers.filter((x) => !x.overlay);
+    for (const b of this.buffers.filter((x) => x.overlay && !x.keep)) gl.deleteBuffer(b.buf);
+    this.buffers = this.buffers.filter((x) => !x.overlay || x.keep);
     const sel = new Set(selected);
     const pre = new Set(preview);
     for (const [id, m] of solids ?? []) {
@@ -495,6 +495,25 @@ export class View3d {
           overlay: true,
         });
     }
+    this.draw();
+  }
+
+  /** Overlaps found by the fit check, drawn red and visible through the parts. */
+  setClashes(list) {
+    const gl = this.gl;
+    if (!gl) return;
+    for (const b of this.buffers.filter((x) => x.role === 'clash')) gl.deleteBuffer(b.buf);
+    this.buffers = this.buffers.filter((x) => x.role !== 'clash');
+    for (const data of list)
+      if (data.length)
+        this.buffers.push({
+          buf: this.buffer(data),
+          count: data.length / 6,
+          mode: gl.TRIANGLES,
+          role: 'clash',
+          overlay: true,
+          keep: true,
+        });
     this.draw();
   }
 
@@ -779,6 +798,9 @@ export class View3d {
     this.paintRole(prog, 'sel', tok('--mn-accent'), 0.5, 1);
     this.paintRole(prog, 'selHole', tok('--mn-bad'), 0.45, 1);
     this.paintRole(prog, 'preview', tok('--mn-ok'), 0.5, 1);
+    gl.disable(gl.DEPTH_TEST);
+    this.paintRole(prog, 'clash', tok('--mn-bad'), 0.75, 1);
+    gl.enable(gl.DEPTH_TEST);
     gl.depthMask(true);
   }
 

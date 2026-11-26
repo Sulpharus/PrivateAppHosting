@@ -8,6 +8,23 @@ const APP = 'http://localhost:8808';
 const shots = process.env.SCREENSHOT_DIR;
 const email = `${run}@example.com`;
 
+/** An ASCII STL of an axis-aligned box (two triangles per face). */
+function boxStl(x: number, y: number, z: number, w: number, d: number, h: number): Buffer {
+  const p = (i: number, j: number, k: number) => [x + i * w, y + j * d, z + k * h];
+  const quads = [
+    [p(0, 0, 0), p(0, 1, 0), p(1, 1, 0), p(1, 0, 0)],
+    [p(0, 0, 1), p(1, 0, 1), p(1, 1, 1), p(0, 1, 1)],
+    [p(0, 0, 0), p(1, 0, 0), p(1, 0, 1), p(0, 0, 1)],
+    [p(1, 1, 0), p(0, 1, 0), p(0, 1, 1), p(1, 1, 1)],
+    [p(0, 1, 0), p(0, 0, 0), p(0, 0, 1), p(0, 1, 1)],
+    [p(1, 0, 0), p(1, 1, 0), p(1, 1, 1), p(1, 0, 1)],
+  ];
+  const facet = (a: number[], b: number[], c: number[]) =>
+    `facet normal 0 0 0\nouter loop\nvertex ${a.join(' ')}\nvertex ${b.join(' ')}\nvertex ${c.join(' ')}\nendloop\nendfacet`;
+  const body = quads.flatMap(([a, b, c, e]) => [facet(a, b, c), facet(a, c, e)]).join('\n');
+  return Buffer.from(`solid box\n${body}\nendsolid box\n`);
+}
+
 test.beforeAll(async () => {
   await createUser(email, 'user', `Cad ${run}`);
 });
@@ -95,6 +112,34 @@ test('cad: drawing, 3D with a hole, export and views', async ({ page }) => {
   await page.reload();
   await expect(page.getByRole('heading', { level: 1, name: 'Platte' })).toBeVisible();
   await expect(page.locator('#subtitle')).toContainText('3 Körper');
+
+  // An assembly: two part files imported at their own positions overlap by 2 mm; the fit check
+  // finds it, moving one part away makes it fit.
+  await page.getByRole('button', { name: '3D-Modell' }).click();
+  const [chooser] = await Promise.all([
+    page.waitForEvent('filechooser'),
+    page.getByRole('button', { name: 'Importieren' }).click(),
+  ]);
+  await chooser.setFiles([
+    { name: 'gehaeuse.stl', mimeType: 'model/stl', buffer: boxStl(200, 0, 0, 20, 20, 10) },
+    { name: 'deckel.stl', mimeType: 'model/stl', buffer: boxStl(200, 0, 8, 20, 20, 3) },
+  ]);
+  await page.getByRole('button', { name: /Wie in den Dateien/ }).click();
+  await expect(page.getByText('2 Dateien importiert, jede als eigenes Teil')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: 'Passung prüfen' }).click();
+  await expect(page.locator('.cad-parts')).toContainText('gehaeuse ↔ deckel');
+  await page
+    .locator('.cad-parts')
+    .getByRole('button', { name: /^deckel/ })
+    .click();
+  await page.getByLabel('ΔZ (mm)').fill('2');
+  await page.getByRole('button', { name: 'Teil verschieben' }).click();
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: 'Passung prüfen' }).click();
+  await expect(page.locator('.cad-parts')).toContainText(
+    'Keine Überschneidungen zwischen den Teilen',
+  );
 
   // The print view shows the sheet.
   await page.getByRole('button', { name: 'Drucken' }).first().click();

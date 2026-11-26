@@ -435,6 +435,25 @@ const boundsOverlap = (a, b) =>
  * imported mesh solid to its loaded polygons.
  */
 export function combine(solids, meshes = new Map()) {
+  return combineByPart(solids, meshes).flatMap((p) => p.mesh);
+}
+
+/**
+ * The model per part of an assembly: solids with the same `group` are one part; solids without a
+ * group form one part together. A part's holes cut only that part, so parts that fit into each
+ * other (a bolt in a bracket) stay separate solids. Returns [{ group, mesh }].
+ */
+export function combineByPart(solids, meshes = new Map()) {
+  const byGroup = new Map();
+  for (const s of solids) {
+    const g = s.group ?? '';
+    if (!byGroup.has(g)) byGroup.set(g, []);
+    byGroup.get(g).push(s);
+  }
+  return [...byGroup].map(([group, list]) => ({ group, mesh: combineOne(list, meshes) }));
+}
+
+function combineOne(solids, meshes) {
   const parts = [];
   const holes = [];
   const raw = [];
@@ -721,4 +740,137 @@ export function smoothNormals(tris, creaseDeg = 30) {
       return l > 0 ? [sum[0] / l, sum[1] / l, sum[2] / l] : own;
     });
   });
+}
+
+/**
+ * Where the parts of an assembly overlap: for each pair of parts whose boxes touch, the volume
+ * they share (mm³) and that shared region as a mesh. Parts that fit have none.
+ */
+export function interference(partsList, minVolume = 1e-3) {
+  const out = [];
+  const withBounds = partsList
+    .filter((p) => p.mesh.length)
+    .map((p) => ({ ...p, b: meshBounds(p.mesh) }));
+  for (let i = 0; i < withBounds.length; i++)
+    for (let j = i + 1; j < withBounds.length; j++) {
+      const a = withBounds[i];
+      const b = withBounds[j];
+      if (!boundsOverlap(a.b, b.b)) continue;
+      const shared = intersect(a.mesh, b.mesh);
+      const v = shared.length ? volume(shared) : 0;
+      if (v > minVolume) out.push({ a: a.group, b: b.group, volume: v, mesh: shared });
+    }
+  return out;
+}
+
+// ---------------------------------------------------------------------------------------------
+// Watertight export: CSG leaves T-junctions (a vertex of one polygon on the edge of its
+// neighbour). Slicers usually repair them; `weld` removes them, so every edge of the exported
+// mesh is shared by exactly two triangles and equal positions are the same numbers.
+
+export function weld(mesh) {
+  const b = meshBounds(mesh);
+  if (!b) return [];
+  const diag = Math.hypot(...b.size) || 1;
+  const tol = diag * 1e-7 + 1e-7;
+  const q = (v) => v.map((x) => Math.round(x / tol)).join(',');
+  // One canonical vertex per position.
+  const canon = new Map();
+  const unique = [];
+  const vert = (v) => {
+    const k = q(v);
+    let c = canon.get(k);
+    if (!c) {
+      c = [v[0], v[1], v[2]];
+      canon.set(k, c);
+      unique.push(c);
+    }
+    return c;
+  };
+  const polys = mesh.map((p) => ({ v: p.v.map(vert), s: p.s })).filter((p) => p.v.length >= 3);
+  // Spatial grid over the vertices, cell about the typical edge length.
+  let total = 0;
+  let count = 0;
+  for (const p of polys)
+    for (let i = 0; i < p.v.length; i++) {
+      total += Math.hypot(...sub(p.v[(i + 1) % p.v.length], p.v[i]));
+      count++;
+    }
+  const cell = Math.max(total / Math.max(count, 1), diag / 2000);
+  const grid = new Map();
+  const ck = (x, y, z) => `${x},${y},${z}`;
+  const cellOf = (v) => v.map((x) => Math.floor(x / cell));
+  for (const v of unique) {
+    const k = ck(...cellOf(v));
+    if (!grid.has(k)) grid.set(k, []);
+    grid.get(k).push(v);
+  }
+  const onEdge = (a, bb) => {
+    const ab = sub(bb, a);
+    const len2 = dot(ab, ab);
+    if (len2 < tol * tol) return [];
+    const found = new Set();
+    const steps = Math.ceil(Math.sqrt(len2) / cell) + 1;
+    for (let s = 0; s <= steps; s++) {
+      const t = s / steps;
+      const [cx, cy, cz] = cellOf([a[0] + ab[0] * t, a[1] + ab[1] * t, a[2] + ab[2] * t]);
+      for (let dx = -1; dx <= 1; dx++)
+        for (let dy = -1; dy <= 1; dy++)
+          for (let dz = -1; dz <= 1; dz++)
+            for (const v of grid.get(ck(cx + dx, cy + dy, cz + dz)) ?? []) found.add(v);
+    }
+    const out = [];
+    for (const v of found) {
+      if (v === a || v === bb) continue;
+      const av = sub(v, a);
+      const t = dot(av, ab) / len2;
+      if (t <= 1e-9 || t >= 1 - 1e-9) continue;
+      const d = sub(
+        av,
+        ab.map((x) => x * t),
+      );
+      if (dot(d, d) <= tol * tol * 4) out.push([t, v]);
+    }
+    return out.sort((x, y) => x[0] - y[0]).map(([, v]) => v);
+  };
+  const edgeCache = new Map();
+  const ids = new Map(unique.map((v, i) => [v, i]));
+  const between = (a, bb) => {
+    const ka = ids.get(a);
+    const kb = ids.get(bb);
+    const key = ka < kb ? `${ka}|${kb}` : `${kb}|${ka}`;
+    let pts = edgeCache.get(key);
+    if (!pts) {
+      pts = ka < kb ? onEdge(a, bb) : onEdge(bb, a);
+      edgeCache.set(key, pts);
+    }
+    return ka < kb ? pts : [...pts].reverse();
+  };
+  const out = [];
+  for (const p of polys) {
+    const ring = [];
+    for (let i = 0; i < p.v.length; i++) {
+      ring.push(p.v[i]);
+      ring.push(...between(p.v[i], p.v[(i + 1) % p.v.length]));
+    }
+    if (ring.length === 3) {
+      out.push({ v: ring, s: p.s });
+      continue;
+    }
+    // Triangulate in the polygon's plane; points on straight edges are never cut off as ears.
+    const { n } = planeOf(p.v);
+    const ax =
+      Math.abs(n[0]) > Math.abs(n[1])
+        ? Math.abs(n[0]) > Math.abs(n[2])
+          ? 0
+          : 2
+        : Math.abs(n[1]) > Math.abs(n[2])
+          ? 1
+          : 2;
+    const [u, w] = ax === 0 ? [1, 2] : ax === 1 ? [2, 0] : [0, 1];
+    const flip = n[ax] < 0;
+    const flat = ring.map((v) => (flip ? [v[w], v[u]] : [v[u], v[w]]));
+    for (const [i, j, k] of triangulate(flat)) out.push({ v: [ring[i], ring[j], ring[k]], s: p.s });
+  }
+  return out;
 }

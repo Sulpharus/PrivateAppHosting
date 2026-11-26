@@ -623,5 +623,69 @@
   "sample.boltNotes": "Example of a real thread: ISO profile M8 × 1.25 as a helix, head 13 mm across flats. Switch the 3D model to “Realistic” to see steel, reflections and shadows.",
   "opError.too_complex": "too fine for a thread of this length",
   "thread.tooComplex": "At this length the thread gets too fine to show smoothly (over 400,000 triangles). Split it into shorter pieces or choose a larger pitch.",
-  "material.layerError": "Enter a layer height between 0.04 and 1 mm."
+  "material.layerError": "Enter a layer height between 0.04 and 1 mm.",
+  "add3d.insert": "Insert project",
+  "props.multiSolids": {
+    "one": "{n} solid selected",
+    "other": "{n} solids selected"
+  },
+  "parts.title": "Parts",
+  "parts.part": "Part",
+  "parts.loose": "No part",
+  "parts.none": "No parts yet. Select several solids and combine them into a part, import several files or insert another project.",
+  "parts.insert": "Insert project",
+  "parts.insertTitle": "Insert a project as a part",
+  "parts.insertHint": "The project's solids are inserted as an editable copy, to the right of the model. The other project stays as it is.",
+  "parts.insertEmpty": "No other projects with a 3D model",
+  "parts.insertEmptyText": "Model parts in their own projects and assemble them here.",
+  "parts.inserted": "“{name}” inserted",
+  "parts.insertError": "Could not insert the project. Check your connection and try again.",
+  "parts.make": "Combine into one part",
+  "parts.makeHint": "You move, turn and colour a part as a whole. Its holes cut only the part itself, not the other parts.",
+  "parts.made": "Part created",
+  "parts.newName": "Part {n}",
+  "parts.move": "Position",
+  "parts.moveGo": "Move part",
+  "parts.rotateGo": "Rotate",
+  "parts.exportStl": "Export part as STL",
+  "parts.ungroup": "Dissolve part",
+  "parts.ungrouped": "Part dissolved, the solids stay",
+  "parts.delete": "Delete part",
+  "parts.deleteConfirm": {
+    "one": "Tap again to delete {n} solid",
+    "other": "Tap again to delete {n} solids"
+  },
+  "parts.deleted": "Part deleted",
+  "parts.selectWhole": "Select the whole part “{name}”",
+  "fit.check": "Check fit",
+  "fit.working": "Checking …",
+  "fit.intro": "Checks whether parts overlap, for example a bolt that does not fit its hole.",
+  "fit.ok": "All parts fit",
+  "fit.found": {
+    "one": "{n} overlap found",
+    "other": "{n} overlaps found"
+  },
+  "fit.allOk": "No overlaps between the parts",
+  "fit.clash": "{a} ↔ {b}: {v} mm³ overlap",
+  "fit.hint": "The overlaps are marked red in the view, also through the parts.",
+  "fit.stale": "The model changed since the last check. Check again.",
+  "import.placeTitle": "Import several parts",
+  "import.placeText": {
+    "one": "You are importing {n} part. Where should they go?",
+    "other": "You are importing {n} parts. Where should they go?"
+  },
+  "import.placeKeep": "As in the files",
+  "import.placeKeepSub": "For assemblies exported together: the parts sit in place straight away",
+  "import.placeRow": "Side by side",
+  "import.placeRowSub": "Each part stands on its own on the plate, ready to arrange",
+  "import.partsDone": {
+    "one": "{n} file imported",
+    "other": "{n} files imported, each as its own part"
+  },
+  "op.make_group": "Combine into a part",
+  "op.ungroup": "Dissolve part",
+  "op.move_group": "Move {target}",
+  "op.rotate_group": "Rotate {target}",
+  "op.set_group": "Change {target}",
+  "op.delete_group": "Delete {target}"
 }

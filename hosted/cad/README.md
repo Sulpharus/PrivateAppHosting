@@ -27,8 +27,8 @@ the MiniNode App Kit with the amber accent. Built on MiniNode (not ported from a
   run-out over half a turn at both ends. As many segments per turn as keep the chord error under
   0.002 mm, so slicers and CAM get the real flanks. The thread mesh is closed with every vertex
   shared exactly (each edge used twice, checked for 40 size, length, hand and clearance
-  combinations in `test/solid.test.js`); after CSG (a thread cut into a block) the STL can contain
-  T-junctions, which slicers weld as usual.
+  combinations in `test/solid.test.js`); after CSG (a thread cut into a block) the export is welded,
+  so it stays watertight.
 - **Darstellung Schnell / Realistisch:** "Schnell" is smooth shading in the material colour.
   "Realistisch" (`js/view3d.js`, WebGL 1) is physically based lighting (GGX), soft shadows from a
   2048² shadow map (16 samples), reflections of a studio environment on metal and gloss, a
@@ -37,6 +37,21 @@ the MiniNode App Kit with the amber accent. Built on MiniNode (not ported from a
   aluminium milled/anodised, steel, stainless, brass, copper, wood, acrylic) with a free colour per
   solid; hole walls take the material of the part they cut. Materials only change the look, never
   STL or G-code.
+- **Baugruppen (assemblies):** solids can form parts (`model.groups`, `solid.group`); a part's holes
+  cut only that part, so parts that fit into each other stay separate solids (`combineByPart`).
+  - Import several STL/OBJ files at once: each becomes a part, either at the coordinates in the files
+    (assemblies exported together) or side by side.
+  - "Projekt einfügen" copies the solids of another project in as editable parts (imported meshes and
+    G-code are copied into this project's files); the other project stays unchanged.
+  - Select a part by clicking it; move it by exact ΔX/ΔY/ΔZ, turn it about its centre, give it one
+    material, hide it, dissolve it, delete it (second tap), or export it alone as STL. Single solids
+    of a part stay editable from the list of solids.
+  - "Passung prüfen" (in the worker): for every pair of parts whose boxes touch, the volume they
+    share; overlaps are listed with their size and drawn red through the parts.
+  - The assistant can make, move, turn and change parts (`make_group`, `move_group`,
+    `rotate_group`, `set_group`, `ungroup`, `delete_group`).
+- **Watertight export:** STL and OBJ exports are welded (`weld` in `js/solid.js`): CSG T-junctions
+  are removed, every edge is shared by exactly two triangles and equal positions are equal numbers.
 - **Zeichnung aus 3D:** front, top, left/right and isometric views with hidden edges dashed
   (software depth buffer), first- or third-angle placement, overall dimensions and centre lines of
   holes along Z (`js/projection.js`). Generated lines are tagged and replaced when made again.

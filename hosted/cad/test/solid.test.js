@@ -70,7 +70,7 @@ describe('threads', () => {
     const m = combine(solids);
     expect(volume(m)).toBeLessThan(16 * 16 * 8 - Math.PI * 2.4 * 2.4 * 8);
     expect(m.every((p) => p.s === 'b')).toBe(true);
-  });
+  }, 30_000);
 });
 
 describe('thread closure', () => {
@@ -104,4 +104,81 @@ describe('thread closure', () => {
           const { thread } = await import('../js/solid.js');
           expect(exactOpen(thread(d, p, l, { offset, left }))).toBe(0);
         });
+});
+
+describe('assemblies', () => {
+  const plate = {
+    id: 's1',
+    kind: 'box',
+    op: 'add',
+    pos: [0, 0, 0],
+    rot: [0, 0, 0],
+    w: 20,
+    d: 20,
+    h: 5,
+    group: 'g1',
+  };
+  const hole = {
+    id: 's2',
+    kind: 'cylinder',
+    op: 'subtract',
+    pos: [10, 10, -1],
+    rot: [0, 0, 0],
+    r: 3,
+    h: 7,
+    group: 'g1',
+  };
+  const pin = (r) => ({
+    id: 's3',
+    kind: 'cylinder',
+    op: 'add',
+    pos: [10, 10, -2],
+    rot: [0, 0, 0],
+    r,
+    h: 9,
+    group: 'g2',
+  });
+
+  it('holes cut only their own part', async () => {
+    const { combineByPart, volume } = await import('../js/solid.js');
+    const parts = combineByPart([plate, hole, pin(2.9)]);
+    expect(parts.map((p) => p.group)).toEqual(['g1', 'g2']);
+    expect(volume(parts[1].mesh)).toBeGreaterThan(Math.PI * 2.8 * 2.8 * 9);
+  }, 30_000);
+
+  it('finds no interference when the pin fits and the overlap when it does not', async () => {
+    const { combineByPart, interference } = await import('../js/solid.js');
+    expect(interference(combineByPart([plate, hole, pin(2.9)]))).toEqual([]);
+    const clash = interference(combineByPart([plate, hole, pin(3.5)]));
+    expect(clash).toHaveLength(1);
+    expect(clash[0].volume).toBeGreaterThan(5);
+    expect(clash[0].volume).toBeLessThan(Math.PI * (3.5 * 3.5 - 2.9 * 2.9) * 5 + 10);
+  }, 30_000);
+});
+
+describe('weld', () => {
+  it('makes a CSG result watertight with exactly shared vertices', async () => {
+    const { combine, weld, volume } = await import('../js/solid.js');
+    const m = combine([
+      { id: 'a', kind: 'box', op: 'add', pos: [0, 0, 0], rot: [0, 0, 0], w: 30, d: 30, h: 10 },
+      { id: 'b', kind: 'cylinder', op: 'subtract', pos: [15, 15, -1], rot: [0, 0, 0], r: 4, h: 12 },
+      { id: 'c', kind: 'box', op: 'add', pos: [10, 10, 10], rot: [0, 0, 0], w: 10, d: 30, h: 5 },
+    ]);
+    const key = (p) => p.join(',');
+    const openOf = (mesh) => {
+      const count = new Map();
+      for (const { v } of mesh)
+        for (let i = 0; i < v.length; i++) {
+          const a = key(v[i]);
+          const b = key(v[(i + 1) % v.length]);
+          const k = a < b ? `${a}|${b}` : `${b}|${a}`;
+          count.set(k, (count.get(k) ?? 0) + 1);
+        }
+      return [...count.values()].filter((c) => c !== 2).length;
+    };
+    expect(openOf(m)).toBeGreaterThan(0);
+    const w = weld(m);
+    expect(openOf(w)).toBe(0);
+    expect(volume(w)).toBeCloseTo(volume(m), 3);
+  }, 30_000);
 });

@@ -16,16 +16,18 @@ import {
 } from './io.js';
 import { cleanMaterial, MATERIAL_IDS, materialOf } from './materials.js';
 import { applyOps, fieldsOf, nextId, normalise, STYLES } from './model.js';
-import { buildScene, geometryKey } from './scene.js';
+import { buildScene, checkFit, geometryKey } from './scene.js';
 import { Sketch } from './sketch.js';
 import {
   combine,
+  combineByPart,
   METRIC_COARSE,
   meshBounds,
   RAW_LIMIT,
   solidMesh,
   THREAD_MAX_TRIANGLES,
   threadTriangles,
+  weld,
 } from './solid.js';
 import {
   contextMenu,
@@ -109,7 +111,8 @@ export function mountEditor(root, app, project) {
 
   /** The model to export: the shown one when it is current, otherwise built now (never stale). */
   function exportMesh() {
-    return currentMesh() ?? combine(model.solids, meshes);
+    // Welded: every edge shared by exactly two triangles, so slicers need no repair.
+    return weld(currentMesh() ?? combine(model.solids, meshes));
   }
 
   function solidNames() {
@@ -120,6 +123,7 @@ export function mountEditor(root, app, project) {
       cone: t('solid.cone'),
       extrude: t('solid.extrude'),
       thread: t('solid.thread'),
+      group: t('parts.part'),
     };
   }
 
@@ -383,10 +387,17 @@ export function mountEditor(root, app, project) {
 
   const view3d = new View3d(canvas3d, {
     pick: (id, add) => {
+      solo = false;
       if (!id) selection = add ? selection : [];
-      else if (add)
-        selection = selection.includes(id) ? selection.filter((x) => x !== id) : [...selection, id];
-      else selection = [id];
+      else {
+        // A click on a part of an assembly selects the whole part (single solids: in the list).
+        const ids = partMembers(id);
+        if (add)
+          selection = ids.every((x) => selection.includes(x))
+            ? selection.filter((x) => !ids.includes(x))
+            : [...new Set([...selection, ...ids])];
+        else selection = ids;
+      }
       updateOverlays();
       renderPanel();
       renderTools();
@@ -555,6 +566,7 @@ export function mountEditor(root, app, project) {
         add('sphere', 'sphere'),
         add('cone', 'cone'),
         add('thread', 'thread', 'g'),
+        add('insert', 'import'),
         add('extrude', 'extrude', 'e'),
       );
       if (selection.length)
@@ -593,6 +605,7 @@ export function mountEditor(root, app, project) {
     const sel = model.solids.find((s) => s.id === selection[0]);
     if (kind === 'extrude') return extrudeSheet();
     if (kind === 'thread') return threadSheet();
+    if (kind === 'insert') return insertProjectSheet();
     if (kind === 'hole') {
       // A hole goes through the selected solid's centre, otherwise at the origin.
       const sb = sel ? meshBounds(solidMesh(sel, meshes.get(sel.id)) ?? []) : b;
@@ -627,6 +640,7 @@ export function mountEditor(root, app, project) {
   const round3 = (v) => Math.round(v * 1000) / 1000;
 
   function selectOnly(ids) {
+    solo = false;
     selection = ids;
     sketch.setSelection(mode === '2d' ? ids : []);
     updateOverlays();
@@ -1120,9 +1134,440 @@ export function mountEditor(root, app, project) {
     sheetFrame('thread.title', form, go, { tall: true });
   }
 
+  // ---------------------------------------------------------------------------------------
+  // Assemblies: parts (groups of solids), fit check, parts from other projects
+
+  /** The solids that are selected together with `id`: its whole part, or just itself. */
+  function partMembers(id) {
+    const g = model.solids.find((x) => x.id === id)?.group;
+    return g ? model.solids.filter((x) => x.group === g).map((x) => x.id) : [id];
+  }
+
+  /** The part whose solids are exactly the selection, or null. */
+  function selectedPart() {
+    if (!selection.length) return null;
+    const g = model.solids.find((x) => x.id === selection[0])?.group;
+    if (!g) return null;
+    const ids = model.solids.filter((x) => x.group === g).map((x) => x.id);
+    return ids.length === selection.length && ids.every((id) => selection.includes(id))
+      ? model.groups.find((x) => x.id === g)
+      : null;
+  }
+
+  let clashes = null; // result of the last fit check: [{ a, b, volume }]
+  let solo = false; // one solid of a part chosen in the list of solids
+  let clashKey = '';
+
+  async function runFitCheck(button) {
+    button.disabled = true;
+    button.textContent = t('fit.working');
+    const key = geometryKey(model.solids);
+    try {
+      const r = worker
+        ? await new Promise((resolve, reject) => {
+            const job = ++sceneJob;
+            pending.set(job, (m) => (m.error ? reject(new Error(m.error)) : resolve(m.clashes)));
+            worker.postMessage({ type: 'fit', job, solids: model.solids });
+          })
+        : checkFit(model.solids, meshes);
+      if (destroyed) return;
+      clashes = r;
+      clashKey = key;
+      view3d.setClashes(r.map((c) => c.data));
+      window.mnui.toast(t(r.length ? 'fit.found' : 'fit.ok', { n: r.length }));
+    } catch {
+      window.mnui.toast(t('common.actionError'));
+    }
+    renderPanel();
+  }
+
+  function partName(gid) {
+    return model.groups.find((g) => g.id === gid)?.name ?? t('parts.loose');
+  }
+
+  function partsSection() {
+    const wrap = el('div.cad-parts');
+    if (!model.groups.length && model.solids.length < 2) return wrap;
+    wrap.append(
+      el(
+        'div.mn-sect',
+        {},
+        el('h2', {}, t('parts.title'), el('small', {}, String(model.groups.length))),
+        el(
+          'button.mn-link',
+          { type: 'button', onclick: () => insertProjectSheet() },
+          t('parts.insert'),
+        ),
+      ),
+    );
+    if (!model.groups.length) {
+      wrap.append(el('p.mn-hint', {}, t('parts.none')));
+      return wrap;
+    }
+    const list = el('div.mn-list.cad-solid-list');
+    for (const g of model.groups) {
+      const members = model.solids.filter((x) => x.group === g.id);
+      const hidden = members.length && members.every((x) => x.hidden);
+      list.append(
+        el(
+          'button.mn-row',
+          {
+            type: 'button',
+            'aria-pressed': String(
+              members.length > 0 && members.every((x) => selection.includes(x.id)),
+            ),
+            onclick: () => selectOnly(members.map((x) => x.id)),
+          },
+          el('span.mn-thumb', { 'aria-hidden': 'true' }, icon('cube3d')),
+          el(
+            'span',
+            {},
+            el('span.mn-row-title', {}, g.name),
+            el(
+              'span.mn-row-sub',
+              {},
+              `${t('count.solids', { n: members.length })}${hidden ? ` · ${t('props.hidden')}` : ''}`,
+            ),
+          ),
+        ),
+      );
+    }
+    wrap.append(list);
+    // Fit check: do the parts intersect?
+    const stale = clashes && clashKey !== geometryKey(model.solids);
+    const check = el(
+      'button.mn-btn.mn-btn--block',
+      { type: 'button', onclick: (e) => runFitCheck(e.currentTarget) },
+      icon('check', { size: 18 }),
+      t('fit.check'),
+    );
+    wrap.append(check);
+    if (clashes && !stale) {
+      if (!clashes.length) wrap.append(el('span.mn-chip.mn-chip--ok', {}, t('fit.allOk')));
+      for (const c of clashes)
+        wrap.append(
+          el(
+            'span.mn-chip.mn-chip--bad',
+            {},
+            t('fit.clash', { a: partName(c.a), b: partName(c.b), v: fmt(c.volume, 2) }),
+          ),
+        );
+      if (clashes.length) wrap.append(el('p.mn-hint', {}, t('fit.hint')));
+    } else if (stale) wrap.append(el('p.mn-hint', {}, t('fit.stale')));
+    else wrap.append(el('p.mn-hint', {}, t('fit.intro')));
+    return wrap;
+  }
+
+  /** The panel of one selected part: name, look, position, and what to do with it. */
+  function partPanel(g) {
+    const box = el('div.cad-props');
+    const members = model.solids.filter((x) => x.group === g.id);
+    const name = el('input', { type: 'text', value: g.name, maxlength: '80' });
+    name.addEventListener(
+      'change',
+      () => name.value.trim() && apply([{ op: 'set_group', target: g.id, name: name.value }]),
+    );
+    box.append(
+      el(
+        'div.mn-sect',
+        {},
+        el('h2', {}, t('parts.part'), el('small', {}, t('count.solids', { n: members.length }))),
+      ),
+      el('label.mn-field', {}, t('field.name'), name),
+    );
+    const first = members.find((x) => x.op !== 'subtract' && x.kind !== 'toolpath');
+    if (first) {
+      const m = materialOf(first, project.purpose);
+      const sel = el(
+        'select',
+        {
+          onchange: (e) =>
+            apply([{ op: 'set_group', target: g.id, material: { id: e.target.value } }]),
+        },
+        ...MATERIAL_IDS.map((id) =>
+          el('option', { value: id, selected: id === m.id }, t(`material.${id}`)),
+        ),
+      );
+      const colour = el('input.cad-colour', { type: 'color', value: m.colour });
+      colour.addEventListener('change', () =>
+        apply([{ op: 'set_group', target: g.id, material: { id: m.id, colour: colour.value } }]),
+      );
+      box.append(
+        el(
+          'div.cad-material',
+          {},
+          el('label.mn-field', {}, t('material.label'), sel),
+          el('label.mn-field', {}, t('material.colour'), colour),
+        ),
+      );
+    }
+    // Move and turn the whole part by exact amounts.
+    const dx = el('input', { type: 'text', inputmode: 'decimal', value: '0' });
+    const dy = el('input', { type: 'text', inputmode: 'decimal', value: '0' });
+    const dz = el('input', { type: 'text', inputmode: 'decimal', value: '0' });
+    const ang = el('input', { type: 'text', inputmode: 'decimal', value: '90' });
+    const err = el('p.mn-error', { role: 'alert', hidden: true }, t('editor.numberError'));
+    const read = (inp, unit = true) => {
+      const v = readNumber(inp.value);
+      return v === null ? null : unit ? fromUnit(v) : v;
+    };
+    box.append(
+      el(
+        'fieldset.cad-fieldset',
+        {},
+        el('legend', {}, t('parts.move')),
+        el(
+          'div.cad-fields.cad-fields--3',
+          {},
+          el('label.mn-field', {}, `ΔX (${units()})`, dx),
+          el('label.mn-field', {}, `ΔY (${units()})`, dy),
+          el('label.mn-field', {}, `ΔZ (${units()})`, dz),
+        ),
+        el(
+          'button.mn-btn.mn-btn--block',
+          {
+            type: 'button',
+            onclick: () => {
+              const v = [read(dx), read(dy), read(dz)];
+              err.hidden = v.every((x) => x !== null);
+              if (!err.hidden) return;
+              apply([{ op: 'move_group', target: g.id, dx: v[0], dy: v[1], dz: v[2] }]);
+            },
+          },
+          icon('move', { size: 18 }),
+          t('parts.moveGo'),
+        ),
+        el(
+          'div.cad-inline-form',
+          {},
+          el('label.mn-field', {}, `${t('field.angle')} (°)`, ang),
+          el(
+            'button.mn-btn',
+            {
+              type: 'button',
+              onclick: () => {
+                const a = read(ang, false);
+                err.hidden = a !== null;
+                if (a !== null) apply([{ op: 'rotate_group', target: g.id, angle: a }]);
+              },
+            },
+            icon('rotate', { size: 18 }),
+            t('parts.rotateGo'),
+          ),
+        ),
+        err,
+      ),
+    );
+    const hidden = members.length && members.every((x) => x.hidden);
+    const del = el(
+      'button.mn-btn.mn-btn--danger.mn-btn--block',
+      {
+        type: 'button',
+        onclick: () => {
+          // Deleting a part removes all its solids: a second tap confirms.
+          if (del.dataset.armed !== '1') {
+            del.dataset.armed = '1';
+            del.textContent = t('parts.deleteConfirm', { n: members.length });
+            return;
+          }
+          apply([{ op: 'delete_group', target: g.id }]);
+          selectOnly([]);
+          window.mnui.toast(t('parts.deleted'), {
+            action: { label: t('common.undo'), onClick: doUndo },
+          });
+        },
+      },
+      t('parts.delete'),
+    );
+    box.append(
+      el(
+        'button.mn-btn.mn-btn--block',
+        {
+          type: 'button',
+          onclick: () => apply([{ op: 'set_group', target: g.id, hidden: !hidden }]),
+        },
+        icon(hidden ? 'eye' : 'eyeOff', { size: 18 }),
+        t(hidden ? 'props.show' : 'props.hide'),
+      ),
+      el(
+        'button.mn-btn.mn-btn--block',
+        { type: 'button', onclick: () => exportPart(g) },
+        icon('export', { size: 18 }),
+        t('parts.exportStl'),
+      ),
+      el(
+        'button.mn-btn.mn-btn--block',
+        {
+          type: 'button',
+          onclick: () => {
+            apply([{ op: 'ungroup', target: g.id }]);
+            window.mnui.toast(t('parts.ungrouped'));
+          },
+        },
+        t('parts.ungroup'),
+      ),
+      del,
+    );
+    return box;
+  }
+
+  function exportPart(g) {
+    const part = combineByPart(
+      model.solids.filter((x) => x.group === g.id && !x.hidden),
+      meshes,
+    )[0];
+    if (!part?.mesh.length) return;
+    const file = `${safeName(project.name)}-${safeName(g.name)}.stl`;
+    download(new Blob([writeStl(weld(part.mesh), g.name)], { type: 'model/stl' }), file);
+    window.mnui.toast(t('export.done', { file }));
+  }
+
+  /** Copies the solids of another project in as one editable part. */
+  async function insertProjectSheet() {
+    const body = el('div', {}, el('span.mn-sk', { style: { height: '56px' } }));
+    sheetFrame('parts.insertTitle', body, null, { tall: true });
+    let list;
+    try {
+      list = (await store.projects()).filter((p) => p.id !== project.id && p.model.solids.length);
+    } catch {
+      body.replaceChildren(
+        el('p.mn-error', { role: 'alert' }, t('common.loadError')),
+        el(
+          'button.mn-btn',
+          { type: 'button', onclick: () => insertProjectSheet() },
+          t('common.retry'),
+        ),
+      );
+      return;
+    }
+    body.replaceChildren(el('p.mn-hint', {}, t('parts.insertHint')));
+    if (!list.length) {
+      body.append(
+        el(
+          'div.mn-empty',
+          {},
+          el('h3', {}, t('parts.insertEmpty')),
+          el('p', {}, t('parts.insertEmptyText')),
+        ),
+      );
+      return;
+    }
+    const rows = el('div.mn-list');
+    for (const p of list)
+      rows.append(
+        el(
+          'button.mn-row',
+          { type: 'button', onclick: () => insertProject(p) },
+          el(
+            'span',
+            {},
+            el('span.mn-row-title', {}, p.name),
+            el('span.mn-row-sub', {}, t('count.solids', { n: p.model.solids.length })),
+          ),
+        ),
+      );
+    body.append(rows);
+  }
+
+  async function insertProject(source) {
+    window.mnui.sheet.close();
+    const draft = structuredClone(model);
+    const right = combined.length ? (meshBounds(combined)?.max[0] ?? 0) + 10 : 0;
+    const srcMin = (() => {
+      const b = meshBounds(
+        combine(source.model.solids.filter((x) => x.kind !== 'mesh' && x.kind !== 'toolpath')),
+      );
+      return b ? b.min : [0, 0, 0];
+    })();
+    const shift = [right - srcMin[0], 0, 0];
+    // Each source part stays a part; loose solids of the source become one part named after it.
+    const groupMap = new Map();
+    const partFor = (gid) => {
+      const key = gid ?? '';
+      if (!groupMap.has(key)) {
+        const id = nextId(draft, 'g');
+        const srcName = source.model.groups?.find((g) => g.id === gid)?.name;
+        draft.groups.push({
+          id,
+          name: (srcName ? `${source.name} · ${srcName}` : source.name).slice(0, 80),
+        });
+        groupMap.set(key, id);
+      }
+      return groupMap.get(key);
+    };
+    try {
+      for (const s of source.model.solids) {
+        const id = nextId(draft, 's');
+        const copy = {
+          ...structuredClone(s),
+          id,
+          group: partFor(s.group),
+          pos: s.pos.map((v, k) => v + shift[k]),
+        };
+        if (s.file) {
+          // Imported meshes and toolpaths are copied into this project's files.
+          const data = await store.loadFile(s);
+          const ext = s.kind === 'mesh' ? 'stl' : 'nc';
+          copy.file = store.filePath(project.id, id, ext);
+          const blob =
+            s.kind === 'mesh'
+              ? new Blob([writeStl(data)], { type: 'model/stl' })
+              : await (await fetch(await mn.files.url(s.file))).blob();
+          await store.uploadFile(copy.file, blob);
+          store.cache(copy.file, data);
+          if (s.kind === 'mesh') meshes.set(id, data);
+          else paths.set(id, data);
+        }
+        draft.solids.push(copy);
+      }
+    } catch {
+      window.mnui.toast(t('parts.insertError'));
+      return;
+    }
+    commit(draft);
+    setMode('3d');
+    selectOnly(
+      draft.solids.filter((x) => [...groupMap.values()].includes(x.group)).map((x) => x.id),
+    );
+    view3d.fitAll();
+    window.mnui.toast(t('parts.inserted', { name: source.name }));
+  }
+
   function props3d() {
+    const part = selectedPart();
+    if (part && !(solo && selection.length === 1)) return partPanel(part);
     const box = el('div.cad-props');
     const items = model.solids.filter((s) => selection.includes(s.id));
+    if (items.length > 1) {
+      box.append(
+        el('div.mn-sect', {}, el('h2', {}, t('props.multiSolids', { n: items.length }))),
+        el(
+          'button.mn-btn.mn-btn--block',
+          {
+            type: 'button',
+            onclick: () => {
+              const ids = apply([
+                {
+                  op: 'make_group',
+                  targets: items.map((x) => x.id),
+                  name: t('parts.newName', { n: model.groups.length + 1 }),
+                },
+              ]);
+              if (ids.length) window.mnui.toast(t('parts.made'));
+            },
+          },
+          icon('cube3d', { size: 18 }),
+          t('parts.make'),
+        ),
+        el('p.mn-hint', {}, t('parts.makeHint')),
+        el(
+          'button.mn-btn.mn-btn--danger.mn-btn--block',
+          { type: 'button', onclick: deleteSelection },
+          t('editor.delete'),
+        ),
+      );
+      return box;
+    }
     if (items.length === 1) {
       const s = items[0];
       const name = el('input', { type: 'text', value: s.name, maxlength: '80' });
@@ -1134,6 +1579,15 @@ export function mountEditor(root, app, project) {
         el('div.mn-sect', {}, el('h2', {}, t(`solid.${s.kind}`), el('small', {}, s.id))),
         el('label.mn-field', {}, t('field.name'), name),
       );
+      if (s.group)
+        box.append(
+          el(
+            'button.mn-btn.mn-btn--block',
+            { type: 'button', onclick: () => selectOnly(partMembers(s.id)) },
+            icon('cube3d', { size: 18 }),
+            t('parts.selectWhole', { name: partName(s.group) }),
+          ),
+        );
       if (s.kind !== 'toolpath') {
         const seg = el('div.mn-seg', { role: 'group', 'aria-label': t('props.mode') });
         for (const m of ['add', 'subtract'])
@@ -1179,8 +1633,9 @@ export function mountEditor(root, app, project) {
       );
       return box;
     }
-    // The model: statistics, print checks and the list of solids.
+    // The model: statistics, print checks, the parts of the assembly and the list of solids.
     box.append(stats3d());
+    box.append(partsSection());
     box.append(
       el(
         'div.mn-sect',
@@ -1224,7 +1679,7 @@ export function mountEditor(root, app, project) {
             el(
               'span.mn-row-sub',
               {},
-              `${t(`solid.${s.kind}`)} · ${s.id}${s.hidden ? ` · ${t('props.hidden')}` : ''}`,
+              `${t(`solid.${s.kind}`)} · ${s.id}${s.group ? ` · ${partName(s.group)}` : ''}${s.hidden ? ` · ${t('props.hidden')}` : ''}`,
             ),
           ),
           el(
@@ -1244,6 +1699,8 @@ export function mountEditor(root, app, project) {
   }
 
   function view3dHost(id, add) {
+    // Chosen in the list of solids: edit this one solid, even when it belongs to a part.
+    solo = !add;
     selection = add
       ? selection.includes(id)
         ? selection.filter((x) => x !== id)
@@ -1445,6 +1902,7 @@ export function mountEditor(root, app, project) {
 
   function showScene(r, key, m) {
     const mats = materialsOf(m);
+    if (clashes && clashKey !== geometryKey(m.solids)) view3d.setClashes([]);
     sceneKey = key;
     combined = r.mesh;
     stats = r.stats;
@@ -2089,16 +2547,72 @@ export function mountEditor(root, app, project) {
       accept: '.stl,.obj,.dxf,.gcode,.nc,.ngc,.tap,.cnc',
       hidden: true,
     });
-    input.addEventListener('change', async () => {
-      const file = input.files?.[0];
+    input.multiple = true;
+    input.addEventListener('change', () => {
+      const files = [...(input.files ?? [])];
       input.remove();
-      if (file) await importOne(file);
+      const meshFiles = files.filter((f) => /\.(stl|obj)$/i.test(f.name));
+      if (meshFiles.length < 2) {
+        importMany(files, 'origin');
+        return;
+      }
+      // Several parts: keep the positions they were exported with (an assembly made elsewhere)
+      // or set them down side by side.
+      const pick = (place) => {
+        window.mnui.sheet.close();
+        importMany(files, place);
+      };
+      const body = el(
+        'div',
+        {},
+        el('p', {}, t('import.placeText', { n: meshFiles.length })),
+        el(
+          'div.mn-list',
+          {},
+          el(
+            'button.mn-row',
+            { type: 'button', onclick: () => pick('keep') },
+            el(
+              'span',
+              {},
+              el('span.mn-row-title', {}, t('import.placeKeep')),
+              el('span.mn-row-sub', {}, t('import.placeKeepSub')),
+            ),
+          ),
+          el(
+            'button.mn-row',
+            { type: 'button', onclick: () => pick('row') },
+            el(
+              'span',
+              {},
+              el('span.mn-row-title', {}, t('import.placeRow')),
+              el('span.mn-row-sub', {}, t('import.placeRowSub')),
+            ),
+          ),
+        ),
+      );
+      sheetFrame('import.placeTitle', body);
     });
     document.body.append(input);
     input.click();
   }
 
-  async function importOne(file) {
+  async function importMany(files, place) {
+    const at = {
+      x: combined.length ? (meshBounds(combined)?.max[0] ?? 0) + 10 : 0,
+      place,
+      first: true,
+    };
+    for (const file of files) await importOne(file, at);
+    if (files.length > 1) {
+      view3d.fitAll();
+      window.mnui.toast(t('import.partsDone', { n: files.length }));
+    }
+  }
+
+  /** One file; `at` places meshes: 'origin' (one part), 'keep' (file coordinates) or 'row'. */
+  async function importOne(file, at = { place: 'origin', x: 0, first: true }) {
+    const many = at.place !== 'origin';
     const ext = file.name.split('.').pop().toLowerCase();
     if (file.size > 60 * 1024 * 1024) {
       window.mnui.toast(t('import.tooLarge'));
@@ -2133,22 +2647,34 @@ export function mountEditor(root, app, project) {
         store.cache(path, polys);
         meshes.set(id, polys);
         const b = meshBounds(polys);
-        // Imported parts stand on the plate at the origin.
+        const name = file.name.replace(/\.[^.]+$/, '').slice(0, 80) || t('solid.mesh');
+        // Imported parts stand on the plate: the first at the origin, more to the right of what
+        // is there (they keep their own coordinates relative to each other when asked to).
+        let pos;
+        if (at.place === 'keep') pos = [0, 0, 0];
+        else if (at.place === 'row') {
+          pos = [at.first && !combined.length ? -b.min[0] : at.x - b.min[0], -b.min[1], -b.min[2]];
+          at.x = pos[0] + b.max[0] + 10;
+        } else pos = [-b.min[0], -b.min[1], -b.min[2]];
+        at.first = false;
         draft.solids.push({
           id,
           kind: 'mesh',
-          name: file.name.replace(/\.[^.]+$/, '').slice(0, 80),
+          name,
           op: 'add',
-          pos: [-b.min[0], -b.min[1], -b.min[2]],
+          pos,
           rot: [0, 0, 0],
           file: path,
           tris: polys.length,
         });
+        const gid = nextId(draft, 'g');
+        draft.groups.push({ id: gid, name });
+        draft.solids = draft.solids.map((x) => (x.id === id ? { ...x, group: gid } : x));
         commit(draft);
         setMode('3d');
         selectOnly([id]);
-        view3d.fitAll();
-        window.mnui.toast(t('import.meshDone', { n: fmt(polys.length, 0) }));
+        if (!many) view3d.fitAll();
+        if (!many) window.mnui.toast(t('import.meshDone', { n: fmt(polys.length, 0) }));
         return;
       }
       // G-code
@@ -2376,6 +2902,11 @@ export function mountEditor(root, app, project) {
           d: n((o.r ?? 0) * 2),
           h: n(o.h),
         });
+      case 'move_group':
+      case 'rotate_group':
+      case 'set_group':
+      case 'delete_group':
+        return t(`op.${o.op}`, { target: partName(o.target) });
       case 'set':
       case 'move':
       case 'rotate':

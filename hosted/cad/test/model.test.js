@@ -124,3 +124,79 @@ describe('normalise keeps what it can', () => {
     expect(errors[0].code).toBe('too_complex');
   });
 });
+
+describe('parts of an assembly', () => {
+  const base = () =>
+    applyOps(emptyModel(), [
+      { op: 'add_box', x: 0, y: 0, z: 0, w: 20, d: 10, h: 4 },
+      { op: 'add_cylinder', x: 5, y: 5, z: -1, r: 2, h: 6, mode: 'subtract' },
+      { op: 'add_cylinder', x: 50, y: 0, z: 0, r: 1.8, h: 12 },
+    ]).model;
+
+  it('groups solids, moves and turns a part as a whole', () => {
+    let { model, added } = applyOps(base(), [
+      { op: 'make_group', targets: ['s1', 's2'], name: 'Halter' },
+    ]);
+    const g = added[0];
+    expect(g).toMatch(/^g\d+$/);
+    expect(model.solids.filter((x) => x.group === g)).toHaveLength(2);
+    ({ model } = applyOps(model, [{ op: 'move_group', target: g, dx: 10, dz: 2 }]));
+    expect(model.solids[0].pos).toEqual([10, 0, 2]);
+    expect(model.solids[1].pos).toEqual([15, 5, 1]);
+    ({ model } = applyOps(model, [{ op: 'rotate_group', target: g, angle: 90 }]));
+    // Centre of the part's box: (20, 5); the box corner (10, 0) turns to (25, -5).
+    expect(model.solids[0].pos[0]).toBeCloseTo(25, 6);
+    expect(model.solids[0].pos[1]).toBeCloseTo(-5, 6);
+    expect(model.solids[0].rot[2]).toBe(90);
+  });
+
+  it('colours, hides, ungroups and deletes a part', () => {
+    let { model, added } = applyOps(base(), [{ op: 'make_group', targets: ['s1', 's2'] }]);
+    const g = added[0];
+    ({ model } = applyOps(model, [
+      { op: 'set_group', target: g, material: { id: 'brass' }, hidden: true },
+    ]));
+    expect(model.solids[0].material).toEqual({ id: 'brass' });
+    expect(model.solids[1].material).toBeUndefined(); // holes have no material of their own
+    expect(model.solids[0].hidden).toBe(true);
+    const un = applyOps(model, [{ op: 'ungroup', target: g }]).model;
+    expect(un.groups).toEqual([]);
+    expect(un.solids.every((x) => !x.group)).toBe(true);
+    const del = applyOps(model, [{ op: 'delete_group', target: g }]).model;
+    expect(del.solids.map((x) => x.id)).toEqual(['s3']);
+  });
+
+  it('normalise drops references to parts that do not exist', () => {
+    const m = normalise({
+      groups: [{ id: 'g9', name: 'A' }],
+      solids: [
+        {
+          id: 's1',
+          name: 'x',
+          kind: 'box',
+          op: 'add',
+          pos: [0, 0, 0],
+          rot: [0, 0, 0],
+          w: 1,
+          d: 1,
+          h: 1,
+          group: 'g9',
+        },
+        {
+          id: 's2',
+          name: 'y',
+          kind: 'box',
+          op: 'add',
+          pos: [0, 0, 0],
+          rot: [0, 0, 0],
+          w: 1,
+          d: 1,
+          h: 1,
+          group: 'g4',
+        },
+      ],
+    });
+    expect(m.solids.map((x) => x.group)).toEqual(['g9', undefined]);
+    expect(m.seq).toBe(9);
+  });
+});

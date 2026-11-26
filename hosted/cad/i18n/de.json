@@ -623,5 +623,69 @@
   "sample.boltNotes": "Beispiel für ein echtes Gewinde: ISO-Profil M8 × 1,25 als Schraubenlinie, Kopf mit Schlüsselweite 13. Schalte im 3D-Modell auf „Realistisch“, um Stahl, Spiegelungen und Schatten zu sehen.",
   "opError.too_complex": "zu fein für ein Gewinde dieser Länge",
   "thread.tooComplex": "So lang wird das Gewinde zu fein für eine flüssige Darstellung (über 400.000 Dreiecke). Teile es in kürzere Stücke oder wähle eine größere Steigung.",
-  "material.layerError": "Gib eine Schichthöhe zwischen 0,04 und 1 mm ein."
+  "material.layerError": "Gib eine Schichthöhe zwischen 0,04 und 1 mm ein.",
+  "add3d.insert": "Projekt einfügen",
+  "props.multiSolids": {
+    "one": "{n} Körper ausgewählt",
+    "other": "{n} Körper ausgewählt"
+  },
+  "parts.title": "Teile",
+  "parts.part": "Teil",
+  "parts.loose": "Ohne Teil",
+  "parts.none": "Noch keine Teile. Wähle mehrere Körper aus und fasse sie zu einem Teil zusammen, importiere mehrere Dateien oder füge ein anderes Projekt ein.",
+  "parts.insert": "Projekt einfügen",
+  "parts.insertTitle": "Projekt als Teil einfügen",
+  "parts.insertHint": "Die Körper des Projekts werden als bearbeitbare Kopie eingefügt, rechts neben das Modell. Das andere Projekt bleibt unverändert.",
+  "parts.insertEmpty": "Keine anderen Projekte mit 3D-Modell",
+  "parts.insertEmptyText": "Lege Teile in eigenen Projekten an und baue sie hier zusammen.",
+  "parts.inserted": "„{name}“ eingefügt",
+  "parts.insertError": "Das Projekt ließ sich nicht einfügen. Prüfe die Verbindung und versuche es erneut.",
+  "parts.make": "Zu einem Teil zusammenfassen",
+  "parts.makeHint": "Ein Teil bewegst, drehst und färbst du als Ganzes. Seine Bohrungen schneiden nur das Teil selbst, nicht die anderen Teile.",
+  "parts.made": "Teil angelegt",
+  "parts.newName": "Teil {n}",
+  "parts.move": "Position",
+  "parts.moveGo": "Teil verschieben",
+  "parts.rotateGo": "Drehen",
+  "parts.exportStl": "Teil als STL exportieren",
+  "parts.ungroup": "Teil auflösen",
+  "parts.ungrouped": "Teil aufgelöst, die Körper bleiben",
+  "parts.delete": "Teil löschen",
+  "parts.deleteConfirm": {
+    "one": "Zum Löschen von {n} Körper erneut tippen",
+    "other": "Zum Löschen von {n} Körpern erneut tippen"
+  },
+  "parts.deleted": "Teil gelöscht",
+  "parts.selectWhole": "Ganzes Teil „{name}“ auswählen",
+  "fit.check": "Passung prüfen",
+  "fit.working": "Wird geprüft …",
+  "fit.intro": "Prüft, ob sich Teile überschneiden, z. B. ein Bolzen, der nicht ins Loch passt.",
+  "fit.ok": "Alle Teile passen",
+  "fit.found": {
+    "one": "{n} Überschneidung gefunden",
+    "other": "{n} Überschneidungen gefunden"
+  },
+  "fit.allOk": "Keine Überschneidungen zwischen den Teilen",
+  "fit.clash": "{a} ↔ {b}: {v} mm³ überschneiden sich",
+  "fit.hint": "Die Überschneidungen sind in der Ansicht rot markiert, auch durch die Teile hindurch.",
+  "fit.stale": "Das Modell hat sich seit der letzten Prüfung geändert. Prüfe erneut.",
+  "import.placeTitle": "Mehrere Teile importieren",
+  "import.placeText": {
+    "one": "Du importierst {n} Teil. Wo sollen sie stehen?",
+    "other": "Du importierst {n} Teile. Wo sollen sie stehen?"
+  },
+  "import.placeKeep": "Wie in den Dateien",
+  "import.placeKeepSub": "Für Baugruppen, die zusammen exportiert wurden: die Teile sitzen gleich richtig ineinander",
+  "import.placeRow": "Nebeneinander",
+  "import.placeRowSub": "Jedes Teil steht einzeln auf der Platte, zum Anordnen",
+  "import.partsDone": {
+    "one": "{n} Datei importiert",
+    "other": "{n} Dateien importiert, jede als eigenes Teil"
+  },
+  "op.make_group": "Teil zusammenfassen",
+  "op.ungroup": "Teil auflösen",
+  "op.move_group": "{target} verschieben",
+  "op.rotate_group": "{target} drehen",
+  "op.set_group": "{target} ändern",
+  "op.delete_group": "{target} löschen"
 }

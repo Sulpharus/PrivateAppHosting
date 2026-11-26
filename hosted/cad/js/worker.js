@@ -2,7 +2,7 @@
 // meshes it was sent once, and the last results by geometry: undo, redo and material changes
 // come back at once.
 
-import { buildScene, geometryKey } from './scene.js';
+import { buildScene, checkFit, geometryKey } from './scene.js';
 
 const meshes = new Map();
 const results = new Map();
@@ -12,6 +12,18 @@ self.addEventListener('message', (e) => {
   const msg = e.data;
   if (msg.type === 'mesh') {
     meshes.set(msg.id, msg.polys);
+    return;
+  }
+  if (msg.type === 'fit') {
+    try {
+      const clashes = checkFit(msg.solids, meshes);
+      self.postMessage(
+        { job: msg.job, clashes },
+        clashes.map((c) => c.data.buffer),
+      );
+    } catch (err) {
+      self.postMessage({ job: msg.job, error: String(err?.message ?? err) });
+    }
     return;
   }
   if (msg.type !== 'build') return;

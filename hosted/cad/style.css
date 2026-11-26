@@ -613,3 +613,29 @@ kbd {
     transition: none;
   }
 }
+
+/* ---------- assemblies ---------- */
+.cad-parts {
+  display: grid;
+  gap: var(--mn-s3);
+}
+.cad-parts .mn-sect {
+  margin: 0;
+}
+.cad-fieldset {
+  display: grid;
+  gap: var(--mn-s2);
+  margin: 0;
+  padding: var(--mn-s3);
+  border: 1px solid var(--mn-line);
+  border-radius: var(--mn-r-md);
+}
+.cad-fields--3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.cad-inline-form .mn-field {
+  flex: 1;
+}
+.cad-inline-form {
+  align-items: end;
+}
