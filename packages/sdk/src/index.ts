@@ -10,6 +10,7 @@ import { createGame } from './game.ts';
 import { createGoogle } from './google.ts';
 import { createImage } from './image.ts';
 import { createKv, type KvScope } from './kv.ts';
+import { leavePage } from './leave.ts';
 import {
   createOfflineKv,
   indexedDbStore,
@@ -155,16 +156,8 @@ export function createMininode(config: MininodeConfig): Mininode {
     },
   });
 
-  // In the installed portal's app viewer (ADR 0032) the portal opens its own pages: loaded in the
-  // frame, they would refuse to show (the portal may not be framed).
-  const leaveTo = (url: string) => {
-    const portal = new URL(config.portalUrl).origin;
-    const framed = globalThis.parent !== undefined && globalThis.parent !== globalThis.self;
-    const parent = globalThis.location?.ancestorOrigins?.[0];
-    if (framed && parent === portal)
-      globalThis.parent.postMessage({ type: 'mn:open', url }, portal);
-    else location.assign(url);
-  };
+  // In the installed portal's app viewer the portal opens its own pages (ADR 0032).
+  const leaveTo = (url: string) => leavePage(url, config.portalUrl);
 
   const loginUrl = () => {
     const url = new URL('/login', config.portalUrl);

@@ -22,7 +22,8 @@ relies on (cookies, storage, service workers, ADR 0001, ADR 0002).
 
 **The installed portal shows apps itself.** When the portal runs as an installed app (display mode
 `standalone`, `fullscreen`, `minimal-ui` or `window-controls-overlay`), a click on a link to an app
-opens `/a/<slug>/<path>` in the portal: the app in a full-screen frame, without any bar. In a
+the gate serves (kind `static`, `spa` or `nextjs`, from the app list the portal loads; not remote
+programs, containers on the hardware server, `api.` or `ai.`) opens `/a/<slug>/<path>` in the portal: the app in a full-screen frame, without any bar. In a
 browser tab nothing changes. The address stays the app's own origin inside the frame, so login,
 data, storage and service worker work as before (portal and apps are the same site, so nothing is
 partitioned). The gate's CSP allows exactly the portal's origin as `frame-ancestors` (before:
@@ -33,8 +34,11 @@ the portal's viewer (the parent's origin is the portal) and hands every click on
 origin to the portal (`postMessage({ type: 'mn:open', url })`, sent only to the portal's origin).
 The SDK does the same for its sign-in and sign-out redirects. The portal accepts the message only
 from the frame it created and from an app origin, and opens portal pages in itself, other apps in
-the viewer and outside sites as below. Should the gate still have to send someone to sign in from
-inside the frame, it answers with a page whose link opens the sign-in for the whole window.
+the viewer and outside sites as below. Before loading the frame the portal renews an expired
+session and writes the shared cookie, so the gate rarely has to send anyone to sign in from inside
+the frame; when it must, it answers with a page whose link opens the sign-in for the whole window.
+The kit's `files.js` uses the file field and downloads instead of the file pickers in a frame
+(Chromium refuses pickers in cross-origin frames), as it already did for Firefox.
 
 **Outside websites, behind a switch.** Verwaltung → Einstellungen → "Externe Seiten im eigenen
 Viewer" (`platform.instance_settings.external_viewer`, off by default; everyone signed in reads it,
@@ -44,7 +48,12 @@ an admin with a recent sign-in changes it). When on, the installed portal opens 
 one that loaded, so the portal asks the API first: `GET /frame-check?url=` fetches the page (public
 https only, at most 3 redirects, rate-limited, cached for six hours) and reads `X-Frame-Options` and
 the CSP's `frame-ancestors`. A page that refuses, does not answer or is not HTML opens as before,
-under Chrome's bar. When off, outside links behave as before.
+under Chrome's bar. When off, outside links behave as before. Links that ask for a new window
+(`target="_blank"`, e.g. to GitHub in Verwaltung) keep doing that. `/web` sends people on only when
+the portal itself navigated there (router state); a link from elsewhere to `/web?url=…` shows the
+address and a button instead, so the portal's domain is no open redirect. "Schließen" returns to the
+page the viewer was opened from. The frame has no top navigation at all, so a site's
+`target="_top"` links do nothing there.
 
 **The bar that remains is dark.** The portal manifest's `theme_color` is the dark background
 (`#121210`), which Chrome uses for its bar over outside websites.

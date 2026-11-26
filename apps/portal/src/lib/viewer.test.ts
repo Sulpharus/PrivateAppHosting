@@ -2,6 +2,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   appViewerPath,
   linkTarget,
+  openRequest,
+  rememberApps,
   rememberSettings,
   viewerRoute,
   webViewerPath,
@@ -61,16 +63,55 @@ describe('viewerRoute', () => {
     expect(viewerRoute('http://kalender.localhost:5173/')).toBeNull();
   });
 
-  it('opens apps in the viewer, outside sites only when switched on', () => {
+  it('opens apps the gate serves in the viewer, outside sites only when switched on', () => {
     installed(true);
-    expect(viewerRoute('http://kalender.localhost:5173/woche')).toBe(
+    rememberApps([
+      { slug: 'kalender', kind: 'spa' },
+      { slug: 'remote', kind: 'remote' },
+      { slug: 'jellyfin', kind: 'container' },
+    ]);
+    expect(viewerRoute('http://kalender.localhost:5173/woche')?.to).toBe(
       appViewerPath('kalender', '/woche'),
     );
+    expect(viewerRoute('http://remote.localhost:5173/?token=x')).toBeNull();
+    expect(viewerRoute('http://jellyfin.localhost:5173/')).toBeNull();
+    expect(viewerRoute('http://api.localhost:5173/')).toBeNull();
     expect(viewerRoute('https://de.wikipedia.org/')).toBeNull();
     rememberSettings({ external_viewer: true });
-    expect(viewerRoute('https://de.wikipedia.org/')).toBe(
-      webViewerPath('https://de.wikipedia.org/'),
+    const web = viewerRoute('https://de.wikipedia.org/');
+    expect(web?.to).toBe(webViewerPath('https://de.wikipedia.org/'));
+    expect(web?.state.fromPortal).toBe(true);
+    expect(viewerRoute('https://github.com/', { newWindow: true })).toBeNull();
+    expect(viewerRoute('http://kalender.localhost:5173/', { newWindow: true })?.to).toBe(
+      appViewerPath('kalender', '/'),
     );
     expect(viewerRoute('/account')).toBeNull();
+  });
+});
+
+describe('openRequest', () => {
+  const frame = {} as MessageEventSource;
+  const message = (data: unknown, origin = 'https://kalender.example.org', source = frame) => ({
+    data,
+    origin,
+    source,
+  });
+  const ok = { type: 'mn:open', url: 'https://example.org/logout' };
+
+  it('accepts a link handed over by the app in the frame', () => {
+    expect(openRequest(message(ok), frame, portal)).toBe(ok.url);
+  });
+
+  it('ignores other windows, other origins and other messages', () => {
+    expect(openRequest(message(ok, undefined, {} as MessageEventSource), frame, portal)).toBeNull();
+    expect(openRequest(message(ok), null, portal)).toBeNull();
+    expect(openRequest(message(ok, 'https://evil.example'), frame, portal)).toBeNull();
+    expect(openRequest(message(ok, 'https://example.org'), frame, portal)).toBeNull();
+    expect(openRequest(message({ type: 'other', url: ok.url }), frame, portal)).toBeNull();
+    expect(openRequest(message({ type: 'mn:open', url: 5 }), frame, portal)).toBeNull();
+    expect(openRequest(message('mn:open'), frame, portal)).toBeNull();
+    expect(
+      openRequest(message({ type: 'mn:open', url: 'x'.repeat(5000) }), frame, portal),
+    ).toBeNull();
   });
 });

@@ -30,6 +30,6 @@ export async function goTo(next: string, navigate: (path: string) => void): Prom
   await sessionPersisted();
   if (next.startsWith('/')) return navigate(next);
   const route = viewerRoute(next);
-  if (route) navigate(route);
+  if (route) navigate(route.to);
   else location.assign(next);
 }

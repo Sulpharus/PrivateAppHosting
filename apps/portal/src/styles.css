@@ -2181,6 +2181,12 @@ code,
   }
 }
 
+.viewer-notice {
+  max-width: 32rem;
+  margin: 0 auto;
+  padding: max(48px, env(safe-area-inset-top)) 16px 48px;
+}
+
 .web-bar {
   display: flex;
   align-items: center;

@@ -9,6 +9,7 @@
 // for the first page; the viewer always offers "Im Browser öffnen" for pages further on.
 
 import { Hono } from 'hono';
+import { z } from 'zod';
 import { type AppContext, problem, requireUser } from '../lib/auth.ts';
 import { isPublicImageUrl } from './image.ts';
 
@@ -77,7 +78,8 @@ export const frameCheck = new Hono<AppContext>();
 
 frameCheck.get('/frame-check', requireUser(), async (c) => {
   const portal = new URL(c.env.PORTAL_URL);
-  const asked = isPublicImageUrl(c.req.query('url') ?? '', portal.hostname);
+  const query = z.object({ url: z.string().max(4096) }).safeParse({ url: c.req.query('url') });
+  const asked = query.success ? isPublicImageUrl(query.data.url, portal.hostname) : null;
   if (!asked) return problem(400, 'invalid_url', 'Keine öffentliche https-Adresse.');
   let url: URL = asked;
 

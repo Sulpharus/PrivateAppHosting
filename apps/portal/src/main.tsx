@@ -179,10 +179,11 @@ function openLinksInViewers() {
     if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
     const link = event.target instanceof Element ? event.target.closest('a[href]') : null;
     if (!(link instanceof HTMLAnchorElement) || link.hasAttribute('download')) return;
-    const route = viewerRoute(link.href);
+    // A link meant for a new window (e.g. to GitHub) keeps doing that, unless it leads to an app.
+    const route = viewerRoute(link.href, { newWindow: link.target === '_blank' });
     if (!route) return;
     event.preventDefault();
-    void router.navigate(route);
+    void router.navigate(route.to, { state: route.state });
   });
 }
 

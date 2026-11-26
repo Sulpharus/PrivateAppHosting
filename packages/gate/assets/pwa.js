@@ -71,16 +71,15 @@ if ('serviceWorker' in navigator) {
 
 // Inside the installed portal's app viewer (/a/<slug>, ADR 0032) a link to another origin (the
 // portal, another app, an outside website) is handed to the portal, which opens it in the right
-// place. Followed inside the frame, the portal would end up inside itself.
+// place. Followed inside the frame, the portal would end up inside itself. The gate lets only the
+// portal frame an app (CSP frame-ancestors), so a framed app always sits in the portal; the
+// message goes to the portal's origin only.
 (() => {
   if (window.parent === window || window.parent !== window.top) return;
   const { protocol, hostname, port } = location;
   const dot = hostname.indexOf('.');
   if (dot < 0) return;
   const portal = `${protocol}//${hostname.slice(dot + 1)}${port ? `:${port}` : ''}`;
-  let parent = location.ancestorOrigins?.[0];
-  if (!parent && document.referrer) parent = new URL(document.referrer).origin;
-  if (parent !== portal) return;
   document.addEventListener('click', (event) => {
     if (event.defaultPrevented || event.button !== 0) return;
     if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;

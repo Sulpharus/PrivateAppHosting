@@ -1,4 +1,5 @@
 import { platform, supabase } from './supabase.ts';
+import { rememberApps } from './viewer.ts';
 
 /** Last app list per user, so the start page also works offline (PWA, ADR 0005). */
 const cacheKey = async () => {
@@ -67,6 +68,7 @@ export async function listApps(): Promise<AppRow[]> {
     throw error;
   }
   const rows = (data as AppRow[] | null) ?? [];
+  rememberApps(rows);
   try {
     if (key) localStorage.setItem(key, JSON.stringify(rows));
   } catch {

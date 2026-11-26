@@ -92,15 +92,75 @@ export async function loadInstanceSettings(): Promise<InstanceSettings> {
   return settings;
 }
 
+// Only apps the gate serves can be shown: it adds pwa.js and allows the portal as frame ancestor.
+// Remote programs, containers on the hardware server, api., ai. and link tiles are left alone.
+const APPS_KEY = 'mn-viewer-apps';
+const VIEWABLE_KINDS = new Set(['static', 'spa', 'nextjs']);
+let viewable: Set<string> = readStoredApps();
+
+function readStoredApps(): Set<string> {
+  try {
+    const stored = JSON.parse(localStorage.getItem(APPS_KEY) ?? '[]') as unknown;
+    return new Set(Array.isArray(stored) ? stored.filter((v) => typeof v === 'string') : []);
+  } catch {
+    return new Set();
+  }
+}
+
+/** Remembers which slugs are apps served by the gate (from the app list the portal loads). */
+export function rememberApps(apps: readonly { slug: string; kind: string }[]): void {
+  viewable = new Set(apps.filter((app) => VIEWABLE_KINDS.has(app.kind)).map((app) => app.slug));
+  try {
+    localStorage.setItem(APPS_KEY, JSON.stringify([...viewable]));
+  } catch {
+    // Private mode: the list still applies for this visit.
+  }
+}
+
+export function isViewableApp(slug: string): boolean {
+  return viewable.has(slug);
+}
+
+/** Navigation state of the viewers: opened by the portal itself, and from where. */
+export interface ViewerState {
+  fromPortal: true;
+  from: string;
+}
+
+export function viewerState(): ViewerState {
+  return { fromPortal: true, from: `${location.pathname}${location.search}${location.hash}` };
+}
+
+/** A message from an app in the viewer: `{ type: 'mn:open', url }` (pwa.js, the SDK). */
+export function openRequest(
+  event: Pick<MessageEvent, 'data' | 'origin' | 'source'>,
+  frame: MessageEventSource | null | undefined,
+  portal: URL = new URL(location.href),
+): string | null {
+  if (!frame || event.source !== frame) return null;
+  const from = linkTarget(event.origin, portal);
+  if (from?.kind !== 'app' || from.path !== '/') return null;
+  if (typeof event.data !== 'object' || event.data === null) return null;
+  const { type, url } = event.data as { type?: unknown; url?: unknown };
+  if (type !== 'mn:open' || typeof url !== 'string' || url.length > 4096) return null;
+  return url;
+}
+
 /**
- * Where the installed portal opens a link: the app viewer for apps, the web viewer for outside
- * sites when it is switched on. Null: leave the link alone (the browser opens it as before).
+ * Where the installed portal opens a link: the app viewer for apps the gate serves, the web
+ * viewer for outside sites when it is switched on and the link does not ask for a new window.
+ * Null: leave the link alone (the browser opens it as before).
  */
-export function viewerRoute(href: string): string | null {
+export function viewerRoute(
+  href: string,
+  options: { newWindow?: boolean } = {},
+): { to: string; state: ViewerState } | null {
   if (!isInstalled()) return null;
   const target = linkTarget(href);
   if (!target) return null;
-  if (target.kind === 'app') return appViewerPath(target.slug, target.path);
-  if (target.kind === 'web' && settings.external_viewer) return webViewerPath(target.url);
+  if (target.kind === 'app' && isViewableApp(target.slug))
+    return { to: appViewerPath(target.slug, target.path), state: viewerState() };
+  if (target.kind === 'web' && settings.external_viewer && !options.newWindow)
+    return { to: webViewerPath(target.url), state: viewerState() };
   return null;
 }

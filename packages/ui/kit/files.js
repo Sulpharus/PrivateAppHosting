@@ -402,7 +402,11 @@
     };
   }
 
-  const nativeOpenPicker = window.showOpenFilePicker?.bind(window);
+  // In the installed portal's app viewer (ADR 0032) the app is a cross-origin frame, where Chromium
+  // refuses the file pickers: use the file field and downloads instead, as in Firefox.
+  const framed = window.self !== window.top;
+  if (framed) window.showOpenFilePicker = undefined;
+  const nativeOpenPicker = framed ? undefined : window.showOpenFilePicker?.bind(window);
   if (nativeOpenPicker) {
     window.showOpenFilePicker = async (options = {}) => {
       const choice = await chooseStored(acceptOfTypes(options.types), Boolean(options.multiple));
@@ -417,7 +421,7 @@
   }
 
   // ---- save: showSaveFilePicker and download links ----
-  const nativeSavePicker = window.showSaveFilePicker?.bind(window);
+  const nativeSavePicker = framed ? undefined : window.showSaveFilePicker?.bind(window);
   window.showSaveFilePicker = async (options = {}) => {
     const types = Object.keys(options.types?.[0]?.accept ?? {});
     const route = options.suggestedName ? await saveRoute(options.suggestedName) : 'dialog';

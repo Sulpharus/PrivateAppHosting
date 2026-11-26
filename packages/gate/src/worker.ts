@@ -74,12 +74,16 @@ main{max-width:28rem;padding:2rem}h1{font-size:1.75rem;margin:0 0 .75rem}a{color
   });
 }
 
-function signInPage(location: string): Response {
+function signInPage(location: string, reason: string): Response {
+  const [title, text] =
+    reason === 'login'
+      ? ['Bitte anmelden', 'Für diese App musst du angemeldet sein.']
+      : ['Bitte neu anmelden', 'Deine Anmeldung ist abgelaufen.'];
   const html = `<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Anmelden</title>
 <style>body{margin:0;min-height:100vh;display:grid;place-items:center;font-family:system-ui,sans-serif;background:#f3f1ec;color:#17160f}
 @media (prefers-color-scheme:dark){body{background:#121210;color:#edeae2}a{color:#ffa47c}}
 main{max-width:28rem;padding:2rem}h1{font-size:1.75rem;margin:0 0 .75rem}a{color:#9a3512;display:inline-block;min-height:44px;line-height:44px}</style></head>
-<body><main><h1>Bitte neu anmelden</h1><p>Deine Anmeldung ist abgelaufen.</p><p><a href="${escapeHtml(location)}" target="_top">Anmelden</a></p></main></body></html>`;
+<body><main><h1>${title}</h1><p>${text}</p><p><a href="${escapeHtml(location)}" target="_top">Anmelden</a></p></main></body></html>`;
   return new Response(html, {
     status: 401,
     headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' },
@@ -236,7 +240,7 @@ export async function handleAppRequest(request: Request, env: AppEnv): Promise<R
       // In the portal's viewer the sign-in page cannot load inside the frame (the portal refuses
       // to be framed): offer it for the whole window instead.
       if (request.headers.get('Sec-Fetch-Dest') === 'iframe')
-        return withHeaders(signInPage(decision.location), headers);
+        return withHeaders(signInPage(decision.location, decision.reason), headers);
       return new Response(null, {
         status: 302,
         headers: { Location: decision.location, 'Cache-Control': 'no-store' },
