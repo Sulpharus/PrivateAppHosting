@@ -72,6 +72,7 @@ export function normalise(model) {
   m.solids = m.solids.map((x) =>
     x.group === undefined || groupIds.has(x.group) ? x : { ...x, group: undefined },
   );
+  pruneGroups(m);
   m.sheet = { ...emptyModel().sheet, ...(m.sheet ?? {}) };
   let max = 0;
   for (const x of [...m.sketch.entities, ...m.solids, ...m.groups]) {
@@ -80,6 +81,12 @@ export function normalise(model) {
   }
   m.seq = Math.max(m.seq ?? 0, max);
   return m;
+}
+
+/** Parts without any solid are removed (after deleting or regrouping their last solid). */
+function pruneGroups(m) {
+  const used = new Set(m.solids.map((x) => x.group).filter(Boolean));
+  m.groups = m.groups.filter((g) => used.has(g.id));
 }
 
 const pt = (p) => Array.isArray(p) && p.length === 2 && finite(p[0]) && finite(p[1]);
@@ -337,6 +344,10 @@ function solidBase(model, o, kind, defName) {
     pos: [num(o, 'x', 0), num(o, 'y', 0), num(o, 'z', 0)],
     rot: [num(o, 'rx', 0), num(o, 'ry', 0), num(o, 'rz', 0)],
     ...(cleanMaterial(o.material) ? { material: cleanMaterial(o.material) } : {}),
+    // Added into an existing part: its holes then cut that part (and it is cut by them).
+    ...(typeof o.group === 'string' && model.groups.some((g) => g.id === o.group)
+      ? { group: o.group }
+      : {}),
   };
 }
 
@@ -550,8 +561,15 @@ export function applyOp(model, o, ctx = {}) {
     case 'set': {
       const x = findAny(model, o.target);
       need(x, 'unknown_target');
-      const { op: _op, target: _t, ...rest } = o;
-      replace(model, setFields(x, rest));
+      const { op: _op, target: _t, group, ...rest } = o;
+      const next = setFields(x, rest);
+      // Moves a solid into a part ('' takes it out of its part).
+      if (typeof group === 'string' && !x.type) {
+        need(group === '' || model.groups.some((g) => g.id === group), 'unknown_target');
+        if (group) next.group = group;
+        else delete next.group;
+      }
+      replace(model, next);
       return [];
     }
     case 'delete': {
@@ -727,6 +745,7 @@ export function applyOps(model, ops, ctx = {}) {
       errors.push({ index, code: err instanceof OpError ? err.code : 'invalid_value' });
     }
   });
+  pruneGroups(m);
   return { model: m, added, errors };
 }
 

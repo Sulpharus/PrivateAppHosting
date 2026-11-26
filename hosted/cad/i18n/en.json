@@ -641,7 +641,7 @@
   "parts.inserted": "“{name}” inserted",
   "parts.insertError": "Could not insert the project. Check your connection and try again.",
   "parts.make": "Combine into one part",
-  "parts.makeHint": "You move, turn and colour a part as a whole. Its holes cut only the part itself, not the other parts.",
+  "parts.makeHint": "You move, turn and colour a part as a whole. Its holes cut only the part itself. With a part selected, new solids and holes go into that part.",
   "parts.made": "Part created",
   "parts.newName": "Part {n}",
   "parts.move": "Position",
@@ -687,5 +687,7 @@
   "op.move_group": "Move {target}",
   "op.rotate_group": "Rotate {target}",
   "op.set_group": "Change {target}",
-  "op.delete_group": "Delete {target}"
+  "op.delete_group": "Delete {target}",
+  "fit.skipped": "{a} ↔ {b}: not checked (mesh too large for the check)",
+  "parts.copyName": "{name} (copy)"
 }

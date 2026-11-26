@@ -18,7 +18,10 @@ export const SCHEMA = {
         type: 'object',
         properties: {
           op: { type: 'string', enum: OPS },
-          target: { type: 'string', description: 'id of an existing entity (e…) or solid (s…)' },
+          target: {
+            type: 'string',
+            description: 'id of an existing entity (e…), solid (s…) or part (g…)',
+          },
           x: NUM,
           y: NUM,
           z: NUM,
@@ -58,6 +61,11 @@ export const SCHEMA = {
           method: { type: 'string', enum: ['first', 'third'] },
           closed: { type: 'boolean' },
           hidden: { type: 'boolean' },
+          group: {
+            type: 'string',
+            description:
+              'part id g… to put a new or changed solid into; empty string removes it from its part',
+          },
           targets: { type: 'array', items: { type: 'string' } },
           pitch: NUM,
           clearance: NUM,
@@ -96,7 +104,7 @@ add_thread(x,y,z = centre of the bottom end, d = nominal diameter, pitch (omit f
 Materials: any solid can take material {id: pla|plaMatte|petg|abs|tpu|resin|aluminium|anodised|steel|stainless|brass|copper|wood|acrylic, colour '#rrggbb', layer (print layer height mm)} in add_* or set; it changes only how the part looks.
 extrude(target = id of a closed sketch shape: rect, circle or closed polyline, h, z) makes a prism from it.
 Edit: set(target, any field above: exact new values), move(target, dx,dy[,dz]), mirror(target, axis x|y, cx, cy: mirror line through that point; axis y = vertical line), rotate(target, angle[, cx, cy] for sketch shapes; solids turn about Z), duplicate(target, dx,dy,dz), delete(target).
-Assemblies: solids can belong to a part (id g<n>, listed in project.parts; a solid's part is its "part" field). A part's holes cut only that part, so a bolt can sit in a hole of another part. make_group(targets = solid ids, name) makes a part; move_group(target = part id, dx,dy,dz) and rotate_group(target, angle[, cx, cy]) move a whole part; set_group(target, name, material, hidden); ungroup(target); delete_group(target). To make parts fit, leave clearance (0.2–0.4 mm for FDM prints, a fit tolerance for machining).
+Assemblies: solids can belong to a part (id g<n>, listed in project.parts; a solid's part is its "part" field). A part's holes cut only that part, so a bolt can sit in a hole of another part. make_group(targets = solid ids, name) makes a part; add_* and set take group = part id to put a solid into a part (a hole must be in the part it should cut), set with group '' takes it out; move_group(target = part id, dx,dy,dz) and rotate_group(target, angle[, cx, cy]) move a whole part; set_group(target, name, material, hidden); ungroup(target); delete_group(target). To make parts fit, leave clearance (0.2–0.4 mm for FDM prints, a fit tolerance for machining).
 Drawing sheet: generate_views(views: front, top, left, right, iso; method first|third; optional x,y = lower-left corner of the front view, otherwise right of the existing drawing) replaces earlier generated views with orthographic views of the solids, hidden edges and overall dimensions. set_sheet(title, sheetMaterial = material text of the title block, scale like "1:2", paper A4|A3|A2, orientation).
 
 Rules:

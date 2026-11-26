@@ -756,6 +756,11 @@ export function interference(partsList, minVolume = 1e-3) {
       const a = withBounds[i];
       const b = withBounds[j];
       if (!boundsOverlap(a.b, b.b)) continue;
+      // Meshes too large for CSG (big scans and exports) are reported, not checked.
+      if (a.mesh.length > RAW_LIMIT || b.mesh.length > RAW_LIMIT) {
+        out.push({ a: a.group, b: b.group, volume: null, mesh: [] });
+        continue;
+      }
       const shared = intersect(a.mesh, b.mesh);
       const v = shared.length ? volume(shared) : 0;
       if (v > minVolume) out.push({ a: a.group, b: b.group, volume: v, mesh: shared });
@@ -848,11 +853,14 @@ export function weld(mesh) {
   };
   const out = [];
   for (const p of polys) {
-    const ring = [];
+    const raw = [];
     for (let i = 0; i < p.v.length; i++) {
-      ring.push(p.v[i]);
-      ring.push(...between(p.v[i], p.v[(i + 1) % p.v.length]));
+      raw.push(p.v[i]);
+      raw.push(...between(p.v[i], p.v[(i + 1) % p.v.length]));
     }
+    // Two input vertices that collapsed onto one canonical vertex: keep it once.
+    const ring = raw.filter((v, i) => v !== raw[(i + 1) % raw.length]);
+    if (ring.length < 3) continue;
     if (ring.length === 3) {
       out.push({ v: ring, s: p.s });
       continue;

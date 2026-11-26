@@ -641,7 +641,7 @@
   "parts.inserted": "„{name}“ eingefügt",
   "parts.insertError": "Das Projekt ließ sich nicht einfügen. Prüfe die Verbindung und versuche es erneut.",
   "parts.make": "Zu einem Teil zusammenfassen",
-  "parts.makeHint": "Ein Teil bewegst, drehst und färbst du als Ganzes. Seine Bohrungen schneiden nur das Teil selbst, nicht die anderen Teile.",
+  "parts.makeHint": "Ein Teil bewegst, drehst und färbst du als Ganzes. Seine Bohrungen schneiden nur das Teil selbst. Mit einem Teil ausgewählt kommen neue Körper und Bohrungen in dieses Teil.",
   "parts.made": "Teil angelegt",
   "parts.newName": "Teil {n}",
   "parts.move": "Position",
@@ -687,5 +687,7 @@
   "op.move_group": "{target} verschieben",
   "op.rotate_group": "{target} drehen",
   "op.set_group": "{target} ändern",
-  "op.delete_group": "{target} löschen"
+  "op.delete_group": "{target} löschen",
+  "fit.skipped": "{a} ↔ {b}: nicht geprüft (Netz zu groß für die Prüfung)",
+  "parts.copyName": "{name} (Kopie)"
 }

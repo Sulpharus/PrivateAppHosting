@@ -45,6 +45,8 @@ import {
 import { View3d } from './view3d.js';
 
 const SAVE_DELAY = 1200;
+// Welding takes about 30 µs per polygon: up to here the export stays under two seconds.
+const WELD_LIMIT = 60_000;
 const VERSION_EVERY = 10 * 60_000;
 
 export function mountEditor(root, app, project) {
@@ -112,7 +114,8 @@ export function mountEditor(root, app, project) {
   /** The model to export: the shown one when it is current, otherwise built now (never stale). */
   function exportMesh() {
     // Welded: every edge shared by exactly two triangles, so slicers need no repair.
-    return weld(currentMesh() ?? combine(model.solids, meshes));
+    const mesh = currentMesh() ?? combine(model.solids, meshes);
+    return mesh.length <= WELD_LIMIT ? weld(mesh) : mesh;
   }
 
   function solidNames() {
@@ -623,6 +626,8 @@ export function mountEditor(root, app, project) {
           h: round3(h),
           mode: 'subtract',
           name: t('solid.hole'),
+          // A hole drilled into a part belongs to it, so it cuts that part.
+          ...(sel?.group ? { group: sel.group } : {}),
         },
       ]);
       selectOnly(ids);
@@ -634,6 +639,8 @@ export function mountEditor(root, app, project) {
       sphere: { op: 'add_sphere', x: x + 10, y: 10, z: 10, r: 10 },
       cone: { op: 'add_cone', x: x + 10, y: 10, z: 0, r: 10, r2: 0, h: 20 },
     }[kind];
+    // With a part selected, new solids join it (and its holes cut them).
+    if (sel?.group) ops.group = sel.group;
     selectOnly(apply([ops]));
   }
 
@@ -661,7 +668,23 @@ export function mountEditor(root, app, project) {
   function duplicateSelection() {
     if (!selection.length) return;
     const off = mode === '2d' ? { dx: 10, dy: -10 } : { dx: 10, dy: 10, dz: 0 };
-    selectOnly(apply(selection.map((id) => ({ op: 'duplicate', target: id, ...off }))));
+    const part = mode === '3d' ? selectedPart() : null;
+    const ops = selection.map((id) => ({ op: 'duplicate', target: id, ...off }));
+    if (!part) {
+      selectOnly(apply(ops));
+      return;
+    }
+    // A whole part is copied as a new part of its own.
+    const r = applyOps(model, ops, { meshes, names: solidNames() });
+    const g = applyOps(r.model, [
+      {
+        op: 'make_group',
+        targets: r.added,
+        name: t('parts.copyName', { name: part.name }).slice(0, 80),
+      },
+    ]);
+    commit(g.model);
+    selectOnly(r.added);
   }
 
   // ---------------------------------------------------------------------------------------
@@ -1165,6 +1188,7 @@ export function mountEditor(root, app, project) {
     try {
       const r = worker
         ? await new Promise((resolve, reject) => {
+            sendMeshes();
             const job = ++sceneJob;
             pending.set(job, (m) => (m.error ? reject(new Error(m.error)) : resolve(m.clashes)));
             worker.postMessage({ type: 'fit', job, solids: model.solids });
@@ -1173,7 +1197,8 @@ export function mountEditor(root, app, project) {
       if (destroyed) return;
       clashes = r;
       clashKey = key;
-      view3d.setClashes(r.map((c) => c.data));
+      // Changed while checking: the result is kept for that geometry but not drawn.
+      if (key === geometryKey(model.solids)) view3d.setClashes(r.map((c) => c.data));
       window.mnui.toast(t(r.length ? 'fit.found' : 'fit.ok', { n: r.length }));
     } catch {
       window.mnui.toast(t('common.actionError'));
@@ -1247,9 +1272,11 @@ export function mountEditor(root, app, project) {
       for (const c of clashes)
         wrap.append(
           el(
-            'span.mn-chip.mn-chip--bad',
+            `span.mn-chip.${c.volume === null ? 'mn-chip--warn' : 'mn-chip--bad'}`,
             {},
-            t('fit.clash', { a: partName(c.a), b: partName(c.b), v: fmt(c.volume, 2) }),
+            c.volume === null
+              ? t('fit.skipped', { a: partName(c.a), b: partName(c.b) })
+              : t('fit.clash', { a: partName(c.a), b: partName(c.b), v: fmt(c.volume, 2) }),
           ),
         );
       if (clashes.length) wrap.append(el('p.mn-hint', {}, t('fit.hint')));
@@ -1418,7 +1445,12 @@ export function mountEditor(root, app, project) {
     )[0];
     if (!part?.mesh.length) return;
     const file = `${safeName(project.name)}-${safeName(g.name)}.stl`;
-    download(new Blob([writeStl(weld(part.mesh), g.name)], { type: 'model/stl' }), file);
+    download(
+      new Blob([writeStl(part.mesh.length <= WELD_LIMIT ? weld(part.mesh) : part.mesh, g.name)], {
+        type: 'model/stl',
+      }),
+      file,
+    );
     window.mnui.toast(t('export.done', { file }));
   }
 
@@ -1471,64 +1503,70 @@ export function mountEditor(root, app, project) {
 
   async function insertProject(source) {
     window.mnui.sheet.close();
-    const draft = structuredClone(model);
+    const withFiles = source.model.solids.some((x) => x.file);
+    if (withFiles && !mn.offline.online()) {
+      window.mnui.toast(t('import.offline'));
+      return;
+    }
+    // Ids are reserved now; the copies are added to the model as it is after the uploads, so
+    // nothing done meanwhile is lost.
+    const srcGroups = [...new Set(source.model.solids.map((x) => x.group ?? ''))];
+    const first = model.seq + 1;
+    model.seq += srcGroups.length + source.model.solids.length;
+    let next = first;
+    const groupMap = new Map(srcGroups.map((key) => [key, `g${next++}`]));
+    const groups = srcGroups.map((key) => {
+      const srcName = source.model.groups?.find((g) => g.id === key)?.name;
+      return {
+        id: groupMap.get(key),
+        name: (srcName ? `${source.name} · ${srcName}` : source.name).slice(0, 80),
+      };
+    });
     const right = combined.length ? (meshBounds(combined)?.max[0] ?? 0) + 10 : 0;
-    const srcMin = (() => {
-      const b = meshBounds(
-        combine(source.model.solids.filter((x) => x.kind !== 'mesh' && x.kind !== 'toolpath')),
-      );
-      return b ? b.min : [0, 0, 0];
-    })();
-    const shift = [right - srcMin[0], 0, 0];
-    // Each source part stays a part; loose solids of the source become one part named after it.
-    const groupMap = new Map();
-    const partFor = (gid) => {
-      const key = gid ?? '';
-      if (!groupMap.has(key)) {
-        const id = nextId(draft, 'g');
-        const srcName = source.model.groups?.find((g) => g.id === gid)?.name;
-        draft.groups.push({
-          id,
-          name: (srcName ? `${source.name} · ${srcName}` : source.name).slice(0, 80),
-        });
-        groupMap.set(key, id);
-      }
-      return groupMap.get(key);
-    };
+    const srcBounds = meshBounds(combine(source.model.solids.filter((x) => !x.file)));
+    const shift = [right - (srcBounds ? srcBounds.min[0] : 0), 0, 0];
+    const copies = [];
+    const uploaded = [];
     try {
       for (const s of source.model.solids) {
-        const id = nextId(draft, 's');
+        const id = `s${next++}`;
         const copy = {
           ...structuredClone(s),
           id,
-          group: partFor(s.group),
+          group: groupMap.get(s.group ?? ''),
           pos: s.pos.map((v, k) => v + shift[k]),
         };
         if (s.file) {
           // Imported meshes and toolpaths are copied into this project's files.
           const data = await store.loadFile(s);
-          const ext = s.kind === 'mesh' ? 'stl' : 'nc';
-          copy.file = store.filePath(project.id, id, ext);
-          const blob =
-            s.kind === 'mesh'
-              ? new Blob([writeStl(data)], { type: 'model/stl' })
-              : await (await fetch(await mn.files.url(s.file))).blob();
+          copy.file = store.filePath(project.id, id, s.kind === 'mesh' ? 'stl' : 'nc');
+          let blob;
+          if (s.kind === 'mesh') blob = new Blob([writeStl(data)], { type: 'model/stl' });
+          else {
+            const res = await fetch(await mn.files.url(s.file));
+            if (!res.ok) throw new Error('load_failed');
+            blob = await res.blob();
+          }
           await store.uploadFile(copy.file, blob);
+          uploaded.push(copy.file);
           store.cache(copy.file, data);
           if (s.kind === 'mesh') meshes.set(id, data);
           else paths.set(id, data);
         }
-        draft.solids.push(copy);
+        copies.push(copy);
       }
     } catch {
+      for (const path of uploaded) await store.removeFile(path);
       window.mnui.toast(t('parts.insertError'));
       return;
     }
+    const draft = structuredClone(model);
+    draft.groups.push(...groups);
+    draft.solids.push(...copies);
+    draft.seq = Math.max(draft.seq, next - 1);
     commit(draft);
     setMode('3d');
-    selectOnly(
-      draft.solids.filter((x) => [...groupMap.values()].includes(x.group)).map((x) => x.id),
-    );
+    selectOnly(copies.map((x) => x.id));
     view3d.fitAll();
     window.mnui.toast(t('parts.inserted', { name: source.name }));
   }
@@ -1809,13 +1847,18 @@ export function mountEditor(root, app, project) {
   };
   worker?.addEventListener('error', fail);
   worker?.addEventListener('messageerror', fail);
-  function build(solids) {
-    if (!worker) return Promise.resolve().then(() => buildScene(solids, meshes));
+  /** The worker keeps imported meshes; each is sent once, before any job that needs it. */
+  function sendMeshes() {
     for (const [id, polys] of meshes)
       if (!sentMeshes.has(id)) {
         worker.postMessage({ type: 'mesh', id, polys });
         sentMeshes.add(id);
       }
+  }
+
+  function build(solids) {
+    if (!worker) return Promise.resolve().then(() => buildScene(solids, meshes));
+    sendMeshes();
     const job = ++sceneJob;
     return new Promise((resolve, reject) => {
       pending.set(job, (r) => {
@@ -1902,7 +1945,10 @@ export function mountEditor(root, app, project) {
 
   function showScene(r, key, m) {
     const mats = materialsOf(m);
-    if (clashes && clashKey !== geometryKey(m.solids)) view3d.setClashes([]);
+    if (clashes && clashKey !== geometryKey(m.solids)) {
+      view3d.setClashes([]);
+      clashes = null;
+    }
     sceneKey = key;
     combined = r.mesh;
     stats = r.stats;
@@ -2553,14 +2599,14 @@ export function mountEditor(root, app, project) {
       input.remove();
       const meshFiles = files.filter((f) => /\.(stl|obj)$/i.test(f.name));
       if (meshFiles.length < 2) {
-        importMany(files, 'origin');
+        importMany(files, 'origin').catch(() => window.mnui.toast(t('import.failed')));
         return;
       }
       // Several parts: keep the positions they were exported with (an assembly made elsewhere)
       // or set them down side by side.
       const pick = (place) => {
         window.mnui.sheet.close();
-        importMany(files, place);
+        importMany(files, place).catch(() => window.mnui.toast(t('import.failed')));
       };
       const body = el(
         'div',
@@ -2604,9 +2650,10 @@ export function mountEditor(root, app, project) {
       first: true,
     };
     for (const file of files) await importOne(file, at);
-    if (files.length > 1) {
+    const parts = files.filter((f) => /\.(stl|obj)$/i.test(f.name)).length;
+    if (parts > 1) {
       view3d.fitAll();
-      window.mnui.toast(t('import.partsDone', { n: files.length }));
+      window.mnui.toast(t('import.partsDone', { n: parts }));
     }
   }
 
@@ -2667,9 +2714,13 @@ export function mountEditor(root, app, project) {
           file: path,
           tris: polys.length,
         });
-        const gid = nextId(draft, 'g');
-        draft.groups.push({ id: gid, name });
-        draft.solids = draft.solids.map((x) => (x.id === id ? { ...x, group: gid } : x));
+        // Several files at once are an assembly: each becomes its own part. A single file stays a
+        // plain solid, so holes and solids added to it cut and join it as usual.
+        if (many) {
+          const gid = nextId(draft, 'g');
+          draft.groups.push({ id: gid, name });
+          draft.solids = draft.solids.map((x) => (x.id === id ? { ...x, group: gid } : x));
+        }
         commit(draft);
         setMode('3d');
         selectOnly([id]);

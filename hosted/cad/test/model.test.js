@@ -200,3 +200,27 @@ describe('parts of an assembly', () => {
     expect(m.seq).toBe(9);
   });
 });
+
+describe('parts stay consistent', () => {
+  it('a solid added into a part is cut by its holes, and empty parts disappear', async () => {
+    const { combine, volume } = await import('../js/solid.js');
+    let { model, added } = applyOps(emptyModel(), [
+      { op: 'add_box', x: 0, y: 0, z: 0, w: 20, d: 20, h: 5 },
+    ]);
+    ({ model, added } = applyOps(model, [
+      { op: 'make_group', targets: [added[0]], name: 'Import' },
+    ]));
+    const g = added[0];
+    ({ model } = applyOps(model, [
+      { op: 'add_cylinder', x: 10, y: 10, z: -1, r: 3, h: 7, mode: 'subtract', group: g },
+    ]));
+    expect(model.solids[1].group).toBe(g);
+    expect(volume(combine(model.solids))).toBeLessThan(20 * 20 * 5 - 100);
+    // Moving the hole out of the part: it no longer cuts.
+    ({ model } = applyOps(model, [{ op: 'set', target: model.solids[1].id, group: '' }]));
+    expect(volume(combine(model.solids))).toBeCloseTo(2000, 3);
+    // Deleting the last solid of a part removes the part.
+    ({ model } = applyOps(model, [{ op: 'delete', target: model.solids[0].id }]));
+    expect(model.groups).toEqual([]);
+  });
+});
