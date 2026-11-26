@@ -178,6 +178,17 @@ describe('helpers', () => {
     expect(csp).not.toContain('wasm-unsafe-eval');
   });
 
+  it('lets only the named origins frame a page, and names what it frames', () => {
+    const csp = contentSecurityPolicy({
+      supabaseUrl: SUPABASE_URL,
+      ...platformOrigins('https://example.org'),
+      frameAncestors: ['https://example.org'],
+      frameSrc: ['https:'],
+    });
+    expect(csp).toContain('frame-ancestors https://example.org');
+    expect(csp).toContain("frame-src 'self' https:");
+  });
+
   it('allows WebAssembly only for apps that declare it', () => {
     const csp = contentSecurityPolicy({
       supabaseUrl: SUPABASE_URL,

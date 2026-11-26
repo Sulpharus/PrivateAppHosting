@@ -9,6 +9,10 @@ export interface CspOptions {
   aiOrigin: string;
   /** The app runs WebAssembly (manifest `wasm`): allows compiling it, not JavaScript eval. */
   wasm?: boolean;
+  /** Who may show the page in a frame (CSP sources); nobody when unset. */
+  frameAncestors?: readonly string[];
+  /** What the page may show in a frame (CSP sources); its own origin only when unset. */
+  frameSrc?: readonly string[];
 }
 
 /** The conventional addresses on a platform domain: `api.<domain>` and `ai.<domain>`. */
@@ -43,7 +47,8 @@ export function contentSecurityPolicy(options: CspOptions): string {
     "font-src 'self' data:",
     "media-src 'self' blob: https:",
     `connect-src ${connect.join(' ')}`,
-    "frame-ancestors 'none'",
+    ...(options.frameSrc?.length ? [`frame-src 'self' ${options.frameSrc.join(' ')}`] : []),
+    `frame-ancestors ${options.frameAncestors?.length ? options.frameAncestors.join(' ') : "'none'"}`,
     "base-uri 'self'",
     "form-action 'self'",
     "object-src 'none'",

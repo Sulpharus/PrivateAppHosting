@@ -3,7 +3,7 @@
 Where things stand, what the owner still has to do, and what a new session should know.
 Update it at the end of every working session; history belongs in git, not here.
 
-Last updated: 2026-11-25 (new app CAD, Spoolman in the App-Bibliothek; before: instance config, desktop edition, starter package, login hardening; ADR 0026).
+Last updated: 2026-11-26 (portal viewers: apps without Chrome's bar in the installed portal, outside sites behind a switch; ADR 0032. Before: new app CAD, Spoolman in the App-Bibliothek).
 
 ## Start here
 
@@ -27,7 +27,7 @@ Where things are documented:
 | Topic | Read |
 | --- | --- |
 | Architecture, phases, data model | `PLAN.md` |
-| Decisions | `docs/adr/0001`–`0031` |
+| Decisions | `docs/adr/0001`–`0032` |
 | Operations: setup, physical server, keys, Kalender, App-Bibliothek, app export, restore | `docs/runbooks/` (index in its README) |
 | Building apps with AI: spec, design system, prompt modules, playbooks | `docs/ai/` |
 | Shared data types (suite) | `docs/suite/data-types.md` |
@@ -38,6 +38,7 @@ Where things are documented:
 
 | Area | What | Where |
 | --- | --- | --- |
+| Portal viewers | The installed portal opens apps at `/a/<slug>/<path>` in a full-screen frame, so Chrome's out-of-scope bar never appears (`scope_extensions` does nothing on Android, checked in Chromium's source). Gate CSP `frame-ancestors` = portal origin; `pwa.js` and the SDK hand cross-origin links to the portal (`mn:open`). Verwaltung → Einstellungen switches outside sites into `/web?url=` (own bar, sandboxed frame) after `GET /frame-check` on the API; refused pages open as before. Manifest `theme_color` dark. Not yet tried on a device | ADR 0032, `apps/portal/src/routes/Viewers.tsx`, `apps/portal/src/lib/viewer.ts`, `apps/api/src/routes/frame-check.ts`, `packages/gate/assets/pwa.js`, `supabase/migrations/20261126090000_instance_settings.sql` |
 | Suite core | Shared records, collections, app type grants, `mn.suite` | ADR 0002, `docs/suite/data-types.md` |
 | Kalender | Views, own events, recurrence, reminders, sources, ICS, shared calendars | `hosted/kalender`, runbook `kalender.md` |
 | Google Calendar | Two-way sync with a "MiniNode" calendar | ADR 0010 |
@@ -127,6 +128,7 @@ since the PR #12 deploy. Earlier deploys stopped at medialog and never shipped t
 
 ## Waiting on the owner
 
+000. **Portal viewers (ADR 0032): try on the tablet after the deploy.** Close and reopen the installed MiniNode app, open Typetrainer: no light bar on top. Check sign-out from an app, a link from an app to another app, and (after switching on Verwaltung → Einstellungen → "Externe Seiten im eigenen Viewer") a Wikipedia link (opens with MiniNode's bar) and a GitHub link (opens under Chrome's bar). Android may take a day to pick up the dark `theme_color`.
 00. **Updates (ADR 0028) were never run against GitHub from here.** Try them once: Verwaltung → Updates → MiniNode (needs `LIBRARY_DISPATCH_TOKEN` and a release newer than the installed one), and with an app that has `"repository"` in its mininode.json. Optional: secret `INTEGRATE_TOKEN` with *Workflows: read and write* so workflow files update too (otherwise the pull request says they were skipped). The first platform update on an installation made before this change has no file list yet, so it removes nothing; later ones do.
 0. **Before merging the anywhere-installable work (ADR 0026), upgrade the physical server once:**
    - add `MININODE_OWNER=sulpharus` to `platform.env`, and `MININODE_OWNER=sulpharus`, `MININODE_REPO=Sulpharus/PrivateAppHosting`, `MININODE_DOMAIN=mininode.app` to `/etc/mininode/deploy.env` (they used to be built into the scripts; without them the physical server deploy stops);

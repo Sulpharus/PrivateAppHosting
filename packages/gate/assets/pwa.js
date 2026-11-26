@@ -68,3 +68,27 @@ if ('serviceWorker' in navigator) {
     if (event.persisted) hide();
   });
 })();
+
+// Inside the installed portal's app viewer (/a/<slug>, ADR 0032) a link to another origin (the
+// portal, another app, an outside website) is handed to the portal, which opens it in the right
+// place. Followed inside the frame, the portal would end up inside itself.
+(() => {
+  if (window.parent === window || window.parent !== window.top) return;
+  const { protocol, hostname, port } = location;
+  const dot = hostname.indexOf('.');
+  if (dot < 0) return;
+  const portal = `${protocol}//${hostname.slice(dot + 1)}${port ? `:${port}` : ''}`;
+  let parent = location.ancestorOrigins?.[0];
+  if (!parent && document.referrer) parent = new URL(document.referrer).origin;
+  if (parent !== portal) return;
+  document.addEventListener('click', (event) => {
+    if (event.defaultPrevented || event.button !== 0) return;
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    const link = event.target instanceof Element ? event.target.closest('a[href]') : null;
+    if (!link || link.hasAttribute('download')) return;
+    const url = new URL(link.href, location.href);
+    if (!/^https?:$/.test(url.protocol) || url.origin === location.origin) return;
+    event.preventDefault();
+    window.parent.postMessage({ type: 'mn:open', url: url.href }, portal);
+  });
+})();

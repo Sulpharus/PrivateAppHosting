@@ -74,6 +74,18 @@ main{max-width:28rem;padding:2rem}h1{font-size:1.75rem;margin:0 0 .75rem}a{color
   });
 }
 
+function signInPage(location: string): Response {
+  const html = `<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Anmelden</title>
+<style>body{margin:0;min-height:100vh;display:grid;place-items:center;font-family:system-ui,sans-serif;background:#f3f1ec;color:#17160f}
+@media (prefers-color-scheme:dark){body{background:#121210;color:#edeae2}a{color:#ffa47c}}
+main{max-width:28rem;padding:2rem}h1{font-size:1.75rem;margin:0 0 .75rem}a{color:#9a3512;display:inline-block;min-height:44px;line-height:44px}</style></head>
+<body><main><h1>Bitte neu anmelden</h1><p>Deine Anmeldung ist abgelaufen.</p><p><a href="${escapeHtml(location)}" target="_top">Anmelden</a></p></main></body></html>`;
+  return new Response(html, {
+    status: 401,
+    headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' },
+  });
+}
+
 function escapeHtml(value: string): string {
   return value.replace(/[&<>"']/g, (char) => `&#${char.charCodeAt(0)};`);
 }
@@ -149,6 +161,9 @@ export async function handleAppRequest(request: Request, env: AppEnv): Promise<R
     ...platformOrigins(env.PORTAL_URL),
     connectSrc: connectSources(env),
     wasm: env.WASM === '1',
+    // The installed portal shows apps in its own viewer (/a/<slug>), so Chrome's bar for pages
+    // outside the portal's scope never appears (ADR 0032). Nobody else may frame an app.
+    frameAncestors: [new URL(env.PORTAL_URL).origin],
   });
 
   if (url.pathname === '/_mininode/config.json') {
@@ -218,6 +233,10 @@ export async function handleAppRequest(request: Request, env: AppEnv): Promise<R
       return withHeaders(response, { ...headers, 'Cache-Control': 'private, no-cache' });
     }
     case 'redirect':
+      // In the portal's viewer the sign-in page cannot load inside the frame (the portal refuses
+      // to be framed): offer it for the whole window instead.
+      if (request.headers.get('Sec-Fetch-Dest') === 'iframe')
+        return withHeaders(signInPage(decision.location), headers);
       return new Response(null, {
         status: 302,
         headers: { Location: decision.location, 'Cache-Control': 'no-store' },

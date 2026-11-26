@@ -155,6 +155,17 @@ export function createMininode(config: MininodeConfig): Mininode {
     },
   });
 
+  // In the installed portal's app viewer (ADR 0032) the portal opens its own pages: loaded in the
+  // frame, they would refuse to show (the portal may not be framed).
+  const leaveTo = (url: string) => {
+    const portal = new URL(config.portalUrl).origin;
+    const framed = globalThis.parent !== undefined && globalThis.parent !== globalThis.self;
+    const parent = globalThis.location?.ancestorOrigins?.[0];
+    if (framed && parent === portal)
+      globalThis.parent.postMessage({ type: 'mn:open', url }, portal);
+    else location.assign(url);
+  };
+
   const loginUrl = () => {
     const url = new URL('/login', config.portalUrl);
     url.searchParams.set('next', location.href);
@@ -269,7 +280,7 @@ export function createMininode(config: MininodeConfig): Mininode {
           globalThis.dispatchEvent?.(new Event('mn:ready'));
           return user;
         }
-        location.assign(loginUrl());
+        leaveTo(loginUrl());
         return new Promise<never>(() => {});
       },
       async signOut() {
@@ -281,7 +292,7 @@ export function createMininode(config: MininodeConfig): Mininode {
           if (key.startsWith('mn-files-linked:')) localStorage.removeItem(key);
         }
         // The portal signs out the shared session and switches this device's push off.
-        location.assign(new URL('/logout', config.portalUrl).toString());
+        leaveTo(new URL('/logout', config.portalUrl).toString());
       },
       accountUrl: () => new URL('/account', config.portalUrl).toString(),
     },
