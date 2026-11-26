@@ -50331,7 +50331,7 @@
       "node_kind": "heading",
       "norm_label": "ende september 2026",
       "source_file": "docs/wiki/neuigkeiten.md",
-      "source_location": "L92"
+      "source_location": "L93"
     },
     {
       "id": "docs_wiki_neuigkeiten_oktober_2026",
@@ -225994,7 +225994,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/wiki/neuigkeiten.md",
-      "source_location": "L92",
+      "source_location": "L93",
       "weight": 1.0
     },
     {
@@ -279909,7 +279909,7 @@
       "confidence_score": 0.95,
       "context": "event",
       "source_file": "docs/wiki/neuigkeiten.md",
-      "source_location": "L52",
+      "source_location": "L53",
       "weight": 1.0
     },
     {
@@ -280413,7 +280413,7 @@
       "confidence_score": 0.95,
       "context": "installLocalStorageSync",
       "source_file": "docs/wiki/neuigkeiten.md",
-      "source_location": "L42",
+      "source_location": "L43",
       "weight": 1.0
     },
     {
@@ -281858,5 +281858,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "bf1935575c1ae8152c9af4173f6008c698919997"
+  "built_at_commit": "73011ad5d9613225a17d859d3c9f44d7010e86ea"
 }

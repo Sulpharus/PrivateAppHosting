@@ -1,7 +1,7 @@
 # Graph Report - PrivateAppHosting  (2026-11-26)
 
 ## Corpus Check
-- 991 files · ~811,666 words
+- 991 files · ~811,830 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 81 file(s) not represented in the graph (top: (none) 28, .css 25, .patch 8)
 
@@ -11,7 +11,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `bf193557`
+- Built from commit: `73011ad5`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
