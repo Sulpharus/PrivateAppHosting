@@ -40,7 +40,9 @@ needs a backend. Do not build your own login, backend or API-key handling.**
    **Look:** use the MiniNode App Kit (`DESIGN-SYSTEM.md`): link `/_mininode/ui.css` and
    `/_mininode/ui.js` (and `/_mininode/i18n.js`), put `class="mn-app"` on `<body>`, pick a `data-accent` and build from
    its `mn-*` components and `--mn-*` tokens. The shell's "Alle Apps" link points to
-   `mn.config.portalUrl`; never write a domain into the app.
+   `mn.config.portalUrl`; never write a domain into the app. Link to the portal, other apps and
+   outside sites with ordinary `<a href>` links and never navigate `window.top`: the installed
+   portal shows apps in a frame and opens such links itself (ADR 0032).
 6. Deliver a **ZIP** containing the project (source, `package.json` if any, `mininode.json`).
 7. **Details that make an upload fail the check** (the integration script and `mininode doctor`
    stop on each of them):
