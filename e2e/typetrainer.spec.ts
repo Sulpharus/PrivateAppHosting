@@ -5,7 +5,7 @@ import { cleanup, createUser, grant, PASSWORD } from './seed.ts';
 // mistake), the run lands in the statistics and unlocks level 2 in the learning tree, an own text
 // is kept in its table, and the layout setting survives a reload.
 const run = `e2ett${Date.now().toString(36)}`;
-const APP = 'http://localhost:8808';
+const APP = 'http://localhost:8809';
 
 test.afterAll(async () => {
   await cleanup(run);

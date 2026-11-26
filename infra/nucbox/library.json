@@ -73,6 +73,23 @@
       "env": { "DOCKER_ENABLE_SECURITY": "false", "LANGS": "de_DE" },
       "readOnly": false,
       "note": "Dateien werden nur zur Bearbeitung hochgeladen und nicht gespeichert."
+    },
+    {
+      "id": "spoolman",
+      "name": "Spoolman",
+      "description": "Filamentrollen für den 3D-Drucker verwalten: Bestand, Restgewicht, Hersteller und Lagerort",
+      "category": "Werkzeuge",
+      "website": "https://github.com/Donkie/Spoolman",
+      "docs": "https://github.com/Donkie/Spoolman/wiki",
+      "image": "ghcr.io/donkie/spoolman:0.27.1@sha256:1ebb4f6a62c2e72a07f18b07ebfdbd96322f5bc2eb72570af3088f68d7c393b1",
+      "port": 8000,
+      "memoryMb": 256,
+      "healthPath": "/api/v1/health",
+      "user": "1000:1000",
+      "volumes": { "data": "/home/app/.local/share/spoolman" },
+      "env": { "TZ": "Europe/Berlin" },
+      "readOnly": false,
+      "note": "Passt zur App CAD (Gewicht aus dem Modell). Drucker mit Klipper/Moonraker oder OctoPrint erreichen Spoolman nicht über die MiniNode-Adresse (Anmeldung); sie brauchen Zugriff im eigenen Netz."
     }
   ]
 }

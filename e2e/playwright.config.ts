@@ -61,7 +61,8 @@ function appServers() {
       ['haushalts-inventar', 8805],
       ['aether-notes', 8806],
       ['bill-the-splitter', 8807],
-      ['typetrainer', 8808],
+      ['cad', 8808],
+      ['typetrainer', 8809],
     ]
       // An app that was uninstalled (its removal pull request) has no folder any more: no server.
       .filter(([slug]) => existsSync(`hosted/${slug}/mininode.json`))

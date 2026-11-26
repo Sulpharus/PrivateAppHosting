@@ -11,7 +11,7 @@ MiniNode-Login und sind von jedem Gerät im Browser erreichbar.
 ## App-Bibliothek (ADR 0011)
 
 Bekannte Linux-Programme als Container, **mit einem Klick** unter Verwaltung → Hardware-Server → App-Bibliothek: Jellyfin, n8n,
-Uptime Kuma, Stirling PDF. Die Versionen sind **fest** in `infra/nucbox/library.json` eingetragen (Image mit Prüfsumme); neue
+Uptime Kuma, Stirling PDF, Spoolman (Filamentrollen für den 3D-Drucker, passt zur App [CAD](wiki:cad)). Die Versionen sind **fest** in `infra/nucbox/library.json` eingetragen (Image mit Prüfsumme); neue
 Versionen oder Programme kommen per Pull Request.
 
 - **Installieren:** Adresse wählen, klicken; nach zwei bis fünf Minuten steht die App unter Verwaltung → Apps. Dann Zugriff vergeben.
