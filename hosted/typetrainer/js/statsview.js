@@ -1,6 +1,14 @@
 // "Statistik": key figures for a year, the weekly speed trend, a heat grid of practice days,
 // weak keys, best speed per course, badges and the latest runs.
-import { courseName, errorBox, levelCounts, route, setHeader, startLesson } from './app.js';
+import {
+  courseName,
+  currentCourse,
+  errorBox,
+  levelCounts,
+  route,
+  setHeader,
+  startLesson,
+} from './app.js';
 import { clear, h, icon, skeleton } from './dom.js';
 import { getLayout } from './layouts.js';
 import { state, t } from './state.js';
@@ -68,7 +76,7 @@ export function renderStats() {
           {
             class: 'mn-btn mn-btn--primary',
             type: 'button',
-            onclick: () => startLesson(`layout:${state.settings.layout}`, 1),
+            onclick: () => startLesson(currentCourse(), 1),
           },
           t('stats.emptyAction'),
         ),

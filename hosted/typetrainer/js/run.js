@@ -1,5 +1,6 @@
 // The typing screen: the text, live figures, the on-screen keyboard and the result.
 
+import { CHORD_WINDOW, createChordInput } from './chordinput.js';
 import { chordKey } from './chords.js';
 import { h, icon, starRow, upper } from './dom.js';
 import * as engine from './engine.js';
@@ -124,7 +125,9 @@ export function startRun(spec) {
     chordWords: spec.chords
       ? new Map([...spec.chords].map(([word, keys]) => [chordKey(keys), word]))
       : null,
-    group: null,
+    // Telling chords from fast typing (js/chordinput.js), and its window timer.
+    keys: spec.chords ? createChordInput() : null,
+    keyTimer: 0,
   };
   mark(view, 0);
   showNext(view);
@@ -135,6 +138,8 @@ export function startRun(spec) {
   capture.addEventListener('keyup', onKeyUp);
   capture.addEventListener('focus', () => board.classList.remove('is-paused'));
   capture.addEventListener('blur', () => {
+    // Releases of keys held while focus leaves never arrive: settle waiting letters now.
+    if (view?.keys) apply(view, view.keys.reset());
     if (state.run && !engine.isDone(run)) board.classList.add('is-paused');
   });
   capture.focus({ preventScroll: true });
@@ -151,6 +156,7 @@ export function placeCorner(button) {
 
 export function stopRun() {
   if (view?.timer) window.clearInterval(view.timer);
+  if (view?.keyTimer) window.clearTimeout(view.keyTimer);
   view = null;
   state.run = null;
   state.result = false;
@@ -161,71 +167,66 @@ function exit(spec) {
   spec.onExit();
 }
 
-/** Keys pressed within this time and held together are a chord; otherwise they are typed. */
-const CHORD_WINDOW = 50;
-
 function onKeyDown(e) {
-  if (!view) return;
+  const v = view;
+  if (!v) return;
   if (e.key === 'Escape') {
     e.preventDefault();
-    exit(view.spec);
-  } else if (e.key === 'Tab') {
+    exit(v.spec);
+    return;
+  }
+  if (e.key === 'Tab') {
     // Code uses spaces; Tab would leave the field.
     e.preventDefault();
-  } else if (view.chords && e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
+    return;
+  }
+  if (!v.keys) return;
+  if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
     // Chord lessons read characters from the key events themselves, so a chord can be told
     // apart from fast typing before anything is written.
     e.preventDefault();
-    if (!e.repeat) chordKeyDown(view, e);
+    if (e.repeat) return;
+    apply(v, v.keys.down(e.key, e.code, performance.now()));
+  } else {
+    // Backspace, Enter, dead keys, AltGr: letters still waiting go first.
+    apply(v, v.keys.flush());
   }
 }
 
 function onKeyUp(e) {
-  if (view?.chords) chordKeyUp(view, e);
+  const v = view;
+  if (v?.keys) apply(v, v.keys.up(e.code));
 }
 
-function chordKeyDown(v, e) {
-  const now = performance.now();
-  const g = v.group;
-  if (!g) {
-    v.group = { start: now, chars: [e.key], held: new Set([e.code]), decided: false, chord: false };
-    v.group.timer = window.setTimeout(() => decide(v), CHORD_WINDOW);
-    return;
+/** Runs the actions of the chord input and keeps its window timer. */
+function apply(v, actions) {
+  for (const action of actions) {
+    if (view !== v) return;
+    if (action.type === 'char') typeChar(action.ch);
+    else playChord(v, action.chars);
   }
-  g.held.add(e.code);
-  if (!g.decided && now - g.start <= CHORD_WINDOW) g.chars.push(e.key);
-  else if (g.chord) g.chars.push(e.key);
-  else typeChar(e.key);
+  window.clearTimeout(v.keyTimer);
+  if (v.keys.waiting) {
+    v.keyTimer = window.setTimeout(() => {
+      if (view === v) apply(v, v.keys.tick(performance.now()));
+    }, CHORD_WINDOW + 1);
+  }
 }
 
-function chordKeyUp(v, e) {
-  const g = v.group;
-  if (!g) return;
-  if (!g.decided) decide(v);
-  g.held.delete(e.code);
-  if (g.held.size > 0) return;
-  v.group = null;
-  if (g.chord) playChord(v, g.chars);
-}
-
-/** After the window: two or more keys still held together are a chord, anything else is typed. */
-function decide(v) {
-  const g = v.group;
-  if (!g || g.decided) return;
-  g.decided = true;
-  window.clearTimeout(g.timer);
-  g.chord = g.chars.length >= 2 && g.held.size >= 2;
-  if (!g.chord) for (const ch of g.chars) typeChar(ch);
-}
-
+/**
+ * Keys held together: the word at the caret if they are its chord; a known chord in the wrong
+ * place is a mistake; anything else was fast typing and is typed in pressing order.
+ */
 function playChord(v, chars) {
   if (v.finished) return;
-  const word = v.chordWords.get(chordKey(chars.map((ch) => ch.toLocaleLowerCase('de-DE'))));
+  const word = v.chordWords.get(chordKey(chars.map((ch) => ch.toLowerCase())));
+  if (!word) {
+    for (const ch of chars) typeChar(ch);
+    return;
+  }
   const expected = engine.wordAt(v.run);
   const res =
-    word && word === expected?.toLocaleLowerCase('de-DE')
-      ? engine.inputWord(v.run, expected, performance.now())
-      : null;
+    word === expected?.toLowerCase() ? engine.inputWord(v.run, expected, performance.now()) : null;
   if (res) {
     for (const i of res.changed) v.spans[i].className = spanClass(v, i);
     if (res.done) return finish(v);
@@ -253,6 +254,7 @@ function onBeforeInput(e) {
 
 function onComposition(e) {
   if (!view) return;
+  if (view.keys) apply(view, view.keys.flush());
   for (const ch of e.data ?? '') typeChar(ch);
   view.capture.value = '';
 }

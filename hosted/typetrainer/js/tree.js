@@ -130,33 +130,33 @@ export function continueCourse(stars, layoutId, focus) {
 export function levelText(layout, level, lang, rng) {
   const all = typeable(layout);
   const ok = (text) => [...text].every((ch) => all.has(ch));
-  const fit = (text) => adapt(text, layout);
+  const adapted = (text) => adapt(text, layout);
   switch (level.kind) {
     case 'letters':
     case 'capitals':
     case 'numbers':
     case 'punctuation':
-      return { text: fit(lessonText(layout, level, lang, rng)) };
+      return { text: adapted(lessonText(layout, level, lang, rng)) };
     case 'common':
-      return { text: fit(frequentText(layout, lang, rng, 0, 100, 32)) };
+      return { text: adapted(frequentText(lang, rng, 0, 100, 32)) };
     case 'sentences':
-      return { text: fit(sentenceText(lang, rng, 180, () => true)) };
+      return { text: adapted(sentenceText(lang, rng, 180, () => true)) };
     case 'long':
-      return { text: fit(wordsText(lang, rng, 18, { capitals: true, long: true })) };
+      return { text: adapted(wordsText(lang, rng, 18, { capitals: true, long: true })) };
     case 'mixed':
-      return { text: fit(`${practiceText(lang, 'schwer', rng)} ${numbersText(lang, rng, 6)}`) };
+      return { text: adapted(`${practiceText(lang, 'schwer', rng)} ${numbersText(lang, rng, 6)}`) };
     case 'speed':
-      return { text: fit(sentenceText(lang, rng, 260, () => true)) };
+      return { text: adapted(sentenceText(lang, rng, 260, () => true)) };
     case 'endurance':
-      return { text: fit(sentenceText(lang, rng, 700, () => true)) };
+      return { text: adapted(sentenceText(lang, rng, 700, () => true)) };
     case 'brackets':
     case 'operators':
       return { text: codeCharsText(level.kind, rng, ok), code: true };
     case 'code':
-      return { text: fit(codeText(getCodeLanguage(level.lang), level.id, rng)), code: true };
+      return { text: adapted(codeText(getCodeLanguage(level.lang), level.id, rng)), code: true };
     case 'chords':
     case 'chordText': {
-      const table = chordTable(layout, lang, fit);
+      const table = chordTable(layout, lang);
       const [from, to] = level.range ?? [0, table.length];
       // Earlier groups come back now and then, so they stay in the hands.
       const group = table.slice(from, to);
@@ -164,7 +164,7 @@ export function levelText(layout, level, lang, rng) {
       const chords = new Map(table.slice(0, to).map((c) => [c.word, c.keys]));
       if (level.kind === 'chordText') {
         return {
-          text: fit(sentenceText(lang, rng, 200, () => true)).toLocaleLowerCase('de-DE'),
+          text: adapted(sentenceText(lang, rng, 200, () => true)).toLocaleLowerCase('de-DE'),
           chords,
         };
       }
@@ -177,11 +177,11 @@ export function levelText(layout, level, lang, rng) {
       return { text: out.join(' '), chords };
     }
     default:
-      return { text: fit(sentenceText(lang, rng, 180, () => true)) };
+      return { text: adapted(sentenceText(lang, rng, 180, () => true)) };
   }
 }
 
-function frequentText(layout, lang, rng, from, to, count) {
+function frequentText(lang, rng, from, to, count) {
   const words = frequentWords(lang).slice(from, to);
   const out = [];
   while (out.length < count && words.length) {

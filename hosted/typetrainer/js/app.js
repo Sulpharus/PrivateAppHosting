@@ -498,16 +498,17 @@ function renderPath(selected) {
       : null;
   const basics = courseCard(layoutId, 'basics');
   const children = (parent) => BRANCHES.filter((b) => b.parent === parent);
-  const subtree = (parent) =>
+  // Nested lists, so screen readers hear the tree as well as seeing it.
+  const subtree = (parent, depth) =>
     h(
-      'div',
+      'ul',
       { class: 'tt-tree-children' },
       children(parent).map((b) =>
         h(
-          'div',
+          'li',
           { class: 'tt-tree-node' },
-          courseCard(layoutId, b.id),
-          children(b.id).length ? subtree(b.id) : null,
+          courseCard(layoutId, b.id, depth),
+          children(b.id).length ? subtree(b.id, depth + 1) : null,
         ),
       ),
     );
@@ -521,12 +522,13 @@ function renderPath(selected) {
       { class: 'tt-tree' },
       basics,
       h('h2', { class: 'tt-tree-title' }, t('path.branches')),
-      subtree('basics'),
+      subtree('basics', 1),
     ),
   );
 }
 
-function courseCard(layoutId, branch) {
+function courseCard(layoutId, branch, depth = 0) {
+  const heading = ['h2', 'h3', 'h4'][Math.min(depth, 2)];
   const course = courseOf(layoutId, branch);
   const levels = courseLevels(course);
   const open = isOpen(state.stars, layoutId, branch);
@@ -573,26 +575,27 @@ function courseCard(layoutId, branch) {
       );
     }),
   );
-  const focusButton = FOCUS.includes(branch)
-    ? h(
-        'button',
-        {
-          class: 'mn-btn',
-          type: 'button',
-          'aria-pressed': String(focus),
-          onclick: async () => {
-            try {
-              await saveSettings({ focus: branch });
-              window.mnui.toast(t('path.focusSaved', { branch: t(`branch.${branch}`) }));
-            } catch {
-              window.mnui.toast(t('common.saveError'));
-            }
-            route();
+  const focusButton = !FOCUS.includes(branch)
+    ? null
+    : focus
+      ? h('span', { class: 'mn-chip mn-chip--ok' }, icon('check'), t('path.isFocus'))
+      : h(
+          'button',
+          {
+            class: 'mn-btn',
+            type: 'button',
+            onclick: async () => {
+              try {
+                await saveSettings({ focus: branch });
+                window.mnui.toast(t('path.focusSaved', { branch: t(`branch.${branch}`) }));
+              } catch {
+                window.mnui.toast(t('common.saveError'));
+              }
+              route();
+            },
           },
-        },
-        focus ? t('path.isFocus') : t('path.setFocus'),
-      )
-    : null;
+          t('path.setFocus'),
+        );
   const extra =
     branch === 'chord'
       ? [
@@ -615,7 +618,7 @@ function courseCard(layoutId, branch) {
     h(
       'div',
       { class: 'tt-course-head' },
-      h('h3', { id: `course-${branch}` }, open ? null : icon('lock'), t(`branch.${branch}`)),
+      h(heading, { id: `course-${branch}` }, open ? null : icon('lock'), t(`branch.${branch}`)),
       h(
         'span',
         { class: 'mn-chip mn-chip--plain' },
@@ -639,7 +642,7 @@ function courseCard(layoutId, branch) {
 /** The chord table of a layout, with an export for chord tools (Kanata, QMK, ZMK …). */
 function showChords(layout) {
   const lang = textLang();
-  const table = chordTable(layout, lang, (w) => adapt(w, layout));
+  const table = chordTable(layout, lang);
   const download = () => {
     const lines = ['chord;word', ...table.map((c) => `${c.keys.join('+')};${c.word}`)];
     const url = URL.createObjectURL(
@@ -694,7 +697,10 @@ function showChords(layout) {
       ),
     ),
   );
-  window.mnui.sheet.open(content, { tall: true });
+  window.mnui.sheet.open(content, {
+    tall: true,
+    label: t('chords.title', { layout: layout.name }),
+  });
 }
 
 // ---------- routing, shortcuts, start-up ----------

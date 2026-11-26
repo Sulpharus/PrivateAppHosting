@@ -273,7 +273,7 @@ describe('chords', () => {
   it('use only letters of the word, never two keys of one finger, each chord once', () => {
     for (const layout of LAYOUTS)
       for (const lang of ['de', 'en']) {
-        const table = chordTable(layout, lang, (w) => adapt(w, layout));
+        const table = chordTable(layout, lang);
         expect(table.length).toBeGreaterThan(80);
         const seen = new Set();
         for (const { word, keys } of table) {
@@ -289,7 +289,7 @@ describe('chords', () => {
   });
 
   it('start with the first letter of the word where possible', () => {
-    const table = chordTable(getLayout('qwertz'), 'de', (w) => w);
+    const table = chordTable(getLayout('qwertz'), 'de');
     const und = table.find((c) => c.word === 'und');
     expect(und.keys[0]).toBe('u');
     const firsts = table.filter((c) => c.keys[0] === c.word[0]).length;
@@ -308,5 +308,99 @@ describe('chords', () => {
     expect(engine.inputWord(run, 'die', 20)).toBeNull();
     engine.chordMiss(run, 30);
     expect(run.errors).toBe(1);
+  });
+});
+
+describe('chord input', async () => {
+  const { createChordInput } = await import('../js/chordinput.js');
+  const typed = (actions) =>
+    actions
+      .filter((a) => a.type === 'char')
+      .map((a) => a.ch)
+      .join('');
+
+  it('keys pressed together and held are a chord, played at the first release', () => {
+    const c = createChordInput(50);
+    expect(c.down('u', 'KeyU', 0)).toEqual([]);
+    expect(c.down('d', 'KeyD', 10)).toEqual([]);
+    expect(c.tick(50)).toEqual([]);
+    expect(c.up('KeyU')).toEqual([{ type: 'chord', chars: ['u', 'd'] }]);
+    expect(c.up('KeyD')).toEqual([]);
+    expect(c.waiting).toBe(false);
+  });
+
+  it('rolling from one key to the next stays typing, even when released out of order', () => {
+    const c = createChordInput(50);
+    c.down('a', 'KeyA', 0);
+    c.down('b', 'KeyB', 20);
+    // A is released first: only B is still held, so this was typing.
+    expect(typed(c.up('KeyA'))).toBe('ab');
+    expect(c.up('KeyB')).toEqual([]);
+  });
+
+  it('a slow second key is typed on its own', () => {
+    const c = createChordInput(50);
+    c.down('a', 'KeyA', 0);
+    // Alone when the window ends: typed right then, not at release.
+    expect(typed(c.tick(50))).toBe('a');
+    expect(typed(c.up('KeyA'))).toBe('');
+    expect(typed(c.down('b', 'KeyB', 80))).toBe('');
+    expect(typed(c.up('KeyB'))).toBe('b');
+  });
+
+  it('space and symbols are never part of a chord and keep their order', () => {
+    const c = createChordInput(50);
+    c.down('a', 'KeyA', 0);
+    expect(typed(c.down(' ', 'Space', 10))).toBe('a ');
+    expect(c.up('KeyA')).toEqual([]);
+  });
+
+  it('a missed release and a lost focus settle the group', () => {
+    const c = createChordInput(50);
+    c.down('u', 'KeyU', 0);
+    c.down('d', 'KeyD', 5);
+    c.tick(60);
+    // Focus left while both were held; the releases never come. U pressed again later:
+    c.down('u', 'KeyU', 500);
+    expect(c.waiting).toBe(true);
+    expect(typed(c.reset())).toBe('u');
+    expect(c.waiting).toBe(false);
+  });
+
+  it('a new chord pressed before the last keys are up starts its own group', () => {
+    const c = createChordInput(50);
+    c.down('u', 'KeyU', 0);
+    c.down('d', 'KeyD', 5);
+    c.tick(50);
+    expect(c.up('KeyU')).toEqual([{ type: 'chord', chars: ['u', 'd'] }]);
+    c.down('d', 'KeyD2', 60);
+    c.down('i', 'KeyI', 65);
+    c.tick(110);
+    expect(c.up('KeyD')).toEqual([]);
+    expect(c.up('KeyI')).toEqual([{ type: 'chord', chars: ['d', 'i'] }]);
+  });
+
+  it('flush types waiting letters before Backspace or Enter', () => {
+    const c = createChordInput(50);
+    c.down('a', 'KeyA', 0);
+    expect(typed(c.flush())).toBe('a');
+  });
+
+  it('the coder badge counts code lessons of every layout', async () => {
+    const { achievements } = await import('../js/stats.js');
+    const runs = Array.from({ length: 25 }, (_, i) => ({
+      id: String(i),
+      course: i % 2 ? 'neo/code-python' : 'qwertz/code',
+      practised_on: '2026-11-26',
+      wpm: 20,
+      accuracy: 95,
+      chars: 100,
+      duration_ms: 60000,
+      mode: 'lesson',
+      details: {},
+    }));
+    expect(achievements(runs, { daily: {} }, '2026-11-26').find((b) => b.id === 'coder').done).toBe(
+      true,
+    );
   });
 });

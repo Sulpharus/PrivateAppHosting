@@ -142,7 +142,9 @@ export function achievements(sessions, progress, today = dayKey(), levelCounts =
     (s) => s.full,
   );
   const precise = sessions.some((s) => num(s.accuracy) >= 99 && num(s.chars) >= 150);
-  const code = sessions.filter((s) => s.course.startsWith('code')).length;
+  const code = sessions.filter(
+    (s) => s.course.startsWith('code:') || /\/code(-|$)/.test(s.course),
+  ).length;
   const daily = Math.max(progress?.daily?.streak ?? 0, progress?.daily?.longest ?? 0) >= 7;
   return [
     { id: 'first', done: sessions.length > 0 },

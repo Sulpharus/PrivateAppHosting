@@ -3,6 +3,7 @@
 // then its consonants ("nicht" → n t, "because" → b c), then vowels. One finger cannot press two
 // keys at once, so a chord never has two letters on the same finger. That depends on where the
 // letters sit, so every layout gets its own table, built the same way every time.
+import { adapt } from './generator.js';
 import { FINGERS, locate } from './layouts.js';
 
 /** The most frequent words, most frequent first. Chord levels take them in this order. */
@@ -43,17 +44,17 @@ function* combinations(items, size, start = 0, picked = []) {
 export const chordKey = (letters) => [...new Set(letters)].sort().join('');
 
 /**
- * The chord table of a layout for a language: [{ word, keys }] in frequency order. Words whose
- * letters cannot form a free chord on this layout are left out (they are typed as usual).
- * @param {(text: string) => string} adaptWord makes the word typeable on the layout (QWERTY umlauts)
+ * The chord table of a layout for a language: [{ word, keys }] in frequency order. Words are made
+ * typeable on the layout first (QWERTY: ä → ae). Words whose letters cannot form a free chord on
+ * this layout are left out (they are typed as usual).
  */
-export function chordTable(layout, lang, adaptWord = (w) => w) {
+export function chordTable(layout, lang) {
   const id = `${layout.id}/${lang}`;
   if (cache.has(id)) return cache.get(id);
   const used = new Set();
   const table = [];
   for (const raw of words(lang)) {
-    const word = adaptWord(raw).toLocaleLowerCase('de-DE');
+    const word = adapt(raw, layout).toLowerCase();
     const letters = [...new Set(word)].filter(
       (ch) => /\p{L}/u.test(ch) && locate(layout, ch)?.layer === 0,
     );

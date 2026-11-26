@@ -132,27 +132,6 @@ export function sentenceText(lang, rng, chars, ok) {
   return out.join(' ');
 }
 
-export function symbolsText(rng, count, ok) {
-  const names = ['a', 'b', 'x', 'y', 'n', 'sum', 'max', 'list', 'item', 'total'];
-  const forms = [
-    () => `(${pick(rng, names)} + ${pick(rng, names)})`,
-    () => `[${Math.floor(rng() * 10)}]`,
-    () => `{${pick(rng, names)}}`,
-    () => `${pick(rng, names)} = ${Math.floor(rng() * 100)}`,
-    () => `${pick(rng, names)} < ${pick(rng, names)}`,
-    () => `${pick(rng, names)} > ${Math.floor(rng() * 10)}`,
-    () => `${pick(rng, names)} * ${Math.floor(rng() * 10)}`,
-    () => `${pick(rng, names)} / ${Math.floor(rng() * 9) + 1}`,
-    () => `<${pick(rng, names)}>`,
-  ];
-  const out = [];
-  while (out.length < count / 2) {
-    const piece = pick(rng, forms)();
-    if (ok(piece)) out.push(piece);
-  }
-  return out.join(' ');
-}
-
 /** Free practice: prose by difficulty. */
 export function practiceText(lang, difficulty, rng) {
   if (difficulty === 'leicht') return wordsText(lang, rng, 25);

@@ -723,6 +723,8 @@ kbd {
   font-size: var(--mn-fs-xl);
 }
 .tt-tree-children {
+  list-style: none;
+  margin: 0;
   display: grid;
   gap: var(--mn-s4);
   padding-left: var(--mn-s4);
@@ -760,7 +762,7 @@ kbd {
 .tt-course.is-focus {
   box-shadow: 0 0 0 2px var(--mn-accent);
 }
-.tt-course.is-locked h3 {
+.tt-course.is-locked :is(h2, h3, h4) {
   color: var(--mn-muted);
 }
 .tt-course-head {
@@ -770,7 +772,7 @@ kbd {
   justify-content: space-between;
   gap: var(--mn-s2);
 }
-.tt-course-head h3 {
+.tt-course-head :is(h2, h3, h4) {
   display: flex;
   align-items: center;
   gap: var(--mn-s2);
