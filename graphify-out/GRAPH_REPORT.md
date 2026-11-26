@@ -1,24 +1,24 @@
 # Graph Report - PrivateAppHosting  (2026-11-26)
 
 ## Corpus Check
-- 979 files · ~804,740 words
+- 991 files · ~811,830 words
 - Verdict: corpus is large enough that graph structure adds value.
-- Unclassified: 74 file(s) not represented in the graph (top: .css 25, (none) 21, .patch 8)
+- Unclassified: 81 file(s) not represented in the graph (top: (none) 28, .css 25, .patch 8)
 
 ## Summary
-- 7196 nodes · 16591 edges · 492 communities (333 shown, 159 thin omitted)
-- Extraction: 97% EXTRACTED · 3% INFERRED · 0% AMBIGUOUS · INFERRED: 518 edges (avg confidence: 0.89)
+- 7277 nodes · 16778 edges · 491 communities (330 shown, 161 thin omitted)
+- Extraction: 97% EXTRACTED · 3% INFERRED · 0% AMBIGUOUS · INFERRED: 519 edges (avg confidence: 0.89)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `41796f5d`
+- Built from commit: `73011ad5`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
 - Suite.tsx
 - MapView.tsx
-- hooks.ts
+- ref_node_crypto
 - typetrainer.test.js
 - ai-proxy/src/index.ts
 - schema.ts
@@ -31,7 +31,7 @@
 - wunschliste/app.js
 - notizen/mininode.json
 - runtimes.ts
-- lib/push.ts
+- AuthProvider.tsx
 - seed.ts
 - 20260923000300_ai_budget.sql
 - control.test.ts
@@ -47,7 +47,7 @@
 - bootstrap.sh
 - medialog/src/i18n.ts
 - sportplaner/js/editor.js
-- mininode
+- routes/google.ts
 - nucbox-deploy
 - kb.sh
 - ListenView.tsx
@@ -64,7 +64,7 @@
 - backup.sh
 - entrypoint.sh
 - typetrainer/js/app.js
-- api/src/index.ts
+- problem
 - platform.admin_ai_usage
 - ai-proxy/README.md
 - routes/gcal.ts
@@ -87,13 +87,13 @@
 - prompts.test.ts
 - codeknacker/app.js
 - 20260928100740_app_identity.sql
-- desktop/index.ts
+- api/src/index.ts
 - prompts.ts
 - createBirthdayView
 - gate.test.ts
 - ui.js
 - preview.js
-- ref_react
+- useStepUp
 - ref_vitest
 - 20260928145158_push_notifications.sql
 - 20260929082657_app_catalog.sql
@@ -112,15 +112,15 @@
 - Sportplaner
 - ci-clean-secret.sh
 - tables.js
-- offline.ts
+- createMininode
 - ADR 0006: Host-level API keys for external APIs
 - import-export.md
 - notifications.md
 - 006_list_access.sql
 - stats.md
-- createMininode
+- mininode
 - lightcraft/build.mjs
-- kalender/app.js
+- t
 - aether-notes/src/App.tsx
 - bill-the-splitter/src/App.tsx
 - sort.test.js
@@ -128,7 +128,7 @@
 - sonstiges.md
 - memory/app.js
 - n2048/app.js
-- routes/push.ts
+- adminClient
 - Uninstall an app
 - files.test.ts
 - kit/game.test.ts
@@ -142,7 +142,7 @@
 - forms.md
 - keyboard.md
 - lists.md
-- Upload.tsx
+- kalender/app.js
 - onboarding.md
 - performance.md
 - print.md
@@ -159,7 +159,7 @@
 - rework.md
 - familie.md
 - solitaer/app.js
-- ref_node_path
+- restore.ts
 - werkzeug.md
 - pwa.js
 - 20260929073053_api_keys.sql
@@ -170,18 +170,18 @@
 - mediaApis.ts
 - t
 - routes/submissions.ts
-- openEditor
+- h
 - memory/mininode.json
 - 20261001150000_uploads_drawers_personal_keys.sql
 - medialog/mininode.json
 - designcraft/mininode.json
 - calendar-sources.spec.ts
-- export.ts
+- manifest/src/index.ts
 - wordcraft/mininode.json
 - subset-icons.py
 - compat.ts
 - Games.tsx
-- ref_node_fs
+- deploy/index.ts
 - portal/src/main.tsx
 - comments.md
 - 001_shares.sql
@@ -208,13 +208,13 @@
 - game-save.md
 - wikiLib.ts
 - game-touch.md
-- apps-verstehen.md
+- Viewers.tsx
 - test.sh
 - suite.js
-- convert.ts
+- ref_node_fs
 - groupedWhen
 - runbooks/README.md
-- Haushalt
+- openEditor
 - kalender/map.js
 - filmcraft/mininode.json
 - lightcraft/mininode.json
@@ -230,7 +230,7 @@
 - publish-export.sh
 - game-sound.md
 - t
-- options.ts
+- ref_node_path
 - MiniNode App Kit: design system for hosted apps
 - README-cloud.md
 - cloud-stack.sh
@@ -238,7 +238,7 @@
 - game.js
 - haushalt/db/001_init.sql
 - MiniNode.app
-- sudoku/app.js
+- install.ts
 - createUser
 - aether-birthdays.spec.ts
 - Codeknacker
@@ -253,15 +253,15 @@
 - programm.md
 - platform.profiles
 - aether-map.spec.ts
-- Decision
+- deploy/library.ts
 - haushalt.test.js
-- editBooking
-- plan.js
+- haushalt/app.js
+- fixedRow
 - haushalts-inventar/mininode.json
 - reiseplaner.brief.md
-- haushalt/app.js
+- formsView
 - sdk-preview.js
-- kit/i18n.test.ts
+- options.ts
 - Uploads: web apps and programs from Verwaltung
 - statement.js
 - quota.js
@@ -289,7 +289,7 @@
 - Kalender and Google Calendar sync
 - language.spec.ts
 - mfa.spec.ts
-- AuthProvider.tsx
+- items.js
 - sicherung.md
 - musescore/build.mjs
 - games-more.spec.ts
@@ -301,7 +301,7 @@
 - ADR 0020: Uninstalling apps from Verwaltung
 - projekte.brief.md
 - arbeitsregeln.md
-- views.js
+- NucBox.tsx
 - LightCraft
 - Page
 - ref_playwright_test
@@ -328,7 +328,7 @@
 - app-bibliothek-programme.md
 - fetch
 - ADR 0005: Push notifications, installable apps and offline data
-- state.js
+- sudoku/app.js
 - tests-ci.md
 - 004_birthdays.sql
 - io.js
@@ -336,7 +336,7 @@
 - ref_exceljs
 - ref_path
 - Workshop.tsx
-- routes/google.ts
+- sudoku/test/logic.test.js
 - aether-notes/src/mininode.ts
 - ADR 0030: Prompt variants per tool and a starter package for building outside MiniNode
 - buildSoundFont
@@ -344,10 +344,10 @@
 - sportplaner/db/001_init.sql
 - mininode-desktop
 - keep-app-schemas.sh
-- Backups.tsx
+- state.js
 - musescore/mininode.json
 - typetrainer/mininode.json
-- src/api.ts
+- sdk/src/config.ts
 - mn-scores.js
 - offline.md
 - ADR 0024: AI web search for apps that need current facts
@@ -355,6 +355,7 @@
 - mn-plugins.js
 - 20261006130000_profile_birthday.sql
 - wunschliste.spec.ts
+- files.js
 - 104_teams.test.sql
 - briefs/README.md
 - birthdays.md
@@ -362,18 +363,18 @@
 - mn-data.js
 - leaflet-heat-module.d.ts
 - courseDates
-- You are building an app for MiniNode
-- sdk-preview.test.ts
-- deploy/uninstall.ts
-- rollen-zugriff.md
-- sudoku/test/logic.test.js
-- kalender.spec.ts
 - desktop-host/src/main.ts
+- sdk-preview.test.ts
+- ADR 0003: Construction prompts, app kit and the suite build order
+- rollen-zugriff.md
+- offline-auth.test.ts
+- kalender.spec.ts
+- 20261126090000_instance_settings.sql
 - craft-builds.sh
 - Variant 1: Cloudflare only
 - musescore.md
 - Variant 2: Desktop only
-- MuseScore Studio
+- game.ts
 - env.sh
 - cad/mininode.json
 - typetrainer/db/001_init.sql
@@ -383,13 +384,13 @@
 - PhotoCraft
 - sdk-stub.js
 - aktualisieren.md
-- Status and handoff
+- daten-speichern.md
 - mn-midi.js
-- platform
+- ref_react
 - ADR 0026: Instance configuration, desktop edition and starter package
 - ADR 0027: First-run setup creates the admin account
 - ADR 0028: One-click updates for the platform and for apps with a GitHub repository
-- host.test.ts
+- ADR 0032: The installed portal shows apps (and optionally outside websites) in its own viewers
 - einrichten.md
 - ms-ninja.sh
 - ci-changes.sh
@@ -398,7 +399,7 @@
 - Releases and downloads
 - Variant 3: Cloudflare and a home server
 - kalender-map.spec.ts
-- AccountKeys.tsx
+- detail.js
 - app_wunschliste.wishlist
 - install.sh script
 - MiniNode
@@ -414,16 +415,16 @@
 - README-starter.md
 - cli/README.md
 - platform.app_sets
-- sdk/src/config.ts
+- browser.ts
 - 20261125090000_ai_models.sql
-- ref_node_child_process
+- Status and handoff
 - ADR 0029: Apps as ZIP files, apps from a GitHub link, and automatic app updates
 - App
 - ADR 0031: Admins write readonly apps, and the AI models are set in Verwaltung
 - game
 - backup.js
 - 20261125090100_readonly_admin_writes.sql
-- daten-speichern.md
+- TableHandle
 - readonly-content.md
 - 106_readonly_admin_writes.test.sql
 - ADR 0022: Lists are tables, kv is for settings
@@ -432,36 +433,34 @@
 - platform.apps
 - platform.submissions
 - ki-proxy.md
-- ADR 0003: Construction prompts, app kit and the suite build order
+- Decision
 - leaflet-heat.d.ts
 - Getting started: pick your variant
 - ai-chat.md
 - ai-vision.md
 - multiplayer.md
-- gemeinsame-daten.md
+- host.test.ts
 - tables.md
 - wasm.md
 - organisation.md
 - solid.js
 - hosted/AGENTS.md
 - mark-program-apps.sh
-- actions.js
-- detail.js
+- write
 - PdfCraft
-- Kalender
-- WordCraft
-- ueberblick.md
-- TableHandle
+- files-framed.test.ts
+- You are building an app for MiniNode
+- fehlerbehebung.md
+- gemeinsame-daten.md
 - ADR 0014: API keys: site-wide or personal
-- Bill the Splitter
+- ueberblick.md
 - CAD
 - FilmCraft
-- write
+- apps-verstehen.md
 - App-Bibliothek
 - generate-short-spec.ts
 - cad.md
-- push-offline.md
-- server.mjs
+- price.test.js
 - render.test.js
 - Typetrainer
 - migration.md
@@ -469,11 +468,11 @@
 ## God Nodes (most connected - your core abstractions)
 1. `mountEditor()` - 126 edges
 2. `t()` - 81 edges
-3. `platform()` - 63 edges
+3. `platform()` - 67 edges
 4. `t()` - 57 edges
-5. `t()` - 52 edges
-6. `el()` - 51 edges
-7. `supabase()` - 50 edges
+5. `supabase()` - 52 edges
+6. `t()` - 52 edges
+7. `el()` - 51 edges
 8. `main()` - 49 edges
 9. `t()` - 48 edges
 10. `t()` - 47 edges
@@ -493,7 +492,7 @@
 ## Import Cycles
 - None detected.
 
-## Communities (492 total, 159 thin omitted)
+## Communities (491 total, 161 thin omitted)
 
 ### Community 0 - "Suite.tsx"
 Cohesion: 0.14
@@ -503,9 +502,9 @@ Nodes (15): Access, ACCESS_LABEL, LEVELS, MatrixRow, openRank(), SortKey, sortRo
 Cohesion: 0.15
 Nodes (27): DEFAULTS, Entry, escapeHtml(), initials(), Layer, MapView(), Mode, Prefs (+19 more)
 
-### Community 2 - "hooks.ts"
-Cohesion: 0.13
-Nodes (24): AUTH_COPY, authEmail(), AuthEmailAction, Email, escapeHtml(), inviteEmail(), layout(), clientIdentifier() (+16 more)
+### Community 2 - "ref_node_crypto"
+Cohesion: 0.09
+Nodes (27): enabled, RFC-6238, AUTH_COPY, authEmail(), AuthEmailAction, Email, escapeHtml(), inviteEmail() (+19 more)
 
 ### Community 3 - "typetrainer.test.js"
 Cohesion: 0.08
@@ -517,7 +516,7 @@ Nodes (45): app, AppAi, appCache, buildDeps(), createApp(), defaultDeps(), Deps,
 
 ### Community 5 - "schema.ts"
 Cohesion: 0.04
-Nodes (53): infra_nucbox_library, jsonSchema, target, GITHUB_REPO, githubRepoSchema, valid, wrongKind, LIBRARY (+45 more)
+Nodes (53): jsonSchema, target, GITHUB_REPO, githubRepoSchema, packages_manifest_src_index_apiserviceschema, packages_manifest_src_index_googleconnectsrc, packages_manifest_src_index_googlescopes, valid (+45 more)
 
 ### Community 6 - "20260923000100_platform_core.sql"
 Cohesion: 0.12
@@ -533,7 +532,7 @@ Nodes (44): CHORD_WINDOW, createChordInput(), chordKey(), accuracy(), AUTO, back
 
 ### Community 9 - "sdk/src/index.ts"
 Cohesion: 0.06
-Nodes (31): Role, ADR-0002, ADR-0004, ADR-0005, ADR-0006, ADR-0009, ADR-0022, ADR-0023 (+23 more)
+Nodes (34): Role, ADR-0002, ADR-0004, ADR-0005, ADR-0006, ADR-0009, ADR-0022, ADR-0023 (+26 more)
 
 ### Community 10 - "rezeptideen/mininode.json"
 Cohesion: 0.11
@@ -555,9 +554,9 @@ Nodes (16): ai, maxOutputTokens, models, monthlyBudgetEur, build, command, outpu
 Cohesion: 0.12
 Nodes (11): Config, Hypervisor, createScheduler(), prepareWine(), GuacConnection, PrepareRequest, PrepareResult, RuntimeConfig (+3 more)
 
-### Community 15 - "lib/push.ts"
-Cohesion: 0.14
-Nodes (22): applicationServerKey(), deviceStatus, disablePush(), enablePush(), isIos(), isStandalone(), listenForRenewals(), owner() (+14 more)
+### Community 15 - "AuthProvider.tsx"
+Cohesion: 0.10
+Nodes (36): AuthContext, AuthProvider(), AuthState, Profile, Role, handOverGoogleGrant(), scrubProviderTokens(), forgetOfflineCopies() (+28 more)
 
 ### Community 16 - "seed.ts"
 Cohesion: 0.18
@@ -568,8 +567,8 @@ Cohesion: 0.17
 Nodes (12): ai_usage_app_month_idx, ai_usage_open_idx, ai_usage_user_month_idx, platform.ai_budgets, platform.ai_spent_micro(), platform.ai_usage, platform.my_ai_budget(), auth (+4 more)
 
 ### Community 18 - "control.test.ts"
-Cohesion: 0.10
-Nodes (23): cachedGrants(), config, TOKEN, ContainerInfo, demuxLogs(), dockerEngine, RunSpec, createInstaller() (+15 more)
+Cohesion: 0.11
+Nodes (16): cachedGrants(), forbiddenPage(), forwardAuth(), pick(), slugFromHost(), config, TOKEN, ContainerInfo (+8 more)
 
 ### Community 19 - "platform.remote_sessions"
 Cohesion: 0.22
@@ -580,8 +579,8 @@ Cohesion: 0.17
 Nodes (11): access, default, data, mode, description, kind, name, $schema (+3 more)
 
 ### Community 21 - "sudoku/logic.js"
-Cohesion: 0.16
-Nodes (30): App type: travel and trips, buildBoard(), label(), bit(), box(), col(), combos(), count() (+22 more)
+Cohesion: 0.22
+Nodes (23): buildBoard(), bit(), box(), col(), combos(), count(), countSolutions(), DIGITS_OF (+15 more)
 
 ### Community 22 - "update/index.ts"
 Cohesion: 0.12
@@ -601,7 +600,7 @@ Nodes (18): platform.team_can(), platform.team_create(), platform.team_list(), p
 
 ### Community 26 - "supabase"
 Cohesion: 0.07
-Nodes (70): useAuth(), CodeForm(), connectGoogle(), disconnectGoogle(), GOOGLE_CONNECTED, googleEnabled(), googleErrorFromUrl(), googleHandOverDone() (+62 more)
+Nodes (65): useAuth(), CodeForm(), connectGoogle(), disconnectGoogle(), GOOGLE_CONNECTED, googleEnabled(), googleErrorFromUrl(), googleHandOverDone() (+57 more)
 
 ### Community 27 - "render.ts"
 Cohesion: 0.07
@@ -616,12 +615,12 @@ Cohesion: 0.19
 Nodes (10): Header(), HeaderProps, i18nReady(), kit(), MnI18n, Params, ADR-0017, useLanguage() (+2 more)
 
 ### Community 30 - "sportplaner/js/editor.js"
-Cohesion: 0.08
-Nodes (41): addPhotos(), BLOCK_HANDLERS, blockHead(), blocksToSlots(), blockTitle(), cancelEdit(), collectForm(), courseFieldSync() (+33 more)
+Cohesion: 0.05
+Nodes (66): applyLocal(), H, persist(), removeAct(), toast(), togglePlan(), addPhotos(), BLOCK_HANDLERS (+58 more)
 
-### Community 31 - "mininode"
-Cohesion: 0.16
-Nodes (10): App(), root, Recipe, suggestRecipes(), fixtures_ai_studio_expected_rezeptideen_src_styles, App(), hosted_haushalts_inventar_src_index, mininode (+2 more)
+### Community 31 - "routes/google.ts"
+Cohesion: 0.12
+Nodes (19): aesKey(), base64(), GoogleAccessToken, googleAccount(), GoogleError, GoogleSettings, revoke(), seal() (+11 more)
 
 ### Community 32 - "nucbox-deploy"
 Cohesion: 0.45
@@ -653,7 +652,7 @@ Nodes (5): Addendum (2026-09): Google sign-in and authenticator apps, ADR 0001: 
 
 ### Community 40 - "doctor.ts"
 Cohesion: 0.04
-Nodes (67): Branches und Pull Requests, Cloud-Sitzungen: Besonderheiten, Skills und Agenten (`.claude/`), Typische Aufträge, Vor dem Ende einer Sitzung, Anmelden, Zugriff, Daten und Schlüssel, Desktop-Version (+59 more)
+Nodes (60): Branches und Pull Requests, Cloud-Sitzungen: Besonderheiten, Skills und Agenten (`.claude/`), Typische Aufträge, Vor dem Ende einer Sitzung, Einrichten (einmalig), Meldung „GitHub hat den Start abgelehnt“, Selbst ausprobieren (+52 more)
 
 ### Community 43 - "bill-the-splitter/mininode.json"
 Cohesion: 0.09
@@ -671,9 +670,9 @@ Nodes (3): app_haushalt.entries, app_pinnwand.notes, app_rezepte.recipes
 Cohesion: 0.18
 Nodes (38): boot(), busy(), courseCard(), courseName(), currentCourse(), levelCounts(), levelTitle(), main() (+30 more)
 
-### Community 50 - "api/src/index.ts"
-Cohesion: 0.05
-Nodes (72): maintenance(), scheduled(), ADR-0010, ADR-0013, AppContext, problem(), requireUser(), verifierFor() (+64 more)
+### Community 50 - "problem"
+Cohesion: 0.06
+Nodes (46): problem(), deployEnvironment(), artifactDownloadUrl(), dispatchWorkflow(), githubGet(), githubHeaders(), githubReadRepo(), notConfigured() (+38 more)
 
 ### Community 51 - "platform.admin_ai_usage"
 Cohesion: 0.40
@@ -681,15 +680,15 @@ Nodes (3): platform.ai_usage, platform.admin_ai_usage(), platform.profiles
 
 ### Community 53 - "routes/gcal.ts"
 Cohesion: 0.07
-Nodes (50): @mininode/api — `api.mininode.app`, applyItem, COLOR_IDS, DEFAULT_TZ, eventBody(), eventFields(), exdatesOf(), formatters (+42 more)
+Nodes (53): @mininode/api — `api.mininode.app`, applyItem, COLOR_IDS, DEFAULT_TZ, eventBody(), eventFields(), exdatesOf(), formatters (+45 more)
 
 ### Community 62 - "20260930082805_suite_core.sql"
 Cohesion: 0.10
 Nodes (31): collection_members_user_idx, collections_personal_key, platform.admin_suite_matrix(), platform.app_type_grants, platform.app_type_requests, platform.collection_create(), platform.collection_families, platform.collection_members (+23 more)
 
 ### Community 66 - "Home.tsx"
-Cohesion: 0.06
-Nodes (71): Catalog(), idFor(), ADR-0007, words(), AppIcon(), AppsIcon(), base(), BellIcon() (+63 more)
+Cohesion: 0.05
+Nodes (75): Catalog(), idFor(), ADR-0007, words(), AppIcon(), AppsIcon(), BackIcon(), base() (+67 more)
 
 ### Community 67 - "minensucher/app.js"
 Cohesion: 0.15
@@ -715,9 +714,9 @@ Nodes (23): add(), clock, current, ended(), feedbackText(), game, newRound(), pa
 Cohesion: 0.24
 Nodes (5): app_origins_app_slug_idx, platform.app_origins, platform.calling_app(), platform, platform.apps
 
-### Community 82 - "desktop/index.ts"
-Cohesion: 0.13
-Nodes (25): dirs, settings, desktopFiles(), DesktopSettings, envFile(), quote(), createDesktopAccount(), initDesktop() (+17 more)
+### Community 82 - "api/src/index.ts"
+Cohesion: 0.07
+Nodes (38): ADR-0010, ADR-0013, AppContext, requireUser(), verifierFor(), frameable(), frameCheck, log() (+30 more)
 
 ### Community 83 - "prompts.ts"
 Cohesion: 0.10
@@ -728,8 +727,8 @@ Cohesion: 0.21
 Nodes (23): euro(), locale(), parseLink(), parsePrice(), titleFromPath(), createBirthdayView(), ideaRow(), load() (+15 more)
 
 ### Community 85 - "gate.test.ts"
-Cohesion: 0.11
-Nodes (27): forbiddenPage(), forwardAuth(), ForwardAuthOptions, pick(), slugFromHost(), decide(), DecideInput, Decision (+19 more)
+Cohesion: 0.16
+Nodes (15): decide(), DecideInput, Decision, loginUrl(), refreshUrl(), url, base64UrlToString(), createVerifier() (+7 more)
 
 ### Community 86 - "ui.js"
 Cohesion: 0.20
@@ -739,13 +738,13 @@ Nodes (15): closeCurrent(), deepActiveElement(), enhanceAll(), enhanceField(), c
 Cohesion: 0.50
 Nodes (3): current, levels, saved
 
-### Community 88 - "ref_react"
-Cohesion: 0.05
-Nodes (74): AdminLayout(), dateTime(), euro(), EXTERNAL, KNOWLEDGE, LINKS, useMissingKeys(), Ai() (+66 more)
+### Community 88 - "useStepUp"
+Cohesion: 0.04
+Nodes (81): AdminLayout(), dateTime(), euro(), EXTERNAL, KNOWLEDGE, LINKS, useMissingKeys(), Ai() (+73 more)
 
 ### Community 90 - "ref_vitest"
 Cohesion: 0.04
-Nodes (65): enabled, RFC-6238, enabled, ADR-0006, ApiEnv, ADR-0004, ADR-0005, ADR-0006 (+57 more)
+Nodes (65): enabled, ADR-0006, ApiEnv, ADR-0004, ADR-0005, ADR-0006, ADR-0011, enabled (+57 more)
 
 ### Community 91 - "20260928145158_push_notifications.sql"
 Cohesion: 0.13
@@ -756,12 +755,12 @@ Cohesion: 0.09
 Nodes (20): platform.app_set_items, platform.apps_auto_category, platform.recategorize_apps, app_categories_recategorize, app_favorites_app_slug_idx, app_opens_app_slug_idx, app_set_items_app_slug_idx, apps_auto_category (+12 more)
 
 ### Community 93 - "nucbox-control/src/main.ts"
-Cohesion: 0.09
-Nodes (27): bool, checked, loadConfig(), schema, app, config, containerResources, docker (+19 more)
+Cohesion: 0.08
+Nodes (28): bool, checked, loadConfig(), schema, app, config, containerResources, docker (+20 more)
 
 ### Community 94 - "server.ts"
-Cohesion: 0.14
-Nodes (11): @mininode/nucbox-control, Installer, ResourceReport, Scheduler, bearer(), createServer(), installSchema, prepareSchema (+3 more)
+Cohesion: 0.13
+Nodes (13): @mininode/nucbox-control, ForwardAuthOptions, Installer, ResourceReport, Scheduler, bearer(), createServer(), installSchema (+5 more)
 
 ### Community 95 - "20260928132539_mfa_enforcement.sql"
 Cohesion: 0.22
@@ -788,8 +787,8 @@ Cohesion: 0.11
 Nodes (17): access, default, apis, data, mode, description, i18n, default (+9 more)
 
 ### Community 103 - "rrule.js"
-Cohesion: 0.09
-Nodes (47): applyEdit(), cancelReminders(), deleteItem(), isFirst(), reminderKey(), scheduleReminders(), syncReminders(), dateInput() (+39 more)
+Cohesion: 0.16
+Nodes (24): parseDateParam(), fromInputs(), moveToDay(), nextReminder(), parseOffset(), ruleFrom(), shiftKeys(), shiftSeries() (+16 more)
 
 ### Community 104 - "Medialog"
 Cohesion: 0.22
@@ -803,9 +802,9 @@ Nodes (14): coursePrices(), normSports(), sportsOf(), parseEuro(), splitCoursePr
 Cohesion: 0.23
 Nodes (17): ACT_KEYS, actRow(), actTable(), clamp(), clip(), colOf(), COLUMN_OF, copyFromKv() (+9 more)
 
-### Community 108 - "offline.ts"
+### Community 108 - "createMininode"
 Cohesion: 0.08
-Nodes (32): createKv(), failure(), Json, KvScope, createOfflineKv(), exclusive(), indexedDbStore(), isNetworkError() (+24 more)
+Nodes (35): appSchema(), createMininode(), createKv(), failure(), Json, KvScope, createOfflineKv(), exclusive() (+27 more)
 
 ### Community 109 - "ADR 0006: Host-level API keys for external APIs"
 Cohesion: 0.14
@@ -815,17 +814,17 @@ Nodes (11): ADR 0006: Host-level API keys for external APIs, Consequences, Conte
 Cohesion: 0.21
 Nodes (14): app_wunschliste.can_see(), app_wunschliste.find_person(), app_wunschliste.list_settings, app_wunschliste.list_viewers, app_wunschliste.people(), app_wunschliste.reserve(), app_wunschliste.wishlist(), list_settings_touch (+6 more)
 
-### Community 114 - "createMininode"
-Cohesion: 0.11
-Nodes (12): appSchema(), createMininode(), config, ADR-0005, user, config, ADR-0030, enabled (+4 more)
+### Community 114 - "mininode"
+Cohesion: 0.16
+Nodes (10): App(), root, Recipe, suggestRecipes(), fixtures_ai_studio_expected_rezeptideen_src_styles, App(), hosted_haushalts_inventar_src_index, mininode (+2 more)
 
 ### Community 115 - "lightcraft/build.mjs"
 Cohesion: 0.11
 Nodes (20): boot, cache, dist, german, has(), here, markers, officialZip() (+12 more)
 
-### Community 116 - "kalender/app.js"
-Cohesion: 0.07
-Nodes (78): appColorPicker(), appUrl(), askScope(), baseFields(), chip(), colorName(), colorPicker(), confirmButton() (+70 more)
+### Community 116 - "t"
+Cohesion: 0.20
+Nodes (26): appColorPicker(), colorName(), colorPicker(), errorText(), exportIcs(), googleErrorText(), googleSoon(), importIcs() (+18 more)
 
 ### Community 117 - "aether-notes/src/App.tsx"
 Cohesion: 0.14
@@ -851,9 +850,9 @@ Nodes (21): cardLabel(), clock(), elapsed(), ADR-0009, pick(), render(), renderP
 Cohesion: 0.20
 Nodes (22): board, clock, describe(), finish(), game, KEYS, newRound(), random() (+14 more)
 
-### Community 125 - "routes/push.ts"
+### Community 125 - "adminClient"
 Cohesion: 0.10
-Nodes (33): concat(), ecdhWith(), encoder, EncryptOptions, encryptPayload(), fromBase64Url(), hkdf(), p256Jwk() (+25 more)
+Nodes (38): maintenance(), scheduled(), adminClient(), concat(), ecdhWith(), encoder, EncryptOptions, encryptPayload() (+30 more)
 
 ### Community 126 - "Uninstall an app"
 Cohesion: 0.33
@@ -864,8 +863,8 @@ Cohesion: 0.17
 Nodes (10): buttonNamed(), Handle, nativeAnchorClick, nativeInputClick, sheet(), stored, upload, Win (+2 more)
 
 ### Community 128 - "kit/game.test.ts"
-Cohesion: 0.18
-Nodes (3): Clock, MnGame, source
+Cohesion: 0.15
+Nodes (4): Feature: the mnGame kit helper (games built in the repository), Clock, MnGame, source
 
 ### Community 129 - "20260929141832_game_hub.sql"
 Cohesion: 0.19
@@ -888,24 +887,24 @@ Cohesion: 0.11
 Nodes (18): access, default, data, mode, description, game, genre, players (+10 more)
 
 ### Community 134 - "t"
-Cohesion: 0.14
-Nodes (47): App type: archive and collection, App type: finance, adoptAmount(), barRow(), bookingList(), bookingRow(), bookings(), catLabel() (+39 more)
+Cohesion: 0.13
+Nodes (47): App type: finance, applyRules(), barRow(), bookingList(), bookingRow(), bookings(), catLabel(), catName() (+39 more)
 
 ### Community 135 - "20260928143037_google_grants.sql"
 Cohesion: 0.40
 Nodes (4): google_grants_touch, platform.google_grants, auth.users, platform.touch_updated_at
 
-### Community 139 - "Upload.tsx"
-Cohesion: 0.21
-Nodes (15): SubmissionCard(), TONE, ADR-0013, ADR-0029, Upload(), UploadConfig, apiUpload(), formatSize() (+7 more)
+### Community 139 - "kalender/app.js"
+Cohesion: 0.10
+Nodes (34): applyEdit(), baseFields(), cancelReminders(), confirmButton(), deleteItem(), events(), F, firstLoad (+26 more)
 
 ### Community 144 - "haushalt/store.js"
 Cohesion: 0.10
-Nodes (42): exportBackup(), importBackup(), refresh(), runRecurring(), saveProfile(), cents(), cleanBooking(), cleanRecurring() (+34 more)
+Nodes (45): adoptAmount(), ensureProfile(), importBackup(), refresh(), saveProfile(), cents(), cleanBooking(), cleanProfile() (+37 more)
 
 ### Community 146 - "bin.ts"
 Cohesion: 0.07
-Nodes (52): currentCommit(), envFlag(), flag(), INIT_FLAGS, main(), ROOT, appsSinceDeployed(), readDeployedVersions() (+44 more)
+Nodes (54): envFlag(), flag(), INIT_FLAGS, main(), ROOT, appsSinceDeployed(), readDeployedVersions(), configuredDomain() (+46 more)
 
 ### Community 151 - "vapid-keys.ts"
 Cohesion: 0.40
@@ -919,9 +918,9 @@ Nodes (16): StarRating(), StarRatingProps, ApiSearchResult, SearchCategoryTarget
 Cohesion: 0.12
 Nodes (43): act(), afterMove(), begin(), card0(), cardEl(), cardName(), clock, cursor (+35 more)
 
-### Community 157 - "ref_node_path"
+### Community 157 - "restore.ts"
 Cohesion: 0.07
-Nodes (57): App type: office and documents, folder(), AUTH_TABLES, createBackup(), CreateOptions, READABLE_SETTINGS, readableRow(), readme() (+49 more)
+Nodes (57): App type: office and documents, folder(), AUTH_TABLES, createBackup(), CreateOptions, currentCommit(), READABLE_SETTINGS, readableRow() (+49 more)
 
 ### Community 161 - "20260929073053_api_keys.sql"
 Cohesion: 0.27
@@ -952,12 +951,12 @@ Cohesion: 0.15
 Nodes (34): DetailSheet(), DetailSheetProps, EditorSheetProps, MediaRow(), MediaRowProps, MediaTile(), MediaTileProps, locale() (+26 more)
 
 ### Community 170 - "routes/submissions.ts"
-Cohesion: 0.09
-Nodes (35): hex(), readCapped(), sha256Hex(), deployEnvironment(), DigestStreamClass, putInstaller(), r2Configured(), argsSchema (+27 more)
+Cohesion: 0.13
+Nodes (27): hex(), readCapped(), sha256Hex(), DigestStreamClass, putInstaller(), r2Configured(), argsSchema, audit() (+19 more)
 
-### Community 171 - "openEditor"
-Cohesion: 0.16
-Nodes (31): addDays(), agenda(), colorsOf(), dayLabel(), dayList(), dayStart(), imagesOn(), imageSwitch() (+23 more)
+### Community 171 - "h"
+Cohesion: 0.15
+Nodes (34): addDays(), agenda(), chip(), colorsOf(), dayLabel(), dayList(), dayStart(), googleButton() (+26 more)
 
 ### Community 172 - "memory/mininode.json"
 Cohesion: 0.11
@@ -975,9 +974,9 @@ Nodes (18): access, default, apis, build, command, output, data, mode (+10 more)
 Cohesion: 0.11
 Nodes (18): access, default, build, command, output, data, mode, description (+10 more)
 
-### Community 177 - "export.ts"
-Cohesion: 0.13
-Nodes (21): BINARY_OK, checkFile(), checkOut(), Entry, exportApp(), ExportResult, Finding, git() (+13 more)
+### Community 177 - "manifest/src/index.ts"
+Cohesion: 0.08
+Nodes (32): SubmissionRow, Call, env, hosted, BINARY_OK, checkFile(), checkOut(), Entry (+24 more)
 
 ### Community 178 - "wordcraft/mininode.json"
 Cohesion: 0.11
@@ -988,20 +987,20 @@ Cohesion: 0.22
 Nodes (12): argparse, fonttools_subset, fonttools_ttlib, Path, pathlib, re, find_font(), main() (+4 more)
 
 ### Community 180 - "compat.ts"
-Cohesion: 0.06
-Nodes (30): ADR 0013: Uploads in Verwaltung, script-first integration, Consequences, Context, Decision, Recently shipped, Ende September 2026, Oktober 2026, What the build changes (+22 more)
+Cohesion: 0.05
+Nodes (36): ADR 0013: Uploads in Verwaltung, script-first integration, Consequences, Context, Decision, Recently shipped, Ende September 2026, Oktober 2026, Data (+28 more)
 
 ### Community 181 - "Games.tsx"
-Cohesion: 0.10
-Nodes (42): ReorderGrid(), appUrl(), applyOrder(), moveItem(), scopeOf, apps, ADR-0013, Achievement (+34 more)
+Cohesion: 0.08
+Nodes (49): Installed, Library(), ADR-0011, version(), ReorderGrid(), appUrl(), applyOrder(), moveItem() (+41 more)
 
-### Community 182 - "ref_node_fs"
-Cohesion: 0.05
-Nodes (58): ENTRIES, REPO, Pack, source, { splitCoursePrice, parseEuro }, parsed, production, desktopDataDir() (+50 more)
+### Community 182 - "deploy/index.ts"
+Cohesion: 0.06
+Nodes (56): removeObjects(), parsed, production, desktopDataDir(), installDesktopApp(), removeDesktopApp(), appAddress(), checkDatabaseSettings() (+48 more)
 
 ### Community 183 - "portal/src/main.tsx"
-Cohesion: 0.09
-Nodes (27): TABS, Bar(), gb(), mb(), NucBox(), pct(), Report, share() (+19 more)
+Cohesion: 0.06
+Nodes (39): TABS, ADR-0028, ADR-0029, load(), OfflineBanner(), loadConfig(), PortalConfig, setRuntimeConfig() (+31 more)
 
 ### Community 185 - "001_shares.sql"
 Cohesion: 0.28
@@ -1024,8 +1023,8 @@ Cohesion: 0.30
 Nodes (13): runReminders(), daysUntil(), groupOf(), isLeap(), mergePeople(), midnight(), nextOccurrence(), normalizeName() (+5 more)
 
 ### Community 198 - "ics.js"
-Cohesion: 0.33
-Nodes (10): day(), fold(), icsEscape(), icsUnescape(), RFC-5545, parseDate(), parseIcs(), toIcs() (+2 more)
+Cohesion: 0.19
+Nodes (17): rangeOf(), subtitleFor(), titleFor(), day(), fold(), icsEscape(), icsUnescape(), RFC-5545 (+9 more)
 
 ### Community 200 - "kalender/mininode.json"
 Cohesion: 0.10
@@ -1036,8 +1035,8 @@ Cohesion: 0.11
 Nodes (18): access, default, data, mode, description, game, genre, players (+10 more)
 
 ### Community 202 - "apis.ts"
-Cohesion: 0.07
-Nodes (29): apis, audit(), Auth, FORWARD_REQUEST, FORWARD_RESPONSE, keySchema, log(), ProxyContext (+21 more)
+Cohesion: 0.12
+Nodes (15): apis, audit(), Auth, FORWARD_REQUEST, FORWARD_RESPONSE, keySchema, log(), ProxyContext (+7 more)
 
 ### Community 203 - "isPlanned"
 Cohesion: 0.21
@@ -1057,11 +1056,11 @@ Nodes (5): Install from Verwaltung → Apps → Hochladen, Installers over 95 MB
 
 ### Community 209 - "wikiLib.ts"
 Cohesion: 0.05
-Nodes (65): Guide(), readDone(), writeDone(), ArticleView(), goToHeading(), Index(), Prose(), withDomain() (+57 more)
+Nodes (66): Guide(), readDone(), writeDone(), ArticleView(), goToHeading(), Index(), Prose(), withDomain() (+58 more)
 
-### Community 211 - "apps-verstehen.md"
-Cohesion: 0.17
-Nodes (9): ADR 0007: App catalog on the start page, Consequences, Context, Decision, Arten (`kind`) und Ziele (`target`), Die Adresse (Slug), `mininode.json`, Prüfen (+1 more)
+### Community 211 - "Viewers.tsx"
+Cohesion: 0.12
+Nodes (27): Settings(), appViewerPath(), instanceSettings, isInstalled(), isViewableApp(), linkTarget, loadInstanceSettings(), openRequest() (+19 more)
 
 ### Community 212 - "test.sh"
 Cohesion: 0.21
@@ -1071,9 +1070,9 @@ Nodes (12): CATALOG, deploy(), fail(), GH_TOKEN, golden(), MININODE_DOMAIN, MINI
 Cohesion: 0.26
 Nodes (13): ADR-0002, same(), sameTime(), suiteImageOf(), suiteImages, suiteImagesFor(), suiteInstant(), suiteSoon() (+5 more)
 
-### Community 214 - "convert.ts"
-Cohesion: 0.07
-Nodes (57): anonymiseEmails(), anonymiseSampleEmails(), bootSource(), buildManifest(), cleanAssets(), ConvertContext, Converted, convertNative() (+49 more)
+### Community 214 - "ref_node_fs"
+Cohesion: 0.06
+Nodes (65): anonymiseEmails(), anonymiseSampleEmails(), bootSource(), buildManifest(), cleanAssets(), ConvertContext, Converted, convertNative() (+57 more)
 
 ### Community 215 - "groupedWhen"
 Cohesion: 0.24
@@ -1083,13 +1082,13 @@ Nodes (13): DAYS(), dayShort(), daysLabel(), dLabel(), esc(), fmt(), groupedWhen
 Cohesion: 0.29
 Nodes (3): Add an app, Key rotation, Runbooks
 
-### Community 217 - "Haushalt"
-Cohesion: 0.29
-Nodes (6): Check, Data, Haushalt, Languages, Tests, What it does
+### Community 217 - "openEditor"
+Cohesion: 0.15
+Nodes (17): appUrl(), askScope(), editItem(), euro(), frag(), googleCollections(), loc(), nextHalfHour() (+9 more)
 
 ### Community 218 - "kalender/map.js"
-Cohesion: 0.09
-Nodes (59): BUFFERS, choose(), clusterPin(), clusterPopup(), DEFAULTS, drawList(), drawn, drawRoutes() (+51 more)
+Cohesion: 0.06
+Nodes (72): Bedienung (Oktober 2026), Bill the Splitter, Herkunft, Offene Punkte, Was für MiniNode geändert wurde, BUFFERS, choose(), clusterPin() (+64 more)
 
 ### Community 219 - "filmcraft/mininode.json"
 Cohesion: 0.11
@@ -1139,9 +1138,9 @@ Nodes (3): api(), git_(), publish-export.sh script
 Cohesion: 0.11
 Nodes (56): Feature: settings and editable lists, errorBox(), getCodeLanguage(), append(), clear(), fill(), h(), icon() (+48 more)
 
-### Community 233 - "options.ts"
-Cohesion: 0.22
-Nodes (13): appFile, bindingName(), InstalledApp, ASSET_SHIM_SCRIPT, ASSET_STORE_SCRIPT, ROUTER_SCRIPT, SUPABASE_PROXY_SCRIPT, Bindings (+5 more)
+### Community 233 - "ref_node_path"
+Cohesion: 0.05
+Nodes (34): ENTRIES, REPO, Pack, csp, [dist, kit, port = '8791'], types, appsFromPaths(), appsToDeploy() (+26 more)
 
 ### Community 234 - "MiniNode App Kit: design system for hosted apps"
 Cohesion: 0.06
@@ -1155,9 +1154,9 @@ Nodes (14): app_haushalt.bookings, app_haushalt.categories, app_haushalt.recurri
 Cohesion: 0.29
 Nodes (7): Commands, Knowledge graph (graphify), Knowledge (wiki): keep it current, Layout, MiniNode.app, Rules, UI
 
-### Community 247 - "sudoku/app.js"
-Cohesion: 0.18
-Nodes (22): askHint(), blank(), build(), chooseLevel(), clock, finished(), levelName(), levelsHost (+14 more)
+### Community 247 - "install.ts"
+Cohesion: 0.23
+Nodes (14): createInstaller(), runWindows(), runWine(), signOrFail(), defaultSilentArgs(), encodePowerShell(), InstallJob, InstallRequest (+6 more)
 
 ### Community 248 - "createUser"
 Cohesion: 0.15
@@ -1167,21 +1166,21 @@ Nodes (10): run(), CORS, ADR-0019, ADR-0012, ADR-0011, ADR-0005, createUser(), P
 Cohesion: 0.11
 Nodes (18): access, default, build, command, output, data, mode, description (+10 more)
 
-### Community 264 - "Decision"
-Cohesion: 0.20
-Nodes (9): 1. App identity from the browser origin, 3. Collections (Sammlungen), 4. App permissions: request → approval → priority, 5. SDK surface, ADR 0002: Suite data, shared collections and app permissions, Consequences, Context, Decision (+1 more)
+### Community 264 - "deploy/library.ts"
+Cohesion: 0.15
+Nodes (19): infra_nucbox_library, checkLibraryInstall(), checkSlug(), client(), existing(), installLibraryApp(), LibraryOptions, removeLibraryApp() (+11 more)
 
 ### Community 265 - "haushalt.test.js"
-Cohesion: 0.21
-Nodes (18): analyse(), detectDelimiter(), GUESS, hash(), parseAmount(), parseCsv(), parseDate(), toBookings() (+10 more)
+Cohesion: 0.20
+Nodes (19): signed(), analyse(), detectDelimiter(), GUESS, hash(), parseAmount(), parseCsv(), parseDate() (+11 more)
 
-### Community 266 - "editBooking"
-Cohesion: 0.18
-Nodes (28): applyRules(), catById(), cats(), catSelect(), changeYear(), closeDialog(), deleteBooking(), editBooking() (+20 more)
+### Community 266 - "haushalt/app.js"
+Cohesion: 0.14
+Nodes (40): calendarSoon(), catById(), cats(), catSelect(), closeDialog(), deleteBooking(), editBooking(), editCategory() (+32 more)
 
-### Community 267 - "plan.js"
-Cohesion: 0.28
-Nodes (14): amountFor(), dueRecurring(), monthsBetween(), calendarPayments(), CONTRACT_KIND, deviations(), dueIn(), INTERVAL (+6 more)
+### Community 267 - "fixedRow"
+Cohesion: 0.13
+Nodes (23): App type: archive and collection, Apps in der installierten MiniNode-App (ADR 0032), Benachrichtigungen (ADR 0005), Jede App ist eine installierbare App (PWA), Offline-Daten (`mn.kv`), Startbildschirm, dayLabel(), everyLabel() (+15 more)
 
 ### Community 268 - "haushalts-inventar/mininode.json"
 Cohesion: 0.13
@@ -1191,25 +1190,25 @@ Nodes (14): access, default, build, command, output, data, mode, description (+6
 Cohesion: 0.15
 Nodes (12): After the trip, Bookings and documents, Calendar and reminders, Costs, Data, Map and routes, Not in scope (first version), Packing list (+4 more)
 
-### Community 270 - "haushalt/app.js"
-Cohesion: 0.11
-Nodes (27): ADR-0005, SHELL_URLS, calendarSoon(), copy(), dateText(), download(), exportTaxCsv(), firstLoad (+19 more)
+### Community 270 - "formsView"
+Cohesion: 0.13
+Nodes (14): ADR-0005, SHELL_URLS, copy(), dateText(), formsView(), plain(), profileForm(), viewTax() (+6 more)
 
 ### Community 271 - "sdk-preview.js"
 Cohesion: 0.12
 Nodes (10): AiError, ExternalApiError, get(), GoogleError, ADR-0030, keys(), list(), upsert() (+2 more)
 
-### Community 272 - "kit/i18n.test.ts"
-Cohesion: 0.31
-Nodes (3): MnI18n, PACKAGES, source
+### Community 272 - "options.ts"
+Cohesion: 0.22
+Nodes (13): appFile, bindingName(), InstalledApp, ASSET_SHIM_SCRIPT, ASSET_STORE_SCRIPT, ROUTER_SCRIPT, SUPABASE_PROXY_SCRIPT, Bindings (+5 more)
 
 ### Community 273 - "Uploads: web apps and programs from Verwaltung"
 Cohesion: 0.25
 Nodes (8): From a GitHub link (ADR 0029), "GitHub hat den Start des Einbaus abgelehnt", Setup (once), Try the script on your own PC, Uploads: web apps and programs from Verwaltung, What happens, What the script checks before it says "done", What the script handles, and what it sends to review
 
 ### Community 274 - "statement.js"
-Cohesion: 0.38
-Nodes (9): importPdf(), fullDate(), linesFromItems(), parseStatement(), readAmount(), readPdf(), signColumns(), statementYears() (+1 more)
+Cohesion: 0.42
+Nodes (8): fullDate(), linesFromItems(), parseStatement(), readAmount(), readPdf(), signColumns(), statementYears(), hosted_haushalt_vendor_pdfjs_pdf_min
 
 ### Community 275 - "quota.js"
 Cohesion: 0.31
@@ -1240,8 +1239,8 @@ Cohesion: 0.31
 Nodes (8): briefSection(), changeText(), compose(), pointerPrompt(), taskIntro(), prompt(), title(), Feature: notes and text editing
 
 ### Community 286 - "worker.ts"
-Cohesion: 0.13
-Nodes (29): @mininode/gate, supabaseGrantChecker(), platformOrigins(), appIcon(), escapeXml(), PwaApp, SPLASH_BACKGROUND, SPLASH_CSS (+21 more)
+Cohesion: 0.12
+Nodes (31): @mininode/gate, supabaseGrantChecker(), platformOrigins(), withHeaders(), appIcon(), escapeXml(), PwaApp, SPLASH_BACKGROUND (+23 more)
 
 ### Community 287 - "aether-notes/mininode.json"
 Cohesion: 0.09
@@ -1303,17 +1302,17 @@ Nodes (4): ALL_APPS, APPS, hasLanguages(), ADR-0017
 Cohesion: 0.38
 Nodes (4): base32(), freshCode(), totp(), RFC-6238
 
-### Community 302 - "AuthProvider.tsx"
-Cohesion: 0.19
-Nodes (16): AuthContext, AuthProvider(), AuthState, Profile, Role, handOverGoogleGrant(), scrubProviderTokens(), runtimeConfig() (+8 more)
+### Community 302 - "items.js"
+Cohesion: 0.23
+Nodes (13): APP_NAMES, appName(), COLORS, imageFits(), imageOf(), isMidnight(), itemsFor(), SELF (+5 more)
 
 ### Community 303 - "sicherung.md"
 Cohesion: 0.33
 Nodes (5): Einrichten (einmalig), Erstellen und herunterladen, Grenzen, Was drin ist, Wiederherstellen
 
 ### Community 304 - "musescore/build.mjs"
-Cohesion: 0.10
-Nodes (27): archive, bin, cache, dist, files(), font, has(), header (+19 more)
+Cohesion: 0.07
+Nodes (36): archive, bin, cache, dist, files(), font, has(), header (+28 more)
 
 ### Community 306 - "assets/sw.js"
 Cohesion: 0.40
@@ -1347,17 +1346,17 @@ Nodes (11): Boards (Kanban), Calendar, Comments, assignments, notifications, Das
 Cohesion: 0.33
 Nodes (5): Code, Dokumentation gehört zur Änderung, Git, Oberfläche, Sicherheit und Datenbank
 
-### Community 314 - "views.js"
-Cohesion: 0.21
-Nodes (19): agendaItemHTML(), baseSkeleton(), countLabel(), emptyHTML(), loadFailedHTML(), render(), rowHTML(), scheduleRender() (+11 more)
+### Community 314 - "NucBox.tsx"
+Cohesion: 0.29
+Nodes (10): Bar(), gb(), mb(), NucBox(), pct(), Report, share(), STATUS (+2 more)
 
 ### Community 315 - "LightCraft"
 Cohesion: 0.29
 Nodes (6): Data, How it is built, LightCraft, Open points, Origin, Updating
 
 ### Community 316 - "Page"
-Cohesion: 0.31
-Nodes (4): Feature: reading PDFs (statements, invoices), hex(), num(), Page
+Cohesion: 0.18
+Nodes (9): ADR 0007: App catalog on the start page, Consequences, Context, Decision, Feature: reading PDFs (statements, invoices), Arten (`kind`) und Ziele (`target`), hex(), num() (+1 more)
 
 ### Community 317 - "ref_playwright_test"
 Cohesion: 0.18
@@ -1444,16 +1443,16 @@ Cohesion: 0.40
 Nodes (4): App-Bibliothek (ADR 0011), Linux oder Windows?, Programme für PC/Server hochladen (ADR 0013), Remote-Apps im Betrieb
 
 ### Community 340 - "fetch"
-Cohesion: 0.20
-Nodes (10): fetch(), portalConfig(), Feature: places and maps, Feature: pictures from other websites, contentSecurityPolicy(), CspOptions, securityHeaders(), withHeaders() (+2 more)
+Cohesion: 0.18
+Nodes (10): fetch(), portalConfig(), ADR-0032, Feature: places and maps, Feature: pictures from other websites, contentSecurityPolicy(), CspOptions, securityHeaders() (+2 more)
 
 ### Community 341 - "ADR 0005: Push notifications, installable apps and offline data"
 Cohesion: 0.33
 Nodes (5): ADR 0005: Push notifications, installable apps and offline data, Consequences, Context, Decision, Update: one start screen for every app (October 2026)
 
-### Community 342 - "state.js"
-Cohesion: 0.18
-Nodes (18): addSession(), byCreated(), byPosition(), CATEGORY_COLUMNS, DEFAULT_PROGRESS, DEFAULT_SETTINGS, deleteEverything(), loadAll() (+10 more)
+### Community 342 - "sudoku/app.js"
+Cohesion: 0.15
+Nodes (27): askHint(), blank(), build(), chooseLevel(), clock, enter(), finished(), levelName() (+19 more)
 
 ### Community 343 - "tests-ci.md"
 Cohesion: 0.40
@@ -1468,12 +1467,12 @@ Cohesion: 0.15
 Nodes (23): exportPart(), exportSheet(), gcodeSheet(), norm(), offsetPolygon(), round(), esc(), f() (+15 more)
 
 ### Community 350 - "Workshop.tsx"
-Cohesion: 0.24
-Nodes (12): approxTokens(), groupModules(), impliedModules(), slugify(), starterFiles(), copyText(), download(), kb() (+4 more)
+Cohesion: 0.18
+Nodes (16): approxTokens(), groupModules(), impliedModules(), slugify(), starterFiles(), copyText(), download(), kb() (+8 more)
 
-### Community 351 - "routes/google.ts"
-Cohesion: 0.11
-Nodes (22): aesKey(), base64(), GoogleAccessToken, googleAccount(), GoogleError, GoogleSettings, refreshAccessToken(), revoke() (+14 more)
+### Community 351 - "sudoku/test/logic.test.js"
+Cohesion: 0.14
+Nodes (12): App type: travel and trips, dig(), generate(), hasUniqueSolution(), randomSolution(), rate(), shuffle(), solve() (+4 more)
 
 ### Community 352 - "aether-notes/src/mininode.ts"
 Cohesion: 0.14
@@ -1495,9 +1494,9 @@ Nodes (6): activities_touch, app_sportplaner.activities, app_sportplaner.plans, 
 Cohesion: 0.39
 Nodes (19): mininode-desktop script, cmd_add(), cmd_admin(), cmd_backup(), cmd_password(), cmd_restore(), cmd_start(), cmd_uninstall() (+11 more)
 
-### Community 359 - "Backups.tsx"
-Cohesion: 0.13
-Nodes (17): ADR-0019, ADR-0028, ADR-0029, BackupList, BackupRow, BackupState, FAILED_HINT, isRunning() (+9 more)
+### Community 359 - "state.js"
+Cohesion: 0.18
+Nodes (18): addSession(), byCreated(), byPosition(), CATEGORY_COLUMNS, DEFAULT_PROGRESS, DEFAULT_SETTINGS, deleteEverything(), loadAll() (+10 more)
 
 ### Community 360 - "musescore/mininode.json"
 Cohesion: 0.11
@@ -1507,9 +1506,9 @@ Nodes (18): access, default, build, command, output, data, mode, description (+1
 Cohesion: 0.11
 Nodes (18): access, default, ai, maxOutputTokens, models, monthlyBudgetEur, data, mode (+10 more)
 
-### Community 362 - "src/api.ts"
-Cohesion: 0.13
-Nodes (15): createApi(), ExternalApiError, config, TokenSource, ADR-0006, ADR-0014, dismissedUntil, el() (+7 more)
+### Community 362 - "sdk/src/config.ts"
+Cohesion: 0.10
+Nodes (22): createApi(), ExternalApiError, config, TokenSource, ADR-0006, ADR-0014, assertConfig(), loadConfig() (+14 more)
 
 ### Community 363 - "mn-scores.js"
 Cohesion: 0.33
@@ -1539,29 +1538,29 @@ Nodes (21): Feature: push notifications, crc32(), CRC_TABLE, dosTime(), exportAl
 Cohesion: 0.47
 Nodes (6): addDays(), courseDates(), nextMap(), pad(), todayStr(), ymd()
 
-### Community 382 - "You are building an app for MiniNode"
-Cohesion: 0.25
-Nodes (7): Before you hand it over, Design guidance, Hard rules, MiniNode app spec (specVersion 1), Tables (the default for lists), The SDK, You are building an app for MiniNode
+### Community 382 - "desktop-host/src/main.ts"
+Cohesion: 0.18
+Nodes (10): installedApps(), bool, DesktopConfig, loadConfig(), schema, applyApps(), apps, config (+2 more)
 
 ### Community 383 - "sdk-preview.test.ts"
 Cohesion: 0.09
 Nodes (8): Feature: accessibility pass, Feature: search, filters and sorting, Client, Global, Query, Result, Row, source
 
-### Community 384 - "deploy/uninstall.ts"
-Cohesion: 0.18
-Nodes (16): removeObjects(), removeDesktopApp(), unexposeSchemas(), AppRow, BiomeOverride, deleteWorker(), dropExemptions(), hideLocally() (+8 more)
+### Community 384 - "ADR 0003: Construction prompts, app kit and the suite build order"
+Cohesion: 0.25
+Nodes (7): 1. Construction prompt library ("Konstruktions-Prompts"), 2. App kit (design system for apps), 3. Build order, ADR 0003: Construction prompts, app kit and the suite build order, Consequences, Context, Decision
 
 ### Community 385 - "rollen-zugriff.md"
 Cohesion: 0.29
 Nodes (6): Die drei Rollen, Erneute Bestätigung (Step-up), Gemeinsames Konto, Nutzer einladen, Wer eine App wirklich "aufruft", Zugriff auf eine App: die Freigabe
 
-### Community 386 - "sudoku/test/logic.test.js"
-Cohesion: 0.15
-Nodes (11): enter(), generate(), isSolved(), randomSolution(), setValue(), snap(), solve(), toggleNote() (+3 more)
+### Community 386 - "offline-auth.test.ts"
+Cohesion: 0.18
+Nodes (6): config, ADR-0005, user, cookieSessionUserId(), session, ADR-0005
 
-### Community 388 - "desktop-host/src/main.ts"
-Cohesion: 0.16
-Nodes (11): installedApps(), bool, DesktopConfig, loadConfig(), schema, applyApps(), apps, config (+3 more)
+### Community 388 - "20261126090000_instance_settings.sql"
+Cohesion: 0.33
+Nodes (4): platform.instance_settings_stamp, instance_settings_stamp, platform.instance_settings, auth.users
 
 ### Community 393 - "Variant 1: Cloudflare only"
 Cohesion: 0.17
@@ -1575,9 +1574,9 @@ Nodes (9): Bauen und Bereitstellen, Einstellungen und Datensicherung, Klänge (S
 Cohesion: 0.22
 Nodes (9): 0. What you need, 1. Install, 2. First steps, 3. Daily use, 4. Other devices and the internet, 5. Back up, update, move, remove, 6. Security of the desktop edition, Troubleshooting (+1 more)
 
-### Community 396 - "MuseScore Studio"
+### Community 396 - "game.ts"
 Cohesion: 0.20
-Nodes (9): Data, MuseScore Studio, Origin, Plugins, Requirements, Sound library, State, The page (`web/`) (+1 more)
+Nodes (8): createGame(), GameOutcome, GameStats, LeaderboardRow, PING_MS, config, Timers, ADR-0009
 
 ### Community 397 - "env.sh"
 Cohesion: 0.31
@@ -1611,17 +1610,17 @@ Nodes (6): Data, How it is built, Open points, Origin, PhotoCraft, Updating
 Cohesion: 0.29
 Nodes (6): Automatisch aktualisieren (ADR 0029), Eine App mit Repository, Einrichten, So läuft ein Update, Vorher sichern, Was dabei geschützt ist
 
-### Community 406 - "Status and handoff"
-Cohesion: 0.18
-Nodes (7): Agent instructions, Conventions worth knowing, Open and proposed work, Start here, Status and handoff, Waiting on the owner, Working in this repository (cloud sessions)
+### Community 406 - "daten-speichern.md"
+Cohesion: 0.29
+Nodes (6): Daten sichern und wegbringen, Datenmodi (`data.mode`), Drei Wege, Daten zu speichern, Teams (ADR 0023), Weitere Regeln, Wie die Trennung funktioniert (ADR 0002)
 
 ### Community 407 - "mn-midi.js"
 Cohesion: 0.67
 Nodes (4): deviceList(), installMidi(), midiPackage(), t()
 
-### Community 408 - "platform"
-Cohesion: 0.17
-Nodes (21): AppDrawersDialog(), DrawerContentDialog(), NameDialog(), clearAppIcon(), PreparedIcon, prepareIcon(), setAppIcon(), ADR-0018 (+13 more)
+### Community 408 - "ref_react"
+Cohesion: 0.11
+Nodes (31): AppSort, Person, RESERVED, SORTS, STATUS, STATUS_ORDER, TARGET, Dialog() (+23 more)
 
 ### Community 409 - "ADR 0026: Instance configuration, desktop edition and starter package"
 Cohesion: 0.40
@@ -1635,9 +1634,9 @@ Nodes (4): ADR 0027: First-run setup creates the admin account, Consequences, Co
 Cohesion: 0.40
 Nodes (4): ADR 0028: One-click updates for the platform and for apps with a GitHub repository, Consequences, Context, Decision
 
-### Community 412 - "host.test.ts"
-Cohesion: 0.33
-Nodes (6): env, CRONS, due(), startScheduler(), App type: learning, ref_miniflare
+### Community 412 - "ADR 0032: The installed portal shows apps (and optionally outside websites) in its own viewers"
+Cohesion: 0.40
+Nodes (4): ADR 0032: The installed portal shows apps (and optionally outside websites) in its own viewers, Consequences, Context, Decision
 
 ### Community 413 - "einrichten.md"
 Cohesion: 0.40
@@ -1667,9 +1666,9 @@ Nodes (4): Download, Make a release, Releases and downloads, Which operating sys
 Cohesion: 0.50
 Nodes (4): Steps, Troubleshooting, Variant 3: Cloudflare and a home server, What the home server can be
 
-### Community 421 - "AccountKeys.tsx"
-Cohesion: 0.33
-Nodes (8): AccountKeys(), host(), KeyCard(), listPersonalKeys(), PersonalKey, PersonalKeysCard(), safeLink(), ADR-0014
+### Community 421 - "detail.js"
+Cohesion: 0.52
+Nodes (6): closeSheet(), detailBodyHTML(), galleryHTML(), openDetail(), openSheet(), updDetail()
 
 ### Community 422 - "app_wunschliste.wishlist"
 Cohesion: 0.50
@@ -1683,17 +1682,17 @@ Nodes (3): die(), say(), install.sh script
 Cohesion: 0.50
 Nodes (4): License, MiniNode, Repository, Start here
 
-### Community 438 - "sdk/src/config.ts"
-Cohesion: 0.09
-Nodes (23): assertConfig(), loadConfig(), MininodeConfig, REQUIRED, createGame(), GameOutcome, GameStats, LeaderboardRow (+15 more)
+### Community 438 - "browser.ts"
+Cohesion: 0.15
+Nodes (10): CalendarSyncSettings, CalendarSyncState, createGoogle(), GoogleError, config, TokenSource, ADR-0004, ADR-0010 (+2 more)
 
 ### Community 439 - "20261125090000_ai_models.sql"
 Cohesion: 0.33
 Nodes (4): platform.ai_models_stamp, ai_models_stamp, platform.ai_models, auth.users
 
-### Community 440 - "ref_node_child_process"
-Cohesion: 0.19
-Nodes (15): crc32(), CRC_TABLE, dosTime(), zip(), appsFromPaths(), appsToDeploy(), builtFromSource(), changedApps() (+7 more)
+### Community 440 - "Status and handoff"
+Cohesion: 0.18
+Nodes (7): Agent instructions, Conventions worth knowing, Open and proposed work, Start here, Status and handoff, Waiting on the owner, Working in this repository (cloud sessions)
 
 ### Community 441 - "ADR 0029: Apps as ZIP files, apps from a GitHub link, and automatic app updates"
 Cohesion: 0.40
@@ -1708,8 +1707,8 @@ Cohesion: 0.40
 Nodes (4): ADR 0031: Admins write readonly apps, and the AI models are set in Verwaltung, Consequences, Context, Decision
 
 ### Community 444 - "game"
-Cohesion: 0.10
-Nodes (16): game(), ADR 0009: Gaming Hub, Consequences, Context, Decision, Feature: the mnGame kit helper (games built in the repository), App type: game, Ein neues Spiel (+8 more)
+Cohesion: 0.11
+Nodes (16): game(), ADR 0009: Gaming Hub, Consequences, Context, Decision, App type: game, Ein neues Spiel, Ein Spiel ist eine App mit `game`-Block (+8 more)
 
 ### Community 445 - "backup.js"
 Cohesion: 0.23
@@ -1718,10 +1717,6 @@ Nodes (14): BK, bkStatus(), blobToDataURL(), dataURLToBlob(), exportData(), impo
 ### Community 446 - "20261125090100_readonly_admin_writes.sql"
 Cohesion: 0.33
 Nodes (3): pg_policies, platform.readonly_admin_policies(), platform.apps
-
-### Community 447 - "daten-speichern.md"
-Cohesion: 0.29
-Nodes (6): Daten sichern und wegbringen, Datenmodi (`data.mode`), Drei Wege, Daten zu speichern, Teams (ADR 0023), Weitere Regeln, Wie die Trennung funktioniert (ADR 0002)
 
 ### Community 450 - "ADR 0022: Lists are tables, kv is for settings"
 Cohesion: 0.33
@@ -1735,9 +1730,9 @@ Nodes (8): ADR 0023: Teams, data shared with chosen people, Alternatives conside
 Cohesion: 0.33
 Nodes (5): Einrichten, Modelle aktuell halten (ADR 0031), Verwaltung → KI-Proxy, Was der Proxy prüft, Websuche (ADR 0024)
 
-### Community 458 - "ADR 0003: Construction prompts, app kit and the suite build order"
-Cohesion: 0.25
-Nodes (7): 1. Construction prompt library ("Konstruktions-Prompts"), 2. App kit (design system for apps), 3. Build order, ADR 0003: Construction prompts, app kit and the suite build order, Consequences, Context, Decision
+### Community 458 - "Decision"
+Cohesion: 0.20
+Nodes (9): 1. App identity from the browser origin, 3. Collections (Sammlungen), 4. App permissions: request → approval → priority, 5. SDK surface, ADR 0002: Suite data, shared collections and app permissions, Consequences, Context, Decision (+1 more)
 
 ### Community 459 - "leaflet-heat.d.ts"
 Cohesion: 0.50
@@ -1747,45 +1742,45 @@ Nodes (3): HeatLayerOptions, leaflet, ref_leaflet
 Cohesion: 0.67
 Nodes (3): Checks after any installation, Getting started: pick your variant, What every variant has in common
 
-### Community 464 - "gemeinsame-daten.md"
-Cohesion: 0.25
-Nodes (7): Aufbau, Bilder, Farben und Orte auf der Karte, Der Kalender, Geburtstage (Aether Notes → Kalender, Wunschliste), Google Kalender, Karte und Wege, SDK
+### Community 464 - "host.test.ts"
+Cohesion: 0.33
+Nodes (6): env, CRONS, due(), startScheduler(), App type: learning, ref_miniflare
 
 ### Community 468 - "solid.js"
 Cohesion: 0.07
 Nodes (61): App type: tracker and health, exportMesh(), persist(), box2(), chainLines(), depthBuffer(), FEATURE_COS, generateViews() (+53 more)
 
-### Community 472 - "actions.js"
-Cohesion: 0.48
-Nodes (6): applyLocal(), H, persist(), removeAct(), toast(), togglePlan()
-
-### Community 473 - "detail.js"
-Cohesion: 0.52
-Nodes (6): closeSheet(), detailBodyHTML(), galleryHTML(), openDetail(), openSheet(), updDetail()
+### Community 473 - "write"
+Cohesion: 0.22
+Nodes (8): ADR 0004: Google services (Gmail, Calendar) for hosted apps, Consequences, Context, Decision, Limits, `mininode.json`, Anfrage, Genehmigung, Priorität, write()
 
 ### Community 474 - "PdfCraft"
 Cohesion: 0.33
 Nodes (5): Data, How it is built, Origin, PdfCraft, Updating
 
-### Community 475 - "Kalender"
+### Community 475 - "files-framed.test.ts"
+Cohesion: 0.22
+Nodes (7): Handle, nativeAnchorClick, nativeOpen, nativeSave, ADR-0032, Win, Writable
+
+### Community 476 - "You are building an app for MiniNode"
 Cohesion: 0.25
-Nodes (7): Data, Develop, Features, Files, Kalender, Languages, Map (`map.js`, `route.js`)
+Nodes (7): Before you hand it over, Design guidance, Hard rules, MiniNode app spec (specVersion 1), Tables (the default for lists), The SDK, You are building an app for MiniNode
 
-### Community 476 - "WordCraft"
-Cohesion: 0.29
-Nodes (6): Data, Open points, Origin, Requirements, Updating, WordCraft
+### Community 477 - "fehlerbehebung.md"
+Cohesion: 0.25
+Nodes (7): Anmelden, Zugriff, Daten und Schlüssel, Desktop-Version, Entwicklung, Hochladen, Einbau, Deploy, Ich sehe eine Änderung nicht, Updates
 
-### Community 477 - "ueberblick.md"
-Cohesion: 0.29
-Nodes (6): Die Teile im Überblick, Die wichtigsten Ideen, Drei Varianten, Was du damit tust, Was es kostet, Wo es weitergeht
+### Community 478 - "gemeinsame-daten.md"
+Cohesion: 0.25
+Nodes (7): Aufbau, Bilder, Farben und Orte auf der Karte, Der Kalender, Geburtstage (Aether Notes → Kalender, Wunschliste), Google Kalender, Karte und Wege, SDK
 
 ### Community 479 - "ADR 0014: API keys: site-wide or personal"
 Cohesion: 0.40
 Nodes (4): ADR 0014: API keys: site-wide or personal, Consequences, Context, Decision
 
-### Community 480 - "Bill the Splitter"
-Cohesion: 0.33
-Nodes (5): Bedienung (Oktober 2026), Bill the Splitter, Herkunft, Offene Punkte, Was für MiniNode geändert wurde
+### Community 480 - "ueberblick.md"
+Cohesion: 0.29
+Nodes (6): Die Teile im Überblick, Die wichtigsten Ideen, Drei Varianten, Was du damit tust, Was es kostet, Wo es weitergeht
 
 ### Community 481 - "CAD"
 Cohesion: 0.33
@@ -1795,9 +1790,9 @@ Nodes (5): CAD, Code, Data, Performance (without losing quality), Try it
 Cohesion: 0.33
 Nodes (5): Data, FilmCraft, How it is built, Origin, Updating
 
-### Community 483 - "write"
-Cohesion: 0.22
-Nodes (8): ADR 0004: Google services (Gmail, Calendar) for hosted apps, Consequences, Context, Decision, Limits, `mininode.json`, Anfrage, Genehmigung, Priorität, write()
+### Community 483 - "apps-verstehen.md"
+Cohesion: 0.40
+Nodes (4): Die Adresse (Slug), `mininode.json`, Prüfen, Was nach dem Deploy in der Verwaltung steht
 
 ### Community 484 - "App-Bibliothek"
 Cohesion: 0.33
@@ -1811,14 +1806,6 @@ Nodes (5): body, match, source, target, text
 Cohesion: 0.40
 Nodes (4): Baugruppen, Import und Export, KI-Assistent, Zeichnen und modellieren
 
-### Community 487 - "push-offline.md"
-Cohesion: 0.40
-Nodes (4): Benachrichtigungen (ADR 0005), Jede App ist eine installierbare App (PWA), Offline-Daten (`mn.kv`), Startbildschirm
-
-### Community 488 - "server.mjs"
-Cohesion: 0.40
-Nodes (4): csp, [dist, kit, port = '8791'], types, ref_node_http
-
 ### Community 489 - "render.test.js"
 Cohesion: 0.70
 Nodes (4): boot(), FILES, read(), translator()
@@ -1828,24 +1815,24 @@ Cohesion: 0.40
 Nodes (4): Try it, Typetrainer, What it does, What it stores
 
 ## Knowledge Gaps
-- **1982 isolated node(s):** `supabase`, `cloudflare-docs`, `context7`, `npx`, `@playwright/mcp` (+1977 more)
-  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 2715 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
-- **159 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **2009 isolated node(s):** `supabase`, `cloudflare-docs`, `context7`, `npx`, `@playwright/mcp` (+2004 more)
+  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 2751 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+- **161 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `mountEditor()` connect `mountEditor` to `View3d`, `geom.js`, `solid.js`, `cad/js/editor.js`, `io.js`, `el`?**
-  _High betweenness centrality (0.027) - this node is a cross-community bridge._
-- **Why does `MiniNode.app — Project Plan (v2)` connect `MiniNode.app — Project Plan (v2)` to `8. Platform SDK (`@mininode/sdk`)`, `Status and handoff`?**
-  _High betweenness centrality (0.024) - this node is a cross-community bridge._
 - **Why does `sanitizeAct()` connect `backup.js` to `Page`?**
-  _High betweenness centrality (0.024) - this node is a cross-community bridge._
+  _High betweenness centrality (0.037) - this node is a cross-community bridge._
+- **Why does `isDay()` connect `backup.js` to `core.js`?**
+  _High betweenness centrality (0.036) - this node is a cross-community bridge._
+- **Why does `timeLabel()` connect `groupedWhen` to `core.js`, `detail.js`, `sportplaner/js/editor.js`?**
+  _High betweenness centrality (0.023) - this node is a cross-community bridge._
 - **Are the 11 inferred relationships involving `mountEditor()` (e.g. with `doRedo()` and `doUndo()`) actually correct?**
   _`mountEditor()` has 11 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `supabase`, `cloudflare-docs`, `context7` to the rest of the system?**
-  _1982 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _2009 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Suite.tsx` be split into smaller, more focused modules?**
   _Cohesion score 0.1437908496732026 - nodes in this community are weakly interconnected._
-- **Should `hooks.ts` be split into smaller, more focused modules?**
-  _Cohesion score 0.12807881773399016 - nodes in this community are weakly interconnected._
+- **Should `ref_node_crypto` be split into smaller, more focused modules?**
+  _Cohesion score 0.09365079365079365 - nodes in this community are weakly interconnected._

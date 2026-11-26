@@ -1,4 +1,5 @@
 import { sessionPersisted } from './supabase.ts';
+import { viewerRoute } from './viewer.ts';
 
 /**
  * Only allow redirects back to the portal itself or to an app on the platform domain.
@@ -23,10 +24,12 @@ export function safeNext(next: string | null, currentOrigin = location.origin): 
 
 /**
  * Navigates to `next` after the session cookie is written, using a full page load for other
- * subdomains (their gate reads the cookie).
+ * subdomains (their gate reads the cookie). The installed portal opens an app in its viewer.
  */
 export async function goTo(next: string, navigate: (path: string) => void): Promise<void> {
   await sessionPersisted();
-  if (next.startsWith('/')) navigate(next);
+  if (next.startsWith('/')) return navigate(next);
+  const route = viewerRoute(next);
+  if (route) navigate(route.to);
   else location.assign(next);
 }

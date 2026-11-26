@@ -1,4 +1,5 @@
 import { platform, supabase } from './supabase.ts';
+import { rememberApps } from './viewer.ts';
 
 /** Last app list per user, so the start page also works offline (PWA, ADR 0005). */
 const cacheKey = async () => {
@@ -46,7 +47,7 @@ export interface RemoteStatus {
 export function forgetOfflineCopies(): void {
   try {
     for (const key of Object.keys(localStorage))
-      if (key.startsWith('mn-apps:')) localStorage.removeItem(key);
+      if (key.startsWith('mn-apps:') || key === 'mn-viewer-apps') localStorage.removeItem(key);
   } catch {
     // Storage blocked: nothing was stored either.
   }
@@ -67,6 +68,7 @@ export async function listApps(): Promise<AppRow[]> {
     throw error;
   }
   const rows = (data as AppRow[] | null) ?? [];
+  rememberApps(rows);
   try {
     if (key) localStorage.setItem(key, JSON.stringify(rows));
   } catch {

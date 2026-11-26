@@ -26,6 +26,8 @@ Meist eine **zwischengespeicherte** PWA-Version: Seite neu laden oder die App sc
 | Passkey geht nicht auf neuem Gerät | Passwort-Anmeldung nutzen, Passkey unter *Dein Konto* neu anlegen |
 | Authenticator-Code verloren | [Anmeldung](wiki:anmeldung): Faktor in Supabase löschen, neu koppeln |
 | App mit Tabellen (Sportplaner, Haushalt, Medialog, Wunschliste) leer oder „konnten nicht geladen werden“, der Kalender zeigt die Termine aber noch | das Schema der App fehlt in der Daten-API. Die Daten sind da. Deploy starten (GitHub → Actions → *Deploy* → *Run workflow*): der Schritt *Expose the schemas* gibt alle wieder frei. Kam am 20.10. vor, weil `supabase config push` die Liste zurückgesetzt hat (behoben) |
+| Helle Leiste mit Name und Adresse über einer App (installierte MiniNode-App) | Die App wurde direkt geöffnet statt im Viewer des Portals. Seit 26.11. öffnet die installierte App Apps unter `/a/<app>` ohne Leiste; MiniNode einmal schließen und neu öffnen, damit die neue Version lädt ([Installierte App](wiki:push-offline)) |
+| Fremde Seite bleibt im Viewer leer | Die Seite verweigert das Einbetten erst auf einer späteren Seite (z. B. der Anmeldung). Oben „Im Browser öffnen“ antippen |
 | App zeigt keine Daten | wird sie von ihrer eigenen Adresse aufgerufen? Daten gehen nur von dort ([App-Kit und SDK](wiki:app-kit-sdk)) |
 
 ## Desktop-Version
