@@ -1,19 +1,28 @@
 import { describe, expect, it } from 'vitest';
+import { chordKey, chordTable } from '../js/chords.js';
 import { CODE_LANGUAGES, CODE_LEVELS, codeText } from '../js/code.js';
 import * as engine from '../js/engine.js';
 import {
   adapt,
   berlinDate,
   dailyText,
-  layoutLevels,
   lessonText,
   mulberry32,
   practiceCode,
   practiceText,
   weakText,
 } from '../js/generator.js';
-import { getLayout, LAYOUTS, letterStages, locate, modifierFor, typeable } from '../js/layouts.js';
+import {
+  FINGERS,
+  getLayout,
+  LAYOUTS,
+  letterStages,
+  locate,
+  modifierFor,
+  typeable,
+} from '../js/layouts.js';
 import { achievements, heat, streak, weakKeys, weeklyTrend, yearSummary } from '../js/stats.js';
+import { BRANCHES, branchLevels, continueCourse, courseOf, isOpen, levelText } from '../js/tree.js';
 
 describe('layouts', () => {
   it('match the xkb definitions of the Neo family', () => {
@@ -56,7 +65,7 @@ describe('layouts', () => {
 describe('generator', () => {
   it('lessons use only the keys learned so far', () => {
     for (const layout of LAYOUTS) {
-      const levels = layoutLevels(layout);
+      const levels = branchLevels(layout, 'basics');
       for (const level of levels.filter((l) => l.kind === 'letters')) {
         const text = lessonText(layout, level, 'de', mulberry32(level.number));
         const allowed = new Set([...level.known, ' ']);
@@ -225,5 +234,79 @@ describe('progress', async () => {
     engine.input(run, 'b', 10);
     expect(engine.backspace(run)).toBeNull();
     expect(engine.isDone(run)).toBe(true);
+  });
+});
+
+describe('learning tree', () => {
+  it('opens the branches after the basics, the languages after the code characters', () => {
+    const basics = branchLevels(getLayout('neo'), 'basics').length;
+    expect(isOpen({}, 'neo', 'speed')).toBe(false);
+    const stars = { [`neo/basics#${basics}`]: 1 };
+    expect(isOpen(stars, 'neo', 'speed')).toBe(true);
+    expect(isOpen(stars, 'neo', 'code-python')).toBe(false);
+    expect(isOpen({ ...stars, 'neo/code#2': 2 }, 'neo', 'code-python')).toBe(true);
+    expect(isOpen(stars, 'qwertz', 'speed')).toBe(false);
+    expect(continueCourse({}, 'neo', 'chord')).toBe('neo/basics');
+    expect(continueCourse(stars, 'neo', 'chord')).toBe('neo/chord');
+    expect(continueCourse(stars, 'neo', 'code-java')).toBe('neo/code');
+  });
+
+  it('every level of every branch makes a text that fits the layout', () => {
+    for (const layout of LAYOUTS)
+      for (const branch of BRANCHES) {
+        for (const level of branchLevels(layout, branch.id)) {
+          const { text } = levelText(layout, level, 'de', mulberry32(level.number));
+          expect(text.length, `${courseOf(layout.id, branch.id)} ${level.number}`).toBeGreaterThan(
+            10,
+          );
+          if (branch.id !== 'basics') {
+            const all = typeable(layout);
+            for (const ch of text)
+              expect(all.has(ch), `${layout.id}/${branch.id} ${ch}`).toBe(true);
+          }
+        }
+      }
+  });
+});
+
+describe('chords', () => {
+  it('use only letters of the word, never two keys of one finger, each chord once', () => {
+    for (const layout of LAYOUTS)
+      for (const lang of ['de', 'en']) {
+        const table = chordTable(layout, lang, (w) => adapt(w, layout));
+        expect(table.length).toBeGreaterThan(80);
+        const seen = new Set();
+        for (const { word, keys } of table) {
+          for (const k of keys) expect(word).toContain(k);
+          const fingers = keys.map((k) => FINGERS[locate(layout, k).key]);
+          expect(new Set(fingers).size).toBe(keys.length);
+          expect(seen.has(chordKey(keys))).toBe(false);
+          seen.add(chordKey(keys));
+          expect(keys.length).toBeGreaterThanOrEqual(2);
+          expect(keys.length).toBeLessThanOrEqual(4);
+        }
+      }
+  });
+
+  it('start with the first letter of the word where possible', () => {
+    const table = chordTable(getLayout('qwertz'), 'de', (w) => w);
+    const und = table.find((c) => c.word === 'und');
+    expect(und.keys[0]).toBe('u');
+    const firsts = table.filter((c) => c.keys[0] === c.word[0]).length;
+    expect(firsts / table.length).toBeGreaterThan(0.9);
+  });
+
+  it('a chord types the whole word and its space', () => {
+    const run = engine.createRun('und die');
+    expect(engine.wordAt(run)).toBe('und');
+    const res = engine.inputWord(run, 'und', 0);
+    expect(res.changed).toContain(3);
+    expect(run.pos).toBe(4);
+    expect(engine.wordAt(run)).toBe('die');
+    engine.input(run, 'd', 10);
+    expect(engine.wordAt(run)).toBeNull();
+    expect(engine.inputWord(run, 'die', 20)).toBeNull();
+    engine.chordMiss(run, 30);
+    expect(run.errors).toBe(1);
   });
 });

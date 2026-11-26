@@ -82,6 +82,45 @@ export function input(run, ch, now) {
   return { changed, correct, done: isDone(run) };
 }
 
+/** The word that starts at the caret, or null when the caret is inside a word. */
+export function wordAt(run) {
+  if (run.pos > 0 && /\p{L}/u.test(run.text[run.pos - 1])) return null;
+  const match = /^\p{L}+/u.exec(run.text.slice(run.pos));
+  return match ? match[0] : null;
+}
+
+/**
+ * A chord typed the whole word at the caret (and the space after it). Counts as one keystroke.
+ * @returns {{ changed: number[], done: boolean }}
+ */
+export function inputWord(run, word, now) {
+  if (wordAt(run) !== word) return null;
+  if (!run.startedAt) run.startedAt = now;
+  run.lastAt = now;
+  run.keystrokes += 1;
+  const changed = [];
+  const end = run.pos + word.length + (run.text[run.pos + word.length] === ' ' ? 1 : 0);
+  // Not counted per character: the key statistics are about typing letter by letter.
+  for (; run.pos < end; run.pos++) {
+    run.status[run.pos] = run.missed[run.pos] ? FIXED : OK;
+    changed.push(run.pos);
+  }
+  if (run.pos < run.text.length) changed.push(run.pos);
+  return { changed, done: isDone(run) };
+}
+
+/** A chord that does not fit the word at the caret: one mistake, the caret stays. */
+export function chordMiss(run, now) {
+  if (isDone(run)) return null;
+  if (!run.startedAt) run.startedAt = now;
+  run.lastAt = now;
+  run.keystrokes += 1;
+  run.errors += 1;
+  run.missed[run.pos] = 1;
+  run.status[run.pos] = WRONG;
+  return { changed: [run.pos] };
+}
+
 /** Back one position (only when going on after mistakes); skips automatic indentation. */
 export function backspace(run) {
   if (run.stopOnError || run.pos === 0 || isDone(run)) return null;

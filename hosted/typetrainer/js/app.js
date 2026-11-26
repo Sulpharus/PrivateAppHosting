@@ -1,13 +1,11 @@
 // Typetrainer: start-up, routing, the "Üben" view and the learning path.
-import { CODE_LANGUAGES, codeText, getCodeLanguage } from './code.js';
-import { clear, fill, h, icon, skeleton, starRow } from './dom.js';
+import { chordTable } from './chords.js';
+import { CODE_LANGUAGES, getCodeLanguage } from './code.js';
+import { clear, fill, h, icon, skeleton, starRow, upper } from './dom.js';
 import {
   adapt,
   berlinDate,
-  codeLevels,
   dailyText,
-  layoutLevels,
-  lessonText,
   msToBerlinMidnight,
   mulberry32,
   practiceCode,
@@ -22,6 +20,17 @@ import { loadAll, saveSettings, state, t, textLang } from './state.js';
 import { dayKey, minutesOn, streak, unlockedFrom, weakKeys } from './stats.js';
 import { renderStats } from './statsview.js';
 import { renderTexts, textShortcut } from './texts.js';
+import {
+  BRANCHES,
+  continueCourse,
+  courseLevels,
+  courseOf,
+  FOCUS,
+  isComplete,
+  isOpen,
+  levelText,
+  parseCourse,
+} from './tree.js';
 
 const main = () => document.getElementById('main');
 
@@ -44,76 +53,69 @@ export function errorBox(message, retry) {
   );
 }
 
-// ---------- courses ----------
+// ---------- courses (the tree per layout, js/tree.js) ----------
 
-export function courses() {
-  return [
-    ...LAYOUTS.map((l) => ({ id: `layout:${l.id}`, type: 'layout', name: l.name, ref: l.id })),
-    ...CODE_LANGUAGES.map((c) => ({ id: `code:${c.id}`, type: 'code', name: c.name, ref: c.id })),
-  ];
-}
+export { courseLevels };
 
-export function courseLevels(courseId) {
-  const [type, ref] = courseId.split(':');
-  return type === 'code' ? codeLevels(ref) : layoutLevels(getLayout(ref));
-}
-
-export function courseName(courseId) {
-  return courses().find((c) => c.id === courseId)?.name ?? courseId;
+/** "Neo 2 · Chording"; older runs without a layout ("code:python") show the language. */
+export function courseName(course) {
+  const parsed = parseCourse(course);
+  if (parsed) return `${getLayout(parsed.layout).name} · ${t(`branch.${parsed.branch}`)}`;
+  if (course.startsWith('code:')) return getCodeLanguage(course.slice(5)).name;
+  return course;
 }
 
 export function levelTitle(level) {
   if (level.kind === 'code') return t(`code.level.${level.id}`);
   if (level.kind === 'letters') {
-    const keys = level.fresh
-      .map((ch) => (/\p{L}/u.test(ch) ? ch.toLocaleUpperCase() : ch))
-      .join(' ');
+    const keys = level.fresh.map((ch) => (/\p{L}/u.test(ch) ? upper(ch) : ch)).join(' ');
     return t('level.letters', { keys });
   }
+  if (level.kind === 'chords')
+    return t('level.chords', { from: level.range[0] + 1, to: level.range[1] });
   return t(`level.${level.kind}`);
 }
 
-export const unlockedLevel = (courseId) => unlockedFrom(state.stars, courseId);
-export const starsOf = (courseId, n) => state.stars[`${courseId}#${n}`] ?? 0;
+export const unlockedLevel = (course) => unlockedFrom(state.stars, course);
+export const starsOf = (course, n) => state.stars[`${course}#${n}`] ?? 0;
 
-/** Number of levels per course (for the "all stars" badge). */
+/** Number of levels per course of every layout (for the "all stars" badge). */
 export function levelCounts() {
-  return Object.fromEntries(courses().map((c) => [c.id, courseLevels(c.id).length]));
+  const out = {};
+  for (const l of LAYOUTS)
+    for (const b of BRANCHES) out[courseOf(l.id, b.id)] = courseLevels(courseOf(l.id, b.id)).length;
+  return out;
 }
 
-/** The course to continue: the last one used, else the layout's. */
+/** The course to continue on the selected layout: Grundlagen first, then the focus. */
 export function currentCourse() {
-  const last = state.settings.lastCourse;
-  if (last && courses().some((c) => c.id === last)) return last;
-  return `layout:${state.settings.layout}`;
+  return continueCourse(state.stars, state.settings.layout, state.settings.focus);
 }
 
-export function startLesson(courseId, number) {
-  const levels = courseLevels(courseId);
+export function startLesson(course, number) {
+  const parsed = parseCourse(course);
+  const levels = courseLevels(course);
   const level = levels[number - 1];
-  if (!level) return;
-  if (state.settings.lastCourse !== courseId)
-    void saveSettings({ lastCourse: courseId }).catch(() => {});
-  const layout = getLayout(state.settings.layout);
-  const rng = mulberry32(randomSeed());
-  const isCode = level.kind === 'code';
-  const raw = isCode
-    ? codeText(getCodeLanguage(level.lang), level.id, rng)
-    : lessonText(getLayout(courseId.split(':')[1]), level, textLang(), rng);
+  if (!parsed || !level) return;
+  // Lessons of another layout keep their own keys; the computer must use that layout too.
+  const layout = getLayout(parsed.layout);
+  const { text, chords, code } = levelText(layout, level, textLang(), mulberry32(randomSeed()));
   startRun({
     mode: 'lesson',
-    course: courseId,
+    course,
     level: number,
     target: level.target,
-    code: isCode,
+    code: Boolean(code),
+    chords,
+    layout,
     title: levelTitle(level),
-    subtitle: t('run.lessonSub', { course: courseName(courseId), n: number, count: levels.length }),
-    text: adapt(raw, layout),
-    onAgain: () => startLesson(courseId, number),
+    subtitle: t('run.lessonSub', { course: courseName(course), n: number, count: levels.length }),
+    text,
+    onAgain: () => startLesson(course, number),
     onNext: () =>
       startLesson(
-        courseId,
-        Math.min(levels.length, unlockedLevel(courseId) > number ? number + 1 : number),
+        course,
+        Math.min(levels.length, unlockedLevel(course) > number ? number + 1 : number),
       ),
     onExit: () => route(),
   });
@@ -220,11 +222,7 @@ function renderHome() {
     h(
       'div',
       { class: 'tt-actions' },
-      h(
-        'a',
-        { class: 'mn-btn', href: `#/pfad/${encodeURIComponent(courseId)}` },
-        t('home.allLevels'),
-      ),
+      h('a', { class: 'mn-btn', href: `#/pfad/${state.settings.layout}` }, t('home.allLevels')),
       h(
         'button',
         {
@@ -451,70 +449,112 @@ async function saveAndRender(patch) {
   route();
 }
 
-// ---------- view: Lernpfad ----------
+// ---------- view: Lernpfad (a tree per layout) ----------
 
 function renderPath(selected) {
-  const courseId = courses().some((c) => c.id === selected) ? selected : currentCourse();
-  const levels = courseLevels(courseId);
-  const unlocked = unlockedLevel(courseId);
-  const starsTotal = levels.reduce((sum, _, i) => sum + starsOf(courseId, i + 1), 0);
-  setHeader(
-    t('path.title'),
-    t('path.sub', { course: courseName(courseId), stars: starsTotal, max: levels.length * 3 }),
+  const layoutId = LAYOUTS.some((l) => l.id === selected) ? selected : state.settings.layout;
+  const layout = getLayout(layoutId);
+  const total = BRANCHES.reduce(
+    (sum, b) =>
+      sum +
+      courseLevels(courseOf(layoutId, b.id)).reduce(
+        (n, _, i) => n + starsOf(courseOf(layoutId, b.id), i + 1),
+        0,
+      ),
+    0,
   );
+  setHeader(t('path.title'), t('path.sub', { layout: layout.name, stars: total }));
   const root = clear(main());
-  if (state.loading) return root.append(skeleton(44, 72, 72, 72, 72));
+  if (state.loading) return root.append(skeleton(44, 160, 120, 120));
   if (state.error) return root.append(errorBox(t('common.loadError'), () => boot()));
   const chips = h(
     'div',
-    { class: 'mn-chips', role: 'group', 'aria-label': t('path.courses') },
-    courses().map((c) =>
+    { class: 'mn-chips', role: 'group', 'aria-label': t('path.layouts') },
+    LAYOUTS.map((l) =>
       h(
         'button',
         {
           class: 'mn-filter',
           type: 'button',
-          'aria-pressed': String(c.id === courseId),
+          'aria-pressed': String(l.id === layoutId),
           onclick: () => {
-            location.hash = `#/pfad/${encodeURIComponent(c.id)}`;
+            location.hash = `#/pfad/${l.id}`;
           },
         },
-        c.name,
+        l.name,
       ),
     ),
   );
-  const [type, ref] = courseId.split(':');
   const note =
-    type === 'layout' && ref !== state.settings.layout
+    layoutId !== state.settings.layout
       ? h(
           'div',
           { class: 'mn-banner mn-banner--warn', role: 'note' },
           t('path.otherLayout', {
-            course: courseName(courseId),
+            course: layout.name,
             layout: getLayout(state.settings.layout).name,
           }),
         )
       : null;
+  const basics = courseCard(layoutId, 'basics');
+  const children = (parent) => BRANCHES.filter((b) => b.parent === parent);
+  const subtree = (parent) =>
+    h(
+      'div',
+      { class: 'tt-tree-children' },
+      children(parent).map((b) =>
+        h(
+          'div',
+          { class: 'tt-tree-node' },
+          courseCard(layoutId, b.id),
+          children(b.id).length ? subtree(b.id) : null,
+        ),
+      ),
+    );
+  fill(
+    root,
+    chips,
+    note,
+    h('p', { class: 'mn-note' }, t('path.treeHint')),
+    h(
+      'div',
+      { class: 'tt-tree' },
+      basics,
+      h('h2', { class: 'tt-tree-title' }, t('path.branches')),
+      subtree('basics'),
+    ),
+  );
+}
+
+function courseCard(layoutId, branch) {
+  const course = courseOf(layoutId, branch);
+  const levels = courseLevels(course);
+  const open = isOpen(state.stars, layoutId, branch);
+  const complete = isComplete(state.stars, course);
+  const unlocked = unlockedLevel(course);
+  const stars = levels.reduce((n, _, i) => n + starsOf(course, i + 1), 0);
+  const focus = state.settings.focus === branch;
+  const parent = BRANCHES.find((b) => b.id === branch)?.parent;
   const list = h(
     'div',
     { class: 'mn-list' },
     levels.map((level, i) => {
       const n = i + 1;
-      const stars = starsOf(courseId, n);
-      const open = n <= unlocked;
+      const playable = open && n <= unlocked;
       const title = levelTitle(level);
+      const got = starsOf(course, n);
       return h(
         'button',
         {
-          class: `mn-row${open ? '' : ' tt-locked'}`,
+          class: `mn-row${playable ? '' : ' tt-locked'}`,
           type: 'button',
-          disabled: !open,
-          'aria-label': open
+          disabled: !playable,
+          'aria-label': playable
             ? t('path.startLevel', { n, title })
             : t('path.lockedLevel', { n, title }),
-          onclick: () => startLesson(courseId, n),
+          onclick: () => startLesson(course, n),
         },
-        h('span', { class: 'mn-thumb' }, open ? String(n) : icon('lock')),
+        h('span', { class: 'mn-thumb' }, playable ? String(n) : icon('lock')),
         h(
           'span',
           {},
@@ -522,26 +562,139 @@ function renderPath(selected) {
           h(
             'span',
             { class: 'mn-row-sub' },
-            open ? t('path.target', { wpm: level.target }) : t('path.locked'),
+            playable ? t('path.target', { wpm: level.target }) : t('path.locked'),
           ),
         ),
         h(
           'span',
           { class: 'mn-row-side' },
-          open ? starRow(stars, t('stars.label', { n: stars })) : null,
+          playable ? starRow(got, t('stars.label', { n: got })) : null,
         ),
       );
     }),
   );
-  fill(
-    root,
-    chips,
-    note,
-    type === 'layout'
-      ? h('p', { class: 'mn-note' }, t('path.layoutHint'))
-      : h('p', { class: 'mn-note' }, t('path.codeHint')),
-    list,
+  const focusButton = FOCUS.includes(branch)
+    ? h(
+        'button',
+        {
+          class: 'mn-btn',
+          type: 'button',
+          'aria-pressed': String(focus),
+          onclick: async () => {
+            try {
+              await saveSettings({ focus: branch });
+              window.mnui.toast(t('path.focusSaved', { branch: t(`branch.${branch}`) }));
+            } catch {
+              window.mnui.toast(t('common.saveError'));
+            }
+            route();
+          },
+        },
+        focus ? t('path.isFocus') : t('path.setFocus'),
+      )
+    : null;
+  const extra =
+    branch === 'chord'
+      ? [
+          window.matchMedia('(pointer: coarse)').matches
+            ? h('p', { class: 'mn-note' }, t('path.chordTouch'))
+            : null,
+          h(
+            'button',
+            { class: 'mn-btn', type: 'button', onclick: () => showChords(getLayout(layoutId)) },
+            t('path.chordTable'),
+          ),
+        ]
+      : [];
+  return h(
+    'section',
+    {
+      class: `mn-card tt-course${open ? '' : ' is-locked'}${focus ? ' is-focus' : ''}`,
+      'aria-labelledby': `course-${branch}`,
+    },
+    h(
+      'div',
+      { class: 'tt-course-head' },
+      h('h3', { id: `course-${branch}` }, open ? null : icon('lock'), t(`branch.${branch}`)),
+      h(
+        'span',
+        { class: 'mn-chip mn-chip--plain' },
+        t('path.stars', { n: stars, max: levels.length * 3 }),
+      ),
+    ),
+    h('p', { class: 'mn-muted' }, t(`branch.${branch}Desc`)),
+    open
+      ? null
+      : h('p', { class: 'mn-note' }, t('path.opensAfter', { parent: t(`branch.${parent}`) })),
+    h('div', { class: 'tt-actions tt-actions--start' }, focusButton, ...extra),
+    h(
+      'details',
+      { class: 'tt-levels', open: open && !complete ? true : null },
+      h('summary', {}, t('path.levels', { n: levels.length })),
+      list,
+    ),
   );
+}
+
+/** The chord table of a layout, with an export for chord tools (Kanata, QMK, ZMK …). */
+function showChords(layout) {
+  const lang = textLang();
+  const table = chordTable(layout, lang, (w) => adapt(w, layout));
+  const download = () => {
+    const lines = ['chord;word', ...table.map((c) => `${c.keys.join('+')};${c.word}`)];
+    const url = URL.createObjectURL(
+      new Blob([`${lines.join('\n')}\n`], { type: 'text/csv;charset=utf-8' }),
+    );
+    const a = h('a', { href: url, download: `chords-${layout.id}-${lang}.csv` });
+    document.body.append(a);
+    a.click();
+    a.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    window.mnui.toast(t('data.exported'));
+  };
+  const content = h(
+    'div',
+    {},
+    h(
+      'div',
+      { class: 'mn-sheet-bar' },
+      h(
+        'button',
+        {
+          class: 'mn-icon-btn',
+          type: 'button',
+          'data-mn-close': true,
+          'aria-label': t('common.close'),
+        },
+        icon('close'),
+      ),
+      h('h2', {}, t('chords.title', { layout: layout.name })),
+      h('span', {}),
+    ),
+    h(
+      'div',
+      { class: 'mn-sheet-body' },
+      h('p', { class: 'mn-hint' }, t('chords.hint')),
+      h('button', { class: 'mn-btn', type: 'button', onclick: download }, t('chords.export')),
+      h(
+        'div',
+        { class: 'mn-list tt-chord-list' },
+        table.map((c) =>
+          h(
+            'div',
+            { class: 'mn-row mn-row--text' },
+            h('span', {}, h('span', { class: 'mn-row-title' }, c.word)),
+            h(
+              'span',
+              { class: 'mn-row-side' },
+              h('b', { class: 'tt-keycap' }, c.keys.map((k) => upper(k)).join(' + ')),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+  window.mnui.sheet.open(content, { tall: true });
 }
 
 // ---------- routing, shortcuts, start-up ----------

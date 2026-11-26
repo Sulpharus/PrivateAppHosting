@@ -1,7 +1,7 @@
 // Practice texts, all made by script (no AI): lessons of the learning path, random practice, the
 // daily challenge and drills for weak keys.
-import { CODE_LEVELS, codeTarget, codeText, getCodeLanguage } from './code.js';
-import { letterStages, typeable } from './layouts.js';
+import { codeText, getCodeLanguage } from './code.js';
+import { typeable } from './layouts.js';
 import { SENTENCES, WORDS } from './words.js';
 
 /** Small seeded random generator (mulberry32). */
@@ -26,49 +26,6 @@ function shuffle(rng, list) {
     [out[i], out[j]] = [out[j], out[i]];
   }
   return out;
-}
-
-/** The learning path of a layout: letter stages, then capitals, numbers, punctuation, symbols, speed. */
-export function layoutLevels(layout) {
-  const stages = letterStages(layout);
-  const levels = [];
-  const known = [];
-  stages.forEach((chars) => {
-    known.push(...chars);
-    levels.push({ kind: 'letters', fresh: chars, known: [...known] });
-  });
-  levels.push({ kind: 'capitals', fresh: [], known: [...known] });
-  levels.push({ kind: 'numbers', fresh: [...'0123456789'], known: [...known] });
-  levels.push({ kind: 'punctuation', fresh: [...'.,;:!?-'], known: [...known] });
-  levels.push({ kind: 'symbols', fresh: [...'()[]{}<>=+*/'], known: [...known] });
-  levels.push({ kind: 'sentences', fresh: [], known: [...known] });
-  levels.push({ kind: 'speed', fresh: [], known: [...known] });
-  return levels.map((level, i) => ({
-    ...level,
-    number: i + 1,
-    target: layoutTarget(i, levels.length),
-  }));
-}
-
-/** Target speed: from 12 WPM on the first level up to 45 WPM on the last. */
-function layoutTarget(index, count) {
-  return Math.round(12 + (33 * index) / Math.max(1, count - 1));
-}
-
-export function codeLevels(langId) {
-  const lang = getCodeLanguage(langId);
-  return CODE_LEVELS.map((id, i) => ({
-    kind: 'code',
-    id,
-    lang: lang.id,
-    number: i + 1,
-    target: codeTarget(i + 1),
-  }));
-}
-
-/** All courses: one per layout and one per programming language. */
-export function courseId(type, id) {
-  return `${type}:${id}`;
 }
 
 const lower = (w) => w.toLocaleLowerCase('de-DE');
@@ -136,15 +93,13 @@ export function lessonText(layout, level, lang, rng, words = 28) {
   if (level.kind === 'capitals') return wordsText(lang, rng, words, { capitals: true });
   if (level.kind === 'numbers') return numbersText(lang, rng, words);
   if (level.kind === 'punctuation') return sentenceText(lang, rng, words * 6, ok);
-  if (level.kind === 'symbols') return symbolsText(rng, words, ok);
-  if (level.kind === 'sentences') return sentenceText(lang, rng, words * 6, ok);
-  return sentenceText(lang, rng, words * 8, ok);
+  return sentenceText(lang, rng, words * 6, ok);
 }
 
 /** Real words with their own capitals (German nouns) or all lower case. */
-function wordsText(lang, rng, count, { capitals, long } = {}) {
+export function wordsText(lang, rng, count, { capitals, long } = {}) {
   let pool = WORDS[lang];
-  if (!long) pool = pool.filter((w) => w.length <= 7);
+  pool = long ? pool.filter((w) => w.length >= 8) : pool.filter((w) => w.length <= 7);
   const out = [];
   while (out.length < count) {
     let w = pick(rng, pool);
@@ -154,7 +109,7 @@ function wordsText(lang, rng, count, { capitals, long } = {}) {
   return out.join(' ');
 }
 
-function numbersText(lang, rng, count) {
+export function numbersText(lang, rng, count) {
   const out = [];
   while (out.length < count) {
     const r = rng();
@@ -165,7 +120,7 @@ function numbersText(lang, rng, count) {
   return out.join(' ');
 }
 
-function sentenceText(lang, rng, chars, ok) {
+export function sentenceText(lang, rng, chars, ok) {
   const list = shuffle(rng, SENTENCES[lang].filter(ok));
   const out = [];
   let length = 0;
@@ -177,7 +132,7 @@ function sentenceText(lang, rng, chars, ok) {
   return out.join(' ');
 }
 
-function symbolsText(rng, count, ok) {
+export function symbolsText(rng, count, ok) {
   const names = ['a', 'b', 'x', 'y', 'n', 'sum', 'max', 'list', 'item', 'total'];
   const forms = [
     () => `(${pick(rng, names)} + ${pick(rng, names)})`,
@@ -288,4 +243,73 @@ const SUBSTITUTES = {
 export function adapt(text, layout) {
   const all = typeable(layout);
   return [...text].map((ch) => (all.has(ch) ? ch : (SUBSTITUTES[ch] ?? ch))).join('');
+}
+
+/** Code characters of the layout: brackets in pairs, or operators, with short names between. */
+export function codeCharsText(kind, rng, ok, count = 26) {
+  const names = ['a', 'b', 'x', 'i', 'n', 'key', 'item', 'list', 'user', 'sum'];
+  const digit = () => Math.floor(rng() * 10);
+  const brackets = [
+    () => '()',
+    () => '[]',
+    () => '{}',
+    () => '<>',
+    () => `(${pick(rng, names)})`,
+    () => `[${digit()}]`,
+    () => `{${pick(rng, names)}}`,
+    () => `<${pick(rng, names)}>`,
+    () => `f(${pick(rng, names)})`,
+    () => `${pick(rng, names)}[i]`,
+    () => `{ ${pick(rng, names)}: [${digit()}] }`,
+    () => `((${pick(rng, names)}))`,
+  ];
+  const ops = [
+    '=',
+    '==',
+    '!=',
+    '<=',
+    '>=',
+    '+=',
+    '-=',
+    '*',
+    '/',
+    '%',
+    '&&',
+    '||',
+    '!',
+    '?',
+    ':',
+    ';',
+    '_',
+    '#',
+    '$',
+    '@',
+    '~',
+    '^',
+    '`',
+    '\\',
+    '|',
+    '&',
+    '->',
+    '=>',
+    '::',
+    '"',
+    "'",
+  ];
+  const operators = [
+    () => pick(rng, ops),
+    () => `${pick(rng, names)} ${pick(rng, ops)} ${pick(rng, names)}`,
+    () => `${pick(rng, names)}${pick(rng, ['_', '.', '->', '::'])}${pick(rng, names)}`,
+    () => `"${pick(rng, names)}"`,
+    () => `$${pick(rng, names)}`,
+    () => `#${pick(rng, names)}`,
+  ];
+  const forms = kind === 'brackets' ? brackets : operators;
+  const out = [];
+  let guard = 0;
+  while (out.length < count && guard++ < count * 20) {
+    const piece = pick(rng, forms)();
+    if (ok(piece)) out.push(piece);
+  }
+  return out.join(' ');
 }

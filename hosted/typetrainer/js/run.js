@@ -1,5 +1,7 @@
 // The typing screen: the text, live figures, the on-screen keyboard and the result.
-import { h, icon, starRow } from './dom.js';
+
+import { chordKey } from './chords.js';
+import { h, icon, starRow, upper } from './dom.js';
 import * as engine from './engine.js';
 import { berlinDate } from './generator.js';
 import { FINGERS, getLayout, locate, modifierFor, ROWS } from './layouts.js';
@@ -17,7 +19,7 @@ let view = null;
  */
 export function startRun(spec) {
   stopRun();
-  const layout = getLayout(state.settings.layout);
+  const layout = spec.layout ?? getLayout(state.settings.layout);
   const run = engine.createRun(spec.text, { stopOnError: state.settings.errorMode !== 'continue' });
   state.run = { spec, run };
   const main = document.getElementById('main');
@@ -117,6 +119,12 @@ export function startRun(spec) {
     lineTop: -1,
     timer: 0,
     shown: -1,
+    // Chord lessons: word → keys, and the chord key → word for recognising a chord.
+    chords: spec.chords ?? null,
+    chordWords: spec.chords
+      ? new Map([...spec.chords].map(([word, keys]) => [chordKey(keys), word]))
+      : null,
+    group: null,
   };
   mark(view, 0);
   showNext(view);
@@ -124,6 +132,7 @@ export function startRun(spec) {
   capture.addEventListener('beforeinput', onBeforeInput);
   capture.addEventListener('compositionend', onComposition);
   capture.addEventListener('keydown', onKeyDown);
+  capture.addEventListener('keyup', onKeyUp);
   capture.addEventListener('focus', () => board.classList.remove('is-paused'));
   capture.addEventListener('blur', () => {
     if (state.run && !engine.isDone(run)) board.classList.add('is-paused');
@@ -152,6 +161,9 @@ function exit(spec) {
   spec.onExit();
 }
 
+/** Keys pressed within this time and held together are a chord; otherwise they are typed. */
+const CHORD_WINDOW = 50;
+
 function onKeyDown(e) {
   if (!view) return;
   if (e.key === 'Escape') {
@@ -160,7 +172,73 @@ function onKeyDown(e) {
   } else if (e.key === 'Tab') {
     // Code uses spaces; Tab would leave the field.
     e.preventDefault();
+  } else if (view.chords && e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
+    // Chord lessons read characters from the key events themselves, so a chord can be told
+    // apart from fast typing before anything is written.
+    e.preventDefault();
+    if (!e.repeat) chordKeyDown(view, e);
   }
+}
+
+function onKeyUp(e) {
+  if (view?.chords) chordKeyUp(view, e);
+}
+
+function chordKeyDown(v, e) {
+  const now = performance.now();
+  const g = v.group;
+  if (!g) {
+    v.group = { start: now, chars: [e.key], held: new Set([e.code]), decided: false, chord: false };
+    v.group.timer = window.setTimeout(() => decide(v), CHORD_WINDOW);
+    return;
+  }
+  g.held.add(e.code);
+  if (!g.decided && now - g.start <= CHORD_WINDOW) g.chars.push(e.key);
+  else if (g.chord) g.chars.push(e.key);
+  else typeChar(e.key);
+}
+
+function chordKeyUp(v, e) {
+  const g = v.group;
+  if (!g) return;
+  if (!g.decided) decide(v);
+  g.held.delete(e.code);
+  if (g.held.size > 0) return;
+  v.group = null;
+  if (g.chord) playChord(v, g.chars);
+}
+
+/** After the window: two or more keys still held together are a chord, anything else is typed. */
+function decide(v) {
+  const g = v.group;
+  if (!g || g.decided) return;
+  g.decided = true;
+  window.clearTimeout(g.timer);
+  g.chord = g.chars.length >= 2 && g.held.size >= 2;
+  if (!g.chord) for (const ch of g.chars) typeChar(ch);
+}
+
+function playChord(v, chars) {
+  if (v.finished) return;
+  const word = v.chordWords.get(chordKey(chars.map((ch) => ch.toLocaleLowerCase('de-DE'))));
+  const expected = engine.wordAt(v.run);
+  const res =
+    word && word === expected?.toLocaleLowerCase('de-DE')
+      ? engine.inputWord(v.run, expected, performance.now())
+      : null;
+  if (res) {
+    for (const i of res.changed) v.spans[i].className = spanClass(v, i);
+    if (res.done) return finish(v);
+  } else {
+    const miss = engine.chordMiss(v.run, performance.now());
+    if (!miss) return;
+    for (const i of miss.changed) v.spans[i].className = spanClass(v, i);
+    v.announce.textContent = expected
+      ? t('run.chordWrong', { word: expected })
+      : t('run.chordNoWord');
+  }
+  mark(v, v.run.pos);
+  showNext(v);
 }
 
 function onBeforeInput(e) {
@@ -234,6 +312,23 @@ function mark(v, pos) {
 function showNext(v) {
   const ch = v.run.text[v.run.pos];
   if (ch === undefined) return;
+  // In chord lessons, a word with a chord shows all its keys at once.
+  const word = v.chords ? engine.wordAt(v.run) : null;
+  const keys = word ? v.chords.get(word.toLocaleLowerCase('de-DE')) : null;
+  if (keys) {
+    const places = keys.map((k) => locate(v.layout, k)).filter(Boolean);
+    if (v.keyboard)
+      v.keyboard.show(
+        places[0],
+        null,
+        places.slice(1).map((p) => p.key),
+      );
+    v.hint.textContent = t('run.chordHint', {
+      word,
+      keys: keys.map((k) => upper(k)).join(' + '),
+    });
+    return;
+  }
   const place = locate(v.layout, ch);
   const mod = modifierFor(v.layout, place);
   if (v.keyboard) v.keyboard.show(place, mod);
@@ -306,7 +401,7 @@ function buildKeyboard(layout) {
   };
   return {
     el,
-    show(place, mod) {
+    show(place, mod, extra = []) {
       const layer = place?.layer === 2 ? 2 : 0;
       if (layer !== shownLayer) {
         label(layer);
@@ -314,7 +409,7 @@ function buildKeyboard(layout) {
       }
       for (const k of lit) k.classList.remove('next');
       lit = [];
-      for (const id of [place?.key, mod]) {
+      for (const id of [place?.key, mod, ...extra]) {
         const k = id && keys.get(id);
         if (k) {
           k.classList.add('next');

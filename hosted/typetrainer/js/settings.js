@@ -73,10 +73,7 @@ function general() {
   layout.addEventListener('change', () => {
     const family = LAYOUTS.find((l) => l.id === layout.value)?.family ?? 'classic';
     layoutHint.textContent = t(`settings.layoutHint.${family}`);
-    void apply(
-      { layout: layout.value, lastCourse: `layout:${layout.value}` },
-      t('settings.layoutSaved'),
-    );
+    void apply({ layout: layout.value }, t('settings.layoutSaved'));
   });
   const minutes = h('input', {
     id: 'set-minutes',

@@ -13,13 +13,27 @@ All practice texts are made by script; AI is optional and only runs when the per
   text for everyone on a Berlin date, the first attempt counts, its own streak and a countdown);
   **free practice** with random prose or code (Leicht, Mittel, Schwer; Python, JavaScript, Java);
   a drill for the **weakest keys** of the last 40 runs.
-- **Lernpfad**: one course per layout and per programming language. Layout courses are derived
-  from the layout data: home row finger by finger, then top and bottom row, the remaining letters,
-  capitals, numbers, punctuation, brackets and symbols, whole sentences and a speed level (target
-  12 to 45 WPM). Code courses go from brackets and operators via names, values, conditions, loops,
-  functions and classes to idioms and small programs (target 16 to 32 WPM). One star (90 %
-  accuracy) unlocks the next level; two need the target speed at 94 %, three 1.3 × the target at
-  97 %.
+- **Lernpfad**: a tree per layout (`js/tree.js`), because key positions decide the order of the
+  letters, where code characters sit and which chords work:
+  - **Grundlagen** (17–18 levels, derived from the layout data): home row finger by finger, then
+    top and bottom row, the remaining letters, capitals, numbers, punctuation (12 to 32 WPM).
+  - After the basics three branches open: **Schnellschreiben** (frequent words, sentences, long
+    words, numbers and symbols in text, speed, endurance; 30 to 60 WPM), **Chording** (below) and
+    **Code-Zeichen** (brackets, operators and symbols of this layout), which opens
+    **Python**, **JavaScript** and **Java** (9 levels each, from names and values to small
+    programs; 16 to 32 WPM).
+  - One star (90 % accuracy) unlocks the next level and a complete course its branches; two stars
+    need the target speed at 94 %, three 1.3 × the target at 97 %. The person picks a
+    **Schwerpunkt** (focus); "Üben" continues there once the basics are done.
+- **Chording**: whole words from keys pressed together (within 50 ms and held together; slower
+  overlaps count as normal typing, so fast typists are not misread). The system is our own: a chord
+  uses only letters of the word, first letter first, then its consonants in order, then vowels
+  (und = U D, nicht = N C, the = T H), and never two keys of the same finger. That depends on the
+  layout, so every layout has its own table (`js/chords.js`, the 100 most frequent words per
+  language); a word without a free chord is typed as usual. Chord lessons accept chords and normal
+  typing; the keyboard lights up all keys of the chord. The table can be exported as CSV
+  (`chord;word`) for a chord tool such as Kanata, QMK or ZMK; the app itself cannot make the
+  computer write words from chords elsewhere. Needs a hardware keyboard.
 - **Typing screen**: the text in three visible lines (five for code), the caret, wrong characters
   marked by colour and underline, live WPM, accuracy and progress, an on-screen keyboard that shows
   the next key, its modifier (Shift on the other hand, AltGr or M3) and the active layer, and a line
@@ -51,7 +65,7 @@ Esc cancels; on the result Enter goes on.
 | table `sessions` | every finished run: mode, course, level, layout, difficulty, WPM, accuracy, characters, mistakes, duration, stars, date, per-character counts (`details.keys`) |
 | table `texts` | own texts: title, body, kind, programming language, category, position, mastered |
 | table `categories` | name, colour (`data-cat` names), position, archived |
-| kv `settings` | layout, text language, mistake mode, keyboard, daily goal, practice choices, last course |
+| kv `settings` | layout, text language, mistake mode, keyboard, daily goal, practice choices, focus branch |
 | kv `progress` | the daily challenge: date of the last ranked attempt (Berlin), its result, streak, longest streak |
 | kv `draft:text` | the unsaved new text, removed on save |
 
@@ -69,7 +83,9 @@ SQL: `db/001_init.sql`.
   fingers and the lessons follow from it. The Neo, Bone and Noted data match the xkb definitions
   (`/usr/share/X11/xkb/symbols/de`, variants `neo`, `bone`, `noted`).
 - Programming language: one entry in `CODE_LANGUAGES` (`js/code.js`) with templates for the same
-  level ids.
+  level ids; it appears as a new branch under Code-Zeichen in every layout's tree.
+- Branch: one entry in `BRANCHES` (`js/tree.js`) with its parent, levels in `branchLevels` and
+  texts in `levelText`.
 
 ## Try it
 

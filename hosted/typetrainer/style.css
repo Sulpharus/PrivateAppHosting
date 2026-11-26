@@ -710,3 +710,89 @@ kbd {
   border-radius: var(--mn-r-sm);
   padding: 2px var(--mn-s2);
 }
+
+/* ---------- learning tree ---------- */
+.tt-tree {
+  display: grid;
+  gap: var(--mn-s4);
+  margin-top: var(--mn-s4);
+}
+.tt-tree-title {
+  margin: var(--mn-s4) 0 0;
+  font-family: var(--mn-font-display);
+  font-size: var(--mn-fs-xl);
+}
+.tt-tree-children {
+  display: grid;
+  gap: var(--mn-s4);
+  padding-left: var(--mn-s4);
+  border-left: 2px solid var(--mn-line-strong);
+}
+.tt-tree-node {
+  display: grid;
+  gap: var(--mn-s4);
+  position: relative;
+}
+.tt-tree-node::before {
+  content: "";
+  position: absolute;
+  left: calc(-1 * var(--mn-s4));
+  top: var(--mn-s8);
+  width: var(--mn-s4);
+  border-top: 2px solid var(--mn-line-strong);
+}
+@media (min-width: 1200px) {
+  .tt-tree > .tt-tree-children {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: start;
+  }
+}
+.tt-course {
+  display: grid;
+  gap: var(--mn-s2);
+}
+.tt-course p {
+  margin: 0;
+}
+.tt-course .tt-actions {
+  margin-top: 0;
+}
+.tt-course.is-focus {
+  box-shadow: 0 0 0 2px var(--mn-accent);
+}
+.tt-course.is-locked h3 {
+  color: var(--mn-muted);
+}
+.tt-course-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--mn-s2);
+}
+.tt-course-head h3 {
+  display: flex;
+  align-items: center;
+  gap: var(--mn-s2);
+  margin: 0;
+  font-family: var(--mn-font-display);
+  font-size: var(--mn-fs-lg);
+}
+.tt-levels summary {
+  min-height: var(--mn-tap);
+  display: flex;
+  align-items: center;
+  font-weight: 600;
+  cursor: pointer;
+}
+.tt-levels .mn-list {
+  box-shadow: none;
+  padding: 0;
+}
+.tt-course .mn-btn[aria-pressed="true"] {
+  background: var(--mn-accent-soft);
+  color: var(--mn-accent-text);
+}
+.tt-chord-list {
+  margin-top: var(--mn-s4);
+}

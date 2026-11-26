@@ -2,8 +2,8 @@ import { expect, type Page, test } from '@playwright/test';
 import { cleanup, createUser, grant, PASSWORD } from './seed.ts';
 
 // hosted/typetrainer behind its local gate: the first lesson is typed to the end (with one
-// mistake), the run lands in the statistics, an own text is kept in its table, and the layout
-// setting survives a reload.
+// mistake), the run lands in the statistics and unlocks level 2 in the learning tree, an own text
+// is kept in its table, and the layout setting survives a reload.
 const run = `e2ett${Date.now().toString(36)}`;
 const APP = 'http://localhost:8808';
 
@@ -52,7 +52,18 @@ test('typetrainer: a lesson, its statistics, an own text and the layout', async 
 
   await page.getByRole('link', { name: 'Statistik' }).filter({ visible: true }).first().click();
   await expect(page.getByText('1 Übung in diesem Jahr')).toBeVisible();
-  await expect(page.getByText('QWERTZ · Stufe 1')).toBeVisible();
+  await expect(page.getByText('QWERTZ · Grundlagen · Stufe 1')).toBeVisible();
+
+  // The learning tree: the basics first, the branches open after them.
+  await page.getByRole('link', { name: 'Lernpfad' }).filter({ visible: true }).first().click();
+  await expect(page.getByRole('heading', { name: 'Danach: dein Schwerpunkt' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Chording' })).toBeVisible();
+  await expect(
+    page.getByText('Öffnet sich, sobald „Grundlagen“ geschafft ist.').first(),
+  ).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: 'Stufe 2 starten: Neue Tasten: D K' }),
+  ).toBeVisible();
 
   await page.getByRole('link', { name: 'Texte' }).filter({ visible: true }).first().click();
   await page.getByLabel('Neuen Text schnell hinzufügen').fill('Liebe Grüße und bis morgen');

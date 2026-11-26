@@ -89,6 +89,9 @@ export function fill(el, ...children) {
   return el;
 }
 
+/** Upper case for key labels; ß stays ß (its capital would read as two keys). */
+export const upper = (ch) => (ch === 'ß' ? ch : ch.toLocaleUpperCase());
+
 export function clear(el) {
   el.replaceChildren();
   return el;

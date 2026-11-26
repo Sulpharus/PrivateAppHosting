@@ -15,6 +15,8 @@ export const DEFAULT_SETTINGS = {
   codeLanguage: 'python',
   difficulty: 'mittel',
   practiceKind: 'text',
+  /** the branch of the learning tree to continue after the basics (js/tree.js FOCUS) */
+  focus: 'speed',
 };
 
 export const DEFAULT_PROGRESS = {
