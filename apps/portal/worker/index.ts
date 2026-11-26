@@ -21,6 +21,9 @@ export default {
       supabaseUrl: env.SUPABASE_URL,
       apiOrigin: new URL(env.API_URL).origin,
       aiOrigin: new URL(env.AI_URL).origin,
+      // The installed portal shows apps and outside websites in its viewers (ADR 0032); locally
+      // apps run on http://<slug>.localhost.
+      frameSrc: url.hostname === 'localhost' ? ['https:', 'http://*.localhost:*'] : ['https:'],
     });
 
     if (url.pathname === '/config.json') {

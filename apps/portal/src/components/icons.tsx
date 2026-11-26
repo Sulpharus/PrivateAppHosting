@@ -132,3 +132,15 @@ export const DrawerIcon = ({ size = 18 }: IconProps) => (
     <path d="M7.5 5.5h3M7.5 12.5h3" />
   </svg>
 );
+
+export const BackIcon = ({ size = 18 }: IconProps) => (
+  <svg {...base(size)} aria-hidden="true">
+    <path d="M11 3.5L5.5 9l5.5 5.5" />
+  </svg>
+);
+
+export const CloseIcon = ({ size = 18 }: IconProps) => (
+  <svg {...base(size)} aria-hidden="true">
+    <path d="M4 4l10 10M14 4L4 14" />
+  </svg>
+);

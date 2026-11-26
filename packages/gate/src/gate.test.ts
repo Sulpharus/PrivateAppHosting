@@ -178,6 +178,17 @@ describe('helpers', () => {
     expect(csp).not.toContain('wasm-unsafe-eval');
   });
 
+  it('lets only the named origins frame a page, and names what it frames', () => {
+    const csp = contentSecurityPolicy({
+      supabaseUrl: SUPABASE_URL,
+      ...platformOrigins('https://example.org'),
+      frameAncestors: ['https://example.org'],
+      frameSrc: ['https:'],
+    });
+    expect(csp).toContain('frame-ancestors https://example.org');
+    expect(csp).toContain("frame-src 'self' https:");
+  });
+
   it('allows WebAssembly only for apps that declare it', () => {
     const csp = contentSecurityPolicy({
       supabaseUrl: SUPABASE_URL,
@@ -307,5 +318,50 @@ describe('connectSources', () => {
     expect(connectSources({ PORTAL_URL: 'http://localhost:5173', CONNECT_SRC: '' })).toEqual([
       'http://localhost:5173',
     ]);
+  });
+});
+
+describe('apps in the portal viewer (ADR 0032)', () => {
+  const env = {
+    APP_SLUG: 'kalender',
+    APP_NAME: 'Kalender',
+    SUPABASE_URL,
+    SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_test',
+    PORTAL_URL: PORTAL,
+    ASSETS: { fetch: async () => new Response('<p>app</p>') } as unknown as Fetcher,
+  };
+
+  it('lets only the portal frame an app', async () => {
+    const { handleAppRequest } = await import('./worker.ts');
+    const response = await handleAppRequest(
+      new Request('https://kalender.example.org/_mininode/config.json'),
+      env,
+    );
+    expect(response.headers.get('Content-Security-Policy')).toContain(
+      'frame-ancestors https://example.org;',
+    );
+  });
+
+  it('offers the sign-in for the whole window when signed out inside a frame', async () => {
+    const { handleAppRequest } = await import('./worker.ts');
+    const headers = { 'Sec-Fetch-Mode': 'navigate', 'Sec-Fetch-Dest': 'iframe' };
+    const framed = await handleAppRequest(
+      new Request('https://kalender.example.org/woche?a=1&b="x"', { headers }),
+      env,
+    );
+    expect(framed.status).toBe(401);
+    const html = await framed.text();
+    expect(html).toContain('target="_top"');
+    expect(html).toContain('Bitte anmelden');
+    expect(html).toMatch(/href="https:\/\/example\.org\/login\?next=[^"]*"/);
+    expect(html).not.toContain('"x"');
+
+    const top = await handleAppRequest(
+      new Request('https://kalender.example.org/woche', {
+        headers: { 'Sec-Fetch-Mode': 'navigate', 'Sec-Fetch-Dest': 'document' },
+      }),
+      env,
+    );
+    expect(top.status).toBe(302);
   });
 });

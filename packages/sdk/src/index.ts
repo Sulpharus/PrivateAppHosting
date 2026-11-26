@@ -10,6 +10,7 @@ import { createGame } from './game.ts';
 import { createGoogle } from './google.ts';
 import { createImage } from './image.ts';
 import { createKv, type KvScope } from './kv.ts';
+import { leavePage } from './leave.ts';
 import {
   createOfflineKv,
   indexedDbStore,
@@ -155,6 +156,9 @@ export function createMininode(config: MininodeConfig): Mininode {
     },
   });
 
+  // In the installed portal's app viewer the portal opens its own pages (ADR 0032).
+  const leaveTo = (url: string) => leavePage(url, config.portalUrl);
+
   const loginUrl = () => {
     const url = new URL('/login', config.portalUrl);
     url.searchParams.set('next', location.href);
@@ -269,7 +273,7 @@ export function createMininode(config: MininodeConfig): Mininode {
           globalThis.dispatchEvent?.(new Event('mn:ready'));
           return user;
         }
-        location.assign(loginUrl());
+        leaveTo(loginUrl());
         return new Promise<never>(() => {});
       },
       async signOut() {
@@ -281,7 +285,7 @@ export function createMininode(config: MininodeConfig): Mininode {
           if (key.startsWith('mn-files-linked:')) localStorage.removeItem(key);
         }
         // The portal signs out the shared session and switches this device's push off.
-        location.assign(new URL('/logout', config.portalUrl).toString());
+        leaveTo(new URL('/logout', config.portalUrl).toString());
       },
       accountUrl: () => new URL('/account', config.portalUrl).toString(),
     },

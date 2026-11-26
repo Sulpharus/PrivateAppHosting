@@ -30,3 +30,29 @@ describe('pwa.js start screen', () => {
     expect(splash?.classList.contains('mns-out')).toBe(false);
   });
 });
+
+describe('pwa.js in the portal viewer', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('hands links to other origins to the portal, and only to the portal', () => {
+    const postMessage = vi.fn();
+    const parent = { postMessage };
+    vi.stubGlobal('parent', parent);
+    vi.stubGlobal('top', parent);
+    vi.stubGlobal('location', new URL('https://kalender.example.org/woche'));
+    document.body.innerHTML =
+      '<a id="other" href="https://notizen.example.org/">x</a><a id="own" href="https://kalender.example.org/monat">y</a>';
+    new Function(script)();
+    const other = new MouseEvent('click', { bubbles: true, cancelable: true });
+    document.getElementById('other')?.dispatchEvent(other);
+    expect(other.defaultPrevented).toBe(true);
+    expect(postMessage).toHaveBeenCalledWith(
+      { type: 'mn:open', url: 'https://notizen.example.org/' },
+      'https://example.org',
+    );
+    const own = new MouseEvent('click', { bubbles: true, cancelable: true });
+    document.getElementById('own')?.dispatchEvent(own);
+    expect(own.defaultPrevented).toBe(false);
+    expect(postMessage).toHaveBeenCalledTimes(1);
+  });
+});

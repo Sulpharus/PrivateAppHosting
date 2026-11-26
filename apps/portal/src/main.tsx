@@ -13,15 +13,18 @@ import { StepUpProvider } from './auth/StepUp.tsx';
 import { OfflineBanner } from './components/OfflineBanner.tsx';
 import { loadConfig, setRuntimeConfig } from './config.ts';
 import { initApi } from './lib/api.ts';
+import { listApps } from './lib/apps.ts';
 import { listenForRenewals, registerServiceWorker } from './lib/push.ts';
 import { initSupabase } from './lib/supabase.ts';
 import { applyStoredTheme } from './lib/theme.ts';
+import { loadInstanceSettings, viewerRoute } from './lib/viewer.ts';
 import { Account } from './routes/Account.tsx';
 import { AccountKeys } from './routes/AccountKeys.tsx';
 import { AuthConfirm, AuthRefresh } from './routes/AuthPages.tsx';
 import { Home } from './routes/Home.tsx';
 import { Login } from './routes/Login.tsx';
 import { Setup } from './routes/Setup.tsx';
+import { AppViewer, WebViewer } from './routes/Viewers.tsx';
 import { Welcome } from './routes/Welcome.tsx';
 import './styles.css';
 
@@ -49,11 +52,19 @@ const Games = lazy(() => import('./routes/Games.tsx').then((m) => ({ default: m.
 const GameProfile = lazy(() =>
   import('./routes/Games.tsx').then((m) => ({ default: m.GameProfile })),
 );
+const Settings = lazy(() => import('./admin/Settings.tsx').then((m) => ({ default: m.Settings })));
 const Workshop = lazy(() => import('./admin/Workshop.tsx').then((m) => ({ default: m.Workshop })));
 
 function RequireSession() {
   const { session, codePending, loading } = useAuth();
   const location = useLocation();
+  const signedIn = Boolean(session) && !codePending;
+  useEffect(() => {
+    if (!signedIn) return;
+    void loadInstanceSettings().catch(() => undefined);
+    // The viewer opens only apps the gate serves; the list is known before Home loads it.
+    void listApps().catch(() => undefined);
+  }, [signedIn]);
   if (loading) return null;
   // Without the authenticator code the database shows nothing yet; the login page asks for it.
   if (!session || codePending) {
@@ -121,6 +132,8 @@ const router = createBrowserRouter([
       { path: '/account/keys', element: <AccountKeys /> },
       { path: '/games', element: <Games /> },
       { path: '/games/:slug', element: <GameProfile /> },
+      { path: '/a/:slug/*', element: <AppViewer /> },
+      { path: '/web', element: <WebViewer /> },
       {
         path: '/admin',
         element: <AdminLayout />,
@@ -151,12 +164,32 @@ const router = createBrowserRouter([
           { path: 'api-keys', element: <ApiKeys /> },
           { path: 'suite', element: <Suite /> },
           { path: 'workshop', element: <Workshop /> },
+          { path: 'settings', element: <Settings /> },
         ],
       },
     ],
   },
   { path: '*', element: <Navigate to="/" replace /> },
 ]);
+
+/**
+ * In the installed portal, links to apps (and, when switched on, to outside websites) open in the
+ * portal's own viewers instead of under Chrome's bar (ADR 0032). Links that handled the click
+ * themselves (router links) are left alone.
+ */
+function openLinksInViewers() {
+  document.addEventListener('click', (event) => {
+    if (event.defaultPrevented || event.button !== 0) return;
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    const link = event.target instanceof Element ? event.target.closest('a[href]') : null;
+    if (!(link instanceof HTMLAnchorElement) || link.hasAttribute('download')) return;
+    // A link meant for a new window (e.g. to GitHub) keeps doing that, unless it leads to an app.
+    const route = viewerRoute(link.href, { newWindow: link.target === '_blank' });
+    if (!route) return;
+    event.preventDefault();
+    void router.navigate(route.to, { state: route.state });
+  });
+}
 
 async function start() {
   applyStoredTheme();
@@ -167,6 +200,7 @@ async function start() {
   // Offline shell and push notifications (ADR 0005).
   void registerServiceWorker();
   listenForRenewals();
+  openLinksInViewers();
   const root = document.getElementById('root');
   if (!root) throw new Error('#root missing');
   createRoot(root).render(
