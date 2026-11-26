@@ -1,0 +1,12 @@
+{
+  "name": "@mininode-hosted/rechnungen",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "jsqr": "1.4.0",
+    "vitest": "5.0.1"
+  }
+}

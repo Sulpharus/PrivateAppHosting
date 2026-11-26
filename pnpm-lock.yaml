@@ -490,6 +490,15 @@ importers:
 
   hosted/photocraft: {}
 
+  hosted/rechnungen:
+    devDependencies:
+      jsqr:
+        specifier: 1.4.0
+        version: 1.4.0
+      vitest:
+        specifier: 5.0.1
+        version: 5.0.1(@types/node@22.20.4)(happy-dom@20.14.5)(vite@8.3.0(@types/node@22.20.4)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.15))
+
   hosted/solitaer:
     devDependencies:
       vitest:
@@ -2865,6 +2874,9 @@ packages:
     resolution: {integrity: sha512-XmOWe7eyHYH14cLdVPoyg+GOH3rYX++KpzrylJwSW98t3Nk+U8XOl8FWKOgwtzdb8lXGf6zYwDUzeHMWfxasyg==}
     engines: {node: '>=6'}
     hasBin: true
+
+  jsqr@1.4.0:
+    resolution: {integrity: sha512-dxLob7q65Xg2DvstYkRpkYtmKm2sPJ9oFhrhmudT1dZvNFFTlroai3AWSpLey/w5vMcLBXRgOJsbXpdN9HzU/A==}
 
   jszip@3.10.2:
     resolution: {integrity: sha512-3l+rb15IOWtUhU0H5MFqES/T6Kh7abYwjosBey/vD6hDt8zoEffkSC5Ws5SGtgVw3gBx2NEbhTeSW1+kWkpyTQ==}
@@ -5491,6 +5503,8 @@ snapshots:
       ts-algebra: 2.0.0
 
   json5@2.2.3: {}
+
+  jsqr@1.4.0: {}
 
   jszip@3.10.2:
     dependencies:
