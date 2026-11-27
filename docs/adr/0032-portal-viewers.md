@@ -27,7 +27,9 @@ programs, containers on the hardware server, `api.` or `ai.`) opens `/a/<slug>/<
 portal: the app in a full-screen frame, without any bar. In a browser tab nothing changes. The address stays the app's own origin inside the frame, so login,
 data, storage and service worker work as before (portal and apps are the same site, so nothing is
 partitioned). The gate's CSP allows exactly the portal's origin as `frame-ancestors` (before:
-`'none'`); the portal allows `frame-src https:`.
+`'none'`); the portal allows `frame-src https: blob: data:`, so an app in the viewer can
+also open pages it made in the browser, such as a PDF (without `blob:` Chrome blocked them with
+"Dieser Inhalt ist blockiert").
 
 **Links leave the frame through the portal.** `pwa.js` (added to every app page) notices it runs in
 the portal's viewer (the parent's origin is the portal) and hands every click on a link to another

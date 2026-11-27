@@ -3,7 +3,7 @@
 Where things stand, what the owner still has to do, and what a new session should know.
 Update it at the end of every working session; history belongs in git, not here.
 
-Last updated: 2026-11-26 (new app Rechnungen; portal viewers: apps without Chrome's bar in the installed portal, outside sites behind a switch, ADR 0032; logos for the last three apps without one; before: new app CAD, Spoolman in the App-Bibliothek).
+Last updated: 2026-11-27 (fix: the portal viewer blocked pages an app made itself, e.g. Rechnungen PDFs, frame-src now allows blob: and data:; before: portal viewers ADR 0032, Rechnungen, app logos).
 
 ## Start here
 

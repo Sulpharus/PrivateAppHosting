@@ -14,6 +14,17 @@ export function portalConfig(env: Env) {
   };
 }
 
+/**
+ * What the portal's viewers may show in a frame (ADR 0032): apps and outside sites (https:), and
+ * whatever an app in the viewer opens in its own frame, such as a PDF or a picture it made in the
+ * browser (blob:, data:). Without blob: and data:, Chrome blocks those pages in the viewer.
+ * Locally apps run on http://<slug>.localhost.
+ */
+export function portalFrameSources(hostname: string): string[] {
+  const local = hostname === 'localhost' ? ['http://*.localhost:*'] : [];
+  return ['https:', 'blob:', 'data:', ...local];
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -21,9 +32,7 @@ export default {
       supabaseUrl: env.SUPABASE_URL,
       apiOrigin: new URL(env.API_URL).origin,
       aiOrigin: new URL(env.AI_URL).origin,
-      // The installed portal shows apps and outside websites in its viewers (ADR 0032); locally
-      // apps run on http://<slug>.localhost.
-      frameSrc: url.hostname === 'localhost' ? ['https:', 'http://*.localhost:*'] : ['https:'],
+      frameSrc: portalFrameSources(url.hostname),
     });
 
     if (url.pathname === '/config.json') {
