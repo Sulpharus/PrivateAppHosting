@@ -32,7 +32,8 @@ Zurück-Geste oder „Alle Apps“ in der App. Im normalen Browser-Tab ändert s
 sind; Apps müssen nichts tun.
 
 Links aus einer App auf das Portal, andere Apps oder fremde Websites gibt die App an das Portal weiter, das sie an der richtigen Stelle
-öffnet. Fremde Websites öffnen wie bisher unter der (jetzt dunklen) Leiste von Chrome, außer du schaltest unter
+öffnet. Was eine App „in einem neuen Tab“ aus eigenen Inhalten öffnet (ein PDF, einen Beleg, eine Vorschau), zeigt
+MiniNode direkt in der App an, nie in einem zusätzlichen Browserfenster; zurück geht es mit der Zurück-Geste. Fremde Websites öffnen wie bisher unter der (jetzt dunklen) Leiste von Chrome, außer du schaltest unter
 [Verwaltung → Einstellungen](/admin/settings) **„Externe Seiten im eigenen Viewer“** ein: Dann öffnen sie in MiniNode mit einer eigenen,
 schlichten Leiste (Zurück, Adresse, „Im Browser öffnen“, Schließen). Seiten, die sich nicht einbetten lassen (Google, GitHub, Banken, die
 meisten sozialen Netzwerke), erkennt MiniNode vorher und öffnet sie automatisch wie bisher. Auf fremden Seiten im Viewer klappt eine

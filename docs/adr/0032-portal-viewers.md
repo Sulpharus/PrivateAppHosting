@@ -31,6 +31,14 @@ partitioned). The gate's CSP allows exactly the portal's origin as `frame-ancest
 also open pages it made in the browser, such as a PDF (without `blob:` Chrome blocked them with
 "Dieser Inhalt ist blockiert").
 
+**Nothing leaves MiniNode for the browser.** In the viewer, `pwa.js` shows what an app opens "in a
+new tab" from its own content inside the frame: `window.open` with a `blob:`, `data:` or the app's
+own address, links with `target="_blank"` to them, and the address an app gives to an empty window
+it opened first (Rechnungen, Haushalt: on the click, so pop-up blockers allow it). In the installed
+app such a window became a separate, blank MiniNode window, and the PDF then opened in the browser.
+Other web addresses from `window.open` go to the portal like links. Downloads stay downloads. The
+system's back gesture returns to the app.
+
 **Links leave the frame through the portal.** `pwa.js` (added to every app page) notices it runs in
 the portal's viewer (the parent's origin is the portal) and hands every click on a link to another
 origin to the portal (`postMessage({ type: 'mn:open', url })`, sent only to the portal's origin).
